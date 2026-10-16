@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -35,6 +34,7 @@ export default function VendorsPage() {
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL')
   const [appliedQuery, setAppliedQuery] = useState('')
   const [appliedStatus, setAppliedStatus] = useState<FilterStatus>('ALL')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Vendor | null>(null)
@@ -43,11 +43,13 @@ export default function VendorsPage() {
   const handleSearch = () => {
     setAppliedQuery(query)
     setAppliedStatus(statusFilter)
+    setSelected(new Set())
   }
 
   const handleReset = () => {
     setQuery(''); setStatusFilter('ALL')
     setAppliedQuery(''); setAppliedStatus('ALL')
+    setSelected(new Set())
   }
 
   const filtered = vendors.filter((v) => {
@@ -60,6 +62,43 @@ export default function VendorsPage() {
     return matchStatus && matchQuery
   })
 
+  const allChecked = filtered.length > 0 && filtered.every((v) => selected.has(v.id))
+  const someChecked = filtered.some((v) => selected.has(v.id))
+
+  const toggleAll = () => {
+    if (allChecked) {
+      setSelected((prev) => {
+        const next = new Set(prev)
+        filtered.forEach((v) => next.delete(v.id))
+        return next
+      })
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev)
+        filtered.forEach((v) => next.add(v.id))
+        return next
+      })
+    }
+  }
+
+  const toggleOne = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleBulkStatus = (status: VendorStatus) => {
+    setVendors((prev) => prev.map((v) => (selected.has(v.id) ? { ...v, status } : v)))
+    setSelected(new Set())
+  }
+
+  const handleStatusChange = (vendor: Vendor, status: VendorStatus) => {
+    setVendors((prev) => prev.map((v) => (v.id === vendor.id ? { ...v, status } : v)))
+  }
+
   const openRegister = () => {
     setEditTarget(null)
     setForm(emptyForm)
@@ -70,14 +109,6 @@ export default function VendorsPage() {
     setEditTarget(vendor)
     setForm({ name: vendor.name, businessNumber: vendor.businessNumber ?? '', managerName: vendor.managerName, phone: vendor.phone, address: vendor.address, loginId: vendor.loginId, password: '', memo: vendor.memo ?? '' })
     setModalOpen(true)
-  }
-
-  const handleToggleStatus = (vendor: Vendor) => {
-    setVendors((prev) =>
-      prev.map((v) =>
-        v.id === vendor.id ? { ...v, status: v.status === 'active' ? 'suspended' : 'active' } : v
-      )
-    )
   }
 
   const handleSave = () => {
@@ -147,32 +178,38 @@ export default function VendorsPage() {
               className="w-full rounded-md border px-3 py-2 pl-9 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-700"
             />
           </div>
-          <button
-            onClick={handleSearch}
-            className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
-          >
-            검색
-          </button>
-          <button
-            onClick={handleReset}
-            className="rounded-md border px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50"
-          >
-            초기화
-          </button>
+          <button onClick={handleSearch} className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800">검색</button>
+          <button onClick={handleReset} className="rounded-md border px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50">초기화</button>
         </div>
       </div>
+
+      {someChecked && (
+        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5">
+          <span className="text-sm font-medium text-blue-700">{selected.size}개 선택됨</span>
+          <button onClick={() => handleBulkStatus('active')} className="rounded-md bg-green-700 px-3 py-1 text-xs font-medium text-white hover:bg-green-800">활성</button>
+          <button onClick={() => handleBulkStatus('suspended')} className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700">정지</button>
+        </div>
+      )}
 
       <div className="rounded-lg border bg-white">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <input
+                  type="checkbox"
+                  checked={allChecked}
+                  ref={(el) => { if (el) el.indeterminate = someChecked && !allChecked }}
+                  onChange={toggleAll}
+                  className="accent-green-700"
+                />
+              </TableHead>
               <TableHead>업체명</TableHead>
               <TableHead>담당자명</TableHead>
               <TableHead>연락처</TableHead>
               <TableHead>주소</TableHead>
               <TableHead>아이디</TableHead>
               <TableHead>상태</TableHead>
-              <TableHead>관리</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -184,31 +221,37 @@ export default function VendorsPage() {
               </TableRow>
             ) : (
               filtered.map((vendor) => (
-                <TableRow key={vendor.id}>
-                  <TableCell className="font-medium">{vendor.name}</TableCell>
+                <TableRow key={vendor.id} className={selected.has(vendor.id) ? 'bg-blue-50' : ''}>
+                  <TableCell>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(vendor.id)}
+                      onChange={() => toggleOne(vendor.id)}
+                      className="accent-green-700"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <button onClick={() => openEdit(vendor)} className="font-medium text-blue-700 hover:underline">
+                      {vendor.name}
+                    </button>
+                  </TableCell>
                   <TableCell className="text-sm">{vendor.managerName}</TableCell>
                   <TableCell className="text-sm">{vendor.phone}</TableCell>
                   <TableCell className="text-sm">{vendor.address}</TableCell>
                   <TableCell className="font-mono text-xs text-gray-500">{vendor.loginId}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant={vendor.status === 'active' ? 'default' : 'destructive'}
-                      className={vendor.status === 'active' ? 'bg-green-100 text-green-800 hover:bg-green-100' : ''}
+                    <select
+                      value={vendor.status}
+                      onChange={(e) => handleStatusChange(vendor, e.target.value as VendorStatus)}
+                      className={`rounded border px-2 py-1 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-green-700 ${
+                        vendor.status === 'active'
+                          ? 'border-green-300 bg-green-50 text-green-800'
+                          : 'border-red-300 bg-red-50 text-red-700'
+                      }`}
                     >
-                      {vendor.status === 'active' ? '활성' : '정지'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <button onClick={() => openEdit(vendor)} className="text-xs text-blue-600 hover:underline">수정</button>
-                      <span className="text-gray-300">|</span>
-                      <button
-                        onClick={() => handleToggleStatus(vendor)}
-                        className={`text-xs ${vendor.status === 'active' ? 'text-red-600' : 'text-green-600'} hover:underline`}
-                      >
-                        {vendor.status === 'active' ? '정지' : '활성화'}
-                      </button>
-                    </div>
+                      <option value="active">활성</option>
+                      <option value="suspended">정지</option>
+                    </select>
                   </TableCell>
                 </TableRow>
               ))
@@ -220,7 +263,7 @@ export default function VendorsPage() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editTarget ? '업체 정보 수정' : '업체 등록'}</DialogTitle>
+            <DialogTitle>{editTarget ? `${editTarget.name} 수정` : '업체 등록'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
