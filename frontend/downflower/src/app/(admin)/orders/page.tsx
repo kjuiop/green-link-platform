@@ -111,13 +111,13 @@ export default function OrdersPage() {
           </div>
           <button
             onClick={handleSearch}
-            className="rounded-md bg-green-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-green-800"
+            className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
           >
             검색
           </button>
           <button
             onClick={handleReset}
-            className="rounded-md border px-5 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50"
+            className="rounded-md border px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50"
           >
             초기화
           </button>

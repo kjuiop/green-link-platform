@@ -182,8 +182,8 @@ export default function VendorsPage() {
               className="w-full rounded-md border px-3 py-2 pl-9 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-700"
             />
           </div>
-          <button onClick={handleSearch} className="rounded-md bg-green-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-green-800">검색</button>
-          <button onClick={handleReset} className="rounded-md border px-5 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50">초기화</button>
+          <button onClick={handleSearch} className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800">검색</button>
+          <button onClick={handleReset} className="rounded-md border px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50">초기화</button>
         </div>
       </div>
 
@@ -191,7 +191,7 @@ export default function VendorsPage() {
         <div className="flex items-center justify-end border-b px-4 py-2">
           <button
             onClick={handleStagedSave}
-            className="rounded-md bg-green-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-green-800"
+            className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
           >
             저장
           </button>
