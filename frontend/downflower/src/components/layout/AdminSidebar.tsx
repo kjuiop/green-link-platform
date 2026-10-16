@@ -16,7 +16,6 @@ import {
   ChevronDown,
   User,
   MessageCircle,
-  LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -117,12 +116,6 @@ export function AdminSidebar() {
         )}
       </nav>
 
-      <div className="border-t p-4">
-        <button className="flex w-full items-center gap-2 text-xs text-gray-400 hover:text-gray-600">
-          <LogOut className="h-3.5 w-3.5" />
-          로그아웃
-        </button>
-      </div>
     </aside>
   )
 }
