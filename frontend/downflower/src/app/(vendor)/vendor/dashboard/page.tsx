@@ -33,7 +33,7 @@ export default function VendorDashboardPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-600">배송 진행중</CardTitle>
+            <CardTitle className="text-sm font-medium text-blue-600">수주완료</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-blue-600">{active}</p>

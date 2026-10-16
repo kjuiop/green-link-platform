@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 
 export default function SettingsMessagesPage() {
   return (
@@ -31,8 +32,7 @@ export default function SettingsMessagesPage() {
         <CardContent className="space-y-3">
           <div className="space-y-1.5">
             <Label>배송완료 문자 내용</Label>
-            <textarea
-              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+            <Textarea
               rows={4}
               defaultValue={"안녕하세요.\n주문하신 화환이 배송 완료되었습니다.\n배송 사진을 확인해주세요.\n\n[사진 링크]"}
             />

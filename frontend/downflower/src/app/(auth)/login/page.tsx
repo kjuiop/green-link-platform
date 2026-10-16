@@ -41,7 +41,7 @@ export default function LoginPage() {
                 id="loginId"
                 placeholder="아이디를 입력하세요"
                 value={loginId}
-                onChange={(e) => setLoginId(e.target.value)}
+                onChange={(e) => { setLoginId(e.target.value); setError('') }}
                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
               />
             </div>
@@ -52,7 +52,7 @@ export default function LoginPage() {
                 type="password"
                 placeholder="비밀번호를 입력하세요"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); setError('') }}
                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
               />
             </div>
