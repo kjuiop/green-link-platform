@@ -1,0 +1,27 @@
+# IDE
+.idea
+
+# OS
+.DS_Store
+
+# Local docs (refs, secrets — never commit)
+docs
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+build/
+out/
+target/
+*.jar
+*.class
+
+# Logs
+*.log
+logs/
+
+# Gradle
+.gradle/
