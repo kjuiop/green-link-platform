@@ -86,7 +86,7 @@ export default function NewOrderPage() {
               </Label>
               {deliveryType === '즉시' ? (
                 <div className="flex items-center gap-2">
-                  <Input type="time" className="w-auto" />
+                  <Input type="time" className="flex-1" />
                   <span className="shrink-0 text-sm text-gray-500">까지</span>
                 </div>
               ) : (
