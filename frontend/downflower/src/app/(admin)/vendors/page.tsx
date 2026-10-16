@@ -20,7 +20,7 @@ const STATUS_FILTERS = [
 
 type FilterStatus = 'ALL' | VendorStatus
 
-const emptyForm = { name: '', managerName: '', phone: '', address: '', loginId: '', password: '', memo: '' }
+const emptyForm = { name: '', businessNumber: '', managerName: '', phone: '', address: '', loginId: '', password: '', memo: '' }
 
 function formatPhone(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 11)
@@ -68,7 +68,7 @@ export default function VendorsPage() {
 
   const openEdit = (vendor: Vendor) => {
     setEditTarget(vendor)
-    setForm({ name: vendor.name, managerName: vendor.managerName, phone: vendor.phone, address: vendor.address, loginId: vendor.loginId, password: '', memo: vendor.memo ?? '' })
+    setForm({ name: vendor.name, businessNumber: vendor.businessNumber ?? '', managerName: vendor.managerName, phone: vendor.phone, address: vendor.address, loginId: vendor.loginId, password: '', memo: vendor.memo ?? '' })
     setModalOpen(true)
   }
 
@@ -91,7 +91,7 @@ export default function VendorsPage() {
       setVendors((prev) =>
         prev.map((v) =>
           v.id === editTarget.id
-            ? { ...v, name: form.name, managerName: form.managerName, phone: form.phone, address: form.address, loginId: form.loginId, memo: form.memo || undefined }
+            ? { ...v, name: form.name, businessNumber: form.businessNumber || undefined, managerName: form.managerName, phone: form.phone, address: form.address, loginId: form.loginId, memo: form.memo || undefined }
             : v
         )
       )
@@ -99,6 +99,7 @@ export default function VendorsPage() {
       const newVendor: Vendor = {
         id: `v${Date.now()}`,
         name: form.name,
+        businessNumber: form.businessNumber || undefined,
         managerName: form.managerName,
         phone: form.phone,
         address: form.address,
@@ -225,6 +226,10 @@ export default function VendorsPage() {
             <div className="space-y-1.5">
               <Label>업체명 *</Label>
               <Input placeholder="업체명" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>사업자번호</Label>
+              <Input placeholder="000-00-00000" value={form.businessNumber} onChange={(e) => setForm((f) => ({ ...f, businessNumber: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
               <Label>담당자명 *</Label>

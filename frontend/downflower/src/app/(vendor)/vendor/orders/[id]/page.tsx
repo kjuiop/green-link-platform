@@ -27,7 +27,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
           <OrderStatusBadge status={order.status} />
         </div>
         <div className="flex gap-2">
-          <Link href={`/vendor/orders/${order.id}/print`} target="_blank">
+          <Link href={`/orders/${order.id}/print`} target="_blank">
             <Button variant="outline" className="gap-1.5">
               <Printer className="h-4 w-4" />
               주문서 인쇄

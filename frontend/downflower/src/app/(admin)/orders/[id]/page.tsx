@@ -5,6 +5,8 @@ import { mockOrders } from '@/lib/mock/orders'
 import { mockPhotos } from '@/lib/mock/photos'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
+import { Printer } from 'lucide-react'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -26,6 +28,12 @@ export default async function OrderDetailPage({ params }: Props) {
           <MessageStatusBadge status={order.messageStatus} />
         </div>
         <div className="flex gap-2">
+          <Link href={`/orders/${order.id}/print`} target="_blank">
+            <Button variant="outline" className="gap-1.5">
+              <Printer className="h-4 w-4" />
+              주문서 인쇄
+            </Button>
+          </Link>
           {order.status === '수주완료' && (
             <Button className="bg-blue-700 hover:bg-blue-800">배송완료 처리</Button>
           )}
