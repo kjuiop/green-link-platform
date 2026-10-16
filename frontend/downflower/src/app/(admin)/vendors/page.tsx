@@ -188,12 +188,10 @@ export default function VendorsPage() {
       </div>
 
       <div className="rounded-lg border bg-white">
-        <div className="flex items-center justify-end gap-2 border-b px-4 py-2">
-          {hasStagedChanges && <span className="text-xs text-gray-400">{Object.keys(staged).length}개 변경됨</span>}
+        <div className="flex items-center justify-end border-b px-4 py-2">
           <button
             onClick={handleStagedSave}
-            disabled={!hasStagedChanges}
-            className="rounded-md bg-green-700 px-3 py-1 text-xs font-medium text-white hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-md bg-green-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-green-800"
           >
             저장
           </button>
