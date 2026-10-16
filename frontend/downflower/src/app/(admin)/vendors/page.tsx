@@ -45,12 +45,14 @@ export default function VendorsPage() {
     setAppliedQuery(query)
     setAppliedStatus(statusFilter)
     setSelected(new Set())
+    setStaged({})
   }
 
   const handleReset = () => {
     setQuery(''); setStatusFilter('ALL')
     setAppliedQuery(''); setAppliedStatus('ALL')
     setSelected(new Set())
+    setStaged({})
   }
 
   const filtered = vendors.filter((v) => {
@@ -90,8 +92,6 @@ export default function VendorsPage() {
       return next
     })
   }
-
-  const hasStagedChanges = Object.keys(staged).length > 0
 
   const handleStagedSave = () => {
     setVendors((prev) => prev.map((v) => (staged[v.id] ? { ...v, status: staged[v.id] } : v)))
