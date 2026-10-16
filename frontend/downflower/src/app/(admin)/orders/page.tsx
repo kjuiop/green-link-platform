@@ -130,7 +130,7 @@ export default function OrdersPage() {
             <TableRow>
               <TableHead>주문번호</TableHead>
               <TableHead>발주일시</TableHead>
-              <TableHead>배송예정</TableHead>
+              <TableHead>배송마감시간</TableHead>
               <TableHead>수주업체</TableHead>
               <TableHead>상품명</TableHead>
               <TableHead>배송장소</TableHead>
