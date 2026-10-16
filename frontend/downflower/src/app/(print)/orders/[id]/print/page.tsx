@@ -15,23 +15,28 @@ export default function PrintOrderPage({ params }: Props) {
   if (!order) notFound()
 
   useEffect(() => {
-    window.print()
-  }, [])
+    const customer = order.recipientName || order.ordererName
+    document.title = `${customer}_${order.placeName}_${order.deliveryAt}`
+  }, [order.recipientName, order.ordererName, order.placeName, order.deliveryAt])
 
   return (
     <>
       <style>{`
+        @page { size: A4 portrait; margin: 10mm; }
         @media print {
           .no-print { display: none !important; }
           body { margin: 0; }
+          .print-page { width: 100%; margin: 0; }
+          .divider { margin: 30px 0; }
         }
         body { font-family: '맑은 고딕', sans-serif; background: #fff; }
-        .print-page { width: 90%; margin: 5% auto; }
+        .print-page { width: 90%; margin: 0 auto; }
         table { width: 100%; border-collapse: collapse; }
-        td { border: 2px solid #000; text-align: center; font-size: 16px; font-weight: 600; padding: 8px; }
-        td.left { text-align: left; }
-        .divider { border: none; border-top: 1px dotted #000; margin: 40px 0; }
-        .order-num { text-align: left; font-size: 14px; margin-bottom: 4px; }
+        td { border: 2px solid #000; text-align: center; font-size: 20px; font-weight: 600; padding: 0; }
+        td.left { text-align: left; padding-left: 10px; }
+        .divider { border: none; border-top: 1px dotted #000; margin: 50px 0; }
+        .order-num { text-align: left; font-size: 18px; margin-bottom: 4px; }
+        .title-cell { font-size: 20px !important; }
       `}</style>
 
       <div className="no-print fixed top-4 right-4 z-10">
@@ -41,22 +46,16 @@ export default function PrintOrderPage({ params }: Props) {
         >
           인쇄
         </button>
-        <button
-          onClick={() => window.history.back()}
-          className="ml-2 rounded-md border px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
-        >
-          돌아가기
-        </button>
       </div>
 
-      <div className="print-page">
+      <div className="print-page" style={{ paddingTop: 40 }}>
         {/* 주문서 */}
         <div className="order-num">주문번호 {order.orderNumber}</div>
         <table>
           <tbody>
             <tr>
-              <td colSpan={2} style={{ fontSize: 20 }}><strong>주문서</strong></td>
-              <td className="left" style={{ fontWeight: 'normal', fontSize: 13 }}>
+              <td colSpan={2}><h2 style={{ margin: 0, marginLeft: 20 }}>주문서</h2></td>
+              <td className="left" style={{ fontWeight: 'normal', fontSize: 16 }}>
                 본부전화: 다운플라워<br />
                 http://downflower.co.kr
               </td>
@@ -106,7 +105,7 @@ export default function PrintOrderPage({ params }: Props) {
             )}
             <tr>
               <td>요청사항</td>
-              <td colSpan={2} className="left" style={{ height: 40, fontWeight: 'normal' }}>
+              <td colSpan={2} className="left" style={{ fontWeight: 'normal', height: 50 }}>
                 {order.vendorMemo || ''}
               </td>
             </tr>
@@ -120,8 +119,8 @@ export default function PrintOrderPage({ params }: Props) {
         <table>
           <tbody>
             <tr>
-              <td colSpan={2} style={{ fontSize: 20 }}><strong>인수증</strong></td>
-              <td className="left" style={{ fontWeight: 'normal', fontSize: 13 }}>
+              <td colSpan={2}><h2 style={{ margin: 0, marginLeft: 20 }}>인수증</h2></td>
+              <td className="left" style={{ fontWeight: 'normal', fontSize: 16 }}>
                 본부전화: 다운플라워<br />
                 http://downflower.co.kr
               </td>
@@ -163,7 +162,7 @@ export default function PrintOrderPage({ params }: Props) {
             </tr>
             <tr>
               <td>요청사항</td>
-              <td colSpan={2} className="left" style={{ height: 40, fontWeight: 'normal' }}>
+              <td colSpan={2} className="left" style={{ fontWeight: 'normal', height: 50 }}>
                 {order.vendorMemo || ''}
               </td>
             </tr>

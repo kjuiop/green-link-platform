@@ -5,8 +5,7 @@ import { mockOrders } from '@/lib/mock/orders'
 import { mockPhotos } from '@/lib/mock/photos'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
-import Link from 'next/link'
-import { Printer } from 'lucide-react'
+import { PrintButton } from '@/components/common/PrintButton'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -27,12 +26,7 @@ export default async function VendorOrderDetailPage({ params }: Props) {
           <OrderStatusBadge status={order.status} />
         </div>
         <div className="flex gap-2">
-          <Link href={`/orders/${order.id}/print`} target="_blank">
-            <Button variant="outline" className="gap-1.5">
-              <Printer className="h-4 w-4" />
-              주문서 인쇄
-            </Button>
-          </Link>
+          <PrintButton orderId={order.id} />
           {order.status === '발주대기' && (
             <>
               <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50">
