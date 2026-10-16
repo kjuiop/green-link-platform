@@ -35,6 +35,7 @@ export default function VendorsPage() {
   const [appliedQuery, setAppliedQuery] = useState('')
   const [appliedStatus, setAppliedStatus] = useState<FilterStatus>('ALL')
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkStatus, setBulkStatus] = useState<VendorStatus>('active')
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Vendor | null>(null)
@@ -90,8 +91,8 @@ export default function VendorsPage() {
     })
   }
 
-  const handleBulkStatus = (status: VendorStatus) => {
-    setVendors((prev) => prev.map((v) => (selected.has(v.id) ? { ...v, status } : v)))
+  const handleBulkSave = () => {
+    setVendors((prev) => prev.map((v) => (selected.has(v.id) ? { ...v, status: bulkStatus } : v)))
     setSelected(new Set())
   }
 
@@ -186,8 +187,15 @@ export default function VendorsPage() {
       {someChecked && (
         <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5">
           <span className="text-sm font-medium text-blue-700">{selected.size}개 선택됨</span>
-          <button onClick={() => handleBulkStatus('active')} className="rounded-md bg-green-700 px-3 py-1 text-xs font-medium text-white hover:bg-green-800">활성</button>
-          <button onClick={() => handleBulkStatus('suspended')} className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700">정지</button>
+          <select
+            value={bulkStatus}
+            onChange={(e) => setBulkStatus(e.target.value as VendorStatus)}
+            className="rounded border border-gray-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-700"
+          >
+            <option value="active">활성</option>
+            <option value="suspended">정지</option>
+          </select>
+          <button onClick={handleBulkSave} className="rounded-md bg-green-700 px-3 py-1 text-xs font-medium text-white hover:bg-green-800">저장</button>
         </div>
       )}
 
