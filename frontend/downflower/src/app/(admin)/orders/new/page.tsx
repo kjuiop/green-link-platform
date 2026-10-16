@@ -81,17 +81,12 @@ export default function NewOrderPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>
-                {deliveryType === '즉시' ? '배송 마감 시간 *' : '배송 희망일시 *'}
-              </Label>
-              {deliveryType === '즉시' ? (
-                <div className="flex items-center gap-2">
-                  <Input type="time" className="w-36" />
-                  <span className="text-sm text-gray-500">까지</span>
-                </div>
-              ) : (
-                <Input type="datetime-local" />
-              )}
+              <Label>배송 희망일시 *</Label>
+              <Input type="datetime-local" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>배송마감시간</Label>
+              <Input placeholder="예: 14:00" />
             </div>
 
             <div className="space-y-1.5">

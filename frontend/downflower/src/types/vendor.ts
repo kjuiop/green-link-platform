@@ -3,6 +3,7 @@ export type VendorStatus = 'active' | 'suspended'
 export interface Vendor {
   id: string
   name: string
+  businessNumber?: string
   managerName: string
   phone: string
   address: string

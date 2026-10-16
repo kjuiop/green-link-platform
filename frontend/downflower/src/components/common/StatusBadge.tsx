@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge'
-import { OrderStatus, MessageStatus } from '@/types/order'
+import { OrderStatus, MessageStatus, DeliveryType } from '@/types/order'
 
 const orderStatusConfig: Record<OrderStatus, { label: string; className: string }> = {
   '발주대기': { label: '발주대기', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
@@ -31,4 +31,11 @@ export function MessageStatusBadge({ status }: { status: MessageStatus }) {
       {config.label}
     </Badge>
   )
+}
+
+export function DeliveryTypeBadge({ deliveryType }: { deliveryType: DeliveryType }) {
+  if (deliveryType === '즉시') {
+    return <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-200">즉시배송</Badge>
+  }
+  return <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200">일반배송</Badge>
 }

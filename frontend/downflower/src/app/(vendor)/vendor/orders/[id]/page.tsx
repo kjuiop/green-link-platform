@@ -5,6 +5,7 @@ import { mockOrders } from '@/lib/mock/orders'
 import { mockPhotos } from '@/lib/mock/photos'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
+import { PrintButton } from '@/components/common/PrintButton'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -24,17 +25,20 @@ export default async function VendorOrderDetailPage({ params }: Props) {
           <h1 className="text-xl font-bold">{order.orderNumber}</h1>
           <OrderStatusBadge status={order.status} />
         </div>
-        {order.status === '발주대기' && (
-          <div className="flex gap-2">
-            <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50">
-              수주거절
-            </Button>
-            <Button className="bg-green-700 hover:bg-green-800">수주확인</Button>
-          </div>
-        )}
-        {order.status === '수주완료' && (
-          <Button className="bg-blue-700 hover:bg-blue-800">배송완료 처리</Button>
-        )}
+        <div className="flex gap-2">
+          <PrintButton orderId={order.id} />
+          {order.status === '발주대기' && (
+            <>
+              <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50">
+                수주거절
+              </Button>
+              <Button className="bg-green-700 hover:bg-green-800">수주확인</Button>
+            </>
+          )}
+          {order.status === '수주완료' && (
+            <Button className="bg-blue-700 hover:bg-blue-800">배송완료 처리</Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

@@ -1,10 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { OrderStatusBadge, MessageStatusBadge } from '@/components/common/StatusBadge'
+import { OrderStatusBadge, MessageStatusBadge, DeliveryTypeBadge } from '@/components/common/StatusBadge'
 import { mockOrders } from '@/lib/mock/orders'
 import { mockPhotos } from '@/lib/mock/photos'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
+import { PrintButton } from '@/components/common/PrintButton'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -23,9 +24,11 @@ export default async function OrderDetailPage({ params }: Props) {
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold">{order.orderNumber}</h1>
           <OrderStatusBadge status={order.status} />
+          <DeliveryTypeBadge deliveryType={order.deliveryType} />
           <MessageStatusBadge status={order.messageStatus} />
         </div>
         <div className="flex gap-2">
+          <PrintButton orderId={order.id} />
           {order.status === '수주완료' && (
             <Button className="bg-blue-700 hover:bg-blue-800">배송완료 처리</Button>
           )}
