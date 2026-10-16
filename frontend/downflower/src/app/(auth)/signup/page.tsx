@@ -266,7 +266,8 @@ export default function SignupPage() {
                     <button
                       type="button"
                       onClick={handleVerify}
-                      className="shrink-0 rounded-md bg-green-700 px-3 py-2 text-xs font-medium text-white hover:bg-green-800"
+                      disabled={countdown === 0}
+                      className="shrink-0 rounded-md bg-green-700 px-3 py-2 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-40"
                     >
                       확인
                     </button>

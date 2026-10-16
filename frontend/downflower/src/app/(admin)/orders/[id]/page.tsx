@@ -130,8 +130,8 @@ export default async function OrderDetailPage({ params }: Props) {
             </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="flex flex-wrap gap-6">
-              <Row label="발송 상태" value="" />
+            <div className="flex items-center gap-2">
+              <span className="w-24 flex-shrink-0 text-gray-500">발송 상태</span>
               <MessageStatusBadge status={order.messageStatus} />
             </div>
 
