@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { OrderStatusBadge, MessageStatusBadge } from '@/components/common/StatusBadge'
+import { OrderStatusBadge, MessageStatusBadge, DeliveryTypeBadge } from '@/components/common/StatusBadge'
 import { mockOrders } from '@/lib/mock/orders'
 import { OrderStatus } from '@/types/order'
 import { Plus, Search } from 'lucide-react'
@@ -160,7 +160,12 @@ export default function OrdersPage() {
                   <TableCell className="text-sm">{order.productName}</TableCell>
                   <TableCell className="text-sm">{order.placeName} {order.roomName}</TableCell>
                   <TableCell className="text-right text-sm">{order.amount.toLocaleString()}원</TableCell>
-                  <TableCell><OrderStatusBadge status={order.status} /></TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <OrderStatusBadge status={order.status} />
+                      <DeliveryTypeBadge deliveryType={order.deliveryType} />
+                    </div>
+                  </TableCell>
                   <TableCell><MessageStatusBadge status={order.messageStatus} /></TableCell>
                 </TableRow>
               ))
