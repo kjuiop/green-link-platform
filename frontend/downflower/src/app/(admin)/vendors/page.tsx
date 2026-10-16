@@ -82,6 +82,11 @@ export default function VendorsPage() {
 
   const handleSave = () => {
     if (!form.name || !form.managerName || !form.phone || !form.loginId) return
+    if (!editTarget && !form.password) return
+    if (!editTarget && vendors.some((v) => v.loginId === form.loginId)) {
+      alert('이미 사용 중인 아이디입니다.')
+      return
+    }
     if (editTarget) {
       setVendors((prev) =>
         prev.map((v) =>
@@ -252,7 +257,7 @@ export default function VendorsPage() {
             <Button variant="outline" onClick={() => setModalOpen(false)}>취소</Button>
             <Button
               className="bg-green-700 hover:bg-green-800"
-              disabled={!form.name || !form.managerName || !form.phone || !form.loginId}
+              disabled={!form.name || !form.managerName || !form.phone || !form.loginId || (!editTarget && !form.password)}
               onClick={handleSave}
             >
               {editTarget ? '저장' : '등록'}
