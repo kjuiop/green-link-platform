@@ -184,9 +184,9 @@ export default function VendorsPage() {
         </div>
       </div>
 
-      {someChecked && (
-        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5">
-          <span className="text-sm font-medium text-blue-700">{selected.size}개 선택됨</span>
+      <div className="rounded-lg border bg-white">
+        <div className="flex items-center justify-end gap-2 border-b px-4 py-2">
+          {someChecked && <span className="text-xs text-gray-500">{selected.size}개 선택됨</span>}
           <select
             value={bulkStatus}
             onChange={(e) => setBulkStatus(e.target.value as VendorStatus)}
@@ -195,11 +195,14 @@ export default function VendorsPage() {
             <option value="active">활성</option>
             <option value="suspended">정지</option>
           </select>
-          <button onClick={handleBulkSave} className="rounded-md bg-green-700 px-3 py-1 text-xs font-medium text-white hover:bg-green-800">저장</button>
+          <button
+            onClick={handleBulkSave}
+            disabled={!someChecked}
+            className="rounded-md bg-green-700 px-3 py-1 text-xs font-medium text-white hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            저장
+          </button>
         </div>
-      )}
-
-      <div className="rounded-lg border bg-white">
         <Table>
           <TableHeader>
             <TableRow>
@@ -251,11 +254,7 @@ export default function VendorsPage() {
                     <select
                       value={vendor.status}
                       onChange={(e) => handleStatusChange(vendor, e.target.value as VendorStatus)}
-                      className={`rounded border px-2 py-1 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-green-700 ${
-                        vendor.status === 'active'
-                          ? 'border-green-300 bg-green-50 text-green-800'
-                          : 'border-red-300 bg-red-50 text-red-700'
-                      }`}
+                      className="rounded border border-gray-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-700"
                     >
                       <option value="active">활성</option>
                       <option value="suspended">정지</option>
