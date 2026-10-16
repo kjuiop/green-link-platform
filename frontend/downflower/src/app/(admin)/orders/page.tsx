@@ -129,12 +129,11 @@ export default function OrdersPage() {
           <TableHeader>
             <TableRow>
               <TableHead>주문번호</TableHead>
-              <TableHead>배송예정</TableHead>
-              <TableHead>배송마감시간</TableHead>
               <TableHead>수주업체</TableHead>
               <TableHead>상품명</TableHead>
               <TableHead>배송장소</TableHead>
-              <TableHead className="text-right">발주금액</TableHead>
+              <TableHead>배송예정</TableHead>
+              <TableHead>배송마감시간</TableHead>
               <TableHead>배송유형</TableHead>
               <TableHead>주문상태</TableHead>
               <TableHead>문자발송</TableHead>
@@ -144,7 +143,7 @@ export default function OrdersPage() {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={10} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -156,12 +155,11 @@ export default function OrdersPage() {
                       {order.orderNumber}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-sm">{order.deliveryAt}</TableCell>
-                  <TableCell className="text-sm">{order.deliveryDeadline ?? '-'}</TableCell>
                   <TableCell className="text-sm">{order.vendorName}</TableCell>
                   <TableCell className="text-sm">{order.productName}</TableCell>
                   <TableCell className="text-sm">{order.placeName} {order.roomName}</TableCell>
-                  <TableCell className="text-right text-sm">{order.amount.toLocaleString()}원</TableCell>
+                  <TableCell className="text-sm">{order.deliveryAt}</TableCell>
+                  <TableCell className="text-sm">{order.deliveryDeadline ?? '-'}</TableCell>
                   <TableCell><DeliveryTypeBadge deliveryType={order.deliveryType} /></TableCell>
                   <TableCell><OrderStatusBadge status={order.status} /></TableCell>
                   <TableCell><MessageStatusBadge status={order.messageStatus} /></TableCell>

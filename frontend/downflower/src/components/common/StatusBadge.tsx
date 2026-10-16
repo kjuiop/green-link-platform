@@ -34,10 +34,8 @@ export function MessageStatusBadge({ status }: { status: MessageStatus }) {
 }
 
 export function DeliveryTypeBadge({ deliveryType }: { deliveryType: DeliveryType }) {
-  if (deliveryType !== '즉시') return null
-  return (
-    <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-200">
-      즉시배송
-    </Badge>
-  )
+  if (deliveryType === '즉시') {
+    return <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-200">즉시배송</Badge>
+  }
+  return <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200">일반배송</Badge>
 }
