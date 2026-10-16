@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { OrderStatusBadge, MessageStatusBadge } from '@/components/common/StatusBadge'
+import { OrderStatusBadge, MessageStatusBadge, DeliveryTypeBadge } from '@/components/common/StatusBadge'
 import { mockOrders } from '@/lib/mock/orders'
 import { OrderStatus } from '@/types/order'
 import { Search } from 'lucide-react'
@@ -121,20 +121,21 @@ export default function ReceivedOrdersPage() {
           <TableHeader>
             <TableRow>
               <TableHead>주문번호</TableHead>
-              <TableHead>발주일시</TableHead>
-              <TableHead>배송예정</TableHead>
               <TableHead>수주업체</TableHead>
               <TableHead>상품명</TableHead>
               <TableHead>배송장소</TableHead>
-              <TableHead className="text-right">발주금액</TableHead>
+              <TableHead>배송예정</TableHead>
+              <TableHead>배송마감시간</TableHead>
+              <TableHead>배송유형</TableHead>
               <TableHead>주문상태</TableHead>
               <TableHead>문자발송</TableHead>
+              <TableHead>발주일시</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={10} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -146,14 +147,15 @@ export default function ReceivedOrdersPage() {
                       {order.orderNumber}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-sm">{order.orderedAt}</TableCell>
-                  <TableCell className="text-sm">{order.deliveryAt}</TableCell>
                   <TableCell className="text-sm">{order.vendorName}</TableCell>
                   <TableCell className="text-sm">{order.productName}</TableCell>
                   <TableCell className="text-sm">{order.placeName} {order.roomName}</TableCell>
-                  <TableCell className="text-right text-sm">{order.amount.toLocaleString()}원</TableCell>
+                  <TableCell className="text-sm">{order.deliveryAt}</TableCell>
+                  <TableCell className="text-sm">{order.deliveryDeadline ?? '-'}</TableCell>
+                  <TableCell><DeliveryTypeBadge deliveryType={order.deliveryType} /></TableCell>
                   <TableCell><OrderStatusBadge status={order.status} /></TableCell>
                   <TableCell><MessageStatusBadge status={order.messageStatus} /></TableCell>
+                  <TableCell className="text-sm text-gray-400">{order.orderedAt}</TableCell>
                 </TableRow>
               ))
             )}
