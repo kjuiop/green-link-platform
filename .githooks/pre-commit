@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# 스테이징된 Java 파일 목록 캡처
+staged_java_files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.java$' || true)
+if [ -z "$staged_java_files" ]; then
+  echo "[pre-commit] No staged .java files. Skipping."
+  exit 0
+fi
+
+# backend/gradlew 존재 여부 확인
+if [ ! -f "backend/gradlew" ]; then
+  echo "[pre-commit] backend/gradlew not found. Skipping format check."
+  exit 0
+fi
+
+# spotless 설정 확인
+if ! grep -q 'spotless' backend/build.gradle 2>/dev/null && ! grep -q 'spotless' backend/build.gradle.kts 2>/dev/null; then
+  echo "[pre-commit] Spotless not configured. Skipping format check."
+  exit 0
+fi
+
+echo "[pre-commit] Running Spotless (auto-fix)..."
+
+# 언스테이징 변경이 spotlessApply로 오염되지 않도록 임시 stash
+had_unstaged=false
+trap '[ "$had_unstaged" = true ] && git stash pop --quiet 2>/dev/null || true' EXIT
+if ! git diff --quiet; then
+  had_unstaged=true
+  git stash push --quiet --keep-index --message "pre-commit: spotless temp stash"
+fi
+
+backend/gradlew -q -p backend spotlessApply
+
+echo "$staged_java_files" | while IFS= read -r f; do
+  [ -f "$f" ] && git add "$f"
+done
+
+if ! git diff --cached --quiet; then
+  echo "[pre-commit] Spotless applied. Staged diff summary:"
+  git diff --cached --stat
+fi
+
+echo "[pre-commit] Done."
