@@ -26,14 +26,6 @@ export default async function OrderDetailPage({ params }: Props) {
           <MessageStatusBadge status={order.messageStatus} />
         </div>
         <div className="flex gap-2">
-          {order.status === '발주대기' && (
-            <>
-              <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50">
-                수주거절
-              </Button>
-              <Button className="bg-green-700 hover:bg-green-800">수주확인</Button>
-            </>
-          )}
           {order.status === '수주완료' && (
             <Button className="bg-blue-700 hover:bg-blue-800">배송완료 처리</Button>
           )}
@@ -84,7 +76,7 @@ export default async function OrderDetailPage({ params }: Props) {
           <CardContent className="space-y-2 text-sm">
             <Row label="주문자" value={`${order.ordererName} ${order.ordererPhone}`} />
             {order.recipientName && (
-              <Row label="받는 분" value={`${order.recipientName} ${order.recipientPhone}`} />
+              <Row label="받는 분" value={`${order.recipientName}${order.recipientPhone ? ` ${order.recipientPhone}` : ''}`} />
             )}
             <Row
               label="사진 발송"

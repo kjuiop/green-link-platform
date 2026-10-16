@@ -96,9 +96,12 @@ export default async function VendorOrderDetailPage({ params }: Props) {
                     )}
                   </div>
                 ))}
-                <button className="flex h-24 w-24 items-center justify-center rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:text-gray-600">
+                <Button
+                  variant="outline"
+                  className="h-24 w-24 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:text-gray-600"
+                >
                   + 추가
-                </button>
+                </Button>
               </div>
               <p className="mt-2 text-xs text-gray-400">
                 사진 업로드 후 &ldquo;배송완료 처리&rdquo; 버튼을 눌러야 배송완료 처리 및 문자가 발송됩니다.
