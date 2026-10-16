@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect } from 'react'
 import { mockOrders } from '@/lib/mock/orders'
 import { notFound } from 'next/navigation'
 import { use } from 'react'
@@ -14,10 +13,6 @@ export default function PrintOrderPage({ params }: Props) {
   const order = mockOrders.find((o) => o.id === id)
   if (!order) notFound()
 
-  useEffect(() => {
-    window.print()
-  }, [])
-
   return (
     <>
       <style>{`
@@ -29,11 +24,11 @@ export default function PrintOrderPage({ params }: Props) {
         body { font-family: '맑은 고딕', sans-serif; background: #fff; }
         .print-page { width: 100%; padding: 0; }
         table { width: 100%; border-collapse: collapse; }
-        td { border: 1.5px solid #000; text-align: center; font-size: 12px; font-weight: 600; padding: 4px 6px; }
+        td { border: 2px solid #000; text-align: center; font-size: 15px; font-weight: 600; padding: 7px 8px; }
         td.left { text-align: left; }
-        .divider { border: none; border-top: 1px dotted #000; margin: 10px 0; }
-        .order-num { text-align: left; font-size: 11px; margin-bottom: 2px; }
-        .title-cell { font-size: 16px !important; }
+        .divider { border: none; border-top: 1px dotted #000; margin: 14px 0; }
+        .order-num { text-align: left; font-size: 13px; margin-bottom: 3px; }
+        .title-cell { font-size: 20px !important; }
       `}</style>
 
       <div className="no-print fixed top-4 right-4 z-10">
@@ -108,7 +103,7 @@ export default function PrintOrderPage({ params }: Props) {
             )}
             <tr>
               <td>요청사항</td>
-              <td colSpan={2} className="left" style={{ height: 28, fontWeight: 'normal' }}>
+              <td colSpan={2} className="left" style={{ height: 38, fontWeight: 'normal' }}>
                 {order.vendorMemo || ''}
               </td>
             </tr>
@@ -165,7 +160,7 @@ export default function PrintOrderPage({ params }: Props) {
             </tr>
             <tr>
               <td>요청사항</td>
-              <td colSpan={2} className="left" style={{ height: 28, fontWeight: 'normal' }}>
+              <td colSpan={2} className="left" style={{ height: 38, fontWeight: 'normal' }}>
                 {order.vendorMemo || ''}
               </td>
             </tr>
