@@ -35,7 +35,7 @@ export default function VendorsPage() {
   const [appliedQuery, setAppliedQuery] = useState('')
   const [appliedStatus, setAppliedStatus] = useState<FilterStatus>('ALL')
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [bulkStatus, setBulkStatus] = useState<VendorStatus>('active')
+  const [staged, setStaged] = useState<Record<string, VendorStatus>>({})
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Vendor | null>(null)
@@ -91,13 +91,16 @@ export default function VendorsPage() {
     })
   }
 
-  const handleBulkSave = () => {
-    setVendors((prev) => prev.map((v) => (selected.has(v.id) ? { ...v, status: bulkStatus } : v)))
+  const hasStagedChanges = Object.keys(staged).length > 0
+
+  const handleStagedSave = () => {
+    setVendors((prev) => prev.map((v) => (staged[v.id] ? { ...v, status: staged[v.id] } : v)))
+    setStaged({})
     setSelected(new Set())
   }
 
   const handleStatusChange = (vendor: Vendor, status: VendorStatus) => {
-    setVendors((prev) => prev.map((v) => (v.id === vendor.id ? { ...v, status } : v)))
+    setStaged((prev) => ({ ...prev, [vendor.id]: status }))
   }
 
   const openRegister = () => {
@@ -186,18 +189,10 @@ export default function VendorsPage() {
 
       <div className="rounded-lg border bg-white">
         <div className="flex items-center justify-end gap-2 border-b px-4 py-2">
-          {someChecked && <span className="text-xs text-gray-500">{selected.size}개 선택됨</span>}
-          <select
-            value={bulkStatus}
-            onChange={(e) => setBulkStatus(e.target.value as VendorStatus)}
-            className="rounded border border-gray-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-700"
-          >
-            <option value="active">활성</option>
-            <option value="suspended">정지</option>
-          </select>
+          {hasStagedChanges && <span className="text-xs text-gray-400">{Object.keys(staged).length}개 변경됨</span>}
           <button
-            onClick={handleBulkSave}
-            disabled={!someChecked}
+            onClick={handleStagedSave}
+            disabled={!hasStagedChanges}
             className="rounded-md bg-green-700 px-3 py-1 text-xs font-medium text-white hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-40"
           >
             저장
@@ -252,7 +247,7 @@ export default function VendorsPage() {
                   <TableCell className="font-mono text-xs text-gray-500">{vendor.loginId}</TableCell>
                   <TableCell>
                     <select
-                      value={vendor.status}
+                      value={staged[vendor.id] ?? vendor.status}
                       onChange={(e) => handleStatusChange(vendor, e.target.value as VendorStatus)}
                       className="rounded border border-gray-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-700"
                     >
