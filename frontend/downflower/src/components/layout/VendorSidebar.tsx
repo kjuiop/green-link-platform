@@ -2,10 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { List, Calculator, User, LogOut } from 'lucide-react'
+import { LayoutDashboard, List, Calculator, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
+  { label: '대시보드', href: '/vendor/dashboard', icon: LayoutDashboard },
   { label: '수주 리스트', href: '/vendor/orders', icon: List },
   { label: '정산내역', href: '/vendor/settlement', icon: Calculator },
   { label: '내 계정 정보', href: '/vendor/account', icon: User },
@@ -44,13 +45,6 @@ export function VendorSidebar() {
         })}
       </nav>
 
-      <div className="border-t p-4">
-        <div className="mb-2 text-xs font-medium text-gray-700">서울꽃배달</div>
-        <button className="flex w-full items-center gap-2 text-xs text-gray-400 hover:text-gray-600">
-          <LogOut className="h-3.5 w-3.5" />
-          로그아웃
-        </button>
-      </div>
     </aside>
   )
 }
