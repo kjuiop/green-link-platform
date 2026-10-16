@@ -1,0 +1,30 @@
+# IDE
+.idea
+
+# OS
+.DS_Store
+
+# Local-only docs (절대 커밋 금지)
+docs/refs.local.md
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+build/
+out/
+target/
+*.jar
+*.class
+
+# Logs
+*.log
+logs/
+
+# Gradle
+.gradle/
+
+# docs
+docs
