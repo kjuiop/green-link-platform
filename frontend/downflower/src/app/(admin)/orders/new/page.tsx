@@ -1,14 +1,23 @@
+'use client'
+
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import { DeliveryType, EventType } from '@/types/order'
 
 export default function NewOrderPage() {
+  const [deliveryType, setDeliveryType] = useState<DeliveryType>('일반')
+  const [eventType, setEventType] = useState<EventType>('장례식')
+
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">신규 발주</h1>
 
       <div className="grid gap-4 lg:grid-cols-2">
+        {/* 기본정보 */}
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">기본정보</CardTitle>
@@ -45,15 +54,47 @@ export default function NewOrderPage() {
           </CardContent>
         </Card>
 
+        {/* 배송정보 */}
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">배송정보</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-1.5">
-              <Label>배송 희망일시 *</Label>
-              <Input type="datetime-local" />
+              <Label>배송 유형 *</Label>
+              <div className="flex gap-2">
+                {(['일반', '즉시'] as DeliveryType[]).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setDeliveryType(type)}
+                    className={cn(
+                      'rounded-md border px-4 py-1.5 text-sm transition-colors',
+                      deliveryType === type
+                        ? 'border-green-700 bg-green-700 text-white'
+                        : 'border-gray-300 text-gray-600 hover:border-gray-400',
+                    )}
+                  >
+                    {type === '즉시' ? '즉시배송 (3시간 이내)' : '일반배송'}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            <div className="space-y-1.5">
+              <Label>
+                {deliveryType === '즉시' ? '배송 마감 시간 *' : '배송 희망일시 *'}
+              </Label>
+              {deliveryType === '즉시' ? (
+                <div className="flex items-center gap-2">
+                  <Input type="time" className="w-36" />
+                  <span className="text-sm text-gray-500">까지</span>
+                </div>
+              ) : (
+                <Input type="datetime-local" />
+              )}
+            </div>
+
             <div className="space-y-1.5">
               <Label>주소 *</Label>
               <Input placeholder="도로명 주소 검색" />
@@ -62,23 +103,102 @@ export default function NewOrderPage() {
               <Label>상세주소</Label>
               <Input placeholder="상세주소" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>장소명 (장례식장·예식장)</Label>
-                <Input placeholder="예: 한독병원장례식장" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>빈소·호실</Label>
-                <Input placeholder="예: 무궁화실" />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>행사정보 (고인명·상주명 등)</Label>
-              <Input placeholder="예: 고인 김순영" />
-            </div>
           </CardContent>
         </Card>
 
+        {/* 행사정보 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">행사정보</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>행사 유형 *</Label>
+              <div className="flex gap-2">
+                {(['장례식', '결혼식', '기타'] as EventType[]).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setEventType(type)}
+                    className={cn(
+                      'rounded-md border px-4 py-1.5 text-sm transition-colors',
+                      eventType === type
+                        ? 'border-green-700 bg-green-700 text-white'
+                        : 'border-gray-300 text-gray-600 hover:border-gray-400',
+                    )}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {eventType === '장례식' && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>장례식장명</Label>
+                    <Input placeholder="예: 한독병원장례식장" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>빈소</Label>
+                    <Input placeholder="예: 무궁화실" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>고인명</Label>
+                    <Input placeholder="예: 고인 김순영" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>발인일시</Label>
+                    <Input type="datetime-local" />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {eventType === '결혼식' && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>예식장명</Label>
+                    <Input placeholder="예: 더파티움 강남" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>홀</Label>
+                    <Input placeholder="예: 그랜드볼룸 A홀" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>신랑/신부명</Label>
+                    <Input placeholder="예: 김철수 ♥ 이영희" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>예식일시</Label>
+                    <Input type="datetime-local" />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {eventType === '기타' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>행사명</Label>
+                  <Input placeholder="예: 주식회사 효진토건 창립기념식" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>장소</Label>
+                  <Input placeholder="예: 강남파이낸스센터 1층" />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 리본 문구 */}
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">리본 문구</CardTitle>
@@ -95,6 +215,7 @@ export default function NewOrderPage() {
           </CardContent>
         </Card>
 
+        {/* 주문자 / 받는 분 */}
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">주문자 / 받는 분</CardTitle>
@@ -134,6 +255,7 @@ export default function NewOrderPage() {
           </CardContent>
         </Card>
 
+        {/* 기타 */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-sm">기타</CardTitle>
