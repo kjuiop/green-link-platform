@@ -81,8 +81,12 @@ export default function NewOrderPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>배송마감시간 *</Label>
+              <Label>배송 희망일시 *</Label>
               <Input type="datetime-local" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>배송마감시간</Label>
+              <Input placeholder="예: 14:00" />
             </div>
 
             <div className="space-y-1.5">

@@ -130,6 +130,7 @@ export default function OrdersPage() {
             <TableRow>
               <TableHead>주문번호</TableHead>
               <TableHead>발주일시</TableHead>
+              <TableHead>배송예정</TableHead>
               <TableHead>배송마감시간</TableHead>
               <TableHead>수주업체</TableHead>
               <TableHead>상품명</TableHead>
@@ -156,6 +157,7 @@ export default function OrdersPage() {
                   </TableCell>
                   <TableCell className="text-sm">{order.orderedAt}</TableCell>
                   <TableCell className="text-sm">{order.deliveryAt}</TableCell>
+                  <TableCell className="text-sm">{order.deliveryDeadline ?? '-'}</TableCell>
                   <TableCell className="text-sm">{order.vendorName}</TableCell>
                   <TableCell className="text-sm">{order.productName}</TableCell>
                   <TableCell className="text-sm">{order.placeName} {order.roomName}</TableCell>
