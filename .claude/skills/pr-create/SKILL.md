@@ -9,8 +9,8 @@ description: 현재 브랜치의 커밋을 분석해 PR을 생성합니다
 
 1. 아래 명령어를 병렬로 실행해 현재 상태를 파악하세요:
    - `git status`
-   - `git log develop..HEAD --oneline`
-   - `git diff develop...HEAD --stat`
+   - `git log origin/develop..HEAD --oneline`
+   - `git diff origin/develop...HEAD --stat`
 
 2. 커밋 내역과 변경 파일을 분석해 PR 제목과 본문을 작성하세요.
    - 제목: 커밋 메시지를 그대로 쓰지 말고, 변경 내용을 파악해 **직접 의미 있는 제목**을 작성합니다 (70자 이내)
