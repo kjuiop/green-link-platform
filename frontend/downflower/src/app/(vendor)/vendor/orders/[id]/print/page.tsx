@@ -106,7 +106,7 @@ export default function PrintOrderPage({ params }: Props) {
             )}
             <tr>
               <td>요청사항</td>
-              <td colSpan={2} className="left" style={{ minHeight: 40, fontWeight: 'normal' }}>
+              <td colSpan={2} className="left" style={{ height: 40, fontWeight: 'normal' }}>
                 {order.vendorMemo || ''}
               </td>
             </tr>
@@ -163,7 +163,7 @@ export default function PrintOrderPage({ params }: Props) {
             </tr>
             <tr>
               <td>요청사항</td>
-              <td colSpan={2} className="left" style={{ minHeight: 40, fontWeight: 'normal' }}>
+              <td colSpan={2} className="left" style={{ height: 40, fontWeight: 'normal' }}>
                 {order.vendorMemo || ''}
               </td>
             </tr>
