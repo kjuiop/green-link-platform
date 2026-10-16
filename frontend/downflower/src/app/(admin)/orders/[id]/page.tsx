@@ -118,6 +118,68 @@ export default async function OrderDetailPage({ params }: Props) {
           </Card>
         )}
 
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm">문자 발송 내역</CardTitle>
+              {order.messageStatus === '발송실패' && (
+                <Button size="sm" className="bg-red-600 hover:bg-red-700 text-xs h-7 px-3">
+                  재발송
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="w-24 flex-shrink-0 text-gray-500">발송 상태</span>
+              <MessageStatusBadge status={order.messageStatus} />
+            </div>
+
+            {order.messageStatus === '미발송' ? (
+              <p className="text-xs text-gray-400">배송완료 처리 시 자동으로 발송됩니다.</p>
+            ) : (
+              <>
+                <div className="space-y-1">
+                  <Row label="발송 일시" value={order.completedAt ?? '-'} />
+                </div>
+
+                <div className="space-y-1.5">
+                  <span className="text-gray-500">발송 대상</span>
+                  <div className="flex flex-col gap-1 pl-0">
+                    {order.sendPhotoToOrderer && (
+                      <div className="flex items-center gap-2">
+                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">주문자</span>
+                        <span>{order.ordererName} · {order.ordererPhone}</span>
+                        {order.messageStatus === '발송성공'
+                          ? <span className="text-xs text-green-600">✓ 성공</span>
+                          : <span className="text-xs text-red-500">✕ 실패</span>
+                        }
+                      </div>
+                    )}
+                    {order.sendPhotoToRecipient && order.recipientName && (
+                      <div className="flex items-center gap-2">
+                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">받는 분</span>
+                        <span>{order.recipientName} · {order.recipientPhone ?? '-'}</span>
+                        {order.messageStatus === '발송성공'
+                          ? <span className="text-xs text-green-600">✓ 성공</span>
+                          : <span className="text-xs text-red-500">✕ 실패</span>
+                        }
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <span className="text-gray-500">발송 내용</span>
+                  <div className="rounded-lg border bg-gray-50 p-3 text-xs leading-relaxed text-gray-700 whitespace-pre-line">
+                    {`[다운플라워] 안녕하세요, ${order.ordererName}님.\n주문하신 '${order.productName}'이(가) 배송 완료되었습니다.\n배송 사진을 확인해주세요.\n\n감사합니다. — 다운플라워`}
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
         {(order.adminMemo || order.vendorMemo) && (
           <Card className="lg:col-span-2">
             <CardHeader>

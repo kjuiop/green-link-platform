@@ -7,37 +7,31 @@ import {
   LayoutDashboard,
   Plus,
   List,
-  Truck,
-  Camera,
+  ListChecks,
   MessageSquare,
-  Calculator,
   Users,
   Settings,
   ChevronDown,
-  User,
-  MessageCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { label: '대시보드', href: '/dashboard', icon: LayoutDashboard },
   { label: '신규 발주', href: '/orders/new', icon: Plus },
-  { label: '발주 리스트', href: '/orders', icon: List },
-  { label: '배송현황', href: '/delivery', icon: Truck },
-  { label: '사진 관리', href: '/photos', icon: Camera },
-  { label: '문자 발송내역', href: '/messages', icon: MessageSquare },
-  { label: '정산내역', href: '/settlement', icon: Calculator },
-  { label: '업체 계정관리', href: '/vendors', icon: Users },
+  { label: '발주 목록', href: '/orders', icon: List },
+  { label: '수주 목록', href: '/orders/received', icon: ListChecks },
 ]
 
 const settingsItems = [
-  { label: '내 계정', href: '/settings/account', icon: User },
-  { label: '문자발송 설정', href: '/settings/messages', icon: MessageCircle },
+  { label: '문자 발송내역', href: '/messages', icon: MessageSquare },
+  { label: '업체 계정관리', href: '/vendors', icon: Users },
 ]
 
 export function AdminSidebar() {
   const pathname = usePathname()
-  const isSettingsActive = pathname.startsWith('/settings')
+  const isSettingsActive =
+    pathname.startsWith('/messages') ||
+    pathname.startsWith('/vendors')
   const [settingsOpen, setSettingsOpen] = useState(isSettingsActive)
 
   return (
@@ -53,6 +47,8 @@ export function AdminSidebar() {
           const isActive =
             item.href === '/orders'
               ? pathname === '/orders'
+              : item.href === '/orders/new'
+              ? pathname === '/orders/new'
               : pathname.startsWith(item.href)
 
           return (
@@ -115,7 +111,6 @@ export function AdminSidebar() {
           </div>
         )}
       </nav>
-
     </aside>
   )
 }
