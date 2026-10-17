@@ -156,7 +156,7 @@ export default function VendorsPage() {
       </div>
 
       <div className="rounded-lg border bg-white p-4">
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-3">
           {STATUS_FILTERS.map(({ label, value }) => (
             <label key={value} className="flex cursor-pointer items-center gap-1.5">
               <input
@@ -187,7 +187,8 @@ export default function VendorsPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border bg-white">
+      {/* 데스크톱 테이블 */}
+      <div className="hidden rounded-lg border bg-white md:block">
         <div className="flex items-center justify-end border-b px-4 py-2">
           <button
             onClick={handleStagedSave}
@@ -258,6 +259,51 @@ export default function VendorsPage() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* 모바일 카드 */}
+      <div className="space-y-3 md:hidden">
+        {Object.keys(staged).length > 0 && (
+          <div className="flex justify-end">
+            <button
+              onClick={handleStagedSave}
+              className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
+            >
+              변경 저장
+            </button>
+          </div>
+        )}
+        {filtered.length === 0 ? (
+          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
+            검색 결과가 없습니다.
+          </div>
+        ) : (
+          filtered.map((vendor) => (
+            <div key={vendor.id} className="rounded-lg border bg-white p-4">
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  onClick={() => openEdit(vendor)}
+                  className="truncate font-medium text-blue-700"
+                >
+                  {vendor.name}
+                </button>
+                <select
+                  value={staged[vendor.id] ?? vendor.status}
+                  onChange={(e) => handleStatusChange(vendor, e.target.value as VendorStatus)}
+                  className="shrink-0 rounded border border-gray-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-700"
+                >
+                  <option value="active">활성</option>
+                  <option value="suspended">정지</option>
+                </select>
+              </div>
+              <div className="mt-1.5 space-y-0.5 text-xs text-gray-500">
+                <div>{vendor.managerName} · {vendor.phone}</div>
+                {vendor.address && <div className="truncate">{vendor.address}</div>}
+                <div className="font-mono text-gray-400">{vendor.loginId}</div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>

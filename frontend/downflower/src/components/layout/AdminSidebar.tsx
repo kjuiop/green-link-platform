@@ -14,6 +14,7 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 
 const navItems = [
   { label: '대시보드', href: '/dashboard', icon: LayoutDashboard },
@@ -27,15 +28,14 @@ const settingsItems = [
   { label: '업체 계정관리', href: '/vendors', icon: Users },
 ]
 
-export function AdminSidebar() {
+function SidebarNav({ onNavClick }: { onNavClick?: () => void }) {
   const pathname = usePathname()
   const isSettingsActive =
-    pathname.startsWith('/messages') ||
-    pathname.startsWith('/vendors')
+    pathname.startsWith('/messages') || pathname.startsWith('/vendors')
   const [settingsOpen, setSettingsOpen] = useState(isSettingsActive)
 
   return (
-    <aside className="flex h-screen w-56 flex-col border-r bg-white">
+    <>
       <div className="flex h-14 items-center border-b px-4">
         <span className="text-sm font-bold text-green-700">🌿 다운플라워</span>
         <span className="ml-2 text-xs text-gray-400">관리자</span>
@@ -55,6 +55,7 @@ export function AdminSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavClick}
               className={cn(
                 'flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
                 isActive
@@ -96,6 +97,7 @@ export function AdminSidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={onNavClick}
                   className={cn(
                     'flex items-center gap-3 py-2 pl-11 pr-4 text-sm transition-colors',
                     isActive
@@ -111,6 +113,29 @@ export function AdminSidebar() {
           </div>
         )}
       </nav>
-    </aside>
+    </>
+  )
+}
+
+interface AdminSidebarProps {
+  mobileOpen?: boolean
+  onMobileClose?: () => void
+}
+
+export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
+  return (
+    <>
+      {/* 데스크톱 사이드바 */}
+      <aside className="hidden h-screen w-56 flex-col border-r bg-white md:flex">
+        <SidebarNav />
+      </aside>
+
+      {/* 모바일 드로어 */}
+      <Sheet open={mobileOpen} onOpenChange={(open) => { if (!open) onMobileClose?.() }}>
+        <SheetContent side="left" className="w-56 p-0" showCloseButton={false}>
+          <SidebarNav onNavClick={onMobileClose} />
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }

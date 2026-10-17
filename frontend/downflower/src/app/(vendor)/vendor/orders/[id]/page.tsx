@@ -20,12 +20,14 @@ export default async function VendorOrderDetailPage({ params }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
           <h1 className="text-xl font-bold">{order.orderNumber}</h1>
-          <OrderStatusBadge status={order.status} />
+          <div className="mt-1">
+            <OrderStatusBadge status={order.status} />
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <PrintButton orderId={order.id} />
           {order.status === '발주대기' && (
             <>
