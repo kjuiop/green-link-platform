@@ -59,7 +59,7 @@ export default function ReceivedOrdersPage() {
 
       {/* 검색 영역 */}
       <div className="rounded-lg border bg-white p-4">
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-3">
           {STATUS_FILTERS.map(({ label, value }) => (
             <label key={value} className="flex cursor-pointer items-center gap-1.5">
               <input
@@ -74,23 +74,25 @@ export default function ReceivedOrdersPage() {
           ))}
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          <div className="flex items-center gap-1.5">
-            <label className="text-sm text-gray-500 whitespace-nowrap">배송마감</label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-            />
-            <span className="text-sm text-gray-400">~</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-            />
+          <div className="flex flex-wrap items-center gap-1.5">
+            <label className="whitespace-nowrap text-sm text-gray-500">배송마감</label>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+              />
+              <span className="text-sm text-gray-400">~</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+              />
+            </div>
           </div>
-          <div className="relative flex-1 min-w-48">
+          <div className="relative min-w-48 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
@@ -116,7 +118,8 @@ export default function ReceivedOrdersPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border bg-white">
+      {/* 데스크톱 테이블 */}
+      <div className="hidden rounded-lg border bg-white md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -161,6 +164,43 @@ export default function ReceivedOrdersPage() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* 모바일 카드 */}
+      <div className="space-y-3 md:hidden">
+        {filtered.length === 0 ? (
+          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
+            검색 결과가 없습니다.
+          </div>
+        ) : (
+          filtered.map((order) => (
+            <Link
+              key={order.id}
+              href={`/orders/${order.id}`}
+              className="block rounded-lg border bg-white p-4 hover:bg-gray-50"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-mono text-xs text-blue-600">{order.orderNumber}</div>
+                  <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
+                  <div className="mt-0.5 text-xs text-gray-500">{order.vendorName}</div>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <OrderStatusBadge status={order.status} />
+                  <DeliveryTypeBadge deliveryType={order.deliveryType} />
+                </div>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
+                <span>{order.deliveryAt}</span>
+                {order.deliveryDeadline && <span>마감 {order.deliveryDeadline}</span>}
+                <span>{order.placeName} {order.roomName}</span>
+              </div>
+              <div className="mt-1.5">
+                <MessageStatusBadge status={order.messageStatus} />
+              </div>
+            </Link>
+          ))
+        )}
       </div>
     </div>
   )

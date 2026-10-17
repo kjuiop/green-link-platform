@@ -47,7 +47,7 @@ export default function MessagesPage() {
       <h1 className="text-xl font-bold">문자 발송내역</h1>
 
       <div className="rounded-lg border bg-white p-4">
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-3">
           {STATUS_FILTERS.map(({ label, value }) => (
             <label key={value} className="flex cursor-pointer items-center gap-1.5">
               <input
@@ -88,7 +88,8 @@ export default function MessagesPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border bg-white">
+      {/* 데스크톱 테이블 */}
+      <div className="hidden rounded-lg border bg-white md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -134,6 +135,41 @@ export default function MessagesPage() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* 모바일 카드 */}
+      <div className="space-y-3 md:hidden">
+        {filtered.length === 0 ? (
+          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
+            검색 결과가 없습니다.
+          </div>
+        ) : (
+          filtered.map((order) => (
+            <Link
+              key={order.id}
+              href={`/orders/${order.id}`}
+              className="block rounded-lg border bg-white p-4 hover:bg-gray-50"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-mono text-xs text-blue-600">{order.orderNumber}</div>
+                  <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
+                  <div className="mt-0.5 text-xs text-gray-500">{order.vendorName} · {order.ordererName}</div>
+                </div>
+                <MessageStatusBadge status={order.messageStatus} />
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
+                <span>완료 {order.completedAt ?? '-'}</span>
+                <span>
+                  발송대상: {[
+                    order.sendPhotoToOrderer ? '주문자' : '',
+                    order.sendPhotoToRecipient ? '받는 분' : '',
+                  ].filter(Boolean).join(', ') || '-'}
+                </span>
+              </div>
+            </Link>
+          ))
+        )}
       </div>
     </div>
   )
