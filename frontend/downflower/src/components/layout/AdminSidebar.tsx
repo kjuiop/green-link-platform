@@ -28,11 +28,16 @@ const settingsItems = [
   { label: '업체 계정관리', href: '/vendors', icon: Users },
 ]
 
-function SidebarNav({ onNavClick }: { onNavClick?: () => void }) {
+interface SidebarNavProps {
+  onNavClick?: () => void
+  settingsOpen: boolean
+  onSettingsToggle: () => void
+}
+
+function SidebarNav({ onNavClick, settingsOpen, onSettingsToggle }: SidebarNavProps) {
   const pathname = usePathname()
   const isSettingsActive =
     pathname.startsWith('/messages') || pathname.startsWith('/vendors')
-  const [settingsOpen, setSettingsOpen] = useState(isSettingsActive)
 
   return (
     <>
@@ -70,7 +75,7 @@ function SidebarNav({ onNavClick }: { onNavClick?: () => void }) {
         })}
 
         <button
-          onClick={() => setSettingsOpen(!settingsOpen)}
+          onClick={onSettingsToggle}
           className={cn(
             'flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors',
             isSettingsActive
@@ -123,17 +128,31 @@ interface AdminSidebarProps {
 }
 
 export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
+  const pathname = usePathname()
+  const isSettingsActive =
+    pathname.startsWith('/messages') || pathname.startsWith('/vendors')
+  const [settingsOpen, setSettingsOpen] = useState(isSettingsActive)
+
+  const toggleSettings = () => setSettingsOpen((v) => !v)
+
   return (
     <>
       {/* 데스크톱 사이드바 */}
       <aside className="hidden h-screen w-56 flex-col border-r bg-white md:flex">
-        <SidebarNav />
+        <SidebarNav
+          settingsOpen={settingsOpen}
+          onSettingsToggle={toggleSettings}
+        />
       </aside>
 
       {/* 모바일 드로어 */}
       <Sheet open={mobileOpen} onOpenChange={(open) => { if (!open) onMobileClose?.() }}>
         <SheetContent side="left" className="w-56 p-0" showCloseButton={false}>
-          <SidebarNav onNavClick={onMobileClose} />
+          <SidebarNav
+            onNavClick={onMobileClose}
+            settingsOpen={settingsOpen}
+            onSettingsToggle={toggleSettings}
+          />
         </SheetContent>
       </Sheet>
     </>

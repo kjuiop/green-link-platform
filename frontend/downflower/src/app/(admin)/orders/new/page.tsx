@@ -41,7 +41,7 @@ export default function NewOrderPage() {
               <select
                 value={vendorId}
                 onChange={(e) => setVendorId(e.target.value)}
-                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                className="w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
               >
                 <option value="">업체 선택</option>
                 {activeVendors.map((v) => (
