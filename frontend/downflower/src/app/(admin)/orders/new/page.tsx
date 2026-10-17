@@ -7,9 +7,13 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { DeliveryType } from '@/types/order'
+import { mockVendors } from '@/lib/mock/vendors'
+
+const activeVendors = mockVendors.filter((v) => v.status === 'active')
 
 export default function NewOrderPage() {
   const [deliveryType, setDeliveryType] = useState<DeliveryType>('일반')
+  const [vendorId, setVendorId] = useState('')
 
   return (
     <div className="space-y-4">
@@ -34,7 +38,16 @@ export default function NewOrderPage() {
             </div>
             <div className="space-y-1.5">
               <Label>수주업체 *</Label>
-              <Input placeholder="업체 선택" />
+              <select
+                value={vendorId}
+                onChange={(e) => setVendorId(e.target.value)}
+                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+              >
+                <option value="">업체 선택</option>
+                {activeVendors.map((v) => (
+                  <option key={v.id} value={v.id}>{v.name}</option>
+                ))}
+              </select>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
