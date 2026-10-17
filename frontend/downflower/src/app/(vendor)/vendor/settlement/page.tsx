@@ -11,7 +11,7 @@ export default function VendorSettlementPage() {
     <div className="space-y-4">
       <h1 className="text-xl font-bold">정산내역</h1>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">완료 주문</CardTitle>
@@ -30,7 +30,7 @@ export default function VendorSettlementPage() {
         </Card>
       </div>
 
-      <div className="rounded-lg border bg-white">
+      <div className="overflow-x-auto rounded-lg border bg-white">
         <Table>
           <TableHeader>
             <TableRow>

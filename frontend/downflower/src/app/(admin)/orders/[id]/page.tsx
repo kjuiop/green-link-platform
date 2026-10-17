@@ -20,14 +20,16 @@ export default async function OrderDetailPage({ params }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
           <h1 className="text-xl font-bold">{order.orderNumber}</h1>
-          <OrderStatusBadge status={order.status} />
-          <DeliveryTypeBadge deliveryType={order.deliveryType} />
-          <MessageStatusBadge status={order.messageStatus} />
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <OrderStatusBadge status={order.status} />
+            <DeliveryTypeBadge deliveryType={order.deliveryType} />
+            <MessageStatusBadge status={order.messageStatus} />
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <PrintButton orderId={order.id} />
           {order.status === '수주완료' && (
             <Button className="bg-blue-700 hover:bg-blue-800">배송완료 처리</Button>

@@ -7,9 +7,13 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { DeliveryType } from '@/types/order'
+import { mockVendors } from '@/lib/mock/vendors'
+
+const activeVendors = mockVendors.filter((v) => v.status === 'active')
 
 export default function NewOrderPage() {
   const [deliveryType, setDeliveryType] = useState<DeliveryType>('일반')
+  const [vendorId, setVendorId] = useState('')
 
   return (
     <div className="space-y-4">
@@ -22,7 +26,7 @@ export default function NewOrderPage() {
             <CardTitle className="text-sm">기본정보</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>주문번호</Label>
                 <Input value="DF-20261016-004" disabled className="bg-gray-50" />
@@ -34,9 +38,18 @@ export default function NewOrderPage() {
             </div>
             <div className="space-y-1.5">
               <Label>수주업체 *</Label>
-              <Input placeholder="업체 선택" />
+              <select
+                value={vendorId}
+                onChange={(e) => setVendorId(e.target.value)}
+                className="w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+              >
+                <option value="">업체 선택</option>
+                {activeVendors.map((v) => (
+                  <option key={v.id} value={v.id}>{v.name}</option>
+                ))}
+              </select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>상품명 *</Label>
                 <Input placeholder="예: 근조화환 3단" />
@@ -61,7 +74,7 @@ export default function NewOrderPage() {
           <CardContent className="space-y-3">
             <div className="space-y-1.5">
               <Label>배송 유형 *</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {(['일반', '즉시'] as DeliveryType[]).map((type) => (
                   <button
                     key={type}
@@ -100,7 +113,7 @@ export default function NewOrderPage() {
           </CardContent>
         </Card>
 
-        {/* 행사정보 + 리본문구 (왼쪽 스택) / 주문자 받는분 (오른쪽) */}
+        {/* 행사정보 + 리본문구 (왼쪽 스택) */}
         <div className="space-y-4">
           <Card>
             <CardHeader>
@@ -110,7 +123,7 @@ export default function NewOrderPage() {
               {/* 장례식 */}
               <div className="space-y-3">
                 <p className="text-xs font-semibold text-gray-400">장례식</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>장례식장명</Label>
                     <Input placeholder="예: 한독병원장례식장" />
@@ -120,7 +133,7 @@ export default function NewOrderPage() {
                     <Input placeholder="예: 무궁화실" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>고인명</Label>
                     <Input placeholder="예: 고인 김순영" />
@@ -137,7 +150,7 @@ export default function NewOrderPage() {
               {/* 결혼식 */}
               <div className="space-y-3">
                 <p className="text-xs font-semibold text-gray-400">결혼식</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>예식장명</Label>
                     <Input placeholder="예: 더파티움 강남" />
@@ -147,7 +160,7 @@ export default function NewOrderPage() {
                     <Input placeholder="예: 그랜드볼룸 A홀" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>신랑/신부명</Label>
                     <Input placeholder="예: 김철수 ♥ 이영희" />
@@ -164,7 +177,7 @@ export default function NewOrderPage() {
               {/* 기타 */}
               <div className="space-y-3">
                 <p className="text-xs font-semibold text-gray-400">기타</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>행사명</Label>
                     <Input placeholder="예: 주식회사 효진토건 창립기념식" />
@@ -177,7 +190,6 @@ export default function NewOrderPage() {
               </div>
             </CardContent>
           </Card>
-
         </div>
 
         {/* 주문자 / 받는 분 + 리본 문구 + 기타 (오른쪽 스택) */}
@@ -187,7 +199,7 @@ export default function NewOrderPage() {
               <CardTitle className="text-sm">주문자 / 받는 분</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>주문자 성함 *</Label>
                   <Input placeholder="주문자 성함" />
@@ -197,7 +209,7 @@ export default function NewOrderPage() {
                   <Input placeholder="010-0000-0000" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>받는 분 성함</Label>
                   <Input placeholder="받는 분 성함" />
@@ -209,7 +221,7 @@ export default function NewOrderPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>사진 발송 대상</Label>
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-4">
                   <label className="flex items-center gap-1.5 text-sm">
                     <input type="checkbox" defaultChecked /> 주문자에게 발송
                   </label>

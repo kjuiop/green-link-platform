@@ -4,17 +4,18 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, List } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 
 const navItems = [
   { label: '대시보드', href: '/vendor/dashboard', icon: LayoutDashboard },
   { label: '수주 목록', href: '/vendor/orders', icon: List },
 ]
 
-export function VendorSidebar() {
+function SidebarNav({ onNavClick }: { onNavClick?: () => void }) {
   const pathname = usePathname()
 
   return (
-    <aside className="flex h-screen w-56 flex-col border-r bg-white">
+    <>
       <div className="flex h-14 items-center border-b px-4">
         <span className="text-sm font-bold text-green-700">🌿 다운플라워</span>
         <span className="ml-2 text-xs text-gray-400">수주업체</span>
@@ -29,6 +30,7 @@ export function VendorSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavClick}
               className={cn(
                 'flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
                 isActive
@@ -42,7 +44,29 @@ export function VendorSidebar() {
           )
         })}
       </nav>
+    </>
+  )
+}
 
-    </aside>
+interface VendorSidebarProps {
+  mobileOpen?: boolean
+  onMobileClose?: () => void
+}
+
+export function VendorSidebar({ mobileOpen, onMobileClose }: VendorSidebarProps) {
+  return (
+    <>
+      {/* 데스크톱 사이드바 */}
+      <aside className="hidden h-screen w-56 flex-col border-r bg-white md:flex">
+        <SidebarNav />
+      </aside>
+
+      {/* 모바일 드로어 */}
+      <Sheet open={mobileOpen} onOpenChange={(open) => { if (!open) onMobileClose?.() }}>
+        <SheetContent side="left" className="w-56 p-0" showCloseButton={false}>
+          <SidebarNav onNavClick={onMobileClose} />
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }

@@ -39,7 +39,7 @@ export default function SettlementPage() {
         </Card>
       </div>
 
-      <div className="rounded-lg border bg-white">
+      <div className="overflow-x-auto rounded-lg border bg-white">
         <Table>
           <TableHeader>
             <TableRow>
