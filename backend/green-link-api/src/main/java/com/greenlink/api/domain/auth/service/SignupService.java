@@ -69,7 +69,11 @@ public class SignupService {
 
     private Role parseRole(String role) {
         try {
-            return Role.valueOf(role);
+            Role r = Role.valueOf(role);
+            if (r == Role.SUPER_ADMIN) {
+                throw new BusinessException(AuthErrorCode.INVALID_ROLE);
+            }
+            return r;
         } catch (IllegalArgumentException e) {
             throw new BusinessException(AuthErrorCode.INVALID_ROLE);
         }
@@ -80,6 +84,7 @@ public class SignupService {
         boolean hasVendor = roles.contains(Role.VENDOR);
         if (hasOrdering && hasVendor) return CompanyType.BOTH;
         if (hasOrdering) return CompanyType.ORDERING;
-        return CompanyType.VENDOR;
+        if (hasVendor) return CompanyType.VENDOR;
+        throw new BusinessException(AuthErrorCode.INVALID_ROLE);
     }
 }

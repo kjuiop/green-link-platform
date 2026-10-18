@@ -1,7 +1,7 @@
 package com.greenlink.api.domain.company.controller;
 
 import com.greenlink.api.domain.company.dto.CompanySearchResponse;
-import com.greenlink.api.domain.company.repository.CompanyRepository;
+import com.greenlink.api.domain.company.service.CompanyService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,16 +9,15 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/companies")
 public class CompanyController {
 
-    private final CompanyRepository companyRepository;
+    private final CompanyService companyService;
 
-    public CompanyController(CompanyRepository companyRepository) {
-        this.companyRepository = companyRepository;
+    public CompanyController(CompanyService companyService) {
+        this.companyService = companyService;
     }
 
     @GetMapping("/search")
     public ResponseEntity<CompanySearchResponse> search(@RequestParam String businessNo) {
-        return companyRepository.findByBusinessNo(businessNo)
-            .map(CompanySearchResponse::from)
+        return companyService.findByBusinessNo(businessNo)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }

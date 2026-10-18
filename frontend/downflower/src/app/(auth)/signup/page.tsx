@@ -254,6 +254,32 @@ export default function SignupPage() {
     return ['VENDOR']
   }
 
+  const handleSubmit = async () => {
+    const res = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        loginId,
+        password,
+        name,
+        phone,
+        businessNo,
+        companyName,
+        ceoName,
+        companyPhone,
+        address,
+        roles: resolveRoles(),
+      }),
+    })
+    if (res.ok) {
+      alert('가입 신청이 완료되었습니다. 관리자 승인 후 로그인하실 수 있습니다.')
+      window.location.href = '/login'
+    } else {
+      const body = await res.json().catch(() => null)
+      alert(body?.message ?? '가입 신청 중 오류가 발생했습니다.')
+    }
+  }
+
   const termsContent = selectedRole === 'ORDERING'
     ? TERMS_ORDERING
     : TERMS_VENDOR
@@ -604,7 +630,7 @@ export default function SignupPage() {
               <Button variant="outline" className="flex-1" onClick={() => setStep('terms')}>
                 이전
               </Button>
-              <Button className="flex-1 bg-green-700 hover:bg-green-800">
+              <Button className="flex-1 bg-green-700 hover:bg-green-800" onClick={handleSubmit}>
                 가입 신청
               </Button>
             </div>
