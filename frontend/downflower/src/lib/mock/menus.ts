@@ -30,13 +30,6 @@ export const mockMenus: MenuItem[] = [
     roles: ['SUPER_ADMIN', 'ORDERING', 'VENDOR'],
   },
   {
-    id: 5,
-    name: '정산관리',
-    url: '/settlement',
-    sortOrder: 5,
-    roles: ['SUPER_ADMIN', 'ORDERING', 'VENDOR'],
-  },
-  {
     id: 6,
     name: '설정',
     url: '/settings',
