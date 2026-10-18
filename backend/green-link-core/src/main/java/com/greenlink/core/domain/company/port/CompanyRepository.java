@@ -1,0 +1,10 @@
+package com.greenlink.core.domain.company.port;
+
+import com.greenlink.core.domain.company.model.Company;
+
+import java.util.Optional;
+
+public interface CompanyRepository {
+    Optional<Company> findByBusinessNo(String businessNo);
+    Company save(Company company);
+}
