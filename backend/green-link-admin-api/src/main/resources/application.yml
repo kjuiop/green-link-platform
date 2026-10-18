@@ -17,5 +17,10 @@ jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:86400000}
 
+admin:
+  init:
+    login-id: ${ADMIN_INIT_LOGIN_ID:admin}
+    password: ${ADMIN_INIT_PASSWORD}
+
 server:
   port: 8080
