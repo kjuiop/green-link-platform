@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { mockMenus } from '@/lib/mock/menus'
+import { useState, useEffect } from 'react'
 import { type MenuItem, type UserRole, ALL_ROLES, ROLE_LABELS } from '@/types/menu'
+import { fetchAllMenus, createMenu, updateMenu, deleteMenu } from '@/lib/api/menuApi'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -27,13 +27,20 @@ const EMPTY_FORM: FormState = {
 }
 
 export default function MenuManagePage() {
-  const nextIdRef = useRef(100)
-  const [menus, setMenus] = useState<MenuItem[]>(mockMenus)
+  const [menus, setMenus] = useState<MenuItem[]>([])
+  const [loading, setLoading] = useState(true)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [inactiveSelected, setInactiveSelected] = useState<UserRole | null>(null)
   const [activeSelected, setActiveSelected] = useState<UserRole | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetchAllMenus()
+      .then(setMenus)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
 
   function selectMenu(menu: MenuItem, parent?: MenuItem) {
     setError('')
@@ -58,7 +65,7 @@ export default function MenuManagePage() {
     setForm({ ...EMPTY_FORM, parentId: form.id, parentUrl: fullParentUrl })
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!form.name.trim()) { setError('이름을 입력하세요.'); return }
     if (!form.url.trim()) { setError('URL을 입력하세요.'); return }
     setSaving(true)
@@ -68,54 +75,46 @@ export default function MenuManagePage() {
       ? form.parentUrl.replace(/\/$/, '') + '/' + form.url.replace(/^\//, '')
       : form.url
 
-    setTimeout(() => {
-      setMenus((prev) => {
-        if (form.id) {
-          // 수정
-          return prev.map((m) => {
-            if (m.id === form.id) return { ...m, name: form.name, url: fullUrl, sortOrder: form.sortOrder, roles: form.roles }
-            if (m.children) {
-              return {
-                ...m,
-                children: m.children.map((c) =>
-                  c.id === form.id ? { ...c, name: form.name, url: fullUrl, sortOrder: form.sortOrder, roles: form.roles } : c
-                ),
-              }
-            }
-            return m
-          })
-        } else if (form.parentId) {
-          // 하위 메뉴 추가
-          return prev.map((m) =>
-            m.id === form.parentId
-              ? { ...m, children: [...(m.children ?? []), { id: nextIdRef.current++, name: form.name, url: fullUrl, sortOrder: form.sortOrder, roles: form.roles }] }
-              : m
-          )
-        } else {
-          // 최상위 메뉴 추가
-          return [...prev, { id: nextIdRef.current++, name: form.name, url: fullUrl, sortOrder: form.sortOrder, roles: form.roles }]
-        }
-      })
-      setSaving(false)
+    try {
+      if (form.id) {
+        await updateMenu(form.id, {
+          name: form.name,
+          url: fullUrl,
+          sortOrder: form.sortOrder,
+          roles: form.roles,
+        })
+      } else {
+        await createMenu({
+          name: form.name,
+          url: fullUrl,
+          sortOrder: form.sortOrder,
+          parentId: form.parentId,
+          roles: form.roles,
+        })
+      }
+      const updated = await fetchAllMenus()
+      setMenus(updated)
       setForm(EMPTY_FORM)
-    }, 400)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '저장에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!form.id || !confirm('정말 삭제하시겠습니까?')) return
     setSaving(true)
-    setTimeout(() => {
-      setMenus((prev) =>
-        prev
-          .filter((m) => m.id !== form.id)
-          .map((m) => ({
-            ...m,
-            children: m.children?.filter((c) => c.id !== form.id),
-          }))
-      )
-      setSaving(false)
+    try {
+      await deleteMenu(form.id)
+      const updated = await fetchAllMenus()
+      setMenus(updated)
       setForm(EMPTY_FORM)
-    }, 300)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '삭제에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   function includeRole() {
@@ -147,43 +146,47 @@ export default function MenuManagePage() {
             <h2 className="text-sm font-semibold">메뉴 트리</h2>
           </div>
           <div className="p-3">
-            <ul className="space-y-0.5">
-              {[...menus].sort((a, b) => a.sortOrder - b.sortOrder).map((menu) => (
-                <li key={menu.id}>
-                  <button
-                    onClick={() => selectMenu(menu)}
-                    className={cn(
-                      'w-full rounded px-3 py-2 text-left text-sm transition-colors',
-                      form.id === menu.id && !form.parentId
-                        ? 'bg-green-50 font-medium text-green-700'
-                        : 'text-gray-600 hover:bg-gray-50',
+            {loading ? (
+              <p className="px-3 py-4 text-center text-sm text-gray-400">불러오는 중...</p>
+            ) : (
+              <ul className="space-y-0.5">
+                {[...menus].sort((a, b) => a.sortOrder - b.sortOrder).map((menu) => (
+                  <li key={menu.id}>
+                    <button
+                      onClick={() => selectMenu(menu)}
+                      className={cn(
+                        'w-full rounded px-3 py-2 text-left text-sm transition-colors',
+                        form.id === menu.id && !form.parentId
+                          ? 'bg-green-50 font-medium text-green-700'
+                          : 'text-gray-600 hover:bg-gray-50',
+                      )}
+                    >
+                      {menu.name}
+                    </button>
+                    {(menu.children?.length ?? 0) > 0 && (
+                      <ul className="ml-4 border-l pl-2">
+                        {[...menu.children!].sort((a, b) => a.sortOrder - b.sortOrder).map((child) => (
+                          <li key={child.id}>
+                            <button
+                              onClick={() => selectMenu(child, menu)}
+                              className={cn(
+                                'flex w-full items-center gap-1 rounded px-3 py-1.5 text-left text-sm transition-colors',
+                                form.id === child.id
+                                  ? 'bg-green-50 font-medium text-green-700'
+                                  : 'text-gray-500 hover:bg-gray-50',
+                              )}
+                            >
+                              <ChevronRight className="h-3 w-3 shrink-0 text-gray-300" />
+                              {child.name}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                  >
-                    {menu.name}
-                  </button>
-                  {(menu.children?.length ?? 0) > 0 && (
-                    <ul className="ml-4 border-l pl-2">
-                      {[...menu.children!].sort((a, b) => a.sortOrder - b.sortOrder).map((child) => (
-                        <li key={child.id}>
-                          <button
-                            onClick={() => selectMenu(child, menu)}
-                            className={cn(
-                              'flex w-full items-center gap-1 rounded px-3 py-1.5 text-left text-sm transition-colors',
-                              form.id === child.id
-                                ? 'bg-green-50 font-medium text-green-700'
-                                : 'text-gray-500 hover:bg-gray-50',
-                            )}
-                          >
-                            <ChevronRight className="h-3 w-3 shrink-0 text-gray-300" />
-                            {child.name}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            )}
             <button
               onClick={() => setForm(EMPTY_FORM)}
               className="mt-3 w-full rounded-md border border-dashed px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 hover:text-gray-600"
@@ -348,7 +351,6 @@ export default function MenuManagePage() {
           </div>
         </div>
       </div>
-
     </div>
   )
 }
