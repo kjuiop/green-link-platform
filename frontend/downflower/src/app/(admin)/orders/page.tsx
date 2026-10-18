@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import * as XLSX from 'xlsx'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { OrderStatusBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
-import { mockOrders } from '@/lib/mock/orders'
+import { fetchOrders } from '@/lib/api/orderApi'
 import { OrderStatus, Order } from '@/types/order'
 import { Plus, Download } from 'lucide-react'
 
@@ -70,6 +70,15 @@ function downloadExcel(orders: Order[]) {
 }
 
 export default function OrdersPage() {
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loadError, setLoadError] = useState('')
+
+  useEffect(() => {
+    fetchOrders()
+      .then(setOrders)
+      .catch((err) => setLoadError(err instanceof Error ? err.message : '목록을 불러오지 못했습니다.'))
+  }, [])
+
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL')
   const [deletedFilter, setDeletedFilter] = useState<DeletedFilter>('정상')
   const [dateFrom, setDateFrom] = useState('')
@@ -108,7 +117,7 @@ export default function OrdersPage() {
     setApplied2Field('수주사명'); setApplied2Value('')
   }
 
-  const filtered = mockOrders.filter((o) => {
+  const filtered = orders.filter((o) => {
     const matchStatus = appliedStatus === 'ALL' || o.status === appliedStatus
     const matchDeleted =
       appliedDeletedFilter === '전체' ||
@@ -124,6 +133,9 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-4">
+      {loadError && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">{loadError}</div>
+      )}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">발주 목록</h1>
         <Link

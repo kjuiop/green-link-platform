@@ -1,0 +1,33 @@
+package com.greenlink.core.application.order.dto;
+
+public record CreateOrderCommand(
+        Long vendorId,
+        String productName,
+        int quantity,
+        long amount,
+        Long extraCost,
+        String deliveryDate,
+        String deliveryTimeType,
+        String deliveryTimeHour,
+        String deliveryTimeMinute,
+        String deliveryTimeCustom,
+        String address,
+        String addressDetail,
+        String eventType,
+        String placeName,
+        String roomName,
+        String eventInfo,
+        String ribbonLeft,
+        String ribbonRight,
+        String ordererName,
+        String ordererPhone,
+        String recipientName,
+        String recipientPhone,
+        boolean sendPhotoToOrderer,
+        boolean sendPhotoToRecipient,
+        String messageSchedule,
+        String scheduledMessageHour,
+        String scheduledMessageMinute,
+        String adminMemo,
+        String vendorMemo
+) {}
