@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
@@ -18,7 +19,7 @@ public class JwtProvider {
         @Value("${jwt.secret}") String secret,
         @Value("${jwt.expiration}") long expiration
     ) {
-        byte[] keyBytes = secret.getBytes();
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         if (keyBytes.length < 32) {
             throw new IllegalArgumentException("jwt.secret must be at least 32 bytes");
         }
