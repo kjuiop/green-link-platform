@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { mockMenus } from '@/lib/mock/menus'
 import { type MenuItem, type UserRole, ALL_ROLES, ROLE_LABELS } from '@/types/menu'
 import { ChevronRight } from 'lucide-react'
@@ -26,9 +26,8 @@ const EMPTY_FORM: FormState = {
   roles: [],
 }
 
-let nextId = 100
-
 export default function MenuManagePage() {
+  const nextIdRef = useRef(100)
   const [menus, setMenus] = useState<MenuItem[]>(mockMenus)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [inactiveSelected, setInactiveSelected] = useState<UserRole | null>(null)
@@ -89,12 +88,12 @@ export default function MenuManagePage() {
           // 하위 메뉴 추가
           return prev.map((m) =>
             m.id === form.parentId
-              ? { ...m, children: [...(m.children ?? []), { id: nextId++, name: form.name, url: fullUrl, sortOrder: form.sortOrder, roles: form.roles }] }
+              ? { ...m, children: [...(m.children ?? []), { id: nextIdRef.current++, name: form.name, url: fullUrl, sortOrder: form.sortOrder, roles: form.roles }] }
               : m
           )
         } else {
           // 최상위 메뉴 추가
-          return [...prev, { id: nextId++, name: form.name, url: fullUrl, sortOrder: form.sortOrder, roles: form.roles }]
+          return [...prev, { id: nextIdRef.current++, name: form.name, url: fullUrl, sortOrder: form.sortOrder, roles: form.roles }]
         }
       })
       setSaving(false)
@@ -149,7 +148,7 @@ export default function MenuManagePage() {
           </div>
           <div className="p-3">
             <ul className="space-y-0.5">
-              {menus.sort((a, b) => a.sortOrder - b.sortOrder).map((menu) => (
+              {[...menus].sort((a, b) => a.sortOrder - b.sortOrder).map((menu) => (
                 <li key={menu.id}>
                   <button
                     onClick={() => selectMenu(menu)}
@@ -164,7 +163,7 @@ export default function MenuManagePage() {
                   </button>
                   {(menu.children?.length ?? 0) > 0 && (
                     <ul className="ml-4 border-l pl-2">
-                      {menu.children!.sort((a, b) => a.sortOrder - b.sortOrder).map((child) => (
+                      {[...menu.children!].sort((a, b) => a.sortOrder - b.sortOrder).map((child) => (
                         <li key={child.id}>
                           <button
                             onClick={() => selectMenu(child, menu)}
