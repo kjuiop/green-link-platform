@@ -12,6 +12,9 @@ docs/refs.local.md
 .env.*
 !.env.example
 
+# Spring local profile (credentials)
+application-local.yml
+
 # Build artifacts
 build/
 out/

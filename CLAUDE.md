@@ -150,8 +150,8 @@
 ```
 green-link-platform/
 ├── backend/                  # Java 25 + Spring Boot
-│   ├── downflower-core/      # 공통 도메인, 엔티티
-│   ├── downflower-api/       # REST API (관리자 + 수주업체)
+│   ├── green-link-core/      # 공통 도메인, 엔티티
+│   ├── green-link-api/       # REST API (관리자 + 수주업체)
 │   └── build.gradle
 ├── frontend/                 # Next.js (App Router)
 │   ├── app/
