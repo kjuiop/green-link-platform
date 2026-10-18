@@ -350,52 +350,6 @@ export default function MenuManagePage() {
         </div>
       </div>
 
-      {/* 역할별 접근 현황 */}
-      <div className="rounded-lg border bg-white">
-        <div className="border-b px-4 py-3">
-          <h2 className="text-sm font-semibold">역할별 접근 현황</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="px-4 py-2.5 text-left font-medium text-gray-500">메뉴</th>
-                {ALL_ROLES.map((role) => (
-                  <th key={role} className="px-4 py-2.5 text-center font-medium text-gray-500">
-                    {ROLE_LABELS[role]}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {menus.sort((a, b) => a.sortOrder - b.sortOrder).flatMap((menu) => [
-                <tr key={menu.id}>
-                  <td className="px-4 py-2.5 font-medium">{menu.name}</td>
-                  {ALL_ROLES.map((role) => (
-                    <td key={role} className="px-4 py-2.5 text-center">
-                      {menu.roles.includes(role)
-                        ? <span className="text-green-600">✓</span>
-                        : <span className="text-gray-300">—</span>}
-                    </td>
-                  ))}
-                </tr>,
-                ...(menu.children?.sort((a, b) => a.sortOrder - b.sortOrder).map((child) => (
-                  <tr key={child.id} className="bg-gray-50/50">
-                    <td className="px-4 py-2 pl-8 text-gray-500">↳ {child.name}</td>
-                    {ALL_ROLES.map((role) => (
-                      <td key={role} className="px-4 py-2 text-center">
-                        {child.roles.includes(role)
-                          ? <span className="text-green-600">✓</span>
-                          : <span className="text-gray-300">—</span>}
-                      </td>
-                    ))}
-                  </tr>
-                )) ?? []),
-              ])}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   )
 }
