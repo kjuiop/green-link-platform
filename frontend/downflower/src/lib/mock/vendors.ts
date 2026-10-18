@@ -9,8 +9,7 @@ export const mockVendors: Vendor[] = [
     phone: '010-1111-1111',
     address: '서울특별시 강남구',
     loginId: 'seoul_flower',
-    status: 'active',
-    memo: '메인 거래 업체',
+    status: 'ACTIVE',
     createdAt: '2026-01-01',
   },
   {
@@ -21,7 +20,7 @@ export const mockVendors: Vendor[] = [
     phone: '010-2222-2222',
     address: '인천광역시 연수구',
     loginId: 'incheon_flower',
-    status: 'active',
+    status: 'ACTIVE',
     createdAt: '2026-02-01',
   },
   {
@@ -32,7 +31,7 @@ export const mockVendors: Vendor[] = [
     phone: '010-3333-3333',
     address: '부산광역시 해운대구',
     loginId: 'busan_flower',
-    status: 'suspended',
+    status: 'INACTIVE',
     createdAt: '2026-03-01',
   },
 ]

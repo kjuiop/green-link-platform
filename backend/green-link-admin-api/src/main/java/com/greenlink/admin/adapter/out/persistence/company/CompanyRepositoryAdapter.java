@@ -5,6 +5,7 @@ import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 import static com.greenlink.admin.adapter.out.persistence.company.QCompanyJpaEntity.companyJpaEntity;
@@ -33,5 +34,22 @@ public class CompanyRepositoryAdapter implements CompanyRepository {
     @Override
     public Company save(Company company) {
         return jpaRepository.save(CompanyJpaEntity.from(company)).toDomain();
+    }
+
+    @Override
+    public Optional<Company> findById(Long id) {
+        return jpaRepository.findById(id).map(CompanyJpaEntity::toDomain);
+    }
+
+    @Override
+    public boolean existsByBusinessNo(String businessNo) {
+        return jpaRepository.existsByBusinessNo(businessNo);
+    }
+
+    @Override
+    public List<Company> findAllByIdIn(List<Long> ids) {
+        return jpaRepository.findByIdIn(ids).stream()
+            .map(CompanyJpaEntity::toDomain)
+            .toList();
     }
 }

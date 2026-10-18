@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/ordering/**").hasRole("ORDERING")
                 .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/menus", "/api/menus/**").hasRole("SUPER_ADMIN")
+                .requestMatchers("/api/vendors", "/api/vendors/**").hasRole("SUPER_ADMIN")
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

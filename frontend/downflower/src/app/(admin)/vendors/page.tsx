@@ -1,27 +1,34 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { mockVendors } from '@/lib/mock/vendors'
 import { Vendor, VendorStatus } from '@/types/vendor'
-import { Search, Upload, X, FileText } from 'lucide-react'
+import { fetchVendors, createVendor, updateVendor, updateVendorStatus } from '@/lib/api/vendorApi'
+import { Search } from 'lucide-react'
 
 const STATUS_FILTERS = [
   { label: '전체', value: 'ALL' },
-  { label: '활성', value: 'active' },
-  { label: '정지', value: 'suspended' },
+  { label: '활성', value: 'ACTIVE' },
+  { label: '대기', value: 'PENDING' },
+  { label: '정지', value: 'INACTIVE' },
 ] as const
 
 type FilterStatus = 'ALL' | VendorStatus
 
+const STATUS_LABELS: Record<VendorStatus, string> = {
+  ACTIVE: '활성',
+  INACTIVE: '정지',
+  PENDING: '대기',
+}
+
 const emptyForm = {
   name: '', businessNumber: '', managerName: '', phone: '',
-  email: '', address: '', loginId: '', password: '', memo: '',
+  address: '', loginId: '', password: '',
 }
 
 function formatPhone(value: string) {
@@ -31,91 +38,30 @@ function formatPhone(value: string) {
   return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
 }
 
-interface FileFieldProps {
-  label: string
-  file: File | null
-  existingUrl?: string
-  onChange: (f: File | null) => void
-}
-
-function FileUploadField({ label, file, existingUrl, onChange }: FileFieldProps) {
-  const ref = useRef<HTMLInputElement>(null)
-  const previewUrl = file && file.type.startsWith('image/') ? URL.createObjectURL(file) : null
-  const isPdf = file && file.type === 'application/pdf'
-
-  return (
-    <div className="space-y-1.5">
-      <Label>{label}</Label>
-      {existingUrl && !file && (
-        <a
-          href={existingUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="mb-1 flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
-        >
-          <FileText className="h-3.5 w-3.5" />
-          등록된 파일 보기
-        </a>
-      )}
-      <div
-        onClick={() => ref.current?.click()}
-        className="flex cursor-pointer items-center gap-3 rounded-md border-2 border-dashed border-gray-200 px-3 py-2.5 hover:border-green-400 hover:bg-green-50"
-      >
-        {file ? (
-          <>
-            {previewUrl ? (
-              <img src={previewUrl} alt="미리보기" className="h-10 w-10 shrink-0 rounded border object-cover" />
-            ) : (
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border bg-gray-100 text-xs font-medium text-gray-500">
-                {isPdf ? 'PDF' : 'FILE'}
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium text-gray-700">{file.name}</div>
-              <div className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</div>
-            </div>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onChange(null) }}
-              className="shrink-0 text-gray-400 hover:text-red-500"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </>
-        ) : (
-          <>
-            <Upload className="h-5 w-5 shrink-0 text-gray-400" />
-            <span className="text-sm text-gray-400">
-              {existingUrl ? '파일 교체 (이미지, PDF)' : '클릭하여 파일 선택 (이미지, PDF)'}
-            </span>
-          </>
-        )}
-      </div>
-      <input
-        ref={ref}
-        type="file"
-        accept="image/*,.pdf"
-        className="hidden"
-        onChange={(e) => { onChange(e.target.files?.[0] ?? null); e.target.value = '' }}
-      />
-    </div>
-  )
-}
-
 export default function VendorsPage() {
-  const [vendors, setVendors] = useState<Vendor[]>(mockVendors)
+  const [vendors, setVendors] = useState<Vendor[]>([])
+  const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL')
   const [appliedQuery, setAppliedQuery] = useState('')
   const [appliedStatus, setAppliedStatus] = useState<FilterStatus>('ALL')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [staged, setStaged] = useState<Record<string, VendorStatus>>({})
+  const [saving, setSaving] = useState(false)
+  const [pageError, setPageError] = useState('')
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Vendor | null>(null)
   const [form, setForm] = useState(emptyForm)
-  const [businessDoc, setBusinessDoc] = useState<File | null>(null)
-  const [bankDoc, setBankDoc] = useState<File | null>(null)
+  const [modalError, setModalError] = useState('')
+  const [modalSaving, setModalSaving] = useState(false)
+
+  useEffect(() => {
+    fetchVendors()
+      .then(setVendors)
+      .catch((e) => setPageError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
 
   const handleSearch = () => {
     setAppliedQuery(query)
@@ -160,21 +106,35 @@ export default function VendorsPage() {
     })
   }
 
-  const handleStagedSave = () => {
-    setVendors((prev) => prev.map((v) => (staged[v.id] ? { ...v, status: staged[v.id] } : v)))
-    setStaged({})
-    setSelected(new Set())
-  }
-
   const handleStatusChange = (vendor: Vendor, status: VendorStatus) => {
     setStaged((prev) => ({ ...prev, [vendor.id]: status }))
+  }
+
+  const handleStagedSave = async () => {
+    if (Object.keys(staged).length === 0) return
+    setSaving(true)
+    setPageError('')
+    try {
+      await Promise.all(
+        Object.entries(staged).map(([id, status]) =>
+          updateVendorStatus(id, status === 'ACTIVE' ? 'activate' : 'suspend')
+        )
+      )
+      const updated = await fetchVendors()
+      setVendors(updated)
+      setStaged({})
+      setSelected(new Set())
+    } catch (e: unknown) {
+      setPageError(e instanceof Error ? e.message : '상태 변경에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const openRegister = () => {
     setEditTarget(null)
     setForm(emptyForm)
-    setBusinessDoc(null)
-    setBankDoc(null)
+    setModalError('')
     setModalOpen(true)
   }
 
@@ -185,67 +145,48 @@ export default function VendorsPage() {
       businessNumber: vendor.businessNumber ?? '',
       managerName: vendor.managerName,
       phone: vendor.phone,
-      email: vendor.email ?? '',
       address: vendor.address,
       loginId: vendor.loginId,
       password: '',
-      memo: vendor.memo ?? '',
     })
-    setBusinessDoc(null)
-    setBankDoc(null)
+    setModalError('')
     setModalOpen(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name || !form.managerName || !form.phone || !form.loginId) return
     if (!editTarget && !form.password) return
-    if (!editTarget && vendors.some((v) => v.loginId === form.loginId)) {
-      alert('이미 사용 중인 아이디입니다.')
-      return
-    }
 
-    const businessDocUrl = businessDoc ? URL.createObjectURL(businessDoc) : editTarget?.businessDocUrl
-    const bankDocUrl = bankDoc ? URL.createObjectURL(bankDoc) : editTarget?.bankDocUrl
-
-    if (editTarget) {
-      setVendors((prev) =>
-        prev.map((v) =>
-          v.id === editTarget.id
-            ? {
-                ...v,
-                name: form.name,
-                businessNumber: form.businessNumber || undefined,
-                managerName: form.managerName,
-                phone: form.phone,
-                email: form.email || undefined,
-                address: form.address,
-                loginId: form.loginId,
-                memo: form.memo || undefined,
-                businessDocUrl,
-                bankDocUrl,
-              }
-            : v
-        )
-      )
-    } else {
-      const newVendor: Vendor = {
-        id: `v${Date.now()}`,
-        name: form.name,
-        businessNumber: form.businessNumber || undefined,
-        managerName: form.managerName,
-        phone: form.phone,
-        email: form.email || undefined,
-        address: form.address,
-        loginId: form.loginId,
-        status: 'active',
-        memo: form.memo || undefined,
-        businessDocUrl,
-        bankDocUrl,
-        createdAt: new Date().toISOString().slice(0, 10),
+    setModalSaving(true)
+    setModalError('')
+    try {
+      if (editTarget) {
+        await updateVendor(editTarget.id, {
+          companyName: form.name,
+          businessNo: form.businessNumber || undefined,
+          address: form.address,
+          managerName: form.managerName,
+          phone: form.phone,
+        })
+      } else {
+        await createVendor({
+          companyName: form.name,
+          businessNo: form.businessNumber || undefined,
+          address: form.address,
+          managerName: form.managerName,
+          phone: form.phone,
+          loginId: form.loginId,
+          password: form.password,
+        })
       }
-      setVendors((prev) => [...prev, newVendor])
+      const updated = await fetchVendors()
+      setVendors(updated)
+      setModalOpen(false)
+    } catch (e: unknown) {
+      setModalError(e instanceof Error ? e.message : '저장에 실패했습니다.')
+    } finally {
+      setModalSaving(false)
     }
-    setModalOpen(false)
   }
 
   return (
@@ -254,6 +195,10 @@ export default function VendorsPage() {
         <h1 className="text-xl font-bold">업체 계정관리</h1>
         <Button className="bg-green-700 hover:bg-green-800" onClick={openRegister}>업체 등록</Button>
       </div>
+
+      {pageError && (
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{pageError}</p>
+      )}
 
       <div className="rounded-lg border bg-white p-4">
         <div className="flex flex-wrap gap-3">
@@ -292,9 +237,10 @@ export default function VendorsPage() {
         <div className="flex items-center justify-end border-b px-4 py-2">
           <button
             onClick={handleStagedSave}
-            className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
+            disabled={saving || Object.keys(staged).length === 0}
+            className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
           >
-            저장
+            {saving ? '저장 중...' : '저장'}
           </button>
         </div>
         <Table>
@@ -312,17 +258,21 @@ export default function VendorsPage() {
               <TableHead>업체명</TableHead>
               <TableHead>담당자명</TableHead>
               <TableHead>연락처</TableHead>
-              <TableHead>이메일</TableHead>
               <TableHead>주소</TableHead>
               <TableHead>아이디</TableHead>
-              <TableHead>서류</TableHead>
               <TableHead>상태</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {loading ? (
               <TableRow>
-                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={7} className="py-10 text-center text-sm text-gray-400">
+                  불러오는 중...
+                </TableCell>
+              </TableRow>
+            ) : filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -344,37 +294,17 @@ export default function VendorsPage() {
                   </TableCell>
                   <TableCell className="text-sm">{vendor.managerName}</TableCell>
                   <TableCell className="text-sm">{vendor.phone}</TableCell>
-                  <TableCell className="text-sm text-gray-500">{vendor.email ?? '-'}</TableCell>
                   <TableCell className="text-sm">{vendor.address}</TableCell>
                   <TableCell className="font-mono text-xs text-gray-500">{vendor.loginId}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1.5">
-                      {vendor.businessDocUrl ? (
-                        <a href={vendor.businessDocUrl} target="_blank" rel="noreferrer"
-                          className="rounded bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-100">
-                          사업자
-                        </a>
-                      ) : (
-                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-400">사업자</span>
-                      )}
-                      {vendor.bankDocUrl ? (
-                        <a href={vendor.bankDocUrl} target="_blank" rel="noreferrer"
-                          className="rounded bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-100">
-                          통장
-                        </a>
-                      ) : (
-                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-400">통장</span>
-                      )}
-                    </div>
-                  </TableCell>
                   <TableCell>
                     <select
                       value={staged[vendor.id] ?? vendor.status}
                       onChange={(e) => handleStatusChange(vendor, e.target.value as VendorStatus)}
                       className="rounded border border-gray-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-700"
                     >
-                      <option value="active">활성</option>
-                      <option value="suspended">정지</option>
+                      <option value="ACTIVE">활성</option>
+                      <option value="INACTIVE">정지</option>
+                      <option value="PENDING" disabled>대기</option>
                     </select>
                   </TableCell>
                 </TableRow>
@@ -390,13 +320,18 @@ export default function VendorsPage() {
           <div className="flex justify-end">
             <button
               onClick={handleStagedSave}
-              className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
+              disabled={saving}
+              className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
             >
-              변경 저장
+              {saving ? '저장 중...' : '변경 저장'}
             </button>
           </div>
         )}
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
+            불러오는 중...
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
             검색 결과가 없습니다.
           </div>
@@ -412,15 +347,18 @@ export default function VendorsPage() {
                   onChange={(e) => handleStatusChange(vendor, e.target.value as VendorStatus)}
                   className="shrink-0 rounded border border-gray-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-700"
                 >
-                  <option value="active">활성</option>
-                  <option value="suspended">정지</option>
+                  <option value="ACTIVE">활성</option>
+                  <option value="INACTIVE">정지</option>
+                  <option value="PENDING" disabled>대기</option>
                 </select>
               </div>
               <div className="mt-1.5 space-y-0.5 text-xs text-gray-500">
                 <div>{vendor.managerName} · {vendor.phone}</div>
-                {vendor.email && <div>{vendor.email}</div>}
                 {vendor.address && <div className="truncate">{vendor.address}</div>}
                 <div className="font-mono text-gray-400">{vendor.loginId}</div>
+                <div className={`font-medium ${vendor.status === 'ACTIVE' ? 'text-green-600' : vendor.status === 'PENDING' ? 'text-yellow-600' : 'text-red-500'}`}>
+                  {STATUS_LABELS[vendor.status]}
+                </div>
               </div>
             </div>
           ))
@@ -429,7 +367,7 @@ export default function VendorsPage() {
 
       {/* 등록/수정 모달 */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editTarget ? `${editTarget.name} 수정` : '업체 등록'}</DialogTitle>
           </DialogHeader>
@@ -451,10 +389,6 @@ export default function VendorsPage() {
               <Input placeholder="010-0000-0000" inputMode="numeric" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: formatPhone(e.target.value) }))} />
             </div>
             <div className="space-y-1.5">
-              <Label>이메일</Label>
-              <Input type="email" placeholder="example@email.com" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
               <Label>주소</Label>
               <Input placeholder="업체 주소" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
             </div>
@@ -468,37 +402,18 @@ export default function VendorsPage() {
                 <Input type="password" placeholder="8자 이상" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} />
               </div>
             )}
-
-            {/* 첨부서류 */}
-            <div className="space-y-3 rounded-lg border bg-gray-50 p-3">
-              <p className="text-xs font-medium text-gray-500">첨부서류</p>
-              <FileUploadField
-                label="사업자 사본"
-                file={businessDoc}
-                existingUrl={editTarget?.businessDocUrl}
-                onChange={setBusinessDoc}
-              />
-              <FileUploadField
-                label="통장 사본"
-                file={bankDoc}
-                existingUrl={editTarget?.bankDocUrl}
-                onChange={setBankDoc}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>메모</Label>
-              <Textarea placeholder="관리자 메모 (선택)" value={form.memo} onChange={(e) => setForm((f) => ({ ...f, memo: e.target.value }))} rows={2} />
-            </div>
+            {modalError && (
+              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{modalError}</p>
+            )}
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setModalOpen(false)}>취소</Button>
             <Button
               className="bg-green-700 hover:bg-green-800"
-              disabled={!form.name || !form.managerName || !form.phone || !form.loginId || (!editTarget && !form.password)}
+              disabled={modalSaving || !form.name || !form.managerName || !form.phone || !form.loginId || (!editTarget && !form.password)}
               onClick={handleSave}
             >
-              {editTarget ? '저장' : '등록'}
+              {modalSaving ? '저장 중...' : editTarget ? '저장' : '등록'}
             </Button>
           </DialogFooter>
         </DialogContent>
