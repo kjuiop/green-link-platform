@@ -16,10 +16,13 @@ import com.greenlink.core.domain.member.model.Role;
 import com.greenlink.core.domain.member.port.MemberRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.vendor.VendorErrorCode;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -28,24 +31,28 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
 
     private final MemberRepository memberRepository;
     private final CompanyRepository companyRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public VendorService(MemberRepository memberRepository, CompanyRepository companyRepository) {
+    public VendorService(MemberRepository memberRepository,
+                         CompanyRepository companyRepository,
+                         PasswordEncoder passwordEncoder) {
         this.memberRepository = memberRepository;
         this.companyRepository = companyRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     public List<VendorResult> getVendors(String status) {
-        List<Member> vendorMembers = memberRepository.findAll().stream()
-            .filter(m -> m.getRoles().contains(Role.VENDOR))
+        List<Member> vendorMembers = memberRepository.findAllByRole(Role.VENDOR);
+
+        List<Long> companyIds = vendorMembers.stream()
+            .map(Member::getCompanyId)
             .toList();
+        Map<Long, Company> companyMap = companyRepository.findAllByIdIn(companyIds).stream()
+            .collect(Collectors.toMap(Company::getId, c -> c));
 
         List<VendorResult> results = vendorMembers.stream()
-            .map(m -> {
-                Company company = companyRepository.findById(m.getCompanyId())
-                    .orElse(null);
-                return toResult(m, company);
-            })
+            .map(m -> toResult(m, companyMap.get(m.getCompanyId())))
             .toList();
 
         if (status == null || status.isBlank()) {
@@ -95,7 +102,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
 
         Member member = Member.create(
             cmd.loginId(),
-            cmd.encodedPassword(),
+            passwordEncoder.encode(cmd.password()),
             cmd.managerName(),
             cmd.phone(),
             savedCompany.getId()

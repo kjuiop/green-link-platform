@@ -2,6 +2,7 @@ package com.greenlink.core.domain.company.port;
 
 import com.greenlink.core.domain.company.model.Company;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface CompanyRepository {
@@ -9,4 +10,5 @@ public interface CompanyRepository {
     Company save(Company company);
     Optional<Company> findById(Long id);
     boolean existsByBusinessNo(String businessNo);
+    List<Company> findAllByIdIn(List<Long> ids);
 }

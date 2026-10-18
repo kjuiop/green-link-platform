@@ -7,5 +7,5 @@ public record CreateVendorCommand(
     String managerName,
     String phone,
     String loginId,
-    String encodedPassword
+    String password
 ) {}

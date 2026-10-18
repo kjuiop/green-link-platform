@@ -12,7 +12,6 @@ import com.greenlink.core.application.vendor.usecase.UpdateVendorUseCase;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,20 +25,17 @@ public class VendorController {
     private final CreateVendorUseCase createVendorUseCase;
     private final UpdateVendorUseCase updateVendorUseCase;
     private final UpdateVendorStatusUseCase updateVendorStatusUseCase;
-    private final PasswordEncoder passwordEncoder;
 
     public VendorController(GetVendorsUseCase getVendorsUseCase,
                             GetVendorUseCase getVendorUseCase,
                             CreateVendorUseCase createVendorUseCase,
                             UpdateVendorUseCase updateVendorUseCase,
-                            UpdateVendorStatusUseCase updateVendorStatusUseCase,
-                            PasswordEncoder passwordEncoder) {
+                            UpdateVendorStatusUseCase updateVendorStatusUseCase) {
         this.getVendorsUseCase = getVendorsUseCase;
         this.getVendorUseCase = getVendorUseCase;
         this.createVendorUseCase = createVendorUseCase;
         this.updateVendorUseCase = updateVendorUseCase;
         this.updateVendorStatusUseCase = updateVendorStatusUseCase;
-        this.passwordEncoder = passwordEncoder;
     }
 
     @GetMapping
@@ -56,7 +52,7 @@ public class VendorController {
     @PostMapping
     public ResponseEntity<VendorResult> create(@RequestBody @Valid CreateVendorRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(createVendorUseCase.createVendor(req.toCommand(passwordEncoder)));
+            .body(createVendorUseCase.createVendor(req.toCommand()));
     }
 
     @PutMapping("/{id}")

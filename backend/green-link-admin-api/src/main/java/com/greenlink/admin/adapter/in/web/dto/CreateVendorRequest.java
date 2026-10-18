@@ -2,7 +2,6 @@ package com.greenlink.admin.adapter.in.web.dto;
 
 import com.greenlink.core.application.vendor.dto.CreateVendorCommand;
 import jakarta.validation.constraints.NotBlank;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 public record CreateVendorRequest(
     @NotBlank String companyName,
@@ -13,7 +12,7 @@ public record CreateVendorRequest(
     @NotBlank String loginId,
     @NotBlank String password
 ) {
-    public CreateVendorCommand toCommand(PasswordEncoder passwordEncoder) {
+    public CreateVendorCommand toCommand() {
         return new CreateVendorCommand(
             companyName,
             businessNo,
@@ -21,7 +20,7 @@ public record CreateVendorRequest(
             managerName,
             phone,
             loginId,
-            passwordEncoder.encode(password)
+            password
         );
     }
 }
