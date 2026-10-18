@@ -1,22 +1,66 @@
+'use client'
+
+import { useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { OrderStatusBadge, MessageStatusBadge, DeliveryTypeBadge } from '@/components/common/StatusBadge'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { OrderStatusBadge, MessageStatusBadge, DeliveryTimeTypeBadge } from '@/components/common/StatusBadge'
 import { mockOrders } from '@/lib/mock/orders'
 import { mockPhotos } from '@/lib/mock/photos'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import { PrintButton } from '@/components/common/PrintButton'
+import { Pencil, X, Check, Trash2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Order } from '@/types/order'
 
-interface Props {
-  params: Promise<{ id: string }>
-}
+const AMOUNT_PRESETS = [
+  { label: '기본32', value: 32000 },
+  { label: '대품42', value: 42000 },
+  { label: '특품52', value: 52000 },
+  { label: '4단62', value: 62000 },
+  { label: '쌀10키로62', value: 62000 },
+  { label: '오브제1단42', value: 42000 },
+]
 
-export default async function OrderDetailPage({ params }: Props) {
-  const { id } = await params
-  const order = mockOrders.find((o) => o.id === id)
-  if (!order) notFound()
+export default function OrderDetailPage() {
+  const { id } = useParams<{ id: string }>()
+  const router = useRouter()
+  const found = mockOrders.find((o) => o.id === id)
+  if (!found) notFound()
 
-  const photos = mockPhotos.filter((p) => p.orderId === order.id)
+  const photos = mockPhotos.filter((p) => p.orderId === id)
+
+  const [order, setOrder] = useState<Order>(found)
+  const [isEditing, setIsEditing] = useState(false)
+  const [draft, setDraft] = useState<Order>(found)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  function startEdit() {
+    setDraft({ ...order })
+    setIsEditing(true)
+  }
+
+  function cancelEdit() {
+    setIsEditing(false)
+  }
+
+  function saveEdit() {
+    setOrder({ ...draft })
+    setIsEditing(false)
+    // TODO: 수정 API 호출
+  }
+
+  function handleDelete() {
+    // TODO: 삭제 API 호출
+    router.push('/orders')
+  }
+
+  function set<K extends keyof Order>(key: K, value: Order[K]) {
+    setDraft((prev) => ({ ...prev, [key]: value }))
+  }
 
   return (
     <div className="space-y-4">
@@ -25,110 +69,380 @@ export default async function OrderDetailPage({ params }: Props) {
           <h1 className="text-xl font-bold">{order.orderNumber}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <OrderStatusBadge status={order.status} />
-            <DeliveryTypeBadge deliveryType={order.deliveryType} />
+            <DeliveryTimeTypeBadge type={order.deliveryTimeType} custom={order.deliveryTimeCustom} />
             <MessageStatusBadge status={order.messageStatus} />
           </div>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <PrintButton orderId={order.id} />
-          {order.status === '수주완료' && (
+          {order.status === '수주완료' && !isEditing && !confirmDelete && (
             <Button className="bg-blue-700 hover:bg-blue-800">배송완료 처리</Button>
+          )}
+          {isEditing && (
+            <>
+              <Button variant="outline" className="gap-1.5" onClick={cancelEdit}>
+                <X className="h-3.5 w-3.5" />
+                취소
+              </Button>
+              <Button className="gap-1.5 bg-green-700 hover:bg-green-800" onClick={saveEdit}>
+                <Check className="h-3.5 w-3.5" />
+                저장
+              </Button>
+            </>
+          )}
+          {!isEditing && !confirmDelete && (
+            <Button variant="outline" className="gap-1.5" onClick={startEdit}>
+              <Pencil className="h-3.5 w-3.5" />
+              수정
+            </Button>
+          )}
+          {!isEditing && !confirmDelete && (
+            <Button
+              variant="outline"
+              className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50"
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              삭제
+            </Button>
+          )}
+          {confirmDelete && (
+            <>
+              <span className="self-center text-sm text-red-600">정말 삭제하시겠습니까?</span>
+              <Button
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => setConfirmDelete(false)}
+              >
+                취소
+              </Button>
+              <Button
+                className="gap-1.5 bg-red-600 hover:bg-red-700"
+                onClick={handleDelete}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                삭제 확인
+              </Button>
+            </>
           )}
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
+        {/* 기본정보 */}
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">기본정보</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="상품명" value={order.productName} />
-            <Row label="수량" value={`${order.quantity}개`} />
-            <Row label="발주금액" value={`${order.amount.toLocaleString()}원`} />
-            <Row label="수주업체" value={order.vendorName} />
-            <Row label="발주일시" value={order.orderedAt} />
+          <CardContent className="space-y-3 text-sm">
+            {isEditing ? (
+              <>
+                <Field label="상품명">
+                  <Input value={draft.productName} onChange={(e) => set('productName', e.target.value)} />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="수량">
+                    <Input type="number" value={draft.quantity} onChange={(e) => set('quantity', Number(e.target.value))} />
+                  </Field>
+                  <Field label="수주업체">
+                    <Input value={draft.vendorName} onChange={(e) => set('vendorName', e.target.value)} />
+                  </Field>
+                </div>
+                <Field label="발주금액">
+                  <Input
+                    type="number"
+                    value={draft.amount}
+                    onChange={(e) => set('amount', Number(e.target.value))}
+                  />
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {AMOUNT_PRESETS.map(({ label, value }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => set('amount', value)}
+                        className={cn(
+                          'rounded-md border px-2.5 py-1 text-xs transition-colors',
+                          draft.amount === value
+                            ? 'border-green-700 bg-green-700 text-white'
+                            : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50',
+                        )}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+                <Field label="추가비용">
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={draft.extraCost ?? ''}
+                    onChange={(e) => set('extraCost', e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                </Field>
+              </>
+            ) : (
+              <>
+                <Row label="상품명" value={order.productName} />
+                <Row label="수량" value={`${order.quantity}개`} />
+                <Row label="발주금액" value={`${order.amount.toLocaleString()}원`} />
+                {order.extraCost ? (
+                  <Row label="추가비용" value={`${order.extraCost.toLocaleString()}원`} />
+                ) : null}
+                <Row label="수주업체" value={order.vendorName} />
+                <Row label="발주일시" value={order.orderedAt} />
+              </>
+            )}
           </CardContent>
         </Card>
 
+        {/* 배송정보 */}
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">배송정보</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="배송예정" value={order.deliveryAt} />
-            <Row label="주소" value={`${order.address} ${order.addressDetail}`} />
-            <Row label="장소명" value={order.placeName} />
-            <Row label="빈소·호실" value={order.roomName} />
-            {order.eventInfo && <Row label="행사정보" value={order.eventInfo} />}
+          <CardContent className="space-y-3 text-sm">
+            {isEditing ? (
+              <>
+                <Field label="배송예정">
+                  <Input value={draft.deliveryAt} onChange={(e) => set('deliveryAt', e.target.value)} />
+                </Field>
+                <Field label="주소">
+                  <Input value={draft.address} onChange={(e) => set('address', e.target.value)} />
+                </Field>
+                <Field label="상세주소">
+                  <Input value={draft.addressDetail} onChange={(e) => set('addressDetail', e.target.value)} />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="장소명">
+                    <Input value={draft.placeName} onChange={(e) => set('placeName', e.target.value)} />
+                  </Field>
+                  <Field label="빈소·호실">
+                    <Input value={draft.roomName} onChange={(e) => set('roomName', e.target.value)} />
+                  </Field>
+                </div>
+                <Field label="행사정보">
+                  <Input
+                    placeholder="행사정보"
+                    value={draft.eventInfo ?? ''}
+                    onChange={(e) => set('eventInfo', e.target.value || undefined)}
+                  />
+                </Field>
+              </>
+            ) : (
+              <>
+                <Row label="배송예정" value={order.deliveryAt} />
+                <Row label="주소" value={`${order.address} ${order.addressDetail}`} />
+                <Row label="장소명" value={order.placeName} />
+                <Row label="빈소·호실" value={order.roomName} />
+                {order.eventInfo && <Row label="행사정보" value={order.eventInfo} />}
+              </>
+            )}
           </CardContent>
         </Card>
 
+        {/* 리본 문구 */}
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">리본 문구</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="리본 왼쪽" value={order.ribbonLeft} />
-            <Row label="리본 오른쪽" value={order.ribbonRight} />
+          <CardContent className="space-y-3 text-sm">
+            {isEditing ? (
+              <>
+                <Field label="리본 왼쪽">
+                  <Input value={draft.ribbonLeft} onChange={(e) => set('ribbonLeft', e.target.value)} />
+                </Field>
+                <Field label="리본 오른쪽">
+                  <Input value={draft.ribbonRight} onChange={(e) => set('ribbonRight', e.target.value)} />
+                </Field>
+              </>
+            ) : (
+              <>
+                <Row label="리본 왼쪽" value={order.ribbonLeft} />
+                <Row label="리본 오른쪽" value={order.ribbonRight} />
+              </>
+            )}
           </CardContent>
         </Card>
 
+        {/* 주문자 / 받는 분 */}
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">주문자 / 받는 분</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="주문자" value={`${order.ordererName} ${order.ordererPhone}`} />
-            {order.recipientName && (
-              <Row label="받는 분" value={`${order.recipientName}${order.recipientPhone ? ` ${order.recipientPhone}` : ''}`} />
+          <CardContent className="space-y-3 text-sm">
+            {isEditing ? (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="주문자 성함">
+                    <Input value={draft.ordererName} onChange={(e) => set('ordererName', e.target.value)} />
+                  </Field>
+                  <Field label="주문자 연락처">
+                    <Input value={draft.ordererPhone} onChange={(e) => set('ordererPhone', e.target.value)} />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="받는 분 성함">
+                    <Input
+                      placeholder="없음"
+                      value={draft.recipientName ?? ''}
+                      onChange={(e) => set('recipientName', e.target.value || undefined)}
+                    />
+                  </Field>
+                  <Field label="받는 분 연락처">
+                    <Input
+                      placeholder="없음"
+                      value={draft.recipientPhone ?? ''}
+                      onChange={(e) => set('recipientPhone', e.target.value || undefined)}
+                    />
+                  </Field>
+                </div>
+                <Field label="문자 발송 대상">
+                  <div className="flex gap-4 pt-1">
+                    <label className="flex items-center gap-1.5 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={draft.sendPhotoToOrderer}
+                        onChange={(e) => set('sendPhotoToOrderer', e.target.checked)}
+                      />
+                      주문자에게 발송
+                    </label>
+                    <label className="flex items-center gap-1.5 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={draft.sendPhotoToRecipient}
+                        onChange={(e) => set('sendPhotoToRecipient', e.target.checked)}
+                      />
+                      받는 분에게 발송
+                    </label>
+                  </div>
+                </Field>
+              </>
+            ) : (
+              <>
+                <Row label="주문자" value={`${order.ordererName} ${order.ordererPhone}`} />
+                {order.recipientName && (
+                  <Row label="받는 분" value={`${order.recipientName}${order.recipientPhone ? ` ${order.recipientPhone}` : ''}`} />
+                )}
+                <Row
+                  label="문자 발송"
+                  value={[
+                    order.sendPhotoToOrderer ? '주문자' : '',
+                    order.sendPhotoToRecipient ? '받는 분' : '',
+                  ].filter(Boolean).join(', ') || '미발송'}
+                />
+              </>
             )}
-            <Row
-              label="사진 발송"
-              value={[
-                order.sendPhotoToOrderer ? '주문자' : '',
-                order.sendPhotoToRecipient ? '받는 분' : '',
-              ]
-                .filter(Boolean)
-                .join(', ') || '미발송'}
-            />
           </CardContent>
         </Card>
 
-        {photos.length > 0 && (
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-sm">배송 사진 ({photos.length}장)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-3">
-                {photos.map((photo) => (
-                  <div key={photo.id} className="relative">
-                    <Image
-                      src={photo.url}
-                      alt="배송 사진"
-                      width={120}
-                      height={120}
-                      className="rounded-lg border object-cover"
-                    />
-                    {photo.isSendToCustomer && (
-                      <span className="absolute bottom-1 left-1 rounded bg-green-700 px-1 py-0.5 text-[10px] text-white">
-                        발송
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* 메모 */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm">메모</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {isEditing ? (
+              <>
+                <Field label="관리자 메모">
+                  <Input
+                    placeholder="내부 메모"
+                    value={draft.adminMemo ?? ''}
+                    onChange={(e) => set('adminMemo', e.target.value || undefined)}
+                  />
+                </Field>
+                <Field label="업체 전달사항">
+                  <Textarea
+                    placeholder="업체에 전달할 내용"
+                    className="min-h-[80px]"
+                    value={draft.vendorMemo ?? ''}
+                    onChange={(e) => set('vendorMemo', e.target.value || undefined)}
+                  />
+                </Field>
+              </>
+            ) : (
+              <>
+                {order.adminMemo && <Row label="관리자 메모" value={order.adminMemo} />}
+                {order.vendorMemo && <Row label="업체 전달사항" value={order.vendorMemo} />}
+                {!order.adminMemo && !order.vendorMemo && (
+                  <p className="text-gray-400">메모 없음</p>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
 
+        {/* 배송사진 */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm">
+              배송사진
+              {photos.length > 0 && <span className="ml-1.5 text-xs font-normal text-gray-400">({photos.length}장)</span>}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {photos.length === 0 ? (
+              <p className="text-sm text-gray-400">등록된 배송사진이 없습니다.</p>
+            ) : (
+              <>
+                {/* 매장사진 */}
+                {photos.filter((p) => p.photoType === 'store').length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-gray-500">매장사진</p>
+                    <div className="flex flex-wrap gap-3">
+                      {photos.filter((p) => p.photoType === 'store').map((photo) => (
+                        <div key={photo.id} className="relative h-28 w-28">
+                          <Image
+                            src={photo.url}
+                            alt="매장사진"
+                            fill
+                            className="rounded-lg border object-cover"
+                          />
+                          {photo.isSendToCustomer && (
+                            <span className="absolute bottom-1 left-1 rounded bg-green-700 px-1 py-0.5 text-[10px] text-white">
+                              발송
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* 현장사진 */}
+                {photos.filter((p) => p.photoType === 'site').length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-gray-500">현장사진</p>
+                    <div className="flex flex-wrap gap-3">
+                      {photos.filter((p) => p.photoType === 'site').map((photo) => (
+                        <div key={photo.id} className="relative h-28 w-28">
+                          <Image
+                            src={photo.url}
+                            alt="현장사진"
+                            fill
+                            className="rounded-lg border object-cover"
+                          />
+                          {photo.isSendToCustomer && (
+                            <span className="absolute bottom-1 left-1 rounded bg-green-700 px-1 py-0.5 text-[10px] text-white">
+                              발송
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 문자 발송 내역 */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm">문자 발송 내역</CardTitle>
               {order.messageStatus === '발송실패' && (
-                <Button size="sm" className="bg-red-600 hover:bg-red-700 text-xs h-7 px-3">
+                <Button size="sm" className="h-7 bg-red-600 px-3 text-xs hover:bg-red-700">
                   재발송
                 </Button>
               )}
@@ -139,26 +453,21 @@ export default async function OrderDetailPage({ params }: Props) {
               <span className="w-24 flex-shrink-0 text-gray-500">발송 상태</span>
               <MessageStatusBadge status={order.messageStatus} />
             </div>
-
             {order.messageStatus === '미발송' ? (
               <p className="text-xs text-gray-400">배송완료 처리 시 자동으로 발송됩니다.</p>
             ) : (
               <>
-                <div className="space-y-1">
-                  <Row label="발송 일시" value={order.completedAt ?? '-'} />
-                </div>
-
+                <Row label="발송 일시" value={order.completedAt ?? '-'} />
                 <div className="space-y-1.5">
                   <span className="text-gray-500">발송 대상</span>
-                  <div className="flex flex-col gap-1 pl-0">
+                  <div className="flex flex-col gap-1">
                     {order.sendPhotoToOrderer && (
                       <div className="flex items-center gap-2">
                         <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">주문자</span>
                         <span>{order.ordererName} · {order.ordererPhone}</span>
                         {order.messageStatus === '발송성공'
                           ? <span className="text-xs text-green-600">✓ 성공</span>
-                          : <span className="text-xs text-red-500">✕ 실패</span>
-                        }
+                          : <span className="text-xs text-red-500">✕ 실패</span>}
                       </div>
                     )}
                     {order.sendPhotoToRecipient && order.recipientName && (
@@ -167,13 +476,11 @@ export default async function OrderDetailPage({ params }: Props) {
                         <span>{order.recipientName} · {order.recipientPhone ?? '-'}</span>
                         {order.messageStatus === '발송성공'
                           ? <span className="text-xs text-green-600">✓ 성공</span>
-                          : <span className="text-xs text-red-500">✕ 실패</span>
-                        }
+                          : <span className="text-xs text-red-500">✕ 실패</span>}
                       </div>
                     )}
                   </div>
                 </div>
-
                 <div className="space-y-1.5">
                   <span className="text-gray-500">발송 내용</span>
                   <div className="rounded-lg border bg-gray-50 p-3 text-xs leading-relaxed text-gray-700 whitespace-pre-line">
@@ -184,19 +491,16 @@ export default async function OrderDetailPage({ params }: Props) {
             )}
           </CardContent>
         </Card>
-
-        {(order.adminMemo || order.vendorMemo) && (
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-sm">메모</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              {order.adminMemo && <Row label="관리자 메모" value={order.adminMemo} />}
-              {order.vendorMemo && <Row label="업체 전달사항" value={order.vendorMemo} />}
-            </CardContent>
-          </Card>
-        )}
       </div>
+    </div>
+  )
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <span className="text-xs font-medium text-gray-500">{label}</span>
+      {children}
     </div>
   )
 }

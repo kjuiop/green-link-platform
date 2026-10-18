@@ -27,6 +27,17 @@ export function Header({ userName, onMenuOpen }: HeaderProps) {
       >
         <Menu className="h-5 w-5" />
       </button>
+      {/* 연락처 */}
+      <div className="hidden items-center gap-3 sm:flex">
+        <div className="flex items-center gap-1.5 rounded-md bg-green-50 px-3 py-1.5">
+          <span className="text-xs font-bold text-green-600">TEL</span>
+          <span className="text-sm font-bold text-green-800 tracking-wide">1855-4400</span>
+        </div>
+        <div className="flex items-center gap-1.5 rounded-md bg-gray-100 px-3 py-1.5">
+          <span className="text-xs font-bold text-gray-500">PHONE</span>
+          <span className="text-sm font-bold text-gray-800 tracking-wide">010-7551-1922</span>
+        </div>
+      </div>
       <div className="flex-1" />
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-2 rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700">

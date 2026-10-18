@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Textarea } from '@/components/ui/textarea'
 import { mockVendors } from '@/lib/mock/vendors'
 import { Vendor, VendorStatus } from '@/types/vendor'
-import { Search } from 'lucide-react'
+import { Search, Upload, X, FileText } from 'lucide-react'
 
 const STATUS_FILTERS = [
   { label: '전체', value: 'ALL' },
@@ -19,13 +19,87 @@ const STATUS_FILTERS = [
 
 type FilterStatus = 'ALL' | VendorStatus
 
-const emptyForm = { name: '', businessNumber: '', managerName: '', phone: '', address: '', loginId: '', password: '', memo: '' }
+const emptyForm = {
+  name: '', businessNumber: '', managerName: '', phone: '',
+  email: '', address: '', loginId: '', password: '', memo: '',
+}
 
 function formatPhone(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 11)
   if (digits.length <= 3) return digits
   if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
   return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
+}
+
+interface FileFieldProps {
+  label: string
+  file: File | null
+  existingUrl?: string
+  onChange: (f: File | null) => void
+}
+
+function FileUploadField({ label, file, existingUrl, onChange }: FileFieldProps) {
+  const ref = useRef<HTMLInputElement>(null)
+  const previewUrl = file && file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+  const isPdf = file && file.type === 'application/pdf'
+
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      {existingUrl && !file && (
+        <a
+          href={existingUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mb-1 flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
+        >
+          <FileText className="h-3.5 w-3.5" />
+          등록된 파일 보기
+        </a>
+      )}
+      <div
+        onClick={() => ref.current?.click()}
+        className="flex cursor-pointer items-center gap-3 rounded-md border-2 border-dashed border-gray-200 px-3 py-2.5 hover:border-green-400 hover:bg-green-50"
+      >
+        {file ? (
+          <>
+            {previewUrl ? (
+              <img src={previewUrl} alt="미리보기" className="h-10 w-10 shrink-0 rounded border object-cover" />
+            ) : (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border bg-gray-100 text-xs font-medium text-gray-500">
+                {isPdf ? 'PDF' : 'FILE'}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium text-gray-700">{file.name}</div>
+              <div className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</div>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onChange(null) }}
+              className="shrink-0 text-gray-400 hover:text-red-500"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </>
+        ) : (
+          <>
+            <Upload className="h-5 w-5 shrink-0 text-gray-400" />
+            <span className="text-sm text-gray-400">
+              {existingUrl ? '파일 교체 (이미지, PDF)' : '클릭하여 파일 선택 (이미지, PDF)'}
+            </span>
+          </>
+        )}
+      </div>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*,.pdf"
+        className="hidden"
+        onChange={(e) => { onChange(e.target.files?.[0] ?? null); e.target.value = '' }}
+      />
+    </div>
+  )
 }
 
 export default function VendorsPage() {
@@ -40,6 +114,8 @@ export default function VendorsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Vendor | null>(null)
   const [form, setForm] = useState(emptyForm)
+  const [businessDoc, setBusinessDoc] = useState<File | null>(null)
+  const [bankDoc, setBankDoc] = useState<File | null>(null)
 
   const handleSearch = () => {
     setAppliedQuery(query)
@@ -70,25 +146,16 @@ export default function VendorsPage() {
 
   const toggleAll = () => {
     if (allChecked) {
-      setSelected((prev) => {
-        const next = new Set(prev)
-        filtered.forEach((v) => next.delete(v.id))
-        return next
-      })
+      setSelected((prev) => { const next = new Set(prev); filtered.forEach((v) => next.delete(v.id)); return next })
     } else {
-      setSelected((prev) => {
-        const next = new Set(prev)
-        filtered.forEach((v) => next.add(v.id))
-        return next
-      })
+      setSelected((prev) => { const next = new Set(prev); filtered.forEach((v) => next.add(v.id)); return next })
     }
   }
 
   const toggleOne = (id: string) => {
     setSelected((prev) => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
   }
@@ -106,12 +173,26 @@ export default function VendorsPage() {
   const openRegister = () => {
     setEditTarget(null)
     setForm(emptyForm)
+    setBusinessDoc(null)
+    setBankDoc(null)
     setModalOpen(true)
   }
 
   const openEdit = (vendor: Vendor) => {
     setEditTarget(vendor)
-    setForm({ name: vendor.name, businessNumber: vendor.businessNumber ?? '', managerName: vendor.managerName, phone: vendor.phone, address: vendor.address, loginId: vendor.loginId, password: '', memo: vendor.memo ?? '' })
+    setForm({
+      name: vendor.name,
+      businessNumber: vendor.businessNumber ?? '',
+      managerName: vendor.managerName,
+      phone: vendor.phone,
+      email: vendor.email ?? '',
+      address: vendor.address,
+      loginId: vendor.loginId,
+      password: '',
+      memo: vendor.memo ?? '',
+    })
+    setBusinessDoc(null)
+    setBankDoc(null)
     setModalOpen(true)
   }
 
@@ -122,11 +203,27 @@ export default function VendorsPage() {
       alert('이미 사용 중인 아이디입니다.')
       return
     }
+
+    const businessDocUrl = businessDoc ? URL.createObjectURL(businessDoc) : editTarget?.businessDocUrl
+    const bankDocUrl = bankDoc ? URL.createObjectURL(bankDoc) : editTarget?.bankDocUrl
+
     if (editTarget) {
       setVendors((prev) =>
         prev.map((v) =>
           v.id === editTarget.id
-            ? { ...v, name: form.name, businessNumber: form.businessNumber || undefined, managerName: form.managerName, phone: form.phone, address: form.address, loginId: form.loginId, memo: form.memo || undefined }
+            ? {
+                ...v,
+                name: form.name,
+                businessNumber: form.businessNumber || undefined,
+                managerName: form.managerName,
+                phone: form.phone,
+                email: form.email || undefined,
+                address: form.address,
+                loginId: form.loginId,
+                memo: form.memo || undefined,
+                businessDocUrl,
+                bankDocUrl,
+              }
             : v
         )
       )
@@ -137,10 +234,13 @@ export default function VendorsPage() {
         businessNumber: form.businessNumber || undefined,
         managerName: form.managerName,
         phone: form.phone,
+        email: form.email || undefined,
         address: form.address,
         loginId: form.loginId,
         status: 'active',
         memo: form.memo || undefined,
+        businessDocUrl,
+        bankDocUrl,
         createdAt: new Date().toISOString().slice(0, 10),
       }
       setVendors((prev) => [...prev, newVendor])
@@ -212,15 +312,17 @@ export default function VendorsPage() {
               <TableHead>업체명</TableHead>
               <TableHead>담당자명</TableHead>
               <TableHead>연락처</TableHead>
+              <TableHead>이메일</TableHead>
               <TableHead>주소</TableHead>
               <TableHead>아이디</TableHead>
+              <TableHead>서류</TableHead>
               <TableHead>상태</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -242,8 +344,29 @@ export default function VendorsPage() {
                   </TableCell>
                   <TableCell className="text-sm">{vendor.managerName}</TableCell>
                   <TableCell className="text-sm">{vendor.phone}</TableCell>
+                  <TableCell className="text-sm text-gray-500">{vendor.email ?? '-'}</TableCell>
                   <TableCell className="text-sm">{vendor.address}</TableCell>
                   <TableCell className="font-mono text-xs text-gray-500">{vendor.loginId}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-1.5">
+                      {vendor.businessDocUrl ? (
+                        <a href={vendor.businessDocUrl} target="_blank" rel="noreferrer"
+                          className="rounded bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-100">
+                          사업자
+                        </a>
+                      ) : (
+                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-400">사업자</span>
+                      )}
+                      {vendor.bankDocUrl ? (
+                        <a href={vendor.bankDocUrl} target="_blank" rel="noreferrer"
+                          className="rounded bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-100">
+                          통장
+                        </a>
+                      ) : (
+                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-400">통장</span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <select
                       value={staged[vendor.id] ?? vendor.status}
@@ -281,10 +404,7 @@ export default function VendorsPage() {
           filtered.map((vendor) => (
             <div key={vendor.id} className="rounded-lg border bg-white p-4">
               <div className="flex items-center justify-between gap-2">
-                <button
-                  onClick={() => openEdit(vendor)}
-                  className="truncate font-medium text-blue-700"
-                >
+                <button onClick={() => openEdit(vendor)} className="truncate font-medium text-blue-700">
                   {vendor.name}
                 </button>
                 <select
@@ -298,6 +418,7 @@ export default function VendorsPage() {
               </div>
               <div className="mt-1.5 space-y-0.5 text-xs text-gray-500">
                 <div>{vendor.managerName} · {vendor.phone}</div>
+                {vendor.email && <div>{vendor.email}</div>}
                 {vendor.address && <div className="truncate">{vendor.address}</div>}
                 <div className="font-mono text-gray-400">{vendor.loginId}</div>
               </div>
@@ -306,8 +427,9 @@ export default function VendorsPage() {
         )}
       </div>
 
+      {/* 등록/수정 모달 */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editTarget ? `${editTarget.name} 수정` : '업체 등록'}</DialogTitle>
           </DialogHeader>
@@ -329,6 +451,10 @@ export default function VendorsPage() {
               <Input placeholder="010-0000-0000" inputMode="numeric" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: formatPhone(e.target.value) }))} />
             </div>
             <div className="space-y-1.5">
+              <Label>이메일</Label>
+              <Input type="email" placeholder="example@email.com" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
               <Label>주소</Label>
               <Input placeholder="업체 주소" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
             </div>
@@ -342,6 +468,24 @@ export default function VendorsPage() {
                 <Input type="password" placeholder="8자 이상" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} />
               </div>
             )}
+
+            {/* 첨부서류 */}
+            <div className="space-y-3 rounded-lg border bg-gray-50 p-3">
+              <p className="text-xs font-medium text-gray-500">첨부서류</p>
+              <FileUploadField
+                label="사업자 사본"
+                file={businessDoc}
+                existingUrl={editTarget?.businessDocUrl}
+                onChange={setBusinessDoc}
+              />
+              <FileUploadField
+                label="통장 사본"
+                file={bankDoc}
+                existingUrl={editTarget?.bankDocUrl}
+                onChange={setBankDoc}
+              />
+            </div>
+
             <div className="space-y-1.5">
               <Label>메모</Label>
               <Textarea placeholder="관리자 메모 (선택)" value={form.memo} onChange={(e) => setForm((f) => ({ ...f, memo: e.target.value }))} rows={2} />
