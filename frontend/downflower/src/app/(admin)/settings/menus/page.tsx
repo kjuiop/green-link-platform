@@ -246,7 +246,7 @@ export default function MenuManagePage() {
             {/* 접근 권한 */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-gray-500">접근 권한</label>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 {/* 비활성 권한 */}
                 <div className="flex-1">
                   <p className="mb-1 text-center text-xs text-gray-400">비활성</p>
@@ -269,7 +269,7 @@ export default function MenuManagePage() {
                 </div>
 
                 {/* 이동 버튼 */}
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-row justify-center gap-1.5 sm:flex-col">
                   <button
                     type="button"
                     onClick={includeRole}
@@ -277,7 +277,7 @@ export default function MenuManagePage() {
                     className="flex h-7 w-7 items-center justify-center rounded border bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-30"
                     title="추가"
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-4 w-4 rotate-90 sm:rotate-0" />
                   </button>
                   <button
                     type="button"
@@ -286,7 +286,7 @@ export default function MenuManagePage() {
                     className="flex h-7 w-7 items-center justify-center rounded border bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-30"
                     title="제거"
                   >
-                    <ChevronRight className="h-4 w-4 rotate-180" />
+                    <ChevronRight className="h-4 w-4 -rotate-90 sm:rotate-180" />
                   </button>
                 </div>
 
