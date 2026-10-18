@@ -28,7 +28,7 @@ public class MenuJpaEntity extends BaseJpaEntity {
     @Column
     private Long parentId;
 
-    @OneToMany(mappedBy = "menu", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "menu", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<MenuRoleJpaEntity> roles = new ArrayList<>();
 
     protected MenuJpaEntity() {}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { type MenuItem, type UserRole, ALL_ROLES, ROLE_LABELS } from '@/types/menu'
 import { fetchAllMenus, createMenu, updateMenu, deleteMenu } from '@/lib/api/menuApi'
 import { ChevronRight } from 'lucide-react'
@@ -27,7 +27,6 @@ const EMPTY_FORM: FormState = {
 }
 
 export default function MenuManagePage() {
-  const nextIdRef = useRef(100)
   const [menus, setMenus] = useState<MenuItem[]>([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)

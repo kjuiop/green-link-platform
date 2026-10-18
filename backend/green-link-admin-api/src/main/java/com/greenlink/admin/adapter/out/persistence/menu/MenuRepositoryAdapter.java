@@ -50,6 +50,11 @@ public class MenuRepositoryAdapter implements MenuRepository {
     }
 
     @Override
+    public boolean existsByParentId(Long parentId) {
+        return menuJpaRepository.existsByParentId(parentId);
+    }
+
+    @Override
     public void delete(Long id) {
         menuJpaRepository.deleteById(id);
     }

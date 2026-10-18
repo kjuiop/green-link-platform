@@ -68,9 +68,10 @@ public class MenuService implements GetAllMenusUseCase, GetMenusByRoleUseCase,
     @Override
     @Transactional
     public void deleteMenu(Long id) {
-        Menu menu = menuRepository.findById(id)
-            .orElseThrow(() -> new BusinessException(MenuErrorCode.MENU_NOT_FOUND));
-        if (menu.hasChildren()) {
+        if (!menuRepository.findById(id).isPresent()) {
+            throw new BusinessException(MenuErrorCode.MENU_NOT_FOUND);
+        }
+        if (menuRepository.existsByParentId(id)) {
             throw new BusinessException(MenuErrorCode.MENU_HAS_CHILDREN);
         }
         menuRepository.delete(id);

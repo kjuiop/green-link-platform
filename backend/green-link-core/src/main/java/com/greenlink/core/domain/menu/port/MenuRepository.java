@@ -8,6 +8,7 @@ import java.util.Optional;
 public interface MenuRepository {
     List<Menu> findAll();
     Optional<Menu> findById(Long id);
+    boolean existsByParentId(Long parentId);
     Menu save(Menu menu);
     void delete(Long id);
 }
