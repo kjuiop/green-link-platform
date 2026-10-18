@@ -6,9 +6,12 @@ export interface Vendor {
   businessNumber?: string
   managerName: string
   phone: string
+  email?: string
   address: string
   loginId: string
   status: VendorStatus
   memo?: string
+  businessDocUrl?: string
+  bankDocUrl?: string
   createdAt: string
 }

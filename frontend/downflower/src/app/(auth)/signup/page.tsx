@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Upload, X } from 'lucide-react'
 import Link from 'next/link'
 
 const TERMS_CONTENT = `제1조 (목적)
@@ -53,13 +54,70 @@ const TERMS_CONTENT = `제1조 (목적)
 제9조 (면책 및 재판관할)
 플랫폼 관련 분쟁의 소송은 관할 법원에서 처리하며, 자격 상실 시 납입된 비용은 반환되지 않습니다.`
 
-const PRIVACY_CONTENT = `수집 항목: 업체명, 사업자번호, 대표자명, 담당자명, 아이디, 비밀번호, 연락처, 주소
+const PRIVACY_CONTENT = `수집 항목: 업체명, 사업자번호, 대표자명, 담당자명, 아이디, 비밀번호, 연락처, 이메일, 주소
 
 수집 목적: 회원 식별 및 인증, 수발주 업무 처리, 정산 관리, 서비스 이용 관련 공지
 
 보유 기간: 회원 탈퇴 또는 서비스 계약 종료 후 5년 (관련 법령에 따름)
 
 개인정보는 수집 목적 이외의 용도로 사용되지 않으며, 법령에 따른 경우를 제외하고 제3자에게 제공하지 않습니다.`
+
+interface FileFieldProps {
+  label: string
+  required?: boolean
+  file: File | null
+  onChange: (f: File | null) => void
+}
+
+function FileUploadField({ label, required, file, onChange }: FileFieldProps) {
+  const ref = useRef<HTMLInputElement>(null)
+  const previewUrl = file && file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+
+  return (
+    <div className="space-y-1.5">
+      <Label>
+        {label}{required && <span className="ml-0.5 text-red-500"> *</span>}
+      </Label>
+      <div
+        onClick={() => ref.current?.click()}
+        className="flex cursor-pointer items-center gap-3 rounded-md border-2 border-dashed border-gray-200 px-3 py-2.5 hover:border-green-400 hover:bg-green-50"
+      >
+        {file ? (
+          <>
+            {previewUrl ? (
+              <img src={previewUrl} alt="미리보기" className="h-10 w-10 shrink-0 rounded border object-cover" />
+            ) : (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border bg-gray-100 text-xs font-medium text-gray-500">PDF</div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium text-gray-700">{file.name}</div>
+              <div className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</div>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onChange(null) }}
+              className="shrink-0 text-gray-400 hover:text-red-500"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </>
+        ) : (
+          <>
+            <Upload className="h-5 w-5 shrink-0 text-gray-400" />
+            <span className="text-sm text-gray-400">클릭하여 파일 선택 (이미지, PDF)</span>
+          </>
+        )}
+      </div>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*,.pdf"
+        className="hidden"
+        onChange={(e) => { onChange(e.target.files?.[0] ?? null); e.target.value = '' }}
+      />
+    </div>
+  )
+}
 
 export default function SignupPage() {
   const [step, setStep] = useState<'terms' | 'form'>('terms')
@@ -73,6 +131,10 @@ export default function SignupPage() {
   const [verified, setVerified] = useState(false)
   const [codeError, setCodeError] = useState('')
   const [countdown, setCountdown] = useState(0)
+
+  const [email, setEmail] = useState('')
+  const [businessDoc, setBusinessDoc] = useState<File | null>(null)
+  const [bankDoc, setBankDoc] = useState<File | null>(null)
 
   useEffect(() => {
     if (countdown <= 0) return
@@ -127,7 +189,6 @@ export default function SignupPage() {
               <CardTitle className="text-base">약관 동의</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* 전체 동의 */}
               <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-2 py-3">
                 <input
                   type="checkbox"
@@ -138,7 +199,6 @@ export default function SignupPage() {
                 <span className="text-sm font-semibold text-green-800">전체 동의</span>
               </label>
 
-              {/* 서비스 이용약관 */}
               <div className="space-y-2">
                 <label className="flex cursor-pointer items-center gap-2 px-2">
                   <input
@@ -156,7 +216,6 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              {/* 개인정보 수집·이용 */}
               <div className="space-y-2">
                 <label className="flex cursor-pointer items-center gap-2 px-2">
                   <input
@@ -223,7 +282,7 @@ export default function SignupPage() {
                 <Input type="password" placeholder="비밀번호 재입력" />
               </div>
 
-              {/* 연락처 + 인증번호 받기 */}
+              {/* 연락처 + 인증번호 */}
               <div className="space-y-1.5">
                 <Label>연락처 *</Label>
                 <div className="flex gap-2">
@@ -246,7 +305,6 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              {/* 인증번호 입력 */}
               {codeSent && !verified && (
                 <div className="space-y-1.5">
                   <div className="flex gap-2">
@@ -286,8 +344,35 @@ export default function SignupPage() {
               )}
 
               <div className="space-y-1.5">
+                <Label>이메일</Label>
+                <Input
+                  type="email"
+                  placeholder="example@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1.5">
                 <Label>주소</Label>
                 <Input placeholder="업체 주소" />
+              </div>
+
+              {/* 첨부서류 */}
+              <div className="space-y-3 rounded-lg border bg-gray-50 p-3">
+                <p className="text-xs font-medium text-gray-500">첨부서류</p>
+                <FileUploadField
+                  label="사업자 사본"
+                  required
+                  file={businessDoc}
+                  onChange={setBusinessDoc}
+                />
+                <FileUploadField
+                  label="통장 사본"
+                  required
+                  file={bankDoc}
+                  onChange={setBankDoc}
+                />
               </div>
 
               <div className="flex gap-2">
