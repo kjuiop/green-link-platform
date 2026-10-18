@@ -34,4 +34,14 @@ public class CompanyRepositoryAdapter implements CompanyRepository {
     public Company save(Company company) {
         return jpaRepository.save(CompanyJpaEntity.from(company)).toDomain();
     }
+
+    @Override
+    public Optional<Company> findById(Long id) {
+        return jpaRepository.findById(id).map(CompanyJpaEntity::toDomain);
+    }
+
+    @Override
+    public boolean existsByBusinessNo(String businessNo) {
+        return jpaRepository.existsByBusinessNo(businessNo);
+    }
 }

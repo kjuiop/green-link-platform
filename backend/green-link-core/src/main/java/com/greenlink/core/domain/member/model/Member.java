@@ -47,6 +47,13 @@ public class Member {
 
     public void addRole(Role role) { roles.add(role); }
 
+    public void activate() { this.status = MemberStatus.ACTIVE; }
+    public void suspend() { this.status = MemberStatus.INACTIVE; }
+    public void updateInfo(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
     public Long getId() { return id; }
     public String getLoginId() { return loginId; }
     public String getPassword() { return password; }

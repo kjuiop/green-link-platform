@@ -1,0 +1,9 @@
+package com.greenlink.core.application.vendor.dto;
+
+public record UpdateVendorCommand(
+    String companyName,
+    String businessNo,
+    String address,
+    String managerName,
+    String phone
+) {}

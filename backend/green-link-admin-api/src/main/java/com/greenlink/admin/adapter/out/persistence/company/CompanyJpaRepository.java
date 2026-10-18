@@ -6,4 +6,5 @@ import java.util.Optional;
 
 public interface CompanyJpaRepository extends JpaRepository<CompanyJpaEntity, Long> {
     Optional<CompanyJpaEntity> findByBusinessNo(String businessNo);
+    boolean existsByBusinessNo(String businessNo);
 }

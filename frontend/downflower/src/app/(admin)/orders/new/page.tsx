@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { mockVendors } from '@/lib/mock/vendors'
 
-const activeVendors = mockVendors.filter((v) => v.status === 'active')
+const activeVendors = mockVendors.filter((v) => v.status === 'ACTIVE')
 
 export default function NewOrderPage() {
   const [vendorId, setVendorId] = useState('')

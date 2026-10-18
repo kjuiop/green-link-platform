@@ -14,7 +14,7 @@ public class CompanyJpaEntity extends BaseJpaEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 20)
+    @Column(unique = true, length = 20)
     private String businessNo;
 
     @Column(nullable = false, length = 100)
@@ -42,7 +42,8 @@ public class CompanyJpaEntity extends BaseJpaEntity {
     public static CompanyJpaEntity from(Company company) {
         CompanyJpaEntity e = new CompanyJpaEntity();
         e.id = company.getId();
-        e.businessNo = company.getBusinessNo();
+        String bn = company.getBusinessNo();
+        e.businessNo = (bn != null && !bn.isBlank()) ? bn : null;
         e.companyName = company.getCompanyName();
         e.ceoName = company.getCeoName();
         e.phone = company.getPhone();

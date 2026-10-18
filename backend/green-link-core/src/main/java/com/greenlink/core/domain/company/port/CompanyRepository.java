@@ -7,4 +7,6 @@ import java.util.Optional;
 public interface CompanyRepository {
     Optional<Company> findByBusinessNo(String businessNo);
     Company save(Company company);
+    Optional<Company> findById(Long id);
+    boolean existsByBusinessNo(String businessNo);
 }

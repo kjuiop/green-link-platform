@@ -47,6 +47,12 @@ public class Company {
         this.type = CompanyType.BOTH;
     }
 
+    public void updateInfo(String companyName, String businessNo, String address) {
+        this.companyName = companyName;
+        this.businessNo = businessNo;
+        this.address = address;
+    }
+
     public Long getId() { return id; }
     public String getBusinessNo() { return businessNo; }
     public String getCompanyName() { return companyName; }
