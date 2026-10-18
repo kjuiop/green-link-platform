@@ -32,11 +32,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
         if (token != null) {
             JwtProvider.JwtClaims claims = jwtProvider.extractClaims(token);
-            if (claims != null) {
+            if (claims != null && claims.roles() != null) {
+                var authorities = claims.roles().stream()
+                    .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
+                    .toList();
                 var auth = new UsernamePasswordAuthenticationToken(
                     claims.subject(),
                     null,
-                    List.of(new SimpleGrantedAuthority("ROLE_" + claims.role()))
+                    authorities
                 );
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }

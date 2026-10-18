@@ -39,6 +39,7 @@ public class SignupService implements SignupUseCase {
         }
 
         List<Role> roles = cmd.roles().stream()
+            .distinct()
             .map(this::parseRole)
             .toList();
 
