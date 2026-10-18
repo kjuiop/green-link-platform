@@ -2,11 +2,36 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import * as XLSX from 'xlsx'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { OrderStatusBadge, MessageStatusBadge, DeliveryTypeBadge } from '@/components/common/StatusBadge'
+import { OrderStatusBadge } from '@/components/common/StatusBadge'
+import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
+import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { mockOrders } from '@/lib/mock/orders'
-import { OrderStatus } from '@/types/order'
-import { Plus, Search } from 'lucide-react'
+import { OrderStatus, Order } from '@/types/order'
+import { Plus, Download } from 'lucide-react'
+
+type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
+type DeletedFilter = '정상' | '삭제' | '전체'
+
+const SEARCH_FIELDS: SearchField[] = ['발주사명', '수주사명', '주문일', '배송일', '주문자', '받는분', '배달장소', '보내는분', '인수자', '주문번호']
+
+function matchField(o: Order, field: SearchField, value: string): boolean {
+  if (!value.trim()) return true
+  const v = value.trim()
+  switch (field) {
+    case '발주사명': return o.ordererName.includes(v)
+    case '수주사명': return o.vendorName.includes(v)
+    case '주문일':   return o.orderedAt.includes(v)
+    case '배송일':   return o.deliveryAt.includes(v)
+    case '주문자':   return o.ordererName.includes(v)
+    case '받는분':   return (o.recipientName ?? '').includes(v)
+    case '배달장소': return `${o.placeName} ${o.roomName} ${o.address}`.includes(v)
+    case '보내는분': return o.ribbonLeft.includes(v)
+    case '인수자':   return (o.recipientName ?? '').includes(v)
+    case '주문번호': return o.orderNumber.includes(v)
+  }
+}
 
 const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '전체', value: 'ALL' },
@@ -14,42 +39,87 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '수주완료', value: '수주완료' },
   { label: '배송완료', value: '배송완료' },
   { label: '수주거절', value: '수주거절' },
-  { label: '주문취소', value: '주문취소' },
 ]
 
+function downloadExcel(orders: Order[]) {
+  const rows = orders.map((o) => ({
+    주문번호: o.orderNumber,
+    주문접수일: o.orderedAt,
+    배송요구일: o.deliveryAt,
+    주문자: o.ordererName,
+    주문자연락처: o.ordererPhone,
+    받는분: o.recipientName ?? '',
+    받는분연락처: o.recipientPhone ?? '',
+    상품명: o.productName,
+    수량: o.quantity,
+    발주금액: o.amount,
+    수주업체: o.vendorName,
+    배송지: `${o.placeName} ${o.address}`.trim(),
+    배송현황: o.status,
+    문자현황: o.messageStatus,
+    삭제여부: o.isDeleted ? '삭제' : '정상',
+  }))
+
+  const ws = XLSX.utils.json_to_sheet(rows)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, '발주목록')
+
+  const today = new Date()
+  const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`
+  XLSX.writeFile(wb, `발주목록_${dateStr}.xlsx`)
+}
+
 export default function OrdersPage() {
-  const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL')
+  const [deletedFilter, setDeletedFilter] = useState<DeletedFilter>('정상')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-  const [appliedQuery, setAppliedQuery] = useState('')
+  const [search1Field, setSearch1Field] = useState<SearchField>('주문번호')
+  const [search1Value, setSearch1Value] = useState('')
+  const [search2Field, setSearch2Field] = useState<SearchField>('수주사명')
+  const [search2Value, setSearch2Value] = useState('')
+
   const [appliedStatus, setAppliedStatus] = useState<OrderStatus | 'ALL'>('ALL')
+  const [appliedDeletedFilter, setAppliedDeletedFilter] = useState<DeletedFilter>('정상')
   const [appliedFrom, setAppliedFrom] = useState('')
   const [appliedTo, setAppliedTo] = useState('')
+  const [applied1Field, setApplied1Field] = useState<SearchField>('주문번호')
+  const [applied1Value, setApplied1Value] = useState('')
+  const [applied2Field, setApplied2Field] = useState<SearchField>('수주사명')
+  const [applied2Value, setApplied2Value] = useState('')
 
   const handleSearch = () => {
-    setAppliedQuery(query)
     setAppliedStatus(statusFilter)
+    setAppliedDeletedFilter(deletedFilter)
     setAppliedFrom(dateFrom)
     setAppliedTo(dateTo)
+    setApplied1Field(search1Field)
+    setApplied1Value(search1Value)
+    setApplied2Field(search2Field)
+    setApplied2Value(search2Value)
   }
 
   const handleReset = () => {
-    setQuery(''); setStatusFilter('ALL'); setDateFrom(''); setDateTo('')
-    setAppliedQuery(''); setAppliedStatus('ALL'); setAppliedFrom(''); setAppliedTo('')
+    setStatusFilter('ALL'); setDeletedFilter('정상'); setDateFrom(''); setDateTo('')
+    setSearch1Field('주문번호'); setSearch1Value('')
+    setSearch2Field('수주사명'); setSearch2Value('')
+    setAppliedStatus('ALL'); setAppliedDeletedFilter('정상'); setAppliedFrom(''); setAppliedTo('')
+    setApplied1Field('주문번호'); setApplied1Value('')
+    setApplied2Field('수주사명'); setApplied2Value('')
   }
 
   const filtered = mockOrders.filter((o) => {
     const matchStatus = appliedStatus === 'ALL' || o.status === appliedStatus
-    const matchQuery =
-      !appliedQuery ||
-      o.orderNumber.includes(appliedQuery) ||
-      o.vendorName.includes(appliedQuery) ||
-      o.productName.includes(appliedQuery)
+    const matchDeleted =
+      appliedDeletedFilter === '전체' ||
+      (appliedDeletedFilter === '정상' && !o.isDeleted) ||
+      (appliedDeletedFilter === '삭제' && !!o.isDeleted)
     const deliveryDate = o.deliveryAt.slice(0, 10)
     const matchFrom = !appliedFrom || deliveryDate >= appliedFrom
     const matchTo = !appliedTo || deliveryDate <= appliedTo
-    return matchStatus && matchQuery && matchFrom && matchTo
+    const match1 = matchField(o, applied1Field, applied1Value)
+    const match2 = matchField(o, applied2Field, applied2Value)
+    return matchStatus && matchDeleted && matchFrom && matchTo && match1 && match2
   })
 
   return (
@@ -81,34 +151,68 @@ export default function OrdersPage() {
             </label>
           ))}
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <label className="whitespace-nowrap text-sm text-gray-500">배송마감</label>
-            <div className="flex items-center gap-1.5">
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-              />
-              <span className="text-sm text-gray-400">~</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-              />
-            </div>
-          </div>
-          <div className="relative min-w-48 flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+
+        {/* 배송날짜 + 정상/삭제 */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <label className="whitespace-nowrap text-sm text-gray-500">배송날짜</label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+          />
+          <span className="text-sm text-gray-400">~</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+          />
+          <select
+            value={deletedFilter}
+            onChange={(e) => setDeletedFilter(e.target.value as DeletedFilter)}
+            className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+          >
+            <option value="정상">정상</option>
+            <option value="삭제">삭제</option>
+            <option value="전체">전체</option>
+          </select>
+        </div>
+
+        {/* 검색 조건 2쌍 */}
+        <div className="mt-2 flex flex-wrap gap-2">
+          <div className="flex min-w-0 flex-1 gap-1.5">
+            <select
+              value={search1Field}
+              onChange={(e) => { setSearch1Field(e.target.value as SearchField); setSearch1Value('') }}
+              className="w-28 shrink-0 rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+            >
+              {SEARCH_FIELDS.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
             <input
               type="text"
-              placeholder="주문번호, 업체명, 상품명으로 검색"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              placeholder={`${search1Field} 검색`}
+              value={search1Value}
+              onChange={(e) => setSearch1Value(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              className="w-full rounded-md border px-3 py-2 pl-9 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-700"
+              className="min-w-0 flex-1 rounded-md border px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-700"
+            />
+          </div>
+          <div className="flex min-w-0 flex-1 gap-1.5">
+            <select
+              value={search2Field}
+              onChange={(e) => { setSearch2Field(e.target.value as SearchField); setSearch2Value('') }}
+              className="w-28 shrink-0 rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+            >
+              {SEARCH_FIELDS.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+            <input
+              type="text"
+              placeholder={`${search2Field} 검색`}
+              value={search2Value}
+              onChange={(e) => setSearch2Value(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              className="min-w-0 flex-1 rounded-md border px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-700"
             />
           </div>
           <button
@@ -126,47 +230,110 @@ export default function OrdersPage() {
         </div>
       </div>
 
+      {/* 검색 결과 요약 + 엑셀 다운로드 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4 text-sm">
+          <span className="text-gray-500">건수 <strong className="text-gray-900">{filtered.length}</strong>건</span>
+          <span className="text-gray-300">|</span>
+          <span className="text-gray-500">발주금액 <strong className="text-gray-900">{filtered.reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+        </div>
+        <button
+          onClick={() => downloadExcel(filtered)}
+          disabled={filtered.length === 0}
+          className="inline-flex items-center gap-1.5 rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Download className="h-3.5 w-3.5" />
+          엑셀 다운로드
+        </button>
+      </div>
+
       {/* 데스크톱 테이블 */}
       <div className="hidden rounded-lg border bg-white md:block">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="[&>th]:h-auto [&>th]:py-3">
               <TableHead>주문번호</TableHead>
-              <TableHead>수주업체</TableHead>
-              <TableHead>상품명</TableHead>
-              <TableHead>배송장소</TableHead>
-              <TableHead>배송예정</TableHead>
-              <TableHead>배송마감시간</TableHead>
-              <TableHead>배송유형</TableHead>
-              <TableHead>주문상태</TableHead>
-              <TableHead>문자발송</TableHead>
-              <TableHead>발주일시</TableHead>
+              <TableHead><div>배송요구일</div><div className="font-normal text-gray-400">주문접수일</div></TableHead>
+              <TableHead><div>주문자</div><div className="font-normal text-gray-400">받는분</div></TableHead>
+              <TableHead><div>상품명</div><div className="font-normal text-gray-400">배송지</div></TableHead>
+              <TableHead>수량</TableHead>
+              <TableHead>발주금액</TableHead>
+              <TableHead>배송현황</TableHead>
+              <TableHead>문자현황</TableHead>
+              <TableHead>인수정보</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map((order) => (
-                <TableRow key={order.id} className="cursor-pointer hover:bg-gray-50">
+                <TableRow
+                  key={order.id}
+                  className={order.isDeleted ? 'bg-red-50 opacity-60' : 'cursor-pointer hover:bg-gray-50'}
+                >
                   <TableCell>
                     <Link href={`/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
                       {order.orderNumber}
                     </Link>
+                    {order.isDeleted && (
+                      <span className="ml-1.5 rounded bg-red-100 px-1 py-0.5 text-[10px] font-medium text-red-600">삭제</span>
+                    )}
                   </TableCell>
-                  <TableCell className="text-sm">{order.vendorName}</TableCell>
-                  <TableCell className="text-sm">{order.productName}</TableCell>
-                  <TableCell className="text-sm">{order.placeName} {order.roomName}</TableCell>
-                  <TableCell className="text-sm">{order.deliveryAt}</TableCell>
-                  <TableCell className="text-sm">{order.deliveryDeadline ?? '-'}</TableCell>
-                  <TableCell><DeliveryTypeBadge deliveryType={order.deliveryType} /></TableCell>
-                  <TableCell><OrderStatusBadge status={order.status} /></TableCell>
-                  <TableCell><MessageStatusBadge status={order.messageStatus} /></TableCell>
-                  <TableCell className="text-sm text-gray-400">{order.orderedAt}</TableCell>
+                  <TableCell>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-sm text-blue-600">{order.deliveryAt.split(' ')[0]}</span>
+                      <span className="text-sm font-medium text-red-500">{order.deliveryAt.split(' ')[1]}</span>
+                      {order.deliveryTimeType && (
+                        <span className="text-xs font-bold text-red-500">
+                          {order.deliveryTimeType === '직접입력' ? order.deliveryTimeCustom : order.deliveryTimeType}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-400">{order.orderedAt}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">{order.ordererName}</div>
+                    {order.recipientName && <div className="text-sm text-gray-400">{order.recipientName}</div>}
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">{order.productName}</div>
+                    <div className="text-sm text-gray-400">{[order.placeName, order.address].filter(Boolean).join(' ')}</div>
+                  </TableCell>
+                  <TableCell className="text-sm">{order.quantity}</TableCell>
+                  <TableCell className="text-sm">{order.amount.toLocaleString()}원</TableCell>
+                  <TableCell>
+                    <OrderStatusBadge status={order.status} />
+                  </TableCell>
+                  <TableCell>
+                    <ClickableMessageBadge
+                      status={order.messageStatus}
+                      photos={order.deliveryPhotos}
+                      orderNumber={order.orderNumber}
+                      ordererName={order.ordererName}
+                      ordererPhone={order.ordererPhone}
+                      recipientName={order.recipientName}
+                      recipientPhone={order.recipientPhone}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <ReceiptConfirmButton
+                      orderNumber={order.orderNumber}
+                      senderName={order.ribbonLeft}
+                      recipientName={order.recipientName}
+                      initialSaved={order.id === '1' ? {
+                        receiverName: '김민준',
+                        photos: [
+                          { id: 'demo-1', url: 'https://picsum.photos/seed/receipt1/400/400' },
+                          { id: 'demo-2', url: 'https://picsum.photos/seed/receipt2/400/400' },
+                        ],
+                      } : undefined}
+                    />
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -185,26 +352,28 @@ export default function OrdersPage() {
             <Link
               key={order.id}
               href={`/orders/${order.id}`}
-              className="block rounded-lg border bg-white p-4 hover:bg-gray-50"
+              className={`block rounded-lg border p-4 ${order.isDeleted ? 'bg-red-50 opacity-60' : 'bg-white hover:bg-gray-50'}`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="font-mono text-xs text-blue-600">{order.orderNumber}</div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-xs text-blue-600">{order.orderNumber}</span>
+                    {order.isDeleted && (
+                      <span className="rounded bg-red-100 px-1 py-0.5 text-[10px] font-medium text-red-600">삭제</span>
+                    )}
+                  </div>
                   <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
-                  <div className="mt-0.5 text-xs text-gray-500">{order.vendorName}</div>
+                  <div className="mt-0.5 text-xs text-gray-500">{order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}</div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <OrderStatusBadge status={order.status} />
-                  <DeliveryTypeBadge deliveryType={order.deliveryType} />
+                  <ClickableMessageBadge status={order.messageStatus} photos={order.deliveryPhotos} orderNumber={order.orderNumber} />
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
                 <span>{order.deliveryAt}</span>
-                {order.deliveryDeadline && <span>마감 {order.deliveryDeadline}</span>}
-                <span>{order.placeName} {order.roomName}</span>
-              </div>
-              <div className="mt-1.5">
-                <MessageStatusBadge status={order.messageStatus} />
+                <span>{order.placeName}</span>
+                <span>{order.amount.toLocaleString()}원 · {order.quantity}개</span>
               </div>
             </Link>
           ))

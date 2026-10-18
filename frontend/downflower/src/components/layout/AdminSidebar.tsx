@@ -12,6 +12,7 @@ import {
   Users,
   Settings,
   ChevronDown,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
@@ -25,6 +26,7 @@ const navItems = [
 
 const settingsItems = [
   { label: '문자 발송내역', href: '/messages', icon: MessageSquare },
+  { label: '문자 설정', href: '/settings/messages', icon: SlidersHorizontal },
   { label: '업체 계정관리', href: '/vendors', icon: Users },
 ]
 
@@ -37,7 +39,7 @@ interface SidebarNavProps {
 function SidebarNav({ onNavClick, settingsOpen, onSettingsToggle }: SidebarNavProps) {
   const pathname = usePathname()
   const isSettingsActive =
-    pathname.startsWith('/messages') || pathname.startsWith('/vendors')
+    pathname.startsWith('/messages') || pathname.startsWith('/vendors') || pathname.startsWith('/settings')
 
   return (
     <>
@@ -130,7 +132,7 @@ interface AdminSidebarProps {
 export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   const pathname = usePathname()
   const isSettingsActive =
-    pathname.startsWith('/messages') || pathname.startsWith('/vendors')
+    pathname.startsWith('/messages') || pathname.startsWith('/vendors') || pathname.startsWith('/settings')
   const [settingsOpen, setSettingsOpen] = useState(isSettingsActive)
 
   const toggleSettings = () => setSettingsOpen((v) => !v)

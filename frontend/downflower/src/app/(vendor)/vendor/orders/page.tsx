@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { OrderStatusBadge, MessageStatusBadge, DeliveryTypeBadge } from '@/components/common/StatusBadge'
+import { VendorOrderStatusBadge, MessageStatusBadge, DeliveryTimeTypeBadge } from '@/components/common/StatusBadge'
 import { mockOrders } from '@/lib/mock/orders'
 import { OrderStatus } from '@/types/order'
 import Link from 'next/link'
@@ -10,7 +10,7 @@ import { Search } from 'lucide-react'
 
 const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '전체', value: 'ALL' },
-  { label: '발주대기', value: '발주대기' },
+  { label: '미확인', value: '발주대기' },
   { label: '수주완료', value: '수주완료' },
   { label: '배송완료', value: '배송완료' },
   { label: '수주거절', value: '수주거절' },
@@ -71,7 +71,7 @@ export default function VendorOrdersPage() {
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <div className="flex flex-wrap items-center gap-1.5">
-            <label className="whitespace-nowrap text-sm text-gray-500">배송마감</label>
+            <label className="whitespace-nowrap text-sm text-gray-500">배송날짜</label>
             <div className="flex items-center gap-1.5">
               <input
                 type="date"
@@ -112,9 +112,9 @@ export default function VendorOrdersPage() {
               <TableHead>주문번호</TableHead>
               <TableHead>상품명</TableHead>
               <TableHead>배송장소</TableHead>
-              <TableHead>배송예정</TableHead>
-              <TableHead>배송마감시간</TableHead>
-              <TableHead>배송유형</TableHead>
+              <TableHead>배송날짜</TableHead>
+              <TableHead>배송시간</TableHead>
+              <TableHead>배송완료일</TableHead>
               <TableHead>주문상태</TableHead>
               <TableHead>문자발송</TableHead>
               <TableHead>발주일시</TableHead>
@@ -138,9 +138,9 @@ export default function VendorOrdersPage() {
                   <TableCell className="text-sm">{order.productName}</TableCell>
                   <TableCell className="text-sm">{order.placeName} {order.roomName}</TableCell>
                   <TableCell className="text-sm">{order.deliveryAt}</TableCell>
-                  <TableCell className="text-sm">{order.deliveryDeadline ?? '-'}</TableCell>
-                  <TableCell><DeliveryTypeBadge deliveryType={order.deliveryType} /></TableCell>
-                  <TableCell><OrderStatusBadge status={order.status} /></TableCell>
+                  <TableCell><DeliveryTimeTypeBadge type={order.deliveryTimeType} custom={order.deliveryTimeCustom} /></TableCell>
+                  <TableCell className="text-sm">{order.completedAt ?? '-'}</TableCell>
+                  <TableCell><VendorOrderStatusBadge status={order.status} /></TableCell>
                   <TableCell><MessageStatusBadge status={order.messageStatus} /></TableCell>
                   <TableCell className="text-sm text-gray-400">{order.orderedAt}</TableCell>
                 </TableRow>
@@ -170,13 +170,13 @@ export default function VendorOrdersPage() {
                   <div className="mt-0.5 text-xs text-gray-500">{order.placeName} {order.roomName}</div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <OrderStatusBadge status={order.status} />
-                  <DeliveryTypeBadge deliveryType={order.deliveryType} />
+                  <VendorOrderStatusBadge status={order.status} />
+                  <DeliveryTimeTypeBadge type={order.deliveryTimeType} custom={order.deliveryTimeCustom} />
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
                 <span>{order.deliveryAt}</span>
-                {order.deliveryDeadline && <span>마감 {order.deliveryDeadline}</span>}
+                {order.completedAt && <span>완료 {order.completedAt}</span>}
               </div>
               <div className="mt-1.5">
                 <MessageStatusBadge status={order.messageStatus} />
