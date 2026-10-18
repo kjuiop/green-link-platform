@@ -97,9 +97,25 @@ function ReceiptFormDialog({ open, onClose, onSave, orderNumber, senderName, rec
   const [receiverRelation, setReceiverRelation] = useState('')
   const [delivered, setDelivered] = useState(false)
   const [memo, setMemo] = useState('')
-  const now = new Date()
-  const confirmTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+  const [confirmTime, setConfirmTime] = useState('')
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      photos.forEach((p) => URL.revokeObjectURL(p.url))
+      setPhotos([])
+      setReceiverName('')
+      setReceiverRelation('')
+      setDelivered(false)
+      setMemo('')
+      const now = new Date()
+      setConfirmTime(
+        `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ` +
+        `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+      )
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
@@ -159,7 +175,7 @@ function ReceiptFormDialog({ open, onClose, onSave, orderNumber, senderName, rec
                       <img src={p.url} alt="배송사진" className="h-full w-full rounded border object-cover" />
                       <button
                         type="button"
-                        onClick={() => setPhotos((prev) => prev.filter((x) => x.id !== p.id))}
+                        onClick={() => { URL.revokeObjectURL(p.url); setPhotos((prev) => prev.filter((x) => x.id !== p.id)) }}
                         className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
                       >
                         <X className="h-2.5 w-2.5" />
