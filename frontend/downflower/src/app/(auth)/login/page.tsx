@@ -13,13 +13,32 @@ export default function LoginPage() {
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  function handleLogin() {
+  async function handleLogin() {
     if (!loginId) { setError('아이디를 입력하세요'); return }
     if (!password) { setError('비밀번호를 입력하세요'); return }
     setError('')
-    if (loginId === 'admin') router.push('/dashboard')
-    else router.push('/vendor/dashboard')
+    setLoading(true)
+    try {
+      const res = await fetch('/api/auth/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loginId, password }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setError(data.message ?? '아이디 또는 비밀번호가 올바르지 않습니다.')
+        return
+      }
+      const { accessToken } = await res.json()
+      localStorage.setItem('accessToken', accessToken)
+      router.push('/dashboard')
+    } catch {
+      setError('서버 연결에 실패했습니다.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -60,8 +79,9 @@ export default function LoginPage() {
             <Button
               className="w-full bg-green-700 hover:bg-green-800"
               onClick={handleLogin}
+              disabled={loading}
             >
-              로그인
+              {loading ? '로그인 중...' : '로그인'}
             </Button>
 
             <div className="flex items-center justify-center gap-3 pt-1 text-xs text-gray-400">

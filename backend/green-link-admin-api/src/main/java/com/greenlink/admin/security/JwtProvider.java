@@ -1,5 +1,6 @@
 package com.greenlink.admin.security;
 
+import com.greenlink.core.application.auth.port.TokenProvider;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,7 +12,7 @@ import java.util.Date;
 import java.util.List;
 
 @Component
-public class JwtProvider {
+public class JwtProvider implements TokenProvider {
 
     private final SecretKey key;
     private final long expiration;
