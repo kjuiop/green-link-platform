@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.List;
 
 @Component
 public class JwtProvider {
@@ -27,16 +28,17 @@ public class JwtProvider {
         this.expiration = expiration;
     }
 
-    public String generateToken(Long id, String role) {
+    public String generateToken(Long id, List<String> roles) {
         return Jwts.builder()
             .subject(String.valueOf(id))
-            .claim("role", role)
+            .claim("roles", roles)
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + expiration))
             .signWith(key)
             .compact();
     }
 
+    @SuppressWarnings("unchecked")
     public JwtClaims extractClaims(String token) {
         try {
             var payload = Jwts.parser()
@@ -46,12 +48,12 @@ public class JwtProvider {
                 .getPayload();
             return new JwtClaims(
                 payload.getSubject(),
-                payload.get("role", String.class)
+                (List<String>) payload.get("roles")
             );
         } catch (Exception e) {
             return null;
         }
     }
 
-    public record JwtClaims(String subject, String role) {}
+    public record JwtClaims(String subject, List<String> roles) {}
 }
