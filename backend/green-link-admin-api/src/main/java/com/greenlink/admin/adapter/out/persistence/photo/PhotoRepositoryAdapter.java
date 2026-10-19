@@ -1,6 +1,7 @@
 package com.greenlink.admin.adapter.out.persistence.photo;
 
 import com.greenlink.core.domain.photo.model.Photo;
+import com.greenlink.core.domain.photo.model.PhotoType;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
 import org.springframework.stereotype.Component;
 
@@ -31,5 +32,10 @@ public class PhotoRepositoryAdapter implements PhotoRepository {
         return jpaRepository.findAllByOrderId(orderId).stream()
                 .map(PhotoJpaEntity::toDomain)
                 .toList();
+    }
+
+    @Override
+    public boolean existsByOrderIdAndPhotoType(Long orderId, PhotoType photoType) {
+        return jpaRepository.existsByOrderIdAndPhotoType(orderId, photoType);
     }
 }
