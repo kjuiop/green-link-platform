@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { VendorOrderStatusBadge } from '@/components/common/StatusBadge'
-import { fetchOrder, updateOrderStatus } from '@/lib/api/orderApi'
+import { fetchOrder, updateOrderStatus, uploadPhotos, PhotoResult } from '@/lib/api/orderApi'
 import { PrintButton } from '@/components/common/PrintButton'
 import { cn } from '@/lib/utils'
 import { Upload, X } from 'lucide-react'
@@ -17,6 +17,9 @@ interface LocalPhoto {
   id: string
   url: string
   category: PhotoCategory
+  file?: File
+  uploaded?: boolean
+  remoteId?: number
 }
 
 export default function VendorOrderDetailPage() {
@@ -79,6 +82,8 @@ export default function VendorOrderDetailPage() {
       id: `local-${category}-${Date.now()}-${i}`,
       url: URL.createObjectURL(file),
       category,
+      file,
+      uploaded: false,
     }))
     setLocalPhotos((prev) => [...prev, ...newPhotos])
     e.target.value = ''
@@ -93,7 +98,29 @@ export default function VendorOrderDetailPage() {
     setActing(true)
     setActionError(null)
     try {
-      // TODO: S3 사진 업로드(#16) 후 실제 배송완료 처리 연동
+      const pendingStore = localPhotos.filter((p) => p.category === 'store' && !p.uploaded && p.file)
+      const pendingSite = localPhotos.filter((p) => p.category === 'site' && !p.uploaded && p.file)
+
+      let uploadedResults: PhotoResult[] = []
+      if (pendingStore.length > 0) {
+        const r = await uploadPhotos(id, pendingStore.map((p) => p.file!), 'STORE')
+        uploadedResults = [...uploadedResults, ...r]
+      }
+      if (pendingSite.length > 0) {
+        const r = await uploadPhotos(id, pendingSite.map((p) => p.file!), 'SITE')
+        uploadedResults = [...uploadedResults, ...r]
+      }
+
+      setLocalPhotos((prev) =>
+        prev.map((p) => {
+          const matched = uploadedResults.find((r) =>
+            (r.photoType === 'STORE' && p.category === 'store') ||
+            (r.photoType === 'SITE' && p.category === 'site')
+          )
+          return matched ? { ...p, uploaded: true, remoteId: matched.id } : p
+        })
+      )
+
       const updated = await updateOrderStatus(id, 'complete')
       setOrder(updated)
     } catch (e) {

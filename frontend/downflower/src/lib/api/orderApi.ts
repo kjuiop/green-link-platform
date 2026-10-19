@@ -189,6 +189,45 @@ export async function updateOrder(id: string, payload: UpdateOrderPayload): Prom
   return toFrontend(await res.json())
 }
 
+export type PhotoResult = {
+  id: number
+  orderId: number
+  photoUrl: string
+  photoType: 'STORE' | 'SITE'
+  isSendToCustomer: boolean
+  uploadedAt: string | null
+}
+
+export async function fetchPhotos(orderId: string): Promise<PhotoResult[]> {
+  const res = await fetch(`/api/orders/${orderId}/photos`, { headers: authHeaders() })
+  if (!res.ok) throw new Error('사진 목록을 불러오지 못했습니다.')
+  return res.json()
+}
+
+export async function uploadPhotos(orderId: string, files: File[], photoType: 'STORE' | 'SITE'): Promise<PhotoResult[]> {
+  const formData = new FormData()
+  files.forEach((f) => formData.append('files', f))
+  formData.append('photoType', photoType)
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
+  const res = await fetch(`/api/orders/${orderId}/photos`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  })
+  if (!res.ok) throw new Error('사진 업로드에 실패했습니다.')
+  return res.json()
+}
+
+export async function selectPhoto(orderId: string, photoId: number, selected: boolean): Promise<PhotoResult> {
+  const res = await fetch(`/api/orders/${orderId}/photos/${photoId}/select`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ selected }),
+  })
+  if (!res.ok) throw new Error('사진 선택 변경에 실패했습니다.')
+  return res.json()
+}
+
 export async function updateOrderStatus(id: string, action: string): Promise<Order> {
   const res = await fetch(`/api/orders/${id}/status`, {
     method: 'PUT',
