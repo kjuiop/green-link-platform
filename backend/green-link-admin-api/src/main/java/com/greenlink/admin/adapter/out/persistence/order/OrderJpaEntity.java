@@ -184,7 +184,8 @@ public class OrderJpaEntity extends BaseJpaEntity {
                 scheduledMessageMinute,
                 adminMemo,
                 vendorMemo,
-                completedAt
+                completedAt,
+                getCreatedAt() != null ? getCreatedAt().toString() : null
         );
     }
 }

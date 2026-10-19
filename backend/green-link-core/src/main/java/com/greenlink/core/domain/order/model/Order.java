@@ -35,6 +35,7 @@ public class Order {
     private String adminMemo;
     private String vendorMemo;
     private String completedAt;
+    private String createdAt;
 
     private Order() {}
 
@@ -138,7 +139,8 @@ public class Order {
             String scheduledMessageMinute,
             String adminMemo,
             String vendorMemo,
-            String completedAt
+            String completedAt,
+            String createdAt
     ) {
         Order o = new Order();
         o.id = id;
@@ -174,6 +176,7 @@ public class Order {
         o.adminMemo = adminMemo;
         o.vendorMemo = vendorMemo;
         o.completedAt = completedAt;
+        o.createdAt = createdAt;
         return o;
     }
 
@@ -304,4 +307,5 @@ public class Order {
     public String getAdminMemo() { return adminMemo; }
     public String getVendorMemo() { return vendorMemo; }
     public String getCompletedAt() { return completedAt; }
+    public String getCreatedAt() { return createdAt; }
 }

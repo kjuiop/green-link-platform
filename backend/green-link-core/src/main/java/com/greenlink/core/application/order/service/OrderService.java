@@ -91,9 +91,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         if (status != null && !status.isBlank()) {
             OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
             if (vendorId != null) {
-                orders = orderRepository.findAllByStatus(orderStatus).stream()
-                        .filter(o -> vendorId.equals(o.getVendorId()))
-                        .toList();
+                orders = orderRepository.findAllByStatusAndVendorId(orderStatus, vendorId);
             } else {
                 orders = orderRepository.findAllByStatus(orderStatus);
             }
@@ -202,7 +200,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 order.getAdminMemo(),
                 order.getVendorMemo(),
                 order.getCompletedAt(),
-                null
+                order.getCreatedAt()
         );
     }
 }

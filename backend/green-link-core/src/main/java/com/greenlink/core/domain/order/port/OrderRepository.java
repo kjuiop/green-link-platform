@@ -16,5 +16,7 @@ public interface OrderRepository {
 
     List<Order> findAllByVendorId(Long vendorId);
 
+    List<Order> findAllByStatusAndVendorId(OrderStatus status, Long vendorId);
+
     Order save(Order order);
 }

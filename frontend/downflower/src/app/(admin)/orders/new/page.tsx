@@ -167,13 +167,9 @@ export default function NewOrderPage() {
             <CardTitle className="text-sm">기본정보</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>주문번호</Label>
-                <Input value="자동 생성" disabled className="bg-gray-50" />
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              </div>
+            <div className="space-y-1.5">
+              <Label>주문번호</Label>
+              <Input value="자동 생성" disabled className="bg-gray-50" />
             </div>
             <div className="space-y-1.5">
               <Label>수주업체 *</Label>

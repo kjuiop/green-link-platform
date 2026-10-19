@@ -44,6 +44,13 @@ public class OrderRepositoryAdapter implements OrderRepository {
     }
 
     @Override
+    public List<Order> findAllByStatusAndVendorId(OrderStatus status, Long vendorId) {
+        return jpaRepository.findByStatusAndVendorId(status, vendorId).stream()
+                .map(OrderJpaEntity::toDomain)
+                .toList();
+    }
+
+    @Override
     public Order save(Order order) {
         return jpaRepository.save(OrderJpaEntity.from(order)).toDomain();
     }
