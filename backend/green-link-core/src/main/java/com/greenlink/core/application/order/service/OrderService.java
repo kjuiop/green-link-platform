@@ -11,6 +11,8 @@ import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
 import com.greenlink.core.domain.order.model.Order;
 import com.greenlink.core.domain.order.port.OrderRepository;
+import com.greenlink.core.domain.photo.model.PhotoType;
+import com.greenlink.core.domain.photo.port.PhotoRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
 import org.springframework.stereotype.Service;
@@ -27,9 +29,11 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         GetOrdersUseCase, UpdateOrderUseCase, UpdateOrderStatusUseCase {
 
     private final OrderRepository orderRepository;
+    private final PhotoRepository photoRepository;
 
-    public OrderService(OrderRepository orderRepository) {
+    public OrderService(OrderRepository orderRepository, PhotoRepository photoRepository) {
         this.orderRepository = orderRepository;
+        this.photoRepository = photoRepository;
     }
 
     @Override
@@ -141,8 +145,13 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
             case "accept" -> order.accept();
             case "reject" -> order.reject();
             case "cancel" -> order.cancel();
-            case "complete" -> order.complete(LocalDateTime.now().toString());
-            default -> throw new IllegalArgumentException("유효하지 않은 action입니다: " + action);
+            case "complete" -> {
+                if (!photoRepository.existsByOrderIdAndPhotoType(id, PhotoType.SITE)) {
+                    throw new BusinessException(OrderErrorCode.SITE_PHOTO_REQUIRED);
+                }
+                order.complete(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            }
+            default -> throw new BusinessException(OrderErrorCode.INVALID_ORDER_ACTION);
         }
 
         Order saved = orderRepository.save(order);
