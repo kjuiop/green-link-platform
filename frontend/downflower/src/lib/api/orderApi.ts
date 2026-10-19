@@ -78,6 +78,8 @@ export type CreateOrderPayload = {
   vendorMemo: string
 }
 
+export type UpdateOrderPayload = CreateOrderPayload
+
 function authHeaders(): HeadersInit {
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
   return {
@@ -146,6 +148,19 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error(data.message ?? '발주 등록에 실패했습니다.')
+  }
+  return toFrontend(await res.json())
+}
+
+export async function updateOrder(id: string, payload: UpdateOrderPayload): Promise<Order> {
+  const res = await fetch(`/api/orders/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message ?? '발주 수정에 실패했습니다.')
   }
   return toFrontend(await res.json())
 }
