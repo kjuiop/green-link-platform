@@ -11,6 +11,7 @@ import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
 import com.greenlink.core.application.orderhistory.usecase.RecordOrderHistoryUseCase;
 import com.greenlink.core.domain.order.model.Order;
+import com.greenlink.core.domain.order.model.OrderStatus;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
 import com.greenlink.core.domain.photo.model.PhotoType;
@@ -24,11 +25,20 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional(readOnly = true)
 public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         GetOrdersUseCase, UpdateOrderUseCase, UpdateOrderStatusUseCase {
+
+    private static final Map<OrderStatus, String> STATUS_LABEL = Map.of(
+            OrderStatus.PENDING,   "발주대기",
+            OrderStatus.ACCEPTED,  "수주완료",
+            OrderStatus.DELIVERED, "배송완료",
+            OrderStatus.REJECTED,  "수주거절",
+            OrderStatus.CANCELLED, "주문취소"
+    );
 
     private final OrderRepository orderRepository;
     private final PhotoRepository photoRepository;
@@ -164,7 +174,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
 
         Order saved = orderRepository.save(order);
         recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.STATUS_CHANGED,
-                "상태 변경: " + saved.getStatus().name());
+                "상태 변경: " + STATUS_LABEL.getOrDefault(saved.getStatus(), saved.getStatus().name()));
         return toResult(saved);
     }
 

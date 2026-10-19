@@ -6,7 +6,8 @@ import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "order_histories")
+@Table(name = "order_histories",
+       indexes = @Index(name = "idx_order_histories_order_id", columnList = "order_id"))
 public class OrderHistoryJpaEntity extends BaseJpaEntity {
 
     @Id
