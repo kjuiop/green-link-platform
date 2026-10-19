@@ -90,9 +90,9 @@ export default function OrderDetailPage() {
         recipientPhone: draft.recipientPhone ?? '',
         sendPhotoToOrderer: draft.sendPhotoToOrderer,
         sendPhotoToRecipient: draft.sendPhotoToRecipient,
-        messageSchedule: '',
-        scheduledMessageHour: '',
-        scheduledMessageMinute: '',
+        messageSchedule: draft.messageSchedule ?? '',
+        scheduledMessageHour: draft.scheduledMessageHour ?? '',
+        scheduledMessageMinute: draft.scheduledMessageMinute ?? '',
         adminMemo: draft.adminMemo ?? '',
         vendorMemo: draft.vendorMemo ?? '',
       })

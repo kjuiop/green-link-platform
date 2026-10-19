@@ -30,6 +30,9 @@ export interface Order {
   recipientPhone?: string
   sendPhotoToOrderer: boolean
   sendPhotoToRecipient: boolean
+  messageSchedule?: string
+  scheduledMessageHour?: string
+  scheduledMessageMinute?: string
   adminMemo?: string
   vendorMemo?: string
   deliveryTimeType?: DeliveryTimeType
