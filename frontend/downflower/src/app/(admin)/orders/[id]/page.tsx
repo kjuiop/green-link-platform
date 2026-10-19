@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { OrderStatusBadge, MessageStatusBadge, DeliveryTimeTypeBadge } from '@/components/common/StatusBadge'
-import { fetchOrder, updateOrder, updateOrderStatus, fetchPhotos, selectPhoto, PhotoResult } from '@/lib/api/orderApi'
+import { fetchOrder, updateOrder, updateOrderStatus, fetchPhotos, selectPhoto, fetchOrderHistory, PhotoResult, OrderHistoryItem } from '@/lib/api/orderApi'
 import Image from 'next/image'
 import { PrintButton } from '@/components/common/PrintButton'
 import { Pencil, X, Check, Trash2 } from 'lucide-react'
@@ -36,6 +36,7 @@ export default function OrderDetailPage() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [photos, setPhotos] = useState<PhotoResult[]>([])
+  const [history, setHistory] = useState<OrderHistoryItem[]>([])
 
   useEffect(() => {
     fetchOrder(id)
@@ -43,6 +44,7 @@ export default function OrderDetailPage() {
       .catch(() => setLoadError('발주 정보를 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
     fetchPhotos(id).then(setPhotos).catch(() => {})
+    fetchOrderHistory(id).then(setHistory).catch(() => {})
   }, [id])
 
   if (loading) return <div className="p-8 text-sm text-gray-400">불러오는 중...</div>
@@ -579,9 +581,37 @@ export default function OrderDetailPage() {
             )}
           </CardContent>
         </Card>
+        {/* 변경 이력 */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm">변경 이력</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {history.length === 0 ? (
+              <p className="text-sm text-gray-400">이력이 없습니다.</p>
+            ) : (
+              <ol className="relative border-l border-gray-200">
+                {history.map((h) => (
+                  <li key={h.id} className="mb-4 ml-4">
+                    <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border border-white bg-green-600" />
+                    <p className="text-xs text-gray-400">{h.createdAt}</p>
+                    <p className="text-sm font-medium">{ACTION_LABEL[h.action]}</p>
+                    <p className="text-xs text-gray-500">{h.detail}</p>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
+}
+
+const ACTION_LABEL: Record<string, string> = {
+  CREATED: '발주 등록',
+  UPDATED: '발주 수정',
+  STATUS_CHANGED: '상태 변경',
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

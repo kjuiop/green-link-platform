@@ -234,6 +234,20 @@ export async function selectPhoto(orderId: string, photoId: number, selected: bo
   return res.json()
 }
 
+export type OrderHistoryItem = {
+  id: number
+  orderId: number
+  action: 'CREATED' | 'UPDATED' | 'STATUS_CHANGED'
+  detail: string
+  createdAt: string
+}
+
+export async function fetchOrderHistory(orderId: string): Promise<OrderHistoryItem[]> {
+  const res = await fetch(`/api/orders/${orderId}/history`, { headers: authHeaders() })
+  if (!res.ok) throw new Error('이력을 불러오지 못했습니다.')
+  return res.json()
+}
+
 export async function updateOrderStatus(id: string, action: string): Promise<Order> {
   const res = await fetch(`/api/orders/${id}/status`, {
     method: 'PUT',

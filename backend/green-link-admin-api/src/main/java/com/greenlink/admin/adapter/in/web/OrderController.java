@@ -4,12 +4,14 @@ import com.greenlink.admin.adapter.in.web.dto.CreateOrderRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateOrderRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateOrderStatusRequest;
 import com.greenlink.core.application.order.dto.OrderResult;
+import com.greenlink.core.application.orderhistory.dto.OrderHistoryResult;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.application.order.usecase.CreateOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
+import com.greenlink.core.application.orderhistory.usecase.GetOrderHistoryUseCase;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,17 +28,20 @@ public class OrderController {
     private final CreateOrderUseCase createOrderUseCase;
     private final UpdateOrderUseCase updateOrderUseCase;
     private final UpdateOrderStatusUseCase updateOrderStatusUseCase;
+    private final GetOrderHistoryUseCase getOrderHistoryUseCase;
 
     public OrderController(GetOrdersUseCase getOrdersUseCase,
                            GetOrderUseCase getOrderUseCase,
                            CreateOrderUseCase createOrderUseCase,
                            UpdateOrderUseCase updateOrderUseCase,
-                           UpdateOrderStatusUseCase updateOrderStatusUseCase) {
+                           UpdateOrderStatusUseCase updateOrderStatusUseCase,
+                           GetOrderHistoryUseCase getOrderHistoryUseCase) {
         this.getOrdersUseCase = getOrdersUseCase;
         this.getOrderUseCase = getOrderUseCase;
         this.createOrderUseCase = createOrderUseCase;
         this.updateOrderUseCase = updateOrderUseCase;
         this.updateOrderStatusUseCase = updateOrderStatusUseCase;
+        this.getOrderHistoryUseCase = getOrderHistoryUseCase;
     }
 
     @GetMapping
@@ -74,5 +79,10 @@ public class OrderController {
     public ResponseEntity<OrderResult> updateStatus(@PathVariable Long id,
                                                     @RequestBody @Valid UpdateOrderStatusRequest req) {
         return ResponseEntity.ok(updateOrderStatusUseCase.updateOrderStatus(id, req.action()));
+    }
+
+    @GetMapping("/{id}/history")
+    public ResponseEntity<List<OrderHistoryResult>> getHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(getOrderHistoryUseCase.getHistory(id));
     }
 }
