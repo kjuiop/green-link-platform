@@ -1,23 +1,27 @@
 'use client'
 
-import { useEffect } from 'react'
-import { mockOrders } from '@/lib/mock/orders'
-import { notFound } from 'next/navigation'
-import { use } from 'react'
+import { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
+import { fetchOrder } from '@/lib/api/orderApi'
+import { Order } from '@/types/order'
 
-interface Props {
-  params: Promise<{ id: string }>
-}
-
-export default function PrintOrderPage({ params }: Props) {
-  const { id } = use(params)
-  const order = mockOrders.find((o) => o.id === id)
-  if (!order) notFound()
+export default function PrintOrderPage() {
+  const { id } = useParams<{ id: string }>()
+  const [order, setOrder] = useState<Order | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const customer = order.recipientName || order.ordererName
-    document.title = `${customer}_${order.placeName}_${order.deliveryAt}`
-  }, [order.recipientName, order.ordererName, order.placeName, order.deliveryAt])
+    fetchOrder(id)
+      .then((o) => {
+        setOrder(o)
+        const customer = o.recipientName || o.ordererName
+        document.title = `${customer}_${o.placeName}_${o.deliveryAt}`
+      })
+      .catch(() => setError('주문 정보를 불러오지 못했습니다.'))
+  }, [id])
+
+  if (error) return <div style={{ padding: 40, color: 'red' }}>{error}</div>
+  if (!order) return <div style={{ padding: 40, color: '#999' }}>불러오는 중...</div>
 
   return (
     <>
