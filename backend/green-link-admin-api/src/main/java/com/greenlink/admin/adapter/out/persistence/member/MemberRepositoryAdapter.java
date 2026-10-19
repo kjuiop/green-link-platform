@@ -24,6 +24,11 @@ public class MemberRepositoryAdapter implements MemberRepository {
     }
 
     @Override
+    public Optional<Member> findByLoginId(String loginId) {
+        return jpaRepository.findByLoginId(loginId).map(MemberJpaEntity::toDomain);
+    }
+
+    @Override
     public boolean existsByLoginId(String loginId) {
         Integer result = queryFactory
             .selectOne()

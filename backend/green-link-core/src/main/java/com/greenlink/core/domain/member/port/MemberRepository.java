@@ -8,6 +8,7 @@ import java.util.Optional;
 
 public interface MemberRepository {
     boolean existsByLoginId(String loginId);
+    Optional<Member> findByLoginId(String loginId);
     Member save(Member member);
     Optional<Member> findById(Long id);
     List<Member> findAll();
