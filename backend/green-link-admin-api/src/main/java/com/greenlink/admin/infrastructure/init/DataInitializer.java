@@ -2,7 +2,7 @@ package com.greenlink.admin.infrastructure.init;
 
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.port.AdminRepository;
-import com.greenlink.core.domain.member.model.Role;
+import com.greenlink.core.domain.admin.model.Role;
 import com.greenlink.core.domain.menu.model.Menu;
 import com.greenlink.core.domain.menu.port.MenuRepository;
 import org.springframework.beans.factory.annotation.Value;

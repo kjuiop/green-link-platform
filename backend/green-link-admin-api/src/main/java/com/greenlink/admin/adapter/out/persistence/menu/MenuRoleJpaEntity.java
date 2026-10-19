@@ -1,6 +1,6 @@
 package com.greenlink.admin.adapter.out.persistence.menu;
 
-import com.greenlink.core.domain.member.model.Role;
+import com.greenlink.core.domain.admin.model.Role;
 import jakarta.persistence.*;
 
 @Entity
