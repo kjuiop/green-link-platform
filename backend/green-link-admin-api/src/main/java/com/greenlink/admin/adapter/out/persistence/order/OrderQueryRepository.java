@@ -1,11 +1,14 @@
 package com.greenlink.admin.adapter.out.persistence.order;
 
-import com.greenlink.core.application.order.dto.OrderSearchCondition;
+import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.domain.order.model.OrderStatus;
+import com.greenlink.core.global.exception.BusinessException;
+import com.greenlink.core.global.exception.order.OrderErrorCode;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.stereotype.Repository;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Repository
@@ -22,7 +25,11 @@ public class OrderQueryRepository {
         BooleanBuilder where = new BooleanBuilder();
 
         if (condition.status() != null && !condition.status().isBlank()) {
-            where.and(order.status.eq(OrderStatus.valueOf(condition.status().toUpperCase())));
+            OrderStatus orderStatus = Arrays.stream(OrderStatus.values())
+                    .filter(s -> s.name().equalsIgnoreCase(condition.status()))
+                    .findFirst()
+                    .orElseThrow(() -> new BusinessException(OrderErrorCode.INVALID_ORDER_STATUS));
+            where.and(order.status.eq(orderStatus));
         }
         if (condition.vendorId() != null) {
             where.and(order.vendorId.eq(condition.vendorId()));

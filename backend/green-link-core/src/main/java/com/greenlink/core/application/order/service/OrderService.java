@@ -2,7 +2,7 @@ package com.greenlink.core.application.order.service;
 
 import com.greenlink.core.application.order.dto.CreateOrderCommand;
 import com.greenlink.core.application.order.dto.OrderResult;
-import com.greenlink.core.application.order.dto.OrderSearchCondition;
+import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.application.order.dto.UpdateOrderCommand;
 import com.greenlink.core.application.order.usecase.CreateOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrderUseCase;

@@ -1,4 +1,4 @@
-package com.greenlink.core.application.order.dto;
+package com.greenlink.core.domain.order.model;
 
 public record OrderSearchCondition(
         String status,

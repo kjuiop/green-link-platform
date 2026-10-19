@@ -1,6 +1,6 @@
 package com.greenlink.admin.adapter.out.persistence.order;
 
-import com.greenlink.core.application.order.dto.OrderSearchCondition;
+import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.domain.order.model.Order;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import org.springframework.stereotype.Component;
