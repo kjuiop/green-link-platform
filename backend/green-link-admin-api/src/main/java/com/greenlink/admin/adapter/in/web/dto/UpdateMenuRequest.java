@@ -1,7 +1,7 @@
 package com.greenlink.admin.adapter.in.web.dto;
 
 import com.greenlink.core.application.menu.dto.UpdateMenuCommand;
-import com.greenlink.core.domain.member.model.Role;
+import com.greenlink.core.domain.admin.model.Role;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 

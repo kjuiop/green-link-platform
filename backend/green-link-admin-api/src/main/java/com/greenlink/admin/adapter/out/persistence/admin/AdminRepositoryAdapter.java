@@ -5,6 +5,7 @@ import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 import static com.greenlink.admin.adapter.out.persistence.admin.QAdminJpaEntity.adminJpaEntity;
@@ -48,5 +49,19 @@ public class AdminRepositoryAdapter implements AdminRepository {
     @Override
     public Admin save(Admin admin) {
         return jpaRepository.save(AdminJpaEntity.from(admin)).toDomain();
+    }
+
+    @Override
+    public List<Admin> findAllVendors() {
+        return jpaRepository.findByCompanyIdIsNotNull().stream()
+            .map(AdminJpaEntity::toDomain)
+            .toList();
+    }
+
+    @Override
+    public List<Admin> findAllByCompanyId(Long companyId) {
+        return jpaRepository.findByCompanyId(companyId).stream()
+            .map(AdminJpaEntity::toDomain)
+            .toList();
     }
 }

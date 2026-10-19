@@ -1,6 +1,6 @@
 package com.greenlink.core.domain.menu.model;
 
-import com.greenlink.core.domain.member.model.Role;
+import com.greenlink.core.domain.admin.model.Role;
 
 import java.util.List;
 

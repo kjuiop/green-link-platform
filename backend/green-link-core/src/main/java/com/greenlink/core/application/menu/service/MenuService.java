@@ -8,7 +8,7 @@ import com.greenlink.core.application.menu.usecase.DeleteMenuUseCase;
 import com.greenlink.core.application.menu.usecase.GetAllMenusUseCase;
 import com.greenlink.core.application.menu.usecase.GetMenusByRoleUseCase;
 import com.greenlink.core.application.menu.usecase.UpdateMenuUseCase;
-import com.greenlink.core.domain.member.model.Role;
+import com.greenlink.core.domain.admin.model.Role;
 import com.greenlink.core.domain.menu.model.Menu;
 import com.greenlink.core.domain.menu.port.MenuRepository;
 import com.greenlink.core.global.exception.BusinessException;

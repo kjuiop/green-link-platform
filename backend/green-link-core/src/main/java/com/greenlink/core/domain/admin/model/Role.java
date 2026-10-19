@@ -1,4 +1,4 @@
-package com.greenlink.core.domain.member.model;
+package com.greenlink.core.domain.admin.model;
 
 public enum Role {
     SUPER_ADMIN,
