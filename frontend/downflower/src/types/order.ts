@@ -33,6 +33,8 @@ export interface Order {
   adminMemo?: string
   vendorMemo?: string
   deliveryTimeType?: DeliveryTimeType
+  deliveryTimeHour?: string
+  deliveryTimeMinute?: string
   deliveryTimeCustom?: string
   extraCost?: number
   deliveryPhotos?: string[]

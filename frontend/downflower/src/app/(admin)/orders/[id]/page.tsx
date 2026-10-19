@@ -73,8 +73,8 @@ export default function OrderDetailPage() {
         extraCost: draft.extraCost,
         deliveryDate: draft.deliveryAt,
         deliveryTimeType: draft.deliveryTimeType ?? '',
-        deliveryTimeHour: '',
-        deliveryTimeMinute: '',
+        deliveryTimeHour: draft.deliveryTimeHour ?? '',
+        deliveryTimeMinute: draft.deliveryTimeMinute ?? '',
         deliveryTimeCustom: draft.deliveryTimeCustom ?? '',
         address: draft.address,
         addressDetail: draft.addressDetail ?? '',
@@ -107,12 +107,16 @@ export default function OrderDetailPage() {
   }
 
   async function handleComplete() {
+    setSaving(true)
+    setSaveError(null)
     try {
       const updated = await updateOrderStatus(id, 'complete')
       setOrder(updated)
       setDraft(updated)
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : '배송완료 처리에 실패했습니다.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -138,7 +142,7 @@ export default function OrderDetailPage() {
         <div className="flex shrink-0 flex-wrap gap-2">
           <PrintButton orderId={order.id} />
           {order.status === '수주완료' && !isEditing && !confirmDelete && (
-            <Button className="bg-blue-700 hover:bg-blue-800" onClick={handleComplete}>배송완료 처리</Button>
+            <Button className="bg-blue-700 hover:bg-blue-800" onClick={handleComplete} disabled={saving}>배송완료 처리</Button>
           )}
           {isEditing && (
             <>
