@@ -5,21 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-
-type AdminProfile = {
-  id: number
-  loginId: string
-  name: string | null
-  phone: string | null
-}
-
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }
-}
+import { fetchAdminProfile, updateAdminProfile, type AdminProfile } from '@/lib/api/adminApi'
 
 export default function SettingsAccountPage() {
   const [profile, setProfile] = useState<AdminProfile | null>(null)
@@ -29,9 +15,8 @@ export default function SettingsAccountPage() {
   const [saveMsg, setSaveMsg] = useState('')
 
   useEffect(() => {
-    fetch('/api/admin/me', { headers: authHeaders() })
-      .then((r) => r.json())
-      .then((data: AdminProfile) => {
+    fetchAdminProfile()
+      .then((data) => {
         setProfile(data)
         setName(data.name ?? '')
         setPhone(data.phone ?? '')
@@ -43,15 +28,10 @@ export default function SettingsAccountPage() {
     setSaving(true)
     setSaveMsg('')
     try {
-      const res = await fetch('/api/admin/me', {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify({ name, phone }),
-      })
-      if (!res.ok) throw new Error()
+      await updateAdminProfile(name, phone)
       setSaveMsg('저장되었습니다.')
-    } catch {
-      setSaveMsg('저장에 실패했습니다.')
+    } catch (e) {
+      setSaveMsg(e instanceof Error ? e.message : '저장에 실패했습니다.')
     } finally {
       setSaving(false)
     }
