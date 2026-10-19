@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   LayoutDashboard,
   Plus,
@@ -19,11 +19,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
-import { getMenusByRole } from '@/lib/mock/menus'
+import { fetchMenusByRole } from '@/lib/api/menuApi'
 import { type MenuItem, type UserRole } from '@/types/menu'
-
-// 프로토타입: 현재 로그인 역할 고정 (API 연동 시 JWT에서 추출)
-const CURRENT_ROLE: UserRole = 'SUPER_ADMIN'
 
 const ICON_MAP: Record<string, LucideIcon> = {
   '/dashboard': LayoutDashboard,
@@ -45,14 +42,14 @@ function isActive(pathname: string, url: string): boolean {
 }
 
 interface SidebarNavProps {
+  menus: MenuItem[]
   onNavClick?: () => void
   openId: number | null
   onToggle: (id: number) => void
 }
 
-function SidebarNav({ onNavClick, openId, onToggle }: SidebarNavProps) {
+function SidebarNav({ menus, onNavClick, openId, onToggle }: SidebarNavProps) {
   const pathname = usePathname()
-  const menus = getMenusByRole(CURRENT_ROLE)
 
   return (
     <>
@@ -146,22 +143,32 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   const pathname = usePathname()
+  const [menus, setMenus] = useState<MenuItem[]>([])
+  const [openId, setOpenId] = useState<number | null>(null)
 
-  const menus = getMenusByRole(CURRENT_ROLE)
-  const settingsMenu = menus.find((m) => m.children?.some((c) => pathname.startsWith(c.url)))
-  const [openId, setOpenId] = useState<number | null>(settingsMenu?.id ?? null)
+  useEffect(() => {
+    const role = (localStorage.getItem('role') as UserRole) ?? 'SUPER_ADMIN'
+    fetchMenusByRole(role)
+      .then((data) => {
+        setMenus(data)
+        const settingsMenu = data.find((m) => m.children?.some((c) => pathname.startsWith(c.url)))
+        if (settingsMenu) setOpenId(settingsMenu.id)
+      })
+      .catch(() => {})
+  }, [pathname])
 
   const handleToggle = (id: number) => setOpenId((prev) => (prev === id ? null : id))
 
   return (
     <>
       <aside className="hidden h-screen w-56 flex-col border-r bg-white md:flex">
-        <SidebarNav openId={openId} onToggle={handleToggle} />
+        <SidebarNav menus={menus} openId={openId} onToggle={handleToggle} />
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={(open) => { if (!open) onMobileClose?.() }}>
         <SheetContent side="left" className="w-56 p-0" showCloseButton={false}>
           <SidebarNav
+            menus={menus}
             onNavClick={onMobileClose}
             openId={openId}
             onToggle={handleToggle}
