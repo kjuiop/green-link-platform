@@ -149,13 +149,15 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   useEffect(() => {
     const role = (localStorage.getItem('role') as UserRole) ?? 'SUPER_ADMIN'
     fetchMenusByRole(role)
-      .then((data) => {
-        setMenus(data)
-        const settingsMenu = data.find((m) => m.children?.some((c) => pathname.startsWith(c.url)))
-        if (settingsMenu) setOpenId(settingsMenu.id)
-      })
+      .then(setMenus)
       .catch(() => {})
-  }, [pathname])
+  }, [])
+
+  useEffect(() => {
+    if (menus.length === 0) return
+    const settingsMenu = menus.find((m) => m.children?.some((c) => pathname.startsWith(c.url)))
+    setOpenId(settingsMenu?.id ?? null)
+  }, [menus, pathname])
 
   const handleToggle = (id: number) => setOpenId((prev) => (prev === id ? null : id))
 
