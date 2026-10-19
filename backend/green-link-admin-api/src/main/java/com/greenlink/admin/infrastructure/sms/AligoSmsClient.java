@@ -17,9 +17,9 @@ public class AligoSmsClient implements SmsClient {
     private final AligoProperties props;
     private final RestTemplate restTemplate;
 
-    public AligoSmsClient(AligoProperties props) {
+    public AligoSmsClient(AligoProperties props, RestTemplate smsRestTemplate) {
         this.props = props;
-        this.restTemplate = new RestTemplate();
+        this.restTemplate = smsRestTemplate;
     }
 
     @Override
@@ -54,9 +54,8 @@ public class AligoSmsClient implements SmsClient {
             headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
             HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
-            ResponseEntity<Map> response = restTemplate.postForEntity(props.url(), request, Map.class);
-
-            Map<?, ?> responseBody = response.getBody();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> responseBody = restTemplate.postForObject(props.url(), request, Map.class);
             if (responseBody == null) {
                 return new SmsResult(false, null, "응답 없음");
             }

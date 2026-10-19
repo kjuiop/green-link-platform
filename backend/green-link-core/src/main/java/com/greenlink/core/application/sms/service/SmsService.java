@@ -10,6 +10,7 @@ import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.photo.model.Photo;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
 import com.greenlink.core.domain.sms.model.SmsMessage;
+import com.greenlink.core.domain.sms.model.SmsStatus;
 import com.greenlink.core.domain.sms.port.SmsClient;
 import com.greenlink.core.domain.sms.port.SmsMessageRepository;
 import com.greenlink.core.global.exception.BusinessException;
@@ -68,7 +69,21 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     @Override
     @Transactional
     public void resend(Long orderId) {
-        send(orderId);
+        List<SmsMessage> failed = smsMessageRepository.findAllByOrderId(orderId).stream()
+                .filter(m -> m.getStatus() == SmsStatus.FAIL)
+                .toList();
+        if (failed.isEmpty()) return;
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+        List<Photo> selectedPhotos = photoRepository.findSelectedByOrderId(orderId);
+        String imageUrl = selectedPhotos.isEmpty() ? null : selectedPhotos.get(0).getPhotoUrl();
+        String msg = buildMessage(order);
+        String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+
+        for (SmsMessage m : failed) {
+            sendAndRecord(orderId, m.getReceiver(), msg, imageUrl, now);
+        }
     }
 
     @Override
@@ -90,10 +105,10 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
             if (result.success()) {
                 smsMessage.markSuccess(result.msgId(), sentAt);
             } else {
-                smsMessage.markFail(result.failReason());
+                smsMessage.markFail(result.failReason(), sentAt);
             }
         } catch (Exception e) {
-            smsMessage.markFail(e.getMessage());
+            smsMessage.markFail(e.getMessage(), sentAt);
         }
         smsMessageRepository.save(smsMessage);
     }

@@ -40,9 +40,10 @@ public class SmsMessage {
         this.sentAt = sentAt;
     }
 
-    public void markFail(String failReason) {
+    public void markFail(String failReason, String sentAt) {
         this.status = SmsStatus.FAIL;
         this.failReason = failReason;
+        this.sentAt = sentAt;
     }
 
     public Long getId() { return id; }
