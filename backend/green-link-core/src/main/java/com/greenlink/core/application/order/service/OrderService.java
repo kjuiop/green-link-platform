@@ -2,6 +2,7 @@ package com.greenlink.core.application.order.service;
 
 import com.greenlink.core.application.order.dto.CreateOrderCommand;
 import com.greenlink.core.application.order.dto.OrderResult;
+import com.greenlink.core.application.order.dto.OrderSearchCondition;
 import com.greenlink.core.application.order.dto.UpdateOrderCommand;
 import com.greenlink.core.application.order.usecase.CreateOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrderUseCase;
@@ -9,7 +10,6 @@ import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
 import com.greenlink.core.domain.order.model.Order;
-import com.greenlink.core.domain.order.model.OrderStatus;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
@@ -85,23 +85,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     }
 
     @Override
-    public List<OrderResult> getOrders(String status, Long vendorId) {
-        List<Order> orders;
-
-        if (status != null && !status.isBlank()) {
-            OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
-            if (vendorId != null) {
-                orders = orderRepository.findAllByStatusAndVendorId(orderStatus, vendorId);
-            } else {
-                orders = orderRepository.findAllByStatus(orderStatus);
-            }
-        } else if (vendorId != null) {
-            orders = orderRepository.findAllByVendorId(vendorId);
-        } else {
-            orders = orderRepository.findAll();
-        }
-
-        return orders.stream().map(this::toResult).toList();
+    public List<OrderResult> getOrders(OrderSearchCondition condition) {
+        return orderRepository.search(condition).stream().map(this::toResult).toList();
     }
 
     @Override

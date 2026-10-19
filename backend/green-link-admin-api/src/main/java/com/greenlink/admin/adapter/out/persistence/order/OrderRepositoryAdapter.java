@@ -1,7 +1,7 @@
 package com.greenlink.admin.adapter.out.persistence.order;
 
+import com.greenlink.core.application.order.dto.OrderSearchCondition;
 import com.greenlink.core.domain.order.model.Order;
-import com.greenlink.core.domain.order.model.OrderStatus;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import org.springframework.stereotype.Component;
 
@@ -12,9 +12,11 @@ import java.util.Optional;
 public class OrderRepositoryAdapter implements OrderRepository {
 
     private final OrderJpaRepository jpaRepository;
+    private final OrderQueryRepository queryRepository;
 
-    public OrderRepositoryAdapter(OrderJpaRepository jpaRepository) {
+    public OrderRepositoryAdapter(OrderJpaRepository jpaRepository, OrderQueryRepository queryRepository) {
         this.jpaRepository = jpaRepository;
+        this.queryRepository = queryRepository;
     }
 
     @Override
@@ -23,29 +25,8 @@ public class OrderRepositoryAdapter implements OrderRepository {
     }
 
     @Override
-    public List<Order> findAll() {
-        return jpaRepository.findAll().stream()
-                .map(OrderJpaEntity::toDomain)
-                .toList();
-    }
-
-    @Override
-    public List<Order> findAllByStatus(OrderStatus status) {
-        return jpaRepository.findByStatus(status).stream()
-                .map(OrderJpaEntity::toDomain)
-                .toList();
-    }
-
-    @Override
-    public List<Order> findAllByVendorId(Long vendorId) {
-        return jpaRepository.findByVendorId(vendorId).stream()
-                .map(OrderJpaEntity::toDomain)
-                .toList();
-    }
-
-    @Override
-    public List<Order> findAllByStatusAndVendorId(OrderStatus status, Long vendorId) {
-        return jpaRepository.findByStatusAndVendorId(status, vendorId).stream()
+    public List<Order> search(OrderSearchCondition condition) {
+        return queryRepository.search(condition).stream()
                 .map(OrderJpaEntity::toDomain)
                 .toList();
     }
