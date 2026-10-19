@@ -27,6 +27,12 @@ public class GlobalExceptionHandler {
             .body(new ErrorResponse("INVALID_PARAM", e.getMessage()));
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException e) {
+        return ResponseEntity.badRequest()
+            .body(new ErrorResponse("INVALID_STATE", e.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception e) {
         log.error("Unhandled exception", e);
