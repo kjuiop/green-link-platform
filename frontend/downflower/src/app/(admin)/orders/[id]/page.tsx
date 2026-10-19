@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { OrderStatusBadge, MessageStatusBadge, DeliveryTimeTypeBadge } from '@/components/common/StatusBadge'
-import { fetchOrder, updateOrder, updateOrderStatus } from '@/lib/api/orderApi'
+import { fetchOrder, updateOrder, updateOrderStatus, fetchPhotos, selectPhoto, PhotoResult } from '@/lib/api/orderApi'
 import Image from 'next/image'
 import { PrintButton } from '@/components/common/PrintButton'
 import { Pencil, X, Check, Trash2 } from 'lucide-react'
@@ -35,19 +35,28 @@ export default function OrderDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [photos, setPhotos] = useState<PhotoResult[]>([])
 
   useEffect(() => {
     fetchOrder(id)
       .then((o) => { setOrder(o); setDraft(o) })
       .catch(() => setLoadError('발주 정보를 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
+    fetchPhotos(id).then(setPhotos).catch(() => {})
   }, [id])
 
   if (loading) return <div className="p-8 text-sm text-gray-400">불러오는 중...</div>
   if (loadError) return <div className="p-8 text-sm text-red-500">{loadError}</div>
   if (!order || !draft) return <div className="p-8 text-sm text-gray-400">주문을 찾을 수 없습니다.</div>
 
-  const photos: { id: string; url: string; photoType: string; isSendToCustomer: boolean }[] = []
+  async function handleSelectPhoto(photoId: number, selected: boolean) {
+    try {
+      const updated = await selectPhoto(id, photoId, selected)
+      setPhotos((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
+    } catch {
+      // silent — selection failure shouldn't interrupt the user
+    }
+  }
 
   function startEdit() {
     setDraft({ ...order! })
@@ -457,40 +466,59 @@ export default function OrderDetailPage() {
               <p className="text-sm text-gray-400">등록된 배송사진이 없습니다.</p>
             ) : (
               <>
-                {photos.filter((p) => p.photoType === 'store').length > 0 && (
+                {photos.filter((p) => p.photoType === 'STORE').length > 0 && (
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-gray-500">매장사진</p>
                     <div className="flex flex-wrap gap-3">
-                      {photos.filter((p) => p.photoType === 'store').map((photo) => (
-                        <div key={photo.id} className="relative h-28 w-28">
-                          <Image src={photo.url} alt="매장사진" fill className="rounded-lg border object-cover" />
+                      {photos.filter((p) => p.photoType === 'STORE').map((photo) => (
+                        <button
+                          key={photo.id}
+                          type="button"
+                          onClick={() => handleSelectPhoto(photo.id, !photo.isSendToCustomer)}
+                          className={cn(
+                            'relative h-28 w-28 overflow-hidden rounded-lg border-2 transition-colors',
+                            photo.isSendToCustomer ? 'border-green-600' : 'border-transparent',
+                          )}
+                          title={photo.isSendToCustomer ? '발송 해제' : '발송 선택'}
+                        >
+                          <Image src={photo.photoUrl} alt="매장사진" fill className="object-cover" />
                           {photo.isSendToCustomer && (
                             <span className="absolute bottom-1 left-1 rounded bg-green-700 px-1 py-0.5 text-[10px] text-white">
                               발송
                             </span>
                           )}
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>
                 )}
-                {photos.filter((p) => p.photoType === 'site').length > 0 && (
+                {photos.filter((p) => p.photoType === 'SITE').length > 0 && (
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-gray-500">현장사진</p>
                     <div className="flex flex-wrap gap-3">
-                      {photos.filter((p) => p.photoType === 'site').map((photo) => (
-                        <div key={photo.id} className="relative h-28 w-28">
-                          <Image src={photo.url} alt="현장사진" fill className="rounded-lg border object-cover" />
+                      {photos.filter((p) => p.photoType === 'SITE').map((photo) => (
+                        <button
+                          key={photo.id}
+                          type="button"
+                          onClick={() => handleSelectPhoto(photo.id, !photo.isSendToCustomer)}
+                          className={cn(
+                            'relative h-28 w-28 overflow-hidden rounded-lg border-2 transition-colors',
+                            photo.isSendToCustomer ? 'border-green-600' : 'border-transparent',
+                          )}
+                          title={photo.isSendToCustomer ? '발송 해제' : '발송 선택'}
+                        >
+                          <Image src={photo.photoUrl} alt="현장사진" fill className="object-cover" />
                           {photo.isSendToCustomer && (
                             <span className="absolute bottom-1 left-1 rounded bg-green-700 px-1 py-0.5 text-[10px] text-white">
                               발송
                             </span>
                           )}
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>
                 )}
+                <p className="text-xs text-gray-400">사진을 클릭해 고객 발송 여부를 선택할 수 있습니다.</p>
               </>
             )}
           </CardContent>
