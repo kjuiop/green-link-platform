@@ -17,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-@Transactional(readOnly = true)
 public class PhotoService implements UploadPhotoUseCase, SelectPhotoUseCase, GetPhotosUseCase {
 
     private final PhotoRepository photoRepository;
@@ -39,16 +38,12 @@ public class PhotoService implements UploadPhotoUseCase, SelectPhotoUseCase, Get
         PhotoStorage.UploadResult uploaded = photoStorage.store(
                 command.orderId(), command.originalFileName(), command.content(), command.contentType());
         try {
-            return toResult(savePhoto(command.orderId(), uploaded.s3Key(), uploaded.url(), photoType));
+            Photo photo = Photo.create(command.orderId(), uploaded.s3Key(), uploaded.url(), photoType);
+            return toResult(photoRepository.save(photo));
         } catch (Exception e) {
             photoStorage.delete(uploaded.s3Key());
             throw e;
         }
-    }
-
-    @Transactional
-    protected Photo savePhoto(Long orderId, String s3Key, String photoUrl, PhotoType photoType) {
-        return photoRepository.save(Photo.create(orderId, s3Key, photoUrl, photoType));
     }
 
     @Override
@@ -61,6 +56,7 @@ public class PhotoService implements UploadPhotoUseCase, SelectPhotoUseCase, Get
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<PhotoResult> getPhotosByOrder(Long orderId) {
         return photoRepository.findAllByOrderId(orderId).stream().map(this::toResult).toList();
     }
