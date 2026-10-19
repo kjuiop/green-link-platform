@@ -9,8 +9,10 @@ import com.greenlink.core.application.order.usecase.GetOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
+import com.greenlink.core.application.orderhistory.usecase.RecordOrderHistoryUseCase;
 import com.greenlink.core.domain.order.model.Order;
 import com.greenlink.core.domain.order.port.OrderRepository;
+import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
 import com.greenlink.core.domain.photo.model.PhotoType;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
 import com.greenlink.core.global.exception.BusinessException;
@@ -30,10 +32,13 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
 
     private final OrderRepository orderRepository;
     private final PhotoRepository photoRepository;
+    private final RecordOrderHistoryUseCase recordOrderHistoryUseCase;
 
-    public OrderService(OrderRepository orderRepository, PhotoRepository photoRepository) {
+    public OrderService(OrderRepository orderRepository, PhotoRepository photoRepository,
+                        RecordOrderHistoryUseCase recordOrderHistoryUseCase) {
         this.orderRepository = orderRepository;
         this.photoRepository = photoRepository;
+        this.recordOrderHistoryUseCase = recordOrderHistoryUseCase;
     }
 
     @Override
@@ -78,6 +83,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         );
 
         Order saved = orderRepository.save(order);
+        recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.CREATED,
+                "발주 등록: " + saved.getOrderNumber());
         return toResult(saved);
     }
 
@@ -132,6 +139,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         );
 
         Order saved = orderRepository.save(order);
+        recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.UPDATED, "발주 정보 수정");
         return toResult(saved);
     }
 
@@ -155,6 +163,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         }
 
         Order saved = orderRepository.save(order);
+        recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.STATUS_CHANGED,
+                "상태 변경: " + saved.getStatus().name());
         return toResult(saved);
     }
 
