@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { MessageStatusBadge } from '@/components/common/StatusBadge'
-import { mockOrders } from '@/lib/mock/orders'
-import { MessageStatus } from '@/types/order'
+import { fetchOrders } from '@/lib/api/orderApi'
+import { Order, MessageStatus } from '@/types/order'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
 
@@ -14,13 +14,19 @@ const STATUS_FILTERS: { label: string; value: MessageStatus | 'ALL' }[] = [
   { label: '발송실패', value: '발송실패' },
 ]
 
-const BASE_ORDERS = mockOrders.filter((o) => o.messageStatus !== '미발송')
-
 export default function MessagesPage() {
+  const [baseOrders, setBaseOrders] = useState<Order[]>([])
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<MessageStatus | 'ALL'>('ALL')
   const [appliedQuery, setAppliedQuery] = useState('')
   const [appliedStatus, setAppliedStatus] = useState<MessageStatus | 'ALL'>('ALL')
+
+  // MMS 미구현 — messageStatus가 항상 '미발송'이므로 목록은 비어있음
+  useEffect(() => {
+    fetchOrders()
+      .then((all) => setBaseOrders(all.filter((o) => o.messageStatus !== '미발송')))
+      .catch(() => {})
+  }, [])
 
   const handleSearch = () => {
     setAppliedQuery(query)
@@ -32,7 +38,7 @@ export default function MessagesPage() {
     setAppliedQuery(''); setAppliedStatus('ALL')
   }
 
-  const filtered = BASE_ORDERS.filter((o) => {
+  const filtered = baseOrders.filter((o) => {
     const matchStatus = appliedStatus === 'ALL' || o.messageStatus === appliedStatus
     const matchQuery =
       !appliedQuery ||
@@ -45,6 +51,10 @@ export default function MessagesPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">문자 발송내역</h1>
+
+      <div className="rounded-md border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-700">
+        문자 발송 기능은 준비 중입니다. MMS 자동 발송이 구현되면 이 목록에 발송 내역이 표시됩니다.
+      </div>
 
       <div className="rounded-lg border bg-white p-4">
         <div className="flex flex-wrap gap-3">

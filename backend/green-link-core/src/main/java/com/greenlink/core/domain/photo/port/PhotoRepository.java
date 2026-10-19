@@ -12,6 +12,8 @@ public interface PhotoRepository {
 
     Optional<Photo> findById(Long id);
 
+    List<Photo> findAll();
+
     List<Photo> findAllByOrderId(Long orderId);
 
     boolean existsByOrderIdAndPhotoType(Long orderId, PhotoType photoType);

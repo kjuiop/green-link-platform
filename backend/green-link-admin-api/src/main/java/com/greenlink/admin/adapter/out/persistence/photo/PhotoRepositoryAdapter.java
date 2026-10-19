@@ -28,6 +28,13 @@ public class PhotoRepositoryAdapter implements PhotoRepository {
     }
 
     @Override
+    public List<Photo> findAll() {
+        return jpaRepository.findAll().stream()
+                .map(PhotoJpaEntity::toDomain)
+                .toList();
+    }
+
+    @Override
     public List<Photo> findAllByOrderId(Long orderId) {
         return jpaRepository.findAllByOrderId(orderId).stream()
                 .map(PhotoJpaEntity::toDomain)
