@@ -33,6 +33,15 @@ export default function LoginPage() {
       }
       const { accessToken } = await res.json()
       localStorage.setItem('accessToken', accessToken)
+      try {
+        const payload = JSON.parse(atob(accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+        const roles: string[] = payload.roles ?? []
+        const role = roles[0]?.replace('ROLE_', '') ?? ''
+        if (role) localStorage.setItem('role', role)
+      } catch {
+        // JWT 디코드 실패해도 로그인은 계속 진행
+      }
+      localStorage.setItem('loginId', loginId)
       router.push('/dashboard')
     } catch {
       setError('서버 연결에 실패했습니다.')
