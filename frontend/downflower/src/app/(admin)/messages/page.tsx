@@ -52,6 +52,10 @@ export default function MessagesPage() {
     <div className="space-y-4">
       <h1 className="text-xl font-bold">문자 발송내역</h1>
 
+      <div className="rounded-md border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-700">
+        문자 발송 기능은 준비 중입니다. MMS 자동 발송이 구현되면 이 목록에 발송 내역이 표시됩니다.
+      </div>
+
       <div className="rounded-lg border bg-white p-4">
         <div className="flex flex-wrap gap-3">
           {STATUS_FILTERS.map(({ label, value }) => (

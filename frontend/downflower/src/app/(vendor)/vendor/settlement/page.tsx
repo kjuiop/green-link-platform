@@ -13,8 +13,8 @@ export default function VendorSettlementPage() {
 
   useEffect(() => {
     const vendorId = typeof window !== 'undefined' ? localStorage.getItem('vendorId') ?? undefined : undefined
-    fetchOrders({ vendorId })
-      .then((all) => setCompleted(all.filter((o) => o.status === '배송완료')))
+    fetchOrders({ vendorId, status: 'DELIVERED' })
+      .then(setCompleted)
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])

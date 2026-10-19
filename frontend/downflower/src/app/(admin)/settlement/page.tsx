@@ -11,8 +11,8 @@ export default function SettlementPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchOrders()
-      .then((all) => setCompleted(all.filter((o) => o.status === '배송완료')))
+    fetchOrders({ status: 'DELIVERED' })
+      .then(setCompleted)
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
