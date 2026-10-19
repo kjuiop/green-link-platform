@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { OrderStatusBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
-import { fetchOrders } from '@/lib/api/orderApi'
+import { fetchOrders, OrderSearchParams } from '@/lib/api/orderApi'
 import { OrderStatus, Order } from '@/types/order'
 import { Plus, Download } from 'lucide-react'
 
@@ -15,6 +15,20 @@ type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' |
 type DeletedFilter = '정상' | '삭제' | '전체'
 
 const SEARCH_FIELDS: SearchField[] = ['발주사명', '수주사명', '주문일', '배송일', '주문자', '받는분', '배달장소', '보내는분', '인수자', '주문번호']
+
+const STATUS_TO_API: Partial<Record<OrderStatus, string>> = {
+  '발주대기': 'PENDING',
+  '수주완료': 'ACCEPTED',
+  '배송완료': 'DELIVERED',
+  '수주거절': 'REJECTED',
+  '주문취소': 'CANCELLED',
+}
+
+const SERVER_FIELD_MAP: Partial<Record<SearchField, keyof OrderSearchParams>> = {
+  '주문번호': 'orderNumber',
+  '주문자': 'ordererName',
+  '발주사명': 'ordererName',
+}
 
 function matchField(o: Order, field: SearchField, value: string): boolean {
   if (!value.trim()) return true
@@ -71,13 +85,8 @@ function downloadExcel(orders: Order[]) {
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
-
-  useEffect(() => {
-    fetchOrders()
-      .then(setOrders)
-      .catch((err) => setLoadError(err instanceof Error ? err.message : '목록을 불러오지 못했습니다.'))
-  }, [])
 
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL')
   const [deletedFilter, setDeletedFilter] = useState<DeletedFilter>('정상')
@@ -88,47 +97,62 @@ export default function OrdersPage() {
   const [search2Field, setSearch2Field] = useState<SearchField>('수주사명')
   const [search2Value, setSearch2Value] = useState('')
 
-  const [appliedStatus, setAppliedStatus] = useState<OrderStatus | 'ALL'>('ALL')
   const [appliedDeletedFilter, setAppliedDeletedFilter] = useState<DeletedFilter>('정상')
-  const [appliedFrom, setAppliedFrom] = useState('')
-  const [appliedTo, setAppliedTo] = useState('')
   const [applied1Field, setApplied1Field] = useState<SearchField>('주문번호')
   const [applied1Value, setApplied1Value] = useState('')
   const [applied2Field, setApplied2Field] = useState<SearchField>('수주사명')
   const [applied2Value, setApplied2Value] = useState('')
 
+  function buildServerParams(): OrderSearchParams {
+    const params: OrderSearchParams = {}
+    if (statusFilter !== 'ALL') params.status = STATUS_TO_API[statusFilter]
+    if (dateFrom) params.deliveryDateFrom = dateFrom
+    if (dateTo) params.deliveryDateTo = dateTo
+    const key1 = SERVER_FIELD_MAP[search1Field]
+    if (key1 && search1Value) params[key1] = search1Value
+    const key2 = SERVER_FIELD_MAP[search2Field]
+    if (key2 && search2Value) params[key2] = search2Value
+    return params
+  }
+
+  function loadOrders(params: OrderSearchParams = {}) {
+    setLoading(true)
+    setLoadError('')
+    fetchOrders(params)
+      .then(setOrders)
+      .catch((err) => setLoadError(err instanceof Error ? err.message : '목록을 불러오지 못했습니다.'))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { loadOrders() }, [])
+
   const handleSearch = () => {
-    setAppliedStatus(statusFilter)
     setAppliedDeletedFilter(deletedFilter)
-    setAppliedFrom(dateFrom)
-    setAppliedTo(dateTo)
     setApplied1Field(search1Field)
-    setApplied1Value(search1Value)
+    setApplied1Value(SERVER_FIELD_MAP[search1Field] ? '' : search1Value)
     setApplied2Field(search2Field)
-    setApplied2Value(search2Value)
+    setApplied2Value(SERVER_FIELD_MAP[search2Field] ? '' : search2Value)
+    loadOrders(buildServerParams())
   }
 
   const handleReset = () => {
     setStatusFilter('ALL'); setDeletedFilter('정상'); setDateFrom(''); setDateTo('')
     setSearch1Field('주문번호'); setSearch1Value('')
     setSearch2Field('수주사명'); setSearch2Value('')
-    setAppliedStatus('ALL'); setAppliedDeletedFilter('정상'); setAppliedFrom(''); setAppliedTo('')
+    setAppliedDeletedFilter('정상')
     setApplied1Field('주문번호'); setApplied1Value('')
     setApplied2Field('수주사명'); setApplied2Value('')
+    loadOrders()
   }
 
   const filtered = orders.filter((o) => {
-    const matchStatus = appliedStatus === 'ALL' || o.status === appliedStatus
     const matchDeleted =
       appliedDeletedFilter === '전체' ||
       (appliedDeletedFilter === '정상' && !o.isDeleted) ||
       (appliedDeletedFilter === '삭제' && !!o.isDeleted)
-    const deliveryDate = o.deliveryAt.slice(0, 10)
-    const matchFrom = !appliedFrom || deliveryDate >= appliedFrom
-    const matchTo = !appliedTo || deliveryDate <= appliedTo
-    const match1 = matchField(o, applied1Field, applied1Value)
-    const match2 = matchField(o, applied2Field, applied2Value)
-    return matchStatus && matchDeleted && matchFrom && matchTo && match1 && match2
+    const match1 = !SERVER_FIELD_MAP[applied1Field] ? matchField(o, applied1Field, applied1Value) : true
+    const match2 = !SERVER_FIELD_MAP[applied2Field] ? matchField(o, applied2Field, applied2Value) : true
+    return matchDeleted && match1 && match2
   })
 
   return (
@@ -276,7 +300,13 @@ export default function OrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
+                  불러오는 중...
+                </TableCell>
+              </TableRow>
+            ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
@@ -355,7 +385,11 @@ export default function OrdersPage() {
 
       {/* 모바일 카드 */}
       <div className="space-y-3 md:hidden">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
+            불러오는 중...
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
             검색 결과가 없습니다.
           </div>

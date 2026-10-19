@@ -131,10 +131,25 @@ function toFrontend(o: BackendOrder): Order {
   }
 }
 
-export async function fetchOrders(params?: { status?: string; vendorId?: string }): Promise<Order[]> {
+export type OrderSearchParams = {
+  status?: string
+  vendorId?: string
+  orderNumber?: string
+  productName?: string
+  ordererName?: string
+  deliveryDateFrom?: string
+  deliveryDateTo?: string
+}
+
+export async function fetchOrders(params?: OrderSearchParams): Promise<Order[]> {
   const query = new URLSearchParams()
   if (params?.status) query.set('status', params.status)
   if (params?.vendorId) query.set('vendorId', params.vendorId)
+  if (params?.orderNumber) query.set('orderNumber', params.orderNumber)
+  if (params?.productName) query.set('productName', params.productName)
+  if (params?.ordererName) query.set('ordererName', params.ordererName)
+  if (params?.deliveryDateFrom) query.set('deliveryDateFrom', params.deliveryDateFrom)
+  if (params?.deliveryDateTo) query.set('deliveryDateTo', params.deliveryDateTo)
   const qs = query.toString()
   const res = await fetch(`/api/orders${qs ? `?${qs}` : ''}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('발주 목록을 불러오지 못했습니다.')
