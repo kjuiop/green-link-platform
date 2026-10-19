@@ -78,6 +78,8 @@ export type CreateOrderPayload = {
   vendorMemo: string
 }
 
+export type UpdateOrderPayload = CreateOrderPayload
+
 function authHeaders(): HeadersInit {
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
   return {
@@ -101,6 +103,8 @@ function toFrontend(o: BackendOrder): Order {
     deliveryType: '일반',
     deliveryAt: o.deliveryDate ?? '',
     deliveryTimeType: (o.deliveryTimeType as Order['deliveryTimeType']) ?? undefined,
+    deliveryTimeHour: o.deliveryTimeHour ?? undefined,
+    deliveryTimeMinute: o.deliveryTimeMinute ?? undefined,
     deliveryTimeCustom: o.deliveryTimeCustom ?? undefined,
     address: o.address ?? '',
     addressDetail: o.addressDetail ?? '',
@@ -116,6 +120,9 @@ function toFrontend(o: BackendOrder): Order {
     recipientPhone: o.recipientPhone ?? undefined,
     sendPhotoToOrderer: o.sendPhotoToOrderer,
     sendPhotoToRecipient: o.sendPhotoToRecipient,
+    messageSchedule: o.messageSchedule ?? undefined,
+    scheduledMessageHour: o.scheduledMessageHour ?? undefined,
+    scheduledMessageMinute: o.scheduledMessageMinute ?? undefined,
     adminMemo: o.adminMemo ?? undefined,
     vendorMemo: o.vendorMemo ?? undefined,
     completedAt: o.completedAt ?? undefined,
@@ -146,6 +153,19 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error(data.message ?? '발주 등록에 실패했습니다.')
+  }
+  return toFrontend(await res.json())
+}
+
+export async function updateOrder(id: string, payload: UpdateOrderPayload): Promise<Order> {
+  const res = await fetch(`/api/orders/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message ?? '발주 수정에 실패했습니다.')
   }
   return toFrontend(await res.json())
 }
