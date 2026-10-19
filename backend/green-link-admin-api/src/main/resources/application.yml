@@ -33,5 +33,11 @@ aws:
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
 
+aligo:
+  key: ${ALIGO_KEY:}
+  userid: ${ALIGO_USERID:}
+  sender: ${ALIGO_SENDER:}
+  url: https://apis.aligo.in/send/
+
 server:
   port: 8080

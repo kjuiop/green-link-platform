@@ -12,6 +12,7 @@ import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
 import com.greenlink.core.application.orderhistory.usecase.GetOrderHistoryUseCase;
+import com.greenlink.core.application.sms.usecase.SendDeliveryMmsUseCase;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,19 +30,22 @@ public class OrderController {
     private final UpdateOrderUseCase updateOrderUseCase;
     private final UpdateOrderStatusUseCase updateOrderStatusUseCase;
     private final GetOrderHistoryUseCase getOrderHistoryUseCase;
+    private final SendDeliveryMmsUseCase sendDeliveryMmsUseCase;
 
     public OrderController(GetOrdersUseCase getOrdersUseCase,
                            GetOrderUseCase getOrderUseCase,
                            CreateOrderUseCase createOrderUseCase,
                            UpdateOrderUseCase updateOrderUseCase,
                            UpdateOrderStatusUseCase updateOrderStatusUseCase,
-                           GetOrderHistoryUseCase getOrderHistoryUseCase) {
+                           GetOrderHistoryUseCase getOrderHistoryUseCase,
+                           SendDeliveryMmsUseCase sendDeliveryMmsUseCase) {
         this.getOrdersUseCase = getOrdersUseCase;
         this.getOrderUseCase = getOrderUseCase;
         this.createOrderUseCase = createOrderUseCase;
         this.updateOrderUseCase = updateOrderUseCase;
         this.updateOrderStatusUseCase = updateOrderStatusUseCase;
         this.getOrderHistoryUseCase = getOrderHistoryUseCase;
+        this.sendDeliveryMmsUseCase = sendDeliveryMmsUseCase;
     }
 
     @GetMapping
@@ -78,7 +82,15 @@ public class OrderController {
     @PutMapping("/{id}/status")
     public ResponseEntity<OrderResult> updateStatus(@PathVariable Long id,
                                                     @RequestBody @Valid UpdateOrderStatusRequest req) {
-        return ResponseEntity.ok(updateOrderStatusUseCase.updateOrderStatus(id, req.action()));
+        OrderResult result = updateOrderStatusUseCase.updateOrderStatus(id, req.action());
+        if ("complete".equalsIgnoreCase(req.action())) {
+            try {
+                sendDeliveryMmsUseCase.send(id);
+            } catch (Exception ignored) {
+                // MMS 발송 실패는 배송완료 처리를 막지 않음
+            }
+        }
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/{id}/history")
