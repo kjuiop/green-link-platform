@@ -22,6 +22,11 @@ public class AdminRepositoryAdapter implements AdminRepository {
     }
 
     @Override
+    public Optional<Admin> findById(Long id) {
+        return jpaRepository.findById(id).map(AdminJpaEntity::toDomain);
+    }
+
+    @Override
     public Optional<Admin> findByLoginId(String loginId) {
         AdminJpaEntity result = queryFactory
             .selectFrom(adminJpaEntity)

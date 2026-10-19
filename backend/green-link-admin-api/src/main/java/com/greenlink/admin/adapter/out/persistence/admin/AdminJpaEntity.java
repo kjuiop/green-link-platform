@@ -18,6 +18,12 @@ public class AdminJpaEntity extends BaseJpaEntity {
     @Column(nullable = false, length = 100)
     private String password;
 
+    @Column(length = 50)
+    private String name;
+
+    @Column(length = 20)
+    private String phone;
+
     protected AdminJpaEntity() {}
 
     public static AdminJpaEntity from(Admin admin) {
@@ -25,10 +31,12 @@ public class AdminJpaEntity extends BaseJpaEntity {
         e.id = admin.getId();
         e.loginId = admin.getLoginId();
         e.password = admin.getPassword();
+        e.name = admin.getName();
+        e.phone = admin.getPhone();
         return e;
     }
 
     public Admin toDomain() {
-        return Admin.of(id, loginId, password);
+        return Admin.of(id, loginId, password, name, phone);
     }
 }
