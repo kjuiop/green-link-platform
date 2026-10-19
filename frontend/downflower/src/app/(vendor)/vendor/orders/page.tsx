@@ -18,6 +18,7 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
 
 export default function VendorOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL')
@@ -33,6 +34,7 @@ export default function VendorOrdersPage() {
     fetchOrders({ vendorId })
       .then(setOrders)
       .catch(() => setLoadError('수주 목록을 불러오지 못했습니다.'))
+      .finally(() => setLoading(false))
   }, [])
 
   const handleSearch = () => {
@@ -136,7 +138,13 @@ export default function VendorOrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
+                  불러오는 중...
+                </TableCell>
+              </TableRow>
+            ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
@@ -167,7 +175,11 @@ export default function VendorOrdersPage() {
 
       {/* 모바일 카드 */}
       <div className="space-y-3 md:hidden">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
+            불러오는 중...
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
             검색 결과가 없습니다.
           </div>
