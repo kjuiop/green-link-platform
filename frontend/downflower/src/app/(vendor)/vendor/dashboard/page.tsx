@@ -1,14 +1,22 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { mockOrders } from '@/lib/mock/orders'
+'use client'
 
-const MY_VENDOR_ID = 'v1'
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { fetchOrders } from '@/lib/api/orderApi'
+import { Order } from '@/types/order'
 
 export default function VendorDashboardPage() {
-  const myOrders = mockOrders.filter((o) => o.vendorId === MY_VENDOR_ID)
-  const pending = myOrders.filter((o) => o.status === '발주대기').length
-  const active = myOrders.filter((o) => o.status === '수주완료').length
-  const completed = myOrders.filter((o) => o.status === '배송완료').length
-  const failed = myOrders.filter((o) => o.messageStatus === '발송실패').length
+  const [orders, setOrders] = useState<Order[]>([])
+
+  useEffect(() => {
+    const vendorId = typeof window !== 'undefined' ? localStorage.getItem('vendorId') ?? undefined : undefined
+    fetchOrders({ vendorId }).then(setOrders).catch(() => {})
+  }, [])
+
+  const pending = orders.filter((o) => o.status === '발주대기').length
+  const active = orders.filter((o) => o.status === '수주완료').length
+  const completed = orders.filter((o) => o.status === '배송완료').length
+  const failed = orders.filter((o) => o.messageStatus === '발송실패').length
 
   return (
     <div className="space-y-6">
@@ -20,7 +28,7 @@ export default function VendorDashboardPage() {
             <CardTitle className="text-sm font-medium text-gray-500">전체 수주</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{myOrders.length}</p>
+            <p className="text-2xl font-bold">{orders.length}</p>
           </CardContent>
         </Card>
         <Card>

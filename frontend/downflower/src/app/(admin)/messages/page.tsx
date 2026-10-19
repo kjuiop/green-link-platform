@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { MessageStatusBadge } from '@/components/common/StatusBadge'
-import { mockOrders } from '@/lib/mock/orders'
-import { MessageStatus } from '@/types/order'
+import { fetchOrders } from '@/lib/api/orderApi'
+import { Order, MessageStatus } from '@/types/order'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
 
@@ -14,13 +14,19 @@ const STATUS_FILTERS: { label: string; value: MessageStatus | 'ALL' }[] = [
   { label: '발송실패', value: '발송실패' },
 ]
 
-const BASE_ORDERS = mockOrders.filter((o) => o.messageStatus !== '미발송')
-
 export default function MessagesPage() {
+  const [baseOrders, setBaseOrders] = useState<Order[]>([])
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<MessageStatus | 'ALL'>('ALL')
   const [appliedQuery, setAppliedQuery] = useState('')
   const [appliedStatus, setAppliedStatus] = useState<MessageStatus | 'ALL'>('ALL')
+
+  // MMS 미구현 — messageStatus가 항상 '미발송'이므로 목록은 비어있음
+  useEffect(() => {
+    fetchOrders()
+      .then((all) => setBaseOrders(all.filter((o) => o.messageStatus !== '미발송')))
+      .catch(() => {})
+  }, [])
 
   const handleSearch = () => {
     setAppliedQuery(query)
@@ -32,7 +38,7 @@ export default function MessagesPage() {
     setAppliedQuery(''); setAppliedStatus('ALL')
   }
 
-  const filtered = BASE_ORDERS.filter((o) => {
+  const filtered = baseOrders.filter((o) => {
     const matchStatus = appliedStatus === 'ALL' || o.messageStatus === appliedStatus
     const matchQuery =
       !appliedQuery ||
