@@ -45,4 +45,11 @@ public class PhotoRepositoryAdapter implements PhotoRepository {
     public boolean existsByOrderIdAndPhotoType(Long orderId, PhotoType photoType) {
         return jpaRepository.existsByOrderIdAndPhotoType(orderId, photoType);
     }
+
+    @Override
+    public List<Photo> findSelectedByOrderId(Long orderId) {
+        return jpaRepository.findByOrderIdAndIsSendToCustomerTrue(orderId).stream()
+                .map(PhotoJpaEntity::toDomain)
+                .toList();
+    }
 }
