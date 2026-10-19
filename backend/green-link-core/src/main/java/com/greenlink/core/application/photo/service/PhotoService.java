@@ -29,13 +29,26 @@ public class PhotoService implements UploadPhotoUseCase, SelectPhotoUseCase, Get
     }
 
     @Override
-    @Transactional
     public PhotoResult uploadPhoto(UploadPhotoCommand command) {
-        PhotoType photoType = PhotoType.valueOf(command.photoType().toUpperCase());
+        PhotoType photoType;
+        try {
+            photoType = PhotoType.valueOf(command.photoType().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(PhotoErrorCode.INVALID_PHOTO_TYPE);
+        }
         PhotoStorage.UploadResult uploaded = photoStorage.store(
                 command.orderId(), command.originalFileName(), command.content(), command.contentType());
-        Photo photo = Photo.create(command.orderId(), uploaded.s3Key(), uploaded.url(), photoType);
-        return toResult(photoRepository.save(photo));
+        try {
+            return toResult(savePhoto(command.orderId(), uploaded.s3Key(), uploaded.url(), photoType));
+        } catch (Exception e) {
+            photoStorage.delete(uploaded.s3Key());
+            throw e;
+        }
+    }
+
+    @Transactional
+    protected Photo savePhoto(Long orderId, String s3Key, String photoUrl, PhotoType photoType) {
+        return photoRepository.save(Photo.create(orderId, s3Key, photoUrl, photoType));
     }
 
     @Override
