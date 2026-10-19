@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { OrderStatusBadge } from '@/components/common/StatusBadge'
-import { fetchOrders, fetchPhotos, PhotoResult } from '@/lib/api/orderApi'
+import { fetchOrders, fetchAllPhotos, PhotoResult } from '@/lib/api/orderApi'
 import { Order } from '@/types/order'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -16,18 +16,22 @@ export default function PhotosPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchOrders()
-      .then(async (orders) => {
-        const deliveredOrders = orders.filter(
-          (o) => o.status === '수주완료' || o.status === '배송완료'
-        )
-        const results = await Promise.all(
-          deliveredOrders.map(async (order) => {
-            const photos = await fetchPhotos(order.id).catch(() => [] as PhotoResult[])
-            return { order, photos }
-          })
-        )
-        setItems(results.filter((r) => r.photos.length > 0))
+    Promise.all([fetchOrders(), fetchAllPhotos()])
+      .then(([orders, allPhotos]) => {
+        const photosByOrder = new Map<string, PhotoResult[]>()
+        for (const photo of allPhotos) {
+          const key = String(photo.orderId)
+          const list = photosByOrder.get(key) ?? []
+          list.push(photo)
+          photosByOrder.set(key, list)
+        }
+
+        const result: OrderWithPhotos[] = orders
+          .filter((o) => o.status === '수주완료' || o.status === '배송완료')
+          .map((order) => ({ order, photos: photosByOrder.get(order.id) ?? [] }))
+          .filter((r) => r.photos.length > 0)
+
+        setItems(result)
       })
       .catch(() => setLoadError('사진 목록을 불러오지 못했습니다.'))
       .finally(() => setLoading(false))

@@ -198,6 +198,12 @@ export type PhotoResult = {
   uploadedAt: string | null
 }
 
+export async function fetchAllPhotos(): Promise<PhotoResult[]> {
+  const res = await fetch('/api/photos', { headers: authHeaders() })
+  if (!res.ok) throw new Error('사진 목록을 불러오지 못했습니다.')
+  return res.json()
+}
+
 export async function fetchPhotos(orderId: string): Promise<PhotoResult[]> {
   const res = await fetch(`/api/orders/${orderId}/photos`, { headers: authHeaders() })
   if (!res.ok) throw new Error('사진 목록을 불러오지 못했습니다.')

@@ -57,6 +57,12 @@ public class PhotoService implements UploadPhotoUseCase, SelectPhotoUseCase, Get
 
     @Override
     @Transactional(readOnly = true)
+    public List<PhotoResult> getAllPhotos() {
+        return photoRepository.findAll().stream().map(this::toResult).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<PhotoResult> getPhotosByOrder(Long orderId) {
         return photoRepository.findAllByOrderId(orderId).stream().map(this::toResult).toList();
     }

@@ -6,5 +6,7 @@ import java.util.List;
 
 public interface GetPhotosUseCase {
 
+    List<PhotoResult> getAllPhotos();
+
     List<PhotoResult> getPhotosByOrder(Long orderId);
 }
