@@ -35,14 +35,7 @@ export default function VendorLoginPage() {
       localStorage.setItem('accessToken', accessToken)
       localStorage.setItem('role', 'VENDOR')
       localStorage.setItem('vendorId', String(vendorId))
-      try {
-        const base64 = accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-        const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
-        const payload = JSON.parse(atob(padded))
-        localStorage.setItem('loginId', payload.sub ?? loginId)
-      } catch {
-        localStorage.setItem('loginId', loginId)
-      }
+      localStorage.setItem('loginId', loginId)
       router.push('/vendor/dashboard')
     } catch {
       setError('서버 연결에 실패했습니다.')
