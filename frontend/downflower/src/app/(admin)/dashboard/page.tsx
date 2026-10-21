@@ -1,10 +1,24 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { mockOrders } from '@/lib/mock/orders'
+import { fetchOrders } from '@/lib/api/orderApi'
+import { Order } from '@/types/order'
 
 export default function DashboardPage() {
-  const pending = mockOrders.filter((o) => o.status === '발주대기').length
-  const completed = mockOrders.filter((o) => o.status === '배송완료').length
-  const failed = mockOrders.filter((o) => o.messageStatus === '발송실패').length
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchOrders()
+      .then(setOrders)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const pending = orders.filter((o) => o.status === '발주대기').length
+  const completed = orders.filter((o) => o.status === '배송완료').length
+  const failed = orders.filter((o) => o.messageStatus === '발송실패').length
 
   return (
     <div className="space-y-6">
@@ -16,7 +30,7 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium text-gray-500">전체 주문</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{mockOrders.length}</p>
+            <p className="text-2xl font-bold">{loading ? '-' : orders.length}</p>
           </CardContent>
         </Card>
         <Card>
@@ -24,7 +38,7 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium text-yellow-600">미승인 주문</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-yellow-600">{pending}</p>
+            <p className="text-2xl font-bold text-yellow-600">{loading ? '-' : pending}</p>
           </CardContent>
         </Card>
         <Card>
@@ -32,7 +46,7 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium text-green-600">배송완료</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-green-600">{completed}</p>
+            <p className="text-2xl font-bold text-green-600">{loading ? '-' : completed}</p>
           </CardContent>
         </Card>
         <Card>
@@ -40,7 +54,7 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium text-red-600">문자 발송 실패</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-red-600">{failed}</p>
+            <p className="text-2xl font-bold text-red-600">{loading ? '-' : failed}</p>
           </CardContent>
         </Card>
       </div>

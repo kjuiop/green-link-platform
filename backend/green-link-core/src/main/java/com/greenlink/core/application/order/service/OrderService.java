@@ -1,0 +1,220 @@
+package com.greenlink.core.application.order.service;
+
+import com.greenlink.core.application.order.dto.CreateOrderCommand;
+import com.greenlink.core.application.order.dto.OrderResult;
+import com.greenlink.core.domain.order.model.OrderSearchCondition;
+import com.greenlink.core.application.order.dto.UpdateOrderCommand;
+import com.greenlink.core.application.order.usecase.CreateOrderUseCase;
+import com.greenlink.core.application.order.usecase.GetOrderUseCase;
+import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
+import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
+import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
+import com.greenlink.core.application.orderhistory.usecase.RecordOrderHistoryUseCase;
+import com.greenlink.core.domain.order.model.Order;
+import com.greenlink.core.domain.order.model.OrderStatus;
+import com.greenlink.core.domain.order.port.OrderRepository;
+import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
+import com.greenlink.core.domain.photo.model.PhotoType;
+import com.greenlink.core.domain.photo.port.PhotoRepository;
+import com.greenlink.core.global.exception.BusinessException;
+import com.greenlink.core.global.exception.order.OrderErrorCode;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
+
+@Service
+@Transactional(readOnly = true)
+public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
+        GetOrdersUseCase, UpdateOrderUseCase, UpdateOrderStatusUseCase {
+
+    private static final Map<OrderStatus, String> STATUS_LABEL = Map.of(
+            OrderStatus.PENDING,   "발주대기",
+            OrderStatus.ACCEPTED,  "수주완료",
+            OrderStatus.DELIVERED, "배송완료",
+            OrderStatus.REJECTED,  "수주거절",
+            OrderStatus.CANCELLED, "주문취소"
+    );
+
+    private final OrderRepository orderRepository;
+    private final PhotoRepository photoRepository;
+    private final RecordOrderHistoryUseCase recordOrderHistoryUseCase;
+
+    public OrderService(OrderRepository orderRepository, PhotoRepository photoRepository,
+                        RecordOrderHistoryUseCase recordOrderHistoryUseCase) {
+        this.orderRepository = orderRepository;
+        this.photoRepository = photoRepository;
+        this.recordOrderHistoryUseCase = recordOrderHistoryUseCase;
+    }
+
+    @Override
+    @Transactional
+    public OrderResult createOrder(CreateOrderCommand cmd) {
+        String orderNumber = "DF-"
+                + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
+                + "-"
+                + String.format("%04d", System.nanoTime() % 10000);
+
+        Order order = Order.create(
+                cmd.vendorId(),
+                orderNumber,
+                cmd.productName(),
+                cmd.quantity(),
+                cmd.amount(),
+                cmd.extraCost(),
+                cmd.deliveryDate(),
+                cmd.deliveryTimeType(),
+                cmd.deliveryTimeHour(),
+                cmd.deliveryTimeMinute(),
+                cmd.deliveryTimeCustom(),
+                cmd.address(),
+                cmd.addressDetail(),
+                cmd.eventType(),
+                cmd.placeName(),
+                cmd.roomName(),
+                cmd.eventInfo(),
+                cmd.ribbonLeft(),
+                cmd.ribbonRight(),
+                cmd.ordererName(),
+                cmd.ordererPhone(),
+                cmd.recipientName(),
+                cmd.recipientPhone(),
+                cmd.sendPhotoToOrderer(),
+                cmd.sendPhotoToRecipient(),
+                cmd.messageSchedule(),
+                cmd.scheduledMessageHour(),
+                cmd.scheduledMessageMinute(),
+                cmd.adminMemo(),
+                cmd.vendorMemo()
+        );
+
+        Order saved = orderRepository.save(order);
+        recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.CREATED,
+                "발주 등록: " + saved.getOrderNumber());
+        return toResult(saved);
+    }
+
+    @Override
+    public OrderResult getOrder(Long id) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+        return toResult(order);
+    }
+
+    @Override
+    public List<OrderResult> getOrders(OrderSearchCondition condition) {
+        return orderRepository.search(condition).stream().map(this::toResult).toList();
+    }
+
+    @Override
+    @Transactional
+    public OrderResult updateOrder(Long id, UpdateOrderCommand cmd) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+
+        order.updateInfo(
+                cmd.vendorId(),
+                cmd.productName(),
+                cmd.quantity(),
+                cmd.amount(),
+                cmd.extraCost(),
+                cmd.deliveryDate(),
+                cmd.deliveryTimeType(),
+                cmd.deliveryTimeHour(),
+                cmd.deliveryTimeMinute(),
+                cmd.deliveryTimeCustom(),
+                cmd.address(),
+                cmd.addressDetail(),
+                cmd.eventType(),
+                cmd.placeName(),
+                cmd.roomName(),
+                cmd.eventInfo(),
+                cmd.ribbonLeft(),
+                cmd.ribbonRight(),
+                cmd.ordererName(),
+                cmd.ordererPhone(),
+                cmd.recipientName(),
+                cmd.recipientPhone(),
+                cmd.sendPhotoToOrderer(),
+                cmd.sendPhotoToRecipient(),
+                cmd.messageSchedule(),
+                cmd.scheduledMessageHour(),
+                cmd.scheduledMessageMinute(),
+                cmd.adminMemo(),
+                cmd.vendorMemo()
+        );
+
+        Order saved = orderRepository.save(order);
+        recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.UPDATED, "발주 정보 수정");
+        return toResult(saved);
+    }
+
+    @Override
+    @Transactional
+    public OrderResult updateOrderStatus(Long id, String action) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+
+        switch (action.toLowerCase()) {
+            case "accept" -> order.accept();
+            case "reject" -> order.reject();
+            case "cancel" -> order.cancel();
+            case "complete" -> {
+                if (!photoRepository.existsByOrderIdAndPhotoType(id, PhotoType.SITE)) {
+                    throw new BusinessException(OrderErrorCode.SITE_PHOTO_REQUIRED);
+                }
+                order.complete(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            }
+            default -> throw new BusinessException(OrderErrorCode.INVALID_ORDER_ACTION);
+        }
+
+        Order saved = orderRepository.save(order);
+        recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.STATUS_CHANGED,
+                "상태 변경: " + STATUS_LABEL.getOrDefault(saved.getStatus(), saved.getStatus().name()));
+        return toResult(saved);
+    }
+
+    private OrderResult toResult(Order order) {
+        return new OrderResult(
+                order.getId(),
+                order.getOrderNumber(),
+                order.getVendorId(),
+                null,
+                order.getStatus() != null ? order.getStatus().name() : null,
+                order.getProductName(),
+                order.getQuantity(),
+                order.getAmount(),
+                order.getExtraCost(),
+                order.getDeliveryDate(),
+                order.getDeliveryTimeType(),
+                order.getDeliveryTimeHour(),
+                order.getDeliveryTimeMinute(),
+                order.getDeliveryTimeCustom(),
+                order.getAddress(),
+                order.getAddressDetail(),
+                order.getEventType(),
+                order.getPlaceName(),
+                order.getRoomName(),
+                order.getEventInfo(),
+                order.getRibbonLeft(),
+                order.getRibbonRight(),
+                order.getOrdererName(),
+                order.getOrdererPhone(),
+                order.getRecipientName(),
+                order.getRecipientPhone(),
+                order.isSendPhotoToOrderer(),
+                order.isSendPhotoToRecipient(),
+                order.getMessageSchedule(),
+                order.getScheduledMessageHour(),
+                order.getScheduledMessageMinute(),
+                order.getAdminMemo(),
+                order.getVendorMemo(),
+                order.getCompletedAt(),
+                order.getCreatedAt()
+        );
+    }
+}

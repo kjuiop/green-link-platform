@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import * as XLSX from 'xlsx'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { OrderStatusBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
-import { mockOrders } from '@/lib/mock/orders'
+import { fetchOrders } from '@/lib/api/orderApi'
 import { OrderStatus, Order } from '@/types/order'
 import { Download } from 'lucide-react'
 
@@ -39,10 +39,6 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '배송완료', value: '배송완료' },
 ]
 
-const BASE_ORDERS = mockOrders.filter(
-  (o) => o.status === '수주완료' || o.status === '배송완료'
-)
-
 function downloadExcel(orders: Order[]) {
   const rows = orders.map((o) => ({
     주문번호: o.orderNumber,
@@ -72,6 +68,10 @@ function downloadExcel(orders: Order[]) {
 }
 
 export default function ReceivedOrdersPage() {
+  const [baseOrders, setBaseOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL')
   const [deletedFilter, setDeletedFilter] = useState<DeletedFilter>('정상')
   const [dateFrom, setDateFrom] = useState('')
@@ -89,6 +89,13 @@ export default function ReceivedOrdersPage() {
   const [applied1Value, setApplied1Value] = useState('')
   const [applied2Field, setApplied2Field] = useState<SearchField>('수주사명')
   const [applied2Value, setApplied2Value] = useState('')
+
+  useEffect(() => {
+    fetchOrders()
+      .then((all) => setBaseOrders(all.filter((o) => o.status === '수주완료' || o.status === '배송완료')))
+      .catch(() => setLoadError('수주 목록을 불러오지 못했습니다.'))
+      .finally(() => setLoading(false))
+  }, [])
 
   const handleSearch = () => {
     setAppliedStatus(statusFilter)
@@ -110,7 +117,7 @@ export default function ReceivedOrdersPage() {
     setApplied2Field('수주사명'); setApplied2Value('')
   }
 
-  const filtered = BASE_ORDERS.filter((o) => {
+  const filtered = baseOrders.filter((o) => {
     const matchStatus = appliedStatus === 'ALL' || o.status === appliedStatus
     const matchDeleted =
       appliedDeletedFilter === '전체' ||
@@ -127,6 +134,12 @@ export default function ReceivedOrdersPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">수주 목록</h1>
+
+      {loadError && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+          {loadError}
+        </div>
+      )}
 
       {/* 검색 영역 */}
       <div className="rounded-lg border bg-white p-4">
@@ -257,7 +270,13 @@ export default function ReceivedOrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
+                  불러오는 중...
+                </TableCell>
+              </TableRow>
+            ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
@@ -318,13 +337,6 @@ export default function ReceivedOrdersPage() {
                       orderNumber={order.orderNumber}
                       senderName={order.ribbonLeft}
                       recipientName={order.recipientName}
-                      initialSaved={order.id === '1' ? {
-                        receiverName: '김민준',
-                        photos: [
-                          { id: 'demo-1', url: 'https://picsum.photos/seed/receipt1/400/400' },
-                          { id: 'demo-2', url: 'https://picsum.photos/seed/receipt2/400/400' },
-                        ],
-                      } : undefined}
                     />
                   </TableCell>
                 </TableRow>
@@ -336,7 +348,11 @@ export default function ReceivedOrdersPage() {
 
       {/* 모바일 카드 */}
       <div className="space-y-3 md:hidden">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
+            불러오는 중...
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
             검색 결과가 없습니다.
           </div>

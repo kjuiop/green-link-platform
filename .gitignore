@@ -12,11 +12,16 @@ docs/refs.local.md
 .env.*
 !.env.example
 
+# Spring local profile (credentials)
+application-local.yml
+
 # Build artifacts
 build/
 out/
+!**/adapter/out/
 target/
 *.jar
+!**/gradle/wrapper/gradle-wrapper.jar
 *.class
 
 # Logs

@@ -1,9 +1,22 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { mockOrders } from '@/lib/mock/orders'
+import { fetchOrders } from '@/lib/api/orderApi'
+import { Order } from '@/types/order'
 
 export default function SettlementPage() {
-  const completed = mockOrders.filter((o) => o.status === '배송완료')
+  const [completed, setCompleted] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchOrders({ status: 'DELIVERED' })
+      .then(setCompleted)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
   const total = completed.reduce((sum, o) => sum + o.amount, 0)
 
   const byVendor = completed.reduce<Record<string, { name: string; count: number; amount: number }>>(
@@ -26,7 +39,7 @@ export default function SettlementPage() {
             <CardTitle className="text-sm font-medium text-gray-500">완료 주문</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{completed.length}건</p>
+            <p className="text-2xl font-bold">{loading ? '-' : `${completed.length}건`}</p>
           </CardContent>
         </Card>
         <Card>
@@ -34,7 +47,7 @@ export default function SettlementPage() {
             <CardTitle className="text-sm font-medium text-green-600">총 정산금액</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-green-600">{total.toLocaleString()}원</p>
+            <p className="text-2xl font-bold text-green-600">{loading ? '-' : `${total.toLocaleString()}원`}</p>
           </CardContent>
         </Card>
       </div>
@@ -49,19 +62,26 @@ export default function SettlementPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Object.values(byVendor).map((v) => (
-              <TableRow key={v.name}>
-                <TableCell>{v.name}</TableCell>
-                <TableCell className="text-right">{v.count}건</TableCell>
-                <TableCell className="text-right">{v.amount.toLocaleString()}원</TableCell>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={3} className="py-10 text-center text-sm text-gray-400">
+                  불러오는 중...
+                </TableCell>
               </TableRow>
-            ))}
-            {Object.keys(byVendor).length === 0 && (
+            ) : Object.values(byVendor).length === 0 ? (
               <TableRow>
                 <TableCell colSpan={3} className="py-10 text-center text-gray-400">
                   정산 내역이 없습니다.
                 </TableCell>
               </TableRow>
+            ) : (
+              Object.values(byVendor).map((v) => (
+                <TableRow key={v.name}>
+                  <TableCell>{v.name}</TableCell>
+                  <TableCell className="text-right">{v.count}건</TableCell>
+                  <TableCell className="text-right">{v.amount.toLocaleString()}원</TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>

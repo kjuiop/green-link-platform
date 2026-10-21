@@ -1,26 +1,44 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { MessageStatusBadge } from '@/components/common/StatusBadge'
-import { mockOrders } from '@/lib/mock/orders'
-import { MessageStatus } from '@/types/order'
+import { fetchOrders } from '@/lib/api/orderApi'
+import { fetchSmsMessages, resendMms, SmsMessage } from '@/lib/api/smsApi'
+import { Order } from '@/types/order'
 import Link from 'next/link'
-import { Search } from 'lucide-react'
+import { Search, RefreshCw } from 'lucide-react'
 
-const STATUS_FILTERS: { label: string; value: MessageStatus | 'ALL' }[] = [
+type SmsStatusFilter = 'ALL' | 'SUCCESS' | 'FAIL'
+
+const STATUS_FILTERS: { label: string; value: SmsStatusFilter }[] = [
   { label: '전체', value: 'ALL' },
-  { label: '발송성공', value: '발송성공' },
-  { label: '발송실패', value: '발송실패' },
+  { label: '발송성공', value: 'SUCCESS' },
+  { label: '발송실패', value: 'FAIL' },
 ]
 
-const BASE_ORDERS = mockOrders.filter((o) => o.messageStatus !== '미발송')
+type MessageRow = {
+  sms: SmsMessage
+  order: Order | undefined
+}
 
 export default function MessagesPage() {
+  const [rows, setRows] = useState<MessageRow[]>([])
+  const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<MessageStatus | 'ALL'>('ALL')
+  const [statusFilter, setStatusFilter] = useState<SmsStatusFilter>('ALL')
   const [appliedQuery, setAppliedQuery] = useState('')
-  const [appliedStatus, setAppliedStatus] = useState<MessageStatus | 'ALL'>('ALL')
+  const [appliedStatus, setAppliedStatus] = useState<SmsStatusFilter>('ALL')
+  const [resendingIds, setResendingIds] = useState<Set<number>>(new Set())
+
+  useEffect(() => {
+    Promise.all([fetchSmsMessages(), fetchOrders()])
+      .then(([messages, orders]) => {
+        const orderMap = new Map(orders.map((o) => [Number(o.id), o]))
+        setRows(messages.map((sms) => ({ sms, order: orderMap.get(sms.orderId) })))
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
 
   const handleSearch = () => {
     setAppliedQuery(query)
@@ -32,13 +50,28 @@ export default function MessagesPage() {
     setAppliedQuery(''); setAppliedStatus('ALL')
   }
 
-  const filtered = BASE_ORDERS.filter((o) => {
-    const matchStatus = appliedStatus === 'ALL' || o.messageStatus === appliedStatus
+  const handleResend = async (orderId: number) => {
+    setResendingIds((prev) => new Set(prev).add(orderId))
+    try {
+      await resendMms(orderId)
+      const [messages, orders] = await Promise.all([fetchSmsMessages(), fetchOrders()])
+      const orderMap = new Map(orders.map((o) => [Number(o.id), o]))
+      setRows(messages.map((sms) => ({ sms, order: orderMap.get(sms.orderId) })))
+    } catch {
+      alert('재발송에 실패했습니다.')
+    } finally {
+      setResendingIds((prev) => { const s = new Set(prev); s.delete(orderId); return s })
+    }
+  }
+
+  const filtered = rows.filter(({ sms, order }) => {
+    const matchStatus = appliedStatus === 'ALL' || sms.status === appliedStatus
     const matchQuery =
       !appliedQuery ||
-      o.orderNumber.includes(appliedQuery) ||
-      o.vendorName.includes(appliedQuery) ||
-      o.ordererName.includes(appliedQuery)
+      order?.orderNumber.includes(appliedQuery) ||
+      order?.vendorName.includes(appliedQuery) ||
+      order?.ordererName.includes(appliedQuery) ||
+      sms.receiver.includes(appliedQuery)
     return matchStatus && matchQuery
   })
 
@@ -66,7 +99,7 @@ export default function MessagesPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="주문번호, 업체명, 주문자명으로 검색"
+              placeholder="주문번호, 업체명, 주문자명, 수신번호로 검색"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -94,41 +127,67 @@ export default function MessagesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>주문번호</TableHead>
-              <TableHead>배송완료일시</TableHead>
+              <TableHead>발송일시</TableHead>
               <TableHead>수주업체</TableHead>
               <TableHead>상품명</TableHead>
               <TableHead>주문자</TableHead>
-              <TableHead>발송대상</TableHead>
+              <TableHead>수신번호</TableHead>
               <TableHead>발송상태</TableHead>
+              <TableHead>재발송</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">
+                  불러오는 중...
+                </TableCell>
+              </TableRow>
+            ) : filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((order) => (
-                <TableRow key={order.id}>
+              filtered.map(({ sms, order }) => (
+                <TableRow key={sms.id}>
                   <TableCell>
-                    <Link href={`/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
-                      {order.orderNumber}
-                    </Link>
+                    {order ? (
+                      <Link href={`/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
+                        {order.orderNumber}
+                      </Link>
+                    ) : (
+                      <span className="font-mono text-xs text-gray-400">주문 #{sms.orderId}</span>
+                    )}
                   </TableCell>
-                  <TableCell className="text-sm">{order.completedAt ?? '-'}</TableCell>
-                  <TableCell className="text-sm">{order.vendorName}</TableCell>
-                  <TableCell className="text-sm">{order.productName}</TableCell>
-                  <TableCell className="text-sm">{order.ordererName}</TableCell>
-                  <TableCell className="text-sm">
-                    {[
-                      order.sendPhotoToOrderer ? '주문자' : '',
-                      order.sendPhotoToRecipient ? '받는 분' : '',
-                    ].filter(Boolean).join(', ') || '-'}
+                  <TableCell className="text-sm">{sms.sentAt}</TableCell>
+                  <TableCell className="text-sm">{order?.vendorName ?? '-'}</TableCell>
+                  <TableCell className="text-sm">{order?.productName ?? '-'}</TableCell>
+                  <TableCell className="text-sm">{order?.ordererName ?? '-'}</TableCell>
+                  <TableCell className="font-mono text-sm">{sms.receiver}</TableCell>
+                  <TableCell>
+                    {sms.status === 'SUCCESS' ? (
+                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                        발송성공
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700" title={sms.failReason ?? undefined}>
+                        발송실패
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>
-                    <MessageStatusBadge status={order.messageStatus} />
+                    {sms.status === 'FAIL' && (
+                      <button
+                        onClick={() => handleResend(sms.orderId)}
+                        disabled={resendingIds.has(sms.orderId)}
+                        className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        재발송
+                      </button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -139,35 +198,51 @@ export default function MessagesPage() {
 
       {/* 모바일 카드 */}
       <div className="space-y-3 md:hidden">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">불러오는 중...</div>
+        ) : filtered.length === 0 ? (
           <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
             검색 결과가 없습니다.
           </div>
         ) : (
-          filtered.map((order) => (
-            <Link
-              key={order.id}
-              href={`/orders/${order.id}`}
-              className="block rounded-lg border bg-white p-4 hover:bg-gray-50"
-            >
+          filtered.map(({ sms, order }) => (
+            <div key={sms.id} className="rounded-lg border bg-white p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="font-mono text-xs text-blue-600">{order.orderNumber}</div>
-                  <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
-                  <div className="mt-0.5 text-xs text-gray-500">{order.vendorName} · {order.ordererName}</div>
+                  {order ? (
+                    <Link href={`/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
+                      {order.orderNumber}
+                    </Link>
+                  ) : (
+                    <span className="font-mono text-xs text-gray-400">주문 #{sms.orderId}</span>
+                  )}
+                  <div className="mt-1 truncate text-sm font-medium">{order?.productName ?? '-'}</div>
+                  <div className="mt-0.5 text-xs text-gray-500">{order?.vendorName ?? '-'} · {order?.ordererName ?? '-'}</div>
                 </div>
-                <MessageStatusBadge status={order.messageStatus} />
+                {sms.status === 'SUCCESS' ? (
+                  <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 whitespace-nowrap">
+                    발송성공
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 whitespace-nowrap">
+                    발송실패
+                  </span>
+                )}
               </div>
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
-                <span>완료 {order.completedAt ?? '-'}</span>
-                <span>
-                  발송대상: {[
-                    order.sendPhotoToOrderer ? '주문자' : '',
-                    order.sendPhotoToRecipient ? '받는 분' : '',
-                  ].filter(Boolean).join(', ') || '-'}
-                </span>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-xs text-gray-400">
+                <span>발송 {sms.sentAt} · {sms.receiver}</span>
+                {sms.status === 'FAIL' && (
+                  <button
+                    onClick={() => handleResend(sms.orderId)}
+                    disabled={resendingIds.has(sms.orderId)}
+                    className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    재발송
+                  </button>
+                )}
               </div>
-            </Link>
+            </div>
           ))
         )}
       </div>

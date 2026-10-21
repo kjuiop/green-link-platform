@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { VendorOrderStatusBadge, MessageStatusBadge, DeliveryTimeTypeBadge } from '@/components/common/StatusBadge'
-import { mockOrders } from '@/lib/mock/orders'
-import { OrderStatus } from '@/types/order'
+import { fetchOrders } from '@/lib/api/orderApi'
+import { Order, OrderStatus } from '@/types/order'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
 
@@ -17,6 +17,9 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
 ]
 
 export default function VendorOrdersPage() {
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL')
   const [dateFrom, setDateFrom] = useState('')
@@ -25,6 +28,14 @@ export default function VendorOrdersPage() {
   const [appliedStatus, setAppliedStatus] = useState<OrderStatus | 'ALL'>('ALL')
   const [appliedFrom, setAppliedFrom] = useState('')
   const [appliedTo, setAppliedTo] = useState('')
+
+  useEffect(() => {
+    const vendorId = typeof window !== 'undefined' ? localStorage.getItem('vendorId') ?? undefined : undefined
+    fetchOrders({ vendorId })
+      .then(setOrders)
+      .catch(() => setLoadError('수주 목록을 불러오지 못했습니다.'))
+      .finally(() => setLoading(false))
+  }, [])
 
   const handleSearch = () => {
     setAppliedQuery(query)
@@ -38,7 +49,7 @@ export default function VendorOrdersPage() {
     setAppliedQuery(''); setAppliedStatus('ALL'); setAppliedFrom(''); setAppliedTo('')
   }
 
-  const filtered = mockOrders.filter((o) => {
+  const filtered = orders.filter((o) => {
     const matchStatus = appliedStatus === 'ALL' || o.status === appliedStatus
     const matchQuery =
       !appliedQuery ||
@@ -53,6 +64,12 @@ export default function VendorOrdersPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">수주 목록</h1>
+
+      {loadError && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+          {loadError}
+        </div>
+      )}
 
       <div className="rounded-lg border bg-white p-4">
         <div className="flex flex-wrap gap-3">
@@ -121,7 +138,13 @@ export default function VendorOrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
+                  불러오는 중...
+                </TableCell>
+              </TableRow>
+            ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
@@ -152,7 +175,11 @@ export default function VendorOrdersPage() {
 
       {/* 모바일 카드 */}
       <div className="space-y-3 md:hidden">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
+            불러오는 중...
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
             검색 결과가 없습니다.
           </div>

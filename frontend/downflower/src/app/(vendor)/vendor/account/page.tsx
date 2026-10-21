@@ -1,11 +1,40 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { mockVendors } from '@/lib/mock/vendors'
+import { fetchVendor } from '@/lib/api/vendorApi'
+import { Vendor } from '@/types/vendor'
 
 export default function VendorAccountPage() {
-  const vendor = mockVendors[0]
+  const [vendor, setVendor] = useState<Vendor | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const vendorId = typeof window !== 'undefined' ? localStorage.getItem('vendorId') : null
+    if (!vendorId) { setLoading(false); return }
+    fetchVendor(vendorId).then(setVendor).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-xl font-bold">내 계정정보</h1>
+        <p className="py-10 text-center text-sm text-gray-400">불러오는 중...</p>
+      </div>
+    )
+  }
+
+  if (!vendor) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-xl font-bold">내 계정정보</h1>
+        <p className="py-10 text-center text-sm text-gray-400">계정 정보를 불러오지 못했습니다.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -19,19 +48,19 @@ export default function VendorAccountPage() {
           <CardContent className="space-y-3">
             <div className="space-y-1.5">
               <Label>업체명</Label>
-              <Input defaultValue={vendor.name} />
+              <Input defaultValue={vendor.name} readOnly />
             </div>
             <div className="space-y-1.5">
               <Label>담당자명</Label>
-              <Input defaultValue={vendor.managerName} />
+              <Input defaultValue={vendor.managerName} readOnly />
             </div>
             <div className="space-y-1.5">
               <Label>연락처</Label>
-              <Input defaultValue={vendor.phone} />
+              <Input defaultValue={vendor.phone} readOnly />
             </div>
             <div className="space-y-1.5">
               <Label>주소</Label>
-              <Input defaultValue={vendor.address} />
+              <Input defaultValue={vendor.address} readOnly />
             </div>
           </CardContent>
         </Card>
@@ -56,10 +85,6 @@ export default function VendorAccountPage() {
             <Button className="w-full bg-green-700 hover:bg-green-800">비밀번호 변경</Button>
           </CardContent>
         </Card>
-      </div>
-
-      <div className="flex justify-end">
-        <Button className="bg-green-700 hover:bg-green-800">정보 저장</Button>
       </div>
     </div>
   )

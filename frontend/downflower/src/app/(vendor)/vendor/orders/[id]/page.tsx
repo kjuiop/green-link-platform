@@ -1,17 +1,15 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { VendorOrderStatusBadge } from '@/components/common/StatusBadge'
-import { mockOrders } from '@/lib/mock/orders'
-import { mockPhotos } from '@/lib/mock/photos'
-import { notFound } from 'next/navigation'
+import { fetchOrder, updateOrderStatus, uploadPhotos, PhotoResult } from '@/lib/api/orderApi'
 import { PrintButton } from '@/components/common/PrintButton'
 import { cn } from '@/lib/utils'
 import { Upload, X } from 'lucide-react'
-import { OrderStatus } from '@/types/order'
+import { Order } from '@/types/order'
 
 type PhotoCategory = 'store' | 'site'
 
@@ -19,37 +17,63 @@ interface LocalPhoto {
   id: string
   url: string
   category: PhotoCategory
+  file?: File
+  uploaded?: boolean
+  remoteId?: number
 }
 
 export default function VendorOrderDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const order = mockOrders.find((o) => o.id === id)
-  if (!order) notFound()
 
-  const existingPhotos = mockPhotos.filter((p) => p.orderId === order.id)
-
-  const [status, setStatus] = useState<OrderStatus>(order.status)
-  const [localPhotos, setLocalPhotos] = useState<LocalPhoto[]>(() =>
-    existingPhotos.map((p) => ({ id: p.id, url: p.url, category: p.photoType }))
-  )
-  const [completing, setCompleting] = useState(false)
-  const [completed, setCompleted] = useState(false)
+  const [order, setOrder] = useState<Order | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [acting, setActing] = useState(false)
+  const [localPhotos, setLocalPhotos] = useState<LocalPhoto[]>([])
 
   const storeInputRef = useRef<HTMLInputElement>(null)
   const siteInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    fetchOrder(id)
+      .then(setOrder)
+      .catch(() => setLoadError('주문 정보를 불러오지 못했습니다.'))
+      .finally(() => setLoading(false))
+  }, [id])
+
+  if (loading) return <div className="p-8 text-sm text-gray-400">불러오는 중...</div>
+  if (loadError) return <div className="p-8 text-sm text-red-500">{loadError}</div>
+  if (!order) return <div className="p-8 text-sm text-gray-400">주문을 찾을 수 없습니다.</div>
 
   const storePhotos = localPhotos.filter((p) => p.category === 'store')
   const sitePhotos = localPhotos.filter((p) => p.category === 'site')
   const hasSitePhotos = sitePhotos.length > 0
 
-  function handleAccept() {
-    // TODO: 수주확인 API 호출
-    setStatus('수주완료')
+  async function handleAccept() {
+    setActing(true)
+    setActionError(null)
+    try {
+      const updated = await updateOrderStatus(id, 'accept')
+      setOrder(updated)
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : '수주 확인에 실패했습니다.')
+    } finally {
+      setActing(false)
+    }
   }
 
-  function handleReject() {
-    // TODO: 수주거절 API 호출
-    setStatus('수주거절')
+  async function handleReject() {
+    setActing(true)
+    setActionError(null)
+    try {
+      const updated = await updateOrderStatus(id, 'reject')
+      setOrder(updated)
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : '수주 거절에 실패했습니다.')
+    } finally {
+      setActing(false)
+    }
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>, category: PhotoCategory) {
@@ -58,6 +82,8 @@ export default function VendorOrderDetailPage() {
       id: `local-${category}-${Date.now()}-${i}`,
       url: URL.createObjectURL(file),
       category,
+      file,
+      uploaded: false,
     }))
     setLocalPhotos((prev) => [...prev, ...newPhotos])
     e.target.value = ''
@@ -67,15 +93,41 @@ export default function VendorOrderDetailPage() {
     setLocalPhotos((prev) => prev.filter((p) => p.id !== photoId))
   }
 
-  function handleComplete() {
+  async function handleComplete() {
     if (!hasSitePhotos) return
-    setCompleting(true)
-    // TODO: 배송완료 API 호출
-    setTimeout(() => {
-      setCompleting(false)
-      setCompleted(true)
-      setStatus('배송완료')
-    }, 1000)
+    setActing(true)
+    setActionError(null)
+    try {
+      const pendingStore = localPhotos.filter((p) => p.category === 'store' && !p.uploaded && p.file)
+      const pendingSite = localPhotos.filter((p) => p.category === 'site' && !p.uploaded && p.file)
+
+      let uploadedResults: PhotoResult[] = []
+      if (pendingStore.length > 0) {
+        const r = await uploadPhotos(id, pendingStore.map((p) => p.file!), 'STORE')
+        uploadedResults = [...uploadedResults, ...r]
+      }
+      if (pendingSite.length > 0) {
+        const r = await uploadPhotos(id, pendingSite.map((p) => p.file!), 'SITE')
+        uploadedResults = [...uploadedResults, ...r]
+      }
+
+      setLocalPhotos((prev) =>
+        prev.map((p) => {
+          const matched = uploadedResults.find((r) =>
+            (r.photoType === 'STORE' && p.category === 'store') ||
+            (r.photoType === 'SITE' && p.category === 'site')
+          )
+          return matched ? { ...p, uploaded: true, remoteId: matched.id } : p
+        })
+      )
+
+      const updated = await updateOrderStatus(id, 'complete')
+      setOrder(updated)
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : '배송완료 처리에 실패했습니다.')
+    } finally {
+      setActing(false)
+    }
   }
 
   return (
@@ -84,26 +136,27 @@ export default function VendorOrderDetailPage() {
         <div>
           <h1 className="text-xl font-bold">{order.orderNumber}</h1>
           <div className="mt-1">
-            <VendorOrderStatusBadge status={status} />
+            <VendorOrderStatusBadge status={order.status} />
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <PrintButton orderId={order.id} />
-          {status === '발주대기' && (
+          {order.status === '발주대기' && (
             <>
               <Button
                 variant="outline"
                 className="border-red-300 text-red-600 hover:bg-red-50"
                 onClick={handleReject}
+                disabled={acting}
               >
                 수주거절
               </Button>
-              <Button className="bg-green-700 hover:bg-green-800" onClick={handleAccept}>
+              <Button className="bg-green-700 hover:bg-green-800" onClick={handleAccept} disabled={acting}>
                 주문서 접수
               </Button>
             </>
           )}
-          {status === '수주완료' && (
+          {order.status === '수주완료' && (
             <Button
               className={cn(
                 'gap-1.5',
@@ -111,15 +164,21 @@ export default function VendorOrderDetailPage() {
                   ? 'bg-blue-700 hover:bg-blue-800'
                   : 'cursor-not-allowed bg-gray-300 text-gray-500',
               )}
-              disabled={!hasSitePhotos || completing}
+              disabled={!hasSitePhotos || acting}
               onClick={handleComplete}
               title={!hasSitePhotos ? '현장사진을 먼저 업로드해주세요' : undefined}
             >
-              {completing ? '처리 중…' : completed ? '배송완료 ✓' : '배송완료 처리'}
+              {acting ? '처리 중…' : '배송완료 처리'}
             </Button>
           )}
         </div>
       </div>
+
+      {actionError && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+          {actionError}
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -157,13 +216,12 @@ export default function VendorOrderDetailPage() {
           </Card>
         )}
 
-        {(status === '수주완료' || status === '배송완료') && (
+        {(order.status === '수주완료' || order.status === '배송완료') && (
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="text-sm">배송사진 업로드</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
-              {/* 매장사진 */}
               <PhotoUploadSection
                 label="매장사진"
                 description="매장에서 제품을 촬영한 사진"
@@ -172,12 +230,11 @@ export default function VendorOrderDetailPage() {
                 onAdd={() => storeInputRef.current?.click()}
                 onRemove={removePhoto}
                 onChange={(e) => handleFileChange(e, 'store')}
-                disabled={status === '배송완료'}
+                disabled={order.status === '배송완료'}
               />
 
               <hr />
 
-              {/* 현장사진 */}
               <PhotoUploadSection
                 label="현장사진"
                 description="배송 현장에서 촬영한 사진"
@@ -186,10 +243,10 @@ export default function VendorOrderDetailPage() {
                 onAdd={() => siteInputRef.current?.click()}
                 onRemove={removePhoto}
                 onChange={(e) => handleFileChange(e, 'site')}
-                disabled={status === '배송완료'}
+                disabled={order.status === '배송완료'}
               />
 
-              {status === '수주완료' && !hasSitePhotos && (
+              {order.status === '수주완료' && !hasSitePhotos && (
                 <p className="text-xs text-amber-600">
                   현장사진을 1장 이상 업로드해야 배송완료 처리 및 문자 발송이 가능합니다.
                 </p>

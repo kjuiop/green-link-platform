@@ -1,0 +1,13 @@
+plugins {
+    id 'java'
+    id 'io.spring.dependency-management'
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework:spring-tx'
+
+    // BCrypt (Security 풀스택 없이 암호화만)
+    implementation 'org.springframework.security:spring-security-crypto'
+}

@@ -1,15 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { OrderStatusBadge, MessageStatusBadge, DeliveryTimeTypeBadge } from '@/components/common/StatusBadge'
-import { mockOrders } from '@/lib/mock/orders'
-import { mockPhotos } from '@/lib/mock/photos'
-import { notFound } from 'next/navigation'
+import { fetchOrder, updateOrder, updateOrderStatus, fetchPhotos, selectPhoto, fetchOrderHistory, PhotoResult, OrderHistoryItem } from '@/lib/api/orderApi'
 import Image from 'next/image'
 import { PrintButton } from '@/components/common/PrintButton'
 import { Pencil, X, Check, Trash2 } from 'lucide-react'
@@ -28,38 +26,117 @@ const AMOUNT_PRESETS = [
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const found = mockOrders.find((o) => o.id === id)
-  if (!found) notFound()
 
-  const photos = mockPhotos.filter((p) => p.orderId === id)
-
-  const [order, setOrder] = useState<Order>(found)
+  const [order, setOrder] = useState<Order | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [draft, setDraft] = useState<Order>(found)
+  const [draft, setDraft] = useState<Order | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [photos, setPhotos] = useState<PhotoResult[]>([])
+  const [history, setHistory] = useState<OrderHistoryItem[]>([])
+
+  useEffect(() => {
+    fetchOrder(id)
+      .then((o) => { setOrder(o); setDraft(o) })
+      .catch(() => setLoadError('발주 정보를 불러오지 못했습니다.'))
+      .finally(() => setLoading(false))
+    fetchPhotos(id).then(setPhotos).catch(() => {})
+    fetchOrderHistory(id).then(setHistory).catch(() => {})
+  }, [id])
+
+  if (loading) return <div className="p-8 text-sm text-gray-400">불러오는 중...</div>
+  if (loadError) return <div className="p-8 text-sm text-red-500">{loadError}</div>
+  if (!order || !draft) return <div className="p-8 text-sm text-gray-400">주문을 찾을 수 없습니다.</div>
+
+  async function handleSelectPhoto(photoId: number, selected: boolean) {
+    try {
+      const updated = await selectPhoto(id, photoId, selected)
+      setPhotos((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
+    } catch {
+      // silent — selection failure shouldn't interrupt the user
+    }
+  }
 
   function startEdit() {
-    setDraft({ ...order })
+    setDraft({ ...order! })
     setIsEditing(true)
+    setSaveError(null)
   }
 
   function cancelEdit() {
     setIsEditing(false)
+    setSaveError(null)
   }
 
-  function saveEdit() {
-    setOrder({ ...draft })
-    setIsEditing(false)
-    // TODO: 수정 API 호출
+  async function saveEdit() {
+    if (!draft) return
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const updated = await updateOrder(id, {
+        vendorId: Number(draft.vendorId),
+        productName: draft.productName,
+        quantity: draft.quantity,
+        amount: draft.amount,
+        extraCost: draft.extraCost,
+        deliveryDate: draft.deliveryAt,
+        deliveryTimeType: draft.deliveryTimeType ?? '',
+        deliveryTimeHour: draft.deliveryTimeHour ?? '',
+        deliveryTimeMinute: draft.deliveryTimeMinute ?? '',
+        deliveryTimeCustom: draft.deliveryTimeCustom ?? '',
+        address: draft.address,
+        addressDetail: draft.addressDetail ?? '',
+        eventType: draft.eventType ?? '기타',
+        placeName: draft.placeName ?? '',
+        roomName: draft.roomName ?? '',
+        eventInfo: draft.eventInfo ?? '',
+        ribbonLeft: draft.ribbonLeft ?? '',
+        ribbonRight: draft.ribbonRight ?? '',
+        ordererName: draft.ordererName,
+        ordererPhone: draft.ordererPhone,
+        recipientName: draft.recipientName ?? '',
+        recipientPhone: draft.recipientPhone ?? '',
+        sendPhotoToOrderer: draft.sendPhotoToOrderer,
+        sendPhotoToRecipient: draft.sendPhotoToRecipient,
+        messageSchedule: draft.messageSchedule ?? '',
+        scheduledMessageHour: draft.scheduledMessageHour ?? '',
+        scheduledMessageMinute: draft.scheduledMessageMinute ?? '',
+        adminMemo: draft.adminMemo ?? '',
+        vendorMemo: draft.vendorMemo ?? '',
+      })
+      setOrder(updated)
+      setDraft(updated)
+      setIsEditing(false)
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : '수정에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleComplete() {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const updated = await updateOrderStatus(id, 'complete')
+      setOrder(updated)
+      setDraft(updated)
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : '배송완료 처리에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   function handleDelete() {
-    // TODO: 삭제 API 호출
     router.push('/orders')
   }
 
   function set<K extends keyof Order>(key: K, value: Order[K]) {
-    setDraft((prev) => ({ ...prev, [key]: value }))
+    setDraft((prev) => prev ? { ...prev, [key]: value } : prev)
   }
 
   return (
@@ -76,17 +153,17 @@ export default function OrderDetailPage() {
         <div className="flex shrink-0 flex-wrap gap-2">
           <PrintButton orderId={order.id} />
           {order.status === '수주완료' && !isEditing && !confirmDelete && (
-            <Button className="bg-blue-700 hover:bg-blue-800">배송완료 처리</Button>
+            <Button className="bg-blue-700 hover:bg-blue-800" onClick={handleComplete} disabled={saving}>배송완료 처리</Button>
           )}
           {isEditing && (
             <>
-              <Button variant="outline" className="gap-1.5" onClick={cancelEdit}>
+              <Button variant="outline" className="gap-1.5" onClick={cancelEdit} disabled={saving}>
                 <X className="h-3.5 w-3.5" />
                 취소
               </Button>
-              <Button className="gap-1.5 bg-green-700 hover:bg-green-800" onClick={saveEdit}>
+              <Button className="gap-1.5 bg-green-700 hover:bg-green-800" onClick={saveEdit} disabled={saving}>
                 <Check className="h-3.5 w-3.5" />
-                저장
+                {saving ? '저장 중...' : '저장'}
               </Button>
             </>
           )}
@@ -128,6 +205,12 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
+      {saveError && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+          {saveError}
+        </div>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-2">
         {/* 기본정보 */}
         <Card>
@@ -145,7 +228,7 @@ export default function OrderDetailPage() {
                     <Input type="number" value={draft.quantity} onChange={(e) => set('quantity', Number(e.target.value))} />
                   </Field>
                   <Field label="수주업체">
-                    <Input value={draft.vendorName} onChange={(e) => set('vendorName', e.target.value)} />
+                    <Input value={draft.vendorName} readOnly className="bg-gray-50 text-gray-500" />
                   </Field>
                 </div>
                 <Field label="발주금액">
@@ -385,52 +468,59 @@ export default function OrderDetailPage() {
               <p className="text-sm text-gray-400">등록된 배송사진이 없습니다.</p>
             ) : (
               <>
-                {/* 매장사진 */}
-                {photos.filter((p) => p.photoType === 'store').length > 0 && (
+                {photos.filter((p) => p.photoType === 'STORE').length > 0 && (
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-gray-500">매장사진</p>
                     <div className="flex flex-wrap gap-3">
-                      {photos.filter((p) => p.photoType === 'store').map((photo) => (
-                        <div key={photo.id} className="relative h-28 w-28">
-                          <Image
-                            src={photo.url}
-                            alt="매장사진"
-                            fill
-                            className="rounded-lg border object-cover"
-                          />
+                      {photos.filter((p) => p.photoType === 'STORE').map((photo) => (
+                        <button
+                          key={photo.id}
+                          type="button"
+                          onClick={() => handleSelectPhoto(photo.id, !photo.isSendToCustomer)}
+                          className={cn(
+                            'relative h-28 w-28 overflow-hidden rounded-lg border-2 transition-colors',
+                            photo.isSendToCustomer ? 'border-green-600' : 'border-transparent',
+                          )}
+                          title={photo.isSendToCustomer ? '발송 해제' : '발송 선택'}
+                        >
+                          <Image src={photo.photoUrl} alt="매장사진" fill className="object-cover" />
                           {photo.isSendToCustomer && (
                             <span className="absolute bottom-1 left-1 rounded bg-green-700 px-1 py-0.5 text-[10px] text-white">
                               발송
                             </span>
                           )}
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>
                 )}
-                {/* 현장사진 */}
-                {photos.filter((p) => p.photoType === 'site').length > 0 && (
+                {photos.filter((p) => p.photoType === 'SITE').length > 0 && (
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-gray-500">현장사진</p>
                     <div className="flex flex-wrap gap-3">
-                      {photos.filter((p) => p.photoType === 'site').map((photo) => (
-                        <div key={photo.id} className="relative h-28 w-28">
-                          <Image
-                            src={photo.url}
-                            alt="현장사진"
-                            fill
-                            className="rounded-lg border object-cover"
-                          />
+                      {photos.filter((p) => p.photoType === 'SITE').map((photo) => (
+                        <button
+                          key={photo.id}
+                          type="button"
+                          onClick={() => handleSelectPhoto(photo.id, !photo.isSendToCustomer)}
+                          className={cn(
+                            'relative h-28 w-28 overflow-hidden rounded-lg border-2 transition-colors',
+                            photo.isSendToCustomer ? 'border-green-600' : 'border-transparent',
+                          )}
+                          title={photo.isSendToCustomer ? '발송 해제' : '발송 선택'}
+                        >
+                          <Image src={photo.photoUrl} alt="현장사진" fill className="object-cover" />
                           {photo.isSendToCustomer && (
                             <span className="absolute bottom-1 left-1 rounded bg-green-700 px-1 py-0.5 text-[10px] text-white">
                               발송
                             </span>
                           )}
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>
                 )}
+                <p className="text-xs text-gray-400">사진을 클릭해 고객 발송 여부를 선택할 수 있습니다.</p>
               </>
             )}
           </CardContent>
@@ -491,9 +581,37 @@ export default function OrderDetailPage() {
             )}
           </CardContent>
         </Card>
+        {/* 변경 이력 */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm">변경 이력</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {history.length === 0 ? (
+              <p className="text-sm text-gray-400">이력이 없습니다.</p>
+            ) : (
+              <ol className="relative border-l border-gray-200">
+                {history.map((h) => (
+                  <li key={h.id} className="mb-4 ml-4">
+                    <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border border-white bg-green-600" />
+                    <p className="text-xs text-gray-400">{h.createdAt}</p>
+                    <p className="text-sm font-medium">{ACTION_LABEL[h.action]}</p>
+                    <p className="text-xs text-gray-500">{h.detail}</p>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
+}
+
+const ACTION_LABEL: Record<string, string> = {
+  CREATED: '발주 등록',
+  UPDATED: '발주 수정',
+  STATUS_CHANGED: '상태 변경',
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
