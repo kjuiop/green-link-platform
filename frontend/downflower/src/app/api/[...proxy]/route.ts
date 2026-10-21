@@ -23,11 +23,16 @@ async function handler(
       ? await request.arrayBuffer()
       : undefined
 
-  const res = await fetch(url, {
-    method: request.method,
-    headers,
-    body,
-  })
+  let res: Response
+  try {
+    res = await fetch(url, {
+      method: request.method,
+      headers,
+      body,
+    })
+  } catch {
+    return new NextResponse('Backend unreachable', { status: 503 })
+  }
 
   const resHeaders = new Headers()
   res.headers.forEach((value, key) => {
