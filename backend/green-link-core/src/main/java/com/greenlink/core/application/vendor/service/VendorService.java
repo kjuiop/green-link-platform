@@ -217,7 +217,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             company != null ? company.getDetailAddress() : null,
             admin.getLoginId(),
             admin.getStatus().name(),
-            null
+            admin.getCreatedAt()
         );
     }
 }
