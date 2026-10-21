@@ -15,5 +15,5 @@ output "s3_bucket_name" {
 
 output "ssh_command" {
   description = "EC2 SSH 접속 명령어"
-  value       = "ssh -i ~/.ssh/green-link-key ec2-user@${aws_eip.backend.public_ip}"
+  value       = "ssh -i ~/.ssh/green-link-key ubuntu@${aws_eip.backend.public_ip}"
 }
