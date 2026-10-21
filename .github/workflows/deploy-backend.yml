@@ -83,7 +83,7 @@ jobs:
             if ! docker run -d \
               --name $CONTAINER_NAME \
               --env-file /home/ubuntu/green-link/.env.server \
-              -e SPRING_PROFILES_ACTIVE=prod \
+              -e SPRING_PROFILES_ACTIVE=dev \
               -v /home/ubuntu/green-link/logs:/app/logs \
               -p 8080:8080 \
               --restart always \
@@ -94,7 +94,7 @@ jobs:
                 docker run -d \
                   --name $CONTAINER_NAME \
                   --env-file /home/ubuntu/green-link/.env.server \
-                  -e SPRING_PROFILES_ACTIVE=prod \
+                  -e SPRING_PROFILES_ACTIVE=dev \
                   -v /home/ubuntu/green-link/logs:/app/logs \
                   -p 8080:8080 \
                   --restart always \
