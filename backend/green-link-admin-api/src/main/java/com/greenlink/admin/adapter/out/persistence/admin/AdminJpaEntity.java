@@ -4,6 +4,7 @@ import com.greenlink.admin.adapter.out.persistence.BaseJpaEntity;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import jakarta.persistence.*;
+import java.time.format.DateTimeFormatter;
 
 @Entity
 @Table(name = "admins")
@@ -47,6 +48,8 @@ public class AdminJpaEntity extends BaseJpaEntity {
     }
 
     public Admin toDomain() {
-        return Admin.of(id, loginId, password, name, phone, companyId, status);
+        String createdAtStr = getCreatedAt() != null
+                ? getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null;
+        return Admin.of(id, loginId, password, name, phone, companyId, status, createdAtStr);
     }
 }
