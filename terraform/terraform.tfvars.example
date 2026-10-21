@@ -1,0 +1,6 @@
+aws_region     = "ap-northeast-2"
+project_name   = "green-link"
+ec2_key_name   = "green-link-key"
+db_password    = "your-strong-password-here"
+s3_bucket_name = "green-link-photos-prod"
+my_ip          = "0.0.0.0/32"  # 내 공인 IP로 변경 (https://checkip.amazonaws.com)
