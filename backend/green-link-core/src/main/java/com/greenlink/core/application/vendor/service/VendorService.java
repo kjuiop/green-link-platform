@@ -3,11 +3,13 @@ package com.greenlink.core.application.vendor.service;
 import com.greenlink.core.application.vendor.dto.CreateVendorCommand;
 import com.greenlink.core.application.vendor.dto.UpdateVendorCommand;
 import com.greenlink.core.application.vendor.dto.VendorResult;
+import com.greenlink.core.application.vendor.dto.VendorSignupCommand;
 import com.greenlink.core.application.vendor.usecase.CreateVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.GetVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.GetVendorsUseCase;
 import com.greenlink.core.application.vendor.usecase.UpdateVendorStatusUseCase;
 import com.greenlink.core.application.vendor.usecase.UpdateVendorUseCase;
+import com.greenlink.core.application.vendor.usecase.VendorSignupUseCase;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.Company;
@@ -26,7 +28,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
-        CreateVendorUseCase, UpdateVendorUseCase, UpdateVendorStatusUseCase {
+        CreateVendorUseCase, UpdateVendorUseCase, UpdateVendorStatusUseCase, VendorSignupUseCase {
 
     private final AdminRepository adminRepository;
     private final CompanyRepository companyRepository;
@@ -96,6 +98,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             "",
             cmd.phone(),
             cmd.address() != null ? cmd.address() : "",
+            cmd.detailAddress() != null ? cmd.detailAddress() : "",
             CompanyType.VENDOR
         );
         Company savedCompany = companyRepository.save(company);
@@ -131,7 +134,8 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             company.updateInfo(
                 cmd.companyName(),
                 businessNo,
-                cmd.address() != null ? cmd.address() : ""
+                cmd.address() != null ? cmd.address() : "",
+                cmd.detailAddress() != null ? cmd.detailAddress() : ""
             );
             Company savedCompany = companyRepository.save(company);
             return toResult(savedAdmin, savedCompany);
@@ -163,6 +167,45 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
         return toResult(savedAdmin, company);
     }
 
+    @Override
+    @Transactional
+    public VendorResult signup(VendorSignupCommand cmd) {
+        if (adminRepository.existsByLoginId(cmd.loginId())) {
+            throw new BusinessException(VendorErrorCode.DUPLICATE_LOGIN_ID);
+        }
+
+        String businessNo = (cmd.businessNo() != null && !cmd.businessNo().isBlank())
+            ? cmd.businessNo() : null;
+
+        Company savedCompany;
+        if (businessNo != null && companyRepository.existsByBusinessNo(businessNo)) {
+            savedCompany = companyRepository.findByBusinessNo(businessNo)
+                .orElseThrow(() -> new BusinessException(VendorErrorCode.VENDOR_NOT_FOUND));
+        } else {
+            Company company = Company.create(
+                businessNo,
+                cmd.companyName(),
+                cmd.ceoName() != null ? cmd.ceoName() : "",
+                cmd.companyPhone() != null ? cmd.companyPhone() : cmd.phone(),
+                cmd.address() != null ? cmd.address() : "",
+                cmd.detailAddress() != null ? cmd.detailAddress() : "",
+                CompanyType.VENDOR
+            );
+            savedCompany = companyRepository.save(company);
+        }
+
+        Admin vendorAdmin = Admin.createVendorRequest(
+            cmd.loginId(),
+            passwordEncoder.encode(cmd.password()),
+            cmd.managerName(),
+            cmd.phone(),
+            savedCompany.getId()
+        );
+        Admin savedAdmin = adminRepository.save(vendorAdmin);
+
+        return toResult(savedAdmin, savedCompany);
+    }
+
     private VendorResult toResult(Admin admin, Company company) {
         return new VendorResult(
             admin.getId(),
@@ -171,9 +214,10 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             admin.getName(),
             admin.getPhone(),
             company != null ? company.getAddress() : null,
+            company != null ? company.getDetailAddress() : null,
             admin.getLoginId(),
             admin.getStatus().name(),
-            null
+            admin.getCreatedAt()
         );
     }
 }

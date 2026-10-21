@@ -9,6 +9,7 @@ public class Admin {
     private String phone;
     private Long companyId;
     private AdminStatus status;
+    private String createdAt;
 
     private Admin() {}
 
@@ -32,8 +33,20 @@ public class Admin {
         return a;
     }
 
+    public static Admin createVendorRequest(String loginId, String encodedPassword,
+                                             String name, String phone, Long companyId) {
+        Admin a = new Admin();
+        a.loginId = loginId;
+        a.password = encodedPassword;
+        a.name = name;
+        a.phone = phone;
+        a.companyId = companyId;
+        a.status = AdminStatus.PENDING;
+        return a;
+    }
+
     public static Admin of(Long id, String loginId, String password, String name, String phone,
-                           Long companyId, AdminStatus status) {
+                           Long companyId, AdminStatus status, String createdAt) {
         Admin a = new Admin();
         a.id = id;
         a.loginId = loginId;
@@ -42,6 +55,7 @@ public class Admin {
         a.phone = phone;
         a.companyId = companyId;
         a.status = status;
+        a.createdAt = createdAt;
         return a;
     }
 
@@ -62,4 +76,5 @@ public class Admin {
     public String getPhone() { return phone; }
     public Long getCompanyId() { return companyId; }
     public AdminStatus getStatus() { return status; }
+    public String getCreatedAt() { return createdAt; }
 }

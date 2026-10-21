@@ -4,6 +4,7 @@ import com.greenlink.core.application.auth.dto.AdminLoginCommand;
 import com.greenlink.core.application.auth.dto.AdminLoginResult;
 import com.greenlink.core.application.auth.port.TokenProvider;
 import com.greenlink.core.application.auth.usecase.AdminLoginUseCase;
+import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
@@ -36,6 +37,13 @@ public class AdminLoginService implements AdminLoginUseCase {
 
         if (!passwordEncoder.matches(cmd.password(), admin.getPassword())) {
             throw new BusinessException(AuthErrorCode.INVALID_CREDENTIALS);
+        }
+
+        if (admin.getStatus() == AdminStatus.PENDING) {
+            throw new BusinessException(AuthErrorCode.ACCOUNT_PENDING);
+        }
+        if (admin.getStatus() == AdminStatus.INACTIVE) {
+            throw new BusinessException(AuthErrorCode.ACCOUNT_INACTIVE);
         }
 
         String token = tokenProvider.generateToken(admin.getId(), List.of("SUPER_ADMIN"));

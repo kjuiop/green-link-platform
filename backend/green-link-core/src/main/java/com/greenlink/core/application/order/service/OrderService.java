@@ -10,6 +10,10 @@ import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
 import com.greenlink.core.application.orderhistory.usecase.RecordOrderHistoryUseCase;
+import com.greenlink.core.domain.admin.model.Admin;
+import com.greenlink.core.domain.admin.port.AdminRepository;
+import com.greenlink.core.domain.company.model.Company;
+import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.order.model.Order;
 import com.greenlink.core.domain.order.model.OrderStatus;
 import com.greenlink.core.domain.order.port.OrderRepository;
@@ -25,7 +29,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -43,12 +50,17 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     private final OrderRepository orderRepository;
     private final PhotoRepository photoRepository;
     private final RecordOrderHistoryUseCase recordOrderHistoryUseCase;
+    private final AdminRepository adminRepository;
+    private final CompanyRepository companyRepository;
 
     public OrderService(OrderRepository orderRepository, PhotoRepository photoRepository,
-                        RecordOrderHistoryUseCase recordOrderHistoryUseCase) {
+                        RecordOrderHistoryUseCase recordOrderHistoryUseCase,
+                        AdminRepository adminRepository, CompanyRepository companyRepository) {
         this.orderRepository = orderRepository;
         this.photoRepository = photoRepository;
         this.recordOrderHistoryUseCase = recordOrderHistoryUseCase;
+        this.adminRepository = adminRepository;
+        this.companyRepository = companyRepository;
     }
 
     @Override
@@ -107,7 +119,69 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
 
     @Override
     public List<OrderResult> getOrders(OrderSearchCondition condition) {
-        return orderRepository.search(condition).stream().map(this::toResult).toList();
+        List<Order> orders = orderRepository.search(condition);
+        Map<Long, String> vendorNameMap = buildVendorNameMap();
+        return orders.stream()
+                .map(o -> toResult(o, vendorNameMap.get(o.getVendorId())))
+                .toList();
+    }
+
+    private Map<Long, String> buildVendorNameMap() {
+        List<Admin> vendors = adminRepository.findAllVendors();
+        List<Long> companyIds = vendors.stream()
+                .map(Admin::getCompanyId)
+                .filter(Objects::nonNull)
+                .toList();
+        Map<Long, Company> companyById = companyRepository.findAllByIdIn(companyIds).stream()
+                .collect(Collectors.toMap(Company::getId, c -> c));
+        Map<Long, String> result = new HashMap<>();
+        for (Admin a : vendors) {
+            if (a.getCompanyId() != null) {
+                Company c = companyById.get(a.getCompanyId());
+                result.put(a.getId(), c != null ? c.getCompanyName() : null);
+            }
+        }
+        return result;
+    }
+
+    private OrderResult toResult(Order order, String vendorName) {
+        return new OrderResult(
+                order.getId(),
+                order.getOrderNumber(),
+                order.getVendorId(),
+                vendorName,
+                order.getStatus() != null ? order.getStatus().name() : null,
+                order.getProductName(),
+                order.getQuantity(),
+                order.getAmount(),
+                order.getExtraCost(),
+                order.getDeliveryDate(),
+                order.getDeliveryTimeType(),
+                order.getDeliveryTimeHour(),
+                order.getDeliveryTimeMinute(),
+                order.getDeliveryTimeCustom(),
+                order.getAddress(),
+                order.getAddressDetail(),
+                order.getEventType(),
+                order.getPlaceName(),
+                order.getRoomName(),
+                order.getEventInfo(),
+                order.getRibbonLeft(),
+                order.getRibbonRight(),
+                order.getOrdererName(),
+                order.getOrdererPhone(),
+                order.getRecipientName(),
+                order.getRecipientPhone(),
+                order.isSendPhotoToOrderer(),
+                order.isSendPhotoToRecipient(),
+                order.getMessageSchedule(),
+                order.getScheduledMessageHour(),
+                order.getScheduledMessageMinute(),
+                order.getAdminMemo(),
+                order.getVendorMemo(),
+                order.getCompletedAt(),
+                order.getCreatedAt()
+        );
     }
 
     @Override
@@ -178,12 +252,21 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         return toResult(saved);
     }
 
+    private String resolveVendorName(Long vendorId) {
+        if (vendorId == null) return null;
+        return adminRepository.findById(vendorId)
+                .map(admin -> companyRepository.findById(admin.getCompanyId())
+                        .map(company -> company.getCompanyName())
+                        .orElse(null))
+                .orElse(null);
+    }
+
     private OrderResult toResult(Order order) {
         return new OrderResult(
                 order.getId(),
                 order.getOrderNumber(),
                 order.getVendorId(),
-                null,
+                resolveVendorName(order.getVendorId()),
                 order.getStatus() != null ? order.getStatus().name() : null,
                 order.getProductName(),
                 order.getQuantity(),
