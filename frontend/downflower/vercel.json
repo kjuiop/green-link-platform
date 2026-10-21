@@ -1,8 +1,3 @@
 {
-  "github": {
-    "deploymentEnabled": {
-      "main": true,
-      "develop": true
-    }
-  }
+  "ignoreCommand": "[ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ] && [ \"$VERCEL_GIT_COMMIT_REF\" != \"develop\" ]"
 }
