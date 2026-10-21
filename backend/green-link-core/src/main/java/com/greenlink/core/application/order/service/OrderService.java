@@ -29,9 +29,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -134,13 +134,14 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 .toList();
         Map<Long, Company> companyById = companyRepository.findAllByIdIn(companyIds).stream()
                 .collect(Collectors.toMap(Company::getId, c -> c));
-        return vendors.stream()
-                .filter(a -> a.getCompanyId() != null)
-                .collect(Collectors.toMap(
-                        Admin::getId,
-                        a -> Optional.ofNullable(companyById.get(a.getCompanyId()))
-                                     .map(Company::getCompanyName).orElse(null)
-                ));
+        Map<Long, String> result = new HashMap<>();
+        for (Admin a : vendors) {
+            if (a.getCompanyId() != null) {
+                Company c = companyById.get(a.getCompanyId());
+                result.put(a.getId(), c != null ? c.getCompanyName() : null);
+            }
+        }
+        return result;
     }
 
     private OrderResult toResult(Order order, String vendorName) {
