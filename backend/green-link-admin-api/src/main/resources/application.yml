@@ -30,8 +30,6 @@ aws:
   s3:
     bucket: ${S3_BUCKET}
     region: ${S3_REGION:ap-northeast-2}
-    access-key: ${AWS_ACCESS_KEY}
-    secret-key: ${AWS_SECRET_KEY}
 
 aligo:
   key: ${ALIGO_KEY:}
