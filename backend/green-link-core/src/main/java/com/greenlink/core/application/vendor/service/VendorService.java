@@ -177,20 +177,22 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
         String businessNo = (cmd.businessNo() != null && !cmd.businessNo().isBlank())
             ? cmd.businessNo() : null;
 
+        Company savedCompany;
         if (businessNo != null && companyRepository.existsByBusinessNo(businessNo)) {
-            throw new BusinessException(VendorErrorCode.DUPLICATE_BUSINESS_NO);
+            savedCompany = companyRepository.findByBusinessNo(businessNo)
+                .orElseThrow(() -> new BusinessException(VendorErrorCode.VENDOR_NOT_FOUND));
+        } else {
+            Company company = Company.create(
+                businessNo,
+                cmd.companyName(),
+                cmd.ceoName() != null ? cmd.ceoName() : "",
+                cmd.companyPhone() != null ? cmd.companyPhone() : cmd.phone(),
+                cmd.address() != null ? cmd.address() : "",
+                cmd.detailAddress() != null ? cmd.detailAddress() : "",
+                CompanyType.VENDOR
+            );
+            savedCompany = companyRepository.save(company);
         }
-
-        Company company = Company.create(
-            businessNo,
-            cmd.companyName(),
-            cmd.ceoName() != null ? cmd.ceoName() : "",
-            cmd.companyPhone() != null ? cmd.companyPhone() : cmd.phone(),
-            cmd.address() != null ? cmd.address() : "",
-            cmd.detailAddress() != null ? cmd.detailAddress() : "",
-            CompanyType.VENDOR
-        );
-        Company savedCompany = companyRepository.save(company);
 
         Admin vendorAdmin = Admin.createVendorRequest(
             cmd.loginId(),

@@ -267,6 +267,14 @@ export default function SignupPage() {
   }
 
   const handleSubmit = async () => {
+    if (password !== passwordConfirm) {
+      alert('비밀번호가 일치하지 않습니다.')
+      return
+    }
+    if (!verified) {
+      alert('휴대폰 인증을 완료해주세요.')
+      return
+    }
     const res = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
