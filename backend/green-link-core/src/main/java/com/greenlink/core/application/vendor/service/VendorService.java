@@ -3,11 +3,13 @@ package com.greenlink.core.application.vendor.service;
 import com.greenlink.core.application.vendor.dto.CreateVendorCommand;
 import com.greenlink.core.application.vendor.dto.UpdateVendorCommand;
 import com.greenlink.core.application.vendor.dto.VendorResult;
+import com.greenlink.core.application.vendor.dto.VendorSignupCommand;
 import com.greenlink.core.application.vendor.usecase.CreateVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.GetVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.GetVendorsUseCase;
 import com.greenlink.core.application.vendor.usecase.UpdateVendorStatusUseCase;
 import com.greenlink.core.application.vendor.usecase.UpdateVendorUseCase;
+import com.greenlink.core.application.vendor.usecase.VendorSignupUseCase;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.Company;
@@ -26,7 +28,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
-        CreateVendorUseCase, UpdateVendorUseCase, UpdateVendorStatusUseCase {
+        CreateVendorUseCase, UpdateVendorUseCase, UpdateVendorStatusUseCase, VendorSignupUseCase {
 
     private final AdminRepository adminRepository;
     private final CompanyRepository companyRepository;
@@ -161,6 +163,42 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             .orElse(null);
 
         return toResult(savedAdmin, company);
+    }
+
+    @Override
+    @Transactional
+    public VendorResult signup(VendorSignupCommand cmd) {
+        if (adminRepository.existsByLoginId(cmd.loginId())) {
+            throw new BusinessException(VendorErrorCode.DUPLICATE_LOGIN_ID);
+        }
+
+        String businessNo = (cmd.businessNo() != null && !cmd.businessNo().isBlank())
+            ? cmd.businessNo() : null;
+
+        if (businessNo != null && companyRepository.existsByBusinessNo(businessNo)) {
+            throw new BusinessException(VendorErrorCode.DUPLICATE_BUSINESS_NO);
+        }
+
+        Company company = Company.create(
+            businessNo,
+            cmd.companyName(),
+            cmd.ceoName() != null ? cmd.ceoName() : "",
+            cmd.companyPhone() != null ? cmd.companyPhone() : cmd.phone(),
+            cmd.address() != null ? cmd.address() : "",
+            CompanyType.VENDOR
+        );
+        Company savedCompany = companyRepository.save(company);
+
+        Admin vendorAdmin = Admin.createVendorRequest(
+            cmd.loginId(),
+            passwordEncoder.encode(cmd.password()),
+            cmd.managerName(),
+            cmd.phone(),
+            savedCompany.getId()
+        );
+        Admin savedAdmin = adminRepository.save(vendorAdmin);
+
+        return toResult(savedAdmin, savedCompany);
     }
 
     private VendorResult toResult(Admin admin, Company company) {
