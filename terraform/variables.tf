@@ -30,3 +30,15 @@ variable "my_ip" {
   description = "SSH 허용할 내 IP (x.x.x.x/32)"
   type        = string
 }
+
+variable "aws_profile" {
+  description = "AWS CLI 프로필 이름 (환경변수 AWS_PROFILE로도 설정 가능)"
+  type        = string
+  default     = ""
+}
+
+variable "ec2_public_key_path" {
+  description = "EC2 SSH 공개키 파일 경로"
+  type        = string
+  default     = "~/.ssh/green-link-key.pub"
+}

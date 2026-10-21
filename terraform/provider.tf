@@ -10,7 +10,7 @@ terraform {
 
 provider "aws" {
   region  = var.aws_region
-  profile = "green-link"
+  profile = var.aws_profile != "" ? var.aws_profile : null
 }
 
 data "aws_vpc" "default" {

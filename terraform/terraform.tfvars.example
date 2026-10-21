@@ -1,6 +1,8 @@
-aws_region     = "ap-northeast-2"
-project_name   = "green-link"
-ec2_key_name   = "green-link-key"
-db_password    = "your-strong-password-here"
-s3_bucket_name = "green-link-photos-prod"
-my_ip          = "0.0.0.0/32"  # 내 공인 IP로 변경 (https://checkip.amazonaws.com)
+aws_region          = "ap-northeast-2"
+project_name        = "green-link"
+aws_profile         = "green-link"           # AWS CLI 프로필 (환경변수 AWS_PROFILE로도 설정 가능)
+ec2_key_name        = "green-link-key"
+ec2_public_key_path = "~/.ssh/green-link-key.pub"
+db_password         = "your-strong-password-here"
+s3_bucket_name      = "green-link-photos-prod"
+my_ip               = "0.0.0.0/32"           # 내 공인 IP로 변경 (https://checkip.amazonaws.com)

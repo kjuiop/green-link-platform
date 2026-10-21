@@ -10,7 +10,7 @@ data "aws_ami" "ubuntu" {
 
 resource "aws_key_pair" "main" {
   key_name   = var.ec2_key_name
-  public_key = file("~/.ssh/green-link-key.pub")
+  public_key = file(var.ec2_public_key_path)
 }
 
 resource "aws_instance" "backend" {
