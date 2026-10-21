@@ -12,7 +12,8 @@ public record VendorSignupRequest(
     @NotBlank String companyName,
     String ceoName,
     String companyPhone,
-    String address
+    String address,
+    String detailAddress
 ) {
     public VendorSignupCommand toCommand() {
         return new VendorSignupCommand(
@@ -24,7 +25,8 @@ public record VendorSignupRequest(
             companyName,
             ceoName,
             companyPhone,
-            address
+            address,
+            detailAddress
         );
     }
 }

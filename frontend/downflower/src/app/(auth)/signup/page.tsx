@@ -164,6 +164,7 @@ export default function SignupPage() {
   const [ceoName, setCeoName] = useState('')
   const [companyPhone, setCompanyPhone] = useState('')
   const [address, setAddress] = useState('')
+  const [detailAddress, setDetailAddress] = useState('')
 
   // 계정 정보
   const [loginId, setLoginId] = useState('')
@@ -268,6 +269,7 @@ export default function SignupPage() {
         ceoName,
         companyPhone,
         address,
+        detailAddress,
         roles: resolveRoles(),
       }),
     })
@@ -477,7 +479,7 @@ export default function SignupPage() {
             <div className="space-y-1.5">
               <Label>업체 연락처</Label>
               <Input
-                placeholder="02-0000-0000"
+                placeholder="010-0000-0000"
                 value={companyPhone}
                 onChange={(e) => setCompanyPhone(e.target.value)}
                 readOnly={!!existingCompany}
@@ -487,9 +489,19 @@ export default function SignupPage() {
             <div className="space-y-1.5">
               <Label>주소</Label>
               <Input
-                placeholder="업체 주소"
+                placeholder="도로명 주소"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
+                readOnly={!!existingCompany}
+                className={existingCompany ? 'bg-gray-50' : ''}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>상세주소</Label>
+              <Input
+                placeholder="건물명, 동/호수 등"
+                value={detailAddress}
+                onChange={(e) => setDetailAddress(e.target.value)}
                 readOnly={!!existingCompany}
                 className={existingCompany ? 'bg-gray-50' : ''}
               />

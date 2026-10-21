@@ -9,5 +9,6 @@ public record VendorSignupCommand(
     String companyName,
     String ceoName,
     String companyPhone,
-    String address
+    String address,
+    String detailAddress
 ) {}

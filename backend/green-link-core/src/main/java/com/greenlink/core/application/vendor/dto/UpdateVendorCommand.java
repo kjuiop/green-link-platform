@@ -4,6 +4,7 @@ public record UpdateVendorCommand(
     String companyName,
     String businessNo,
     String address,
+    String detailAddress,
     String managerName,
     String phone
 ) {}

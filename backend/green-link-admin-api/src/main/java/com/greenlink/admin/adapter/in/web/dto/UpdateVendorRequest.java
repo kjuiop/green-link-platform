@@ -7,10 +7,11 @@ public record UpdateVendorRequest(
     @NotBlank String companyName,
     String businessNo,
     String address,
+    String detailAddress,
     @NotBlank String managerName,
     @NotBlank String phone
 ) {
     public UpdateVendorCommand toCommand() {
-        return new UpdateVendorCommand(companyName, businessNo, address, managerName, phone);
+        return new UpdateVendorCommand(companyName, businessNo, address, detailAddress, managerName, phone);
     }
 }

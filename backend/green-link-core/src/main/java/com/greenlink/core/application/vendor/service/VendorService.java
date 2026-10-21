@@ -98,6 +98,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             "",
             cmd.phone(),
             cmd.address() != null ? cmd.address() : "",
+            cmd.detailAddress() != null ? cmd.detailAddress() : "",
             CompanyType.VENDOR
         );
         Company savedCompany = companyRepository.save(company);
@@ -133,7 +134,8 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             company.updateInfo(
                 cmd.companyName(),
                 businessNo,
-                cmd.address() != null ? cmd.address() : ""
+                cmd.address() != null ? cmd.address() : "",
+                cmd.detailAddress() != null ? cmd.detailAddress() : ""
             );
             Company savedCompany = companyRepository.save(company);
             return toResult(savedAdmin, savedCompany);
@@ -185,6 +187,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             cmd.ceoName() != null ? cmd.ceoName() : "",
             cmd.companyPhone() != null ? cmd.companyPhone() : cmd.phone(),
             cmd.address() != null ? cmd.address() : "",
+            cmd.detailAddress() != null ? cmd.detailAddress() : "",
             CompanyType.VENDOR
         );
         Company savedCompany = companyRepository.save(company);
@@ -209,6 +212,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             admin.getName(),
             admin.getPhone(),
             company != null ? company.getAddress() : null,
+            company != null ? company.getDetailAddress() : null,
             admin.getLoginId(),
             admin.getStatus().name(),
             null
