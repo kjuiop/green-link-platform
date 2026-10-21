@@ -21,6 +21,7 @@ out/
 !**/adapter/out/
 target/
 *.jar
+!**/gradle/wrapper/gradle-wrapper.jar
 *.class
 
 # Logs
