@@ -7,6 +7,7 @@ public record VendorResult(
     String managerName,
     String phone,
     String address,
+    String detailAddress,
     String loginId,
     String status,
     String createdAt

@@ -90,6 +90,7 @@ interface CompanyInfo {
   ceoName: string
   phone: string
   address: string
+  detailAddress: string
 }
 
 interface FileFieldProps {
@@ -164,6 +165,7 @@ export default function SignupPage() {
   const [ceoName, setCeoName] = useState('')
   const [companyPhone, setCompanyPhone] = useState('')
   const [address, setAddress] = useState('')
+  const [detailAddress, setDetailAddress] = useState('')
 
   // 계정 정보
   const [loginId, setLoginId] = useState('')
@@ -189,9 +191,18 @@ export default function SignupPage() {
   }, [countdown])
 
   const formatPhone = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 11)
+    const raw = value.replace(/\D/g, '')
+    const isSeoul = raw.startsWith('02')
+    const digits = raw.slice(0, isSeoul ? 10 : 11)
+    if (isSeoul) {
+      if (digits.length <= 2) return digits
+      if (digits.length <= 5) return `${digits.slice(0, 2)}-${digits.slice(2)}`
+      if (digits.length <= 9) return `${digits.slice(0, 2)}-${digits.slice(2, 5)}-${digits.slice(5)}`
+      return `${digits.slice(0, 2)}-${digits.slice(2, 6)}-${digits.slice(6)}`
+    }
     if (digits.length <= 3) return digits
-    if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+    if (digits.length <= 10) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
     return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
   }
 
@@ -213,6 +224,7 @@ export default function SignupPage() {
         setCeoName(data.ceoName ?? '')
         setCompanyPhone(data.phone ?? '')
         setAddress(data.address ?? '')
+        setDetailAddress(data.detailAddress ?? '')
       } else {
         setExistingCompany(null)
       }
@@ -255,6 +267,14 @@ export default function SignupPage() {
   }
 
   const handleSubmit = async () => {
+    if (password !== passwordConfirm) {
+      alert('비밀번호가 일치하지 않습니다.')
+      return
+    }
+    if (!verified) {
+      alert('휴대폰 인증을 완료해주세요.')
+      return
+    }
     const res = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -268,6 +288,7 @@ export default function SignupPage() {
         ceoName,
         companyPhone,
         address,
+        detailAddress,
         roles: resolveRoles(),
       }),
     })
@@ -477,9 +498,10 @@ export default function SignupPage() {
             <div className="space-y-1.5">
               <Label>업체 연락처</Label>
               <Input
-                placeholder="02-0000-0000"
+                placeholder="02-0000-0000 / 010-0000-0000"
                 value={companyPhone}
-                onChange={(e) => setCompanyPhone(e.target.value)}
+                onChange={(e) => setCompanyPhone(formatPhone(e.target.value))}
+                inputMode="numeric"
                 readOnly={!!existingCompany}
                 className={existingCompany ? 'bg-gray-50' : ''}
               />
@@ -487,9 +509,19 @@ export default function SignupPage() {
             <div className="space-y-1.5">
               <Label>주소</Label>
               <Input
-                placeholder="업체 주소"
+                placeholder="도로명 주소"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
+                readOnly={!!existingCompany}
+                className={existingCompany ? 'bg-gray-50' : ''}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>상세주소</Label>
+              <Input
+                placeholder="건물명, 동/호수 등"
+                value={detailAddress}
+                onChange={(e) => setDetailAddress(e.target.value)}
                 readOnly={!!existingCompany}
                 className={existingCompany ? 'bg-gray-50' : ''}
               />

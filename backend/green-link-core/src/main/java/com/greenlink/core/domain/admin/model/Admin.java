@@ -32,6 +32,18 @@ public class Admin {
         return a;
     }
 
+    public static Admin createVendorRequest(String loginId, String encodedPassword,
+                                             String name, String phone, Long companyId) {
+        Admin a = new Admin();
+        a.loginId = loginId;
+        a.password = encodedPassword;
+        a.name = name;
+        a.phone = phone;
+        a.companyId = companyId;
+        a.status = AdminStatus.PENDING;
+        return a;
+    }
+
     public static Admin of(Long id, String loginId, String password, String name, String phone,
                            Long companyId, AdminStatus status) {
         Admin a = new Admin();

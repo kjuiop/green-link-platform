@@ -4,6 +4,7 @@ public record CreateVendorCommand(
     String companyName,
     String businessNo,
     String address,
+    String detailAddress,
     String managerName,
     String phone,
     String loginId,

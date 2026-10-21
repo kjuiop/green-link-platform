@@ -44,6 +44,10 @@ public class VendorLoginService implements VendorLoginUseCase {
             throw new BusinessException(AuthErrorCode.INVALID_CREDENTIALS);
         }
 
+        if (admin.getStatus() == AdminStatus.PENDING) {
+            throw new BusinessException(AuthErrorCode.ACCOUNT_PENDING);
+        }
+
         if (admin.getStatus() == AdminStatus.INACTIVE) {
             throw new BusinessException(AuthErrorCode.ACCOUNT_INACTIVE);
         }

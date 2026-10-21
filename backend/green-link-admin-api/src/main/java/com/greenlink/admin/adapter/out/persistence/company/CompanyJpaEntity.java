@@ -29,6 +29,9 @@ public class CompanyJpaEntity extends BaseJpaEntity {
     @Column(length = 200)
     private String address;
 
+    @Column(length = 200)
+    private String detailAddress;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private CompanyType type;
@@ -48,12 +51,13 @@ public class CompanyJpaEntity extends BaseJpaEntity {
         e.ceoName = company.getCeoName();
         e.phone = company.getPhone();
         e.address = company.getAddress();
+        e.detailAddress = company.getDetailAddress();
         e.type = company.getType();
         e.status = company.getStatus();
         return e;
     }
 
     public Company toDomain() {
-        return Company.of(id, businessNo, companyName, ceoName, phone, address, type, status);
+        return Company.of(id, businessNo, companyName, ceoName, phone, address, detailAddress, type, status);
     }
 }
