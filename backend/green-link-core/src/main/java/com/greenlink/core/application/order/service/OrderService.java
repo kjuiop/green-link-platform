@@ -10,6 +10,8 @@ import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
 import com.greenlink.core.application.orderhistory.usecase.RecordOrderHistoryUseCase;
+import com.greenlink.core.domain.admin.port.AdminRepository;
+import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.order.model.Order;
 import com.greenlink.core.domain.order.model.OrderStatus;
 import com.greenlink.core.domain.order.port.OrderRepository;
@@ -43,12 +45,17 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     private final OrderRepository orderRepository;
     private final PhotoRepository photoRepository;
     private final RecordOrderHistoryUseCase recordOrderHistoryUseCase;
+    private final AdminRepository adminRepository;
+    private final CompanyRepository companyRepository;
 
     public OrderService(OrderRepository orderRepository, PhotoRepository photoRepository,
-                        RecordOrderHistoryUseCase recordOrderHistoryUseCase) {
+                        RecordOrderHistoryUseCase recordOrderHistoryUseCase,
+                        AdminRepository adminRepository, CompanyRepository companyRepository) {
         this.orderRepository = orderRepository;
         this.photoRepository = photoRepository;
         this.recordOrderHistoryUseCase = recordOrderHistoryUseCase;
+        this.adminRepository = adminRepository;
+        this.companyRepository = companyRepository;
     }
 
     @Override
@@ -178,12 +185,21 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         return toResult(saved);
     }
 
+    private String resolveVendorName(Long vendorId) {
+        if (vendorId == null) return null;
+        return adminRepository.findById(vendorId)
+                .map(admin -> companyRepository.findById(admin.getCompanyId())
+                        .map(company -> company.getCompanyName())
+                        .orElse(null))
+                .orElse(null);
+    }
+
     private OrderResult toResult(Order order) {
         return new OrderResult(
                 order.getId(),
                 order.getOrderNumber(),
                 order.getVendorId(),
-                null,
+                resolveVendorName(order.getVendorId()),
                 order.getStatus() != null ? order.getStatus().name() : null,
                 order.getProductName(),
                 order.getQuantity(),
