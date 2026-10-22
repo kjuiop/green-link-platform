@@ -21,6 +21,7 @@ export default function NewOrderPage() {
   const [quantity, setQuantity] = useState(1)
   const [amount, setAmount] = useState('')
   const [extraCost, setExtraCost] = useState('')
+  const [baseAmount, setBaseAmount] = useState('')
   const [selectedExtraPreset, setSelectedExtraPreset] = useState('')
 
   // 배송정보
@@ -212,7 +213,7 @@ export default function NewOrderPage() {
                 type="number"
                 placeholder="0"
                 value={amount}
-                onChange={(e) => { setAmount(e.target.value); setSelectedExtraPreset(''); setErrors((prev) => ({ ...prev, amount: undefined })) }}
+                onChange={(e) => { setAmount(e.target.value); setBaseAmount(e.target.value); setSelectedExtraPreset(''); setErrors((prev) => ({ ...prev, amount: undefined })) }}
                 className={cn(errors.amount && 'border-red-500 focus-visible:ring-red-500')}
               />
               {errors.amount && <p className="text-xs text-red-500">{errors.amount}</p>}
@@ -222,10 +223,9 @@ export default function NewOrderPage() {
                     key={label}
                     type="button"
                     onClick={() => {
-                      const oldVal = EXTRA_COST_PRESETS.find((p) => p.label === selectedExtraPreset)?.value ?? 0
-                      const base = Number(amount) - oldVal
+                      const base = Number(baseAmount) || 0
                       if (selectedExtraPreset === label) {
-                        setAmount(base === 0 ? '' : String(base))
+                        setAmount(baseAmount)
                         setSelectedExtraPreset('')
                       } else {
                         setAmount(String(base + value))
