@@ -36,6 +36,7 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     @Override
+    @Transactional
     public void run(ApplicationArguments args) {
         initAdmin();
         initMenus();
@@ -48,8 +49,7 @@ public class DataInitializer implements ApplicationRunner {
         }
     }
 
-    @Transactional
-    public void fixMenuRoles() {
+    private void fixMenuRoles() {
         menuRepository.findAll().stream()
             .filter(m -> "/settings".equals(m.getUrl()))
             .filter(m -> m.getRoles().contains(Role.VENDOR) || m.getRoles().contains(Role.ORDERING))
