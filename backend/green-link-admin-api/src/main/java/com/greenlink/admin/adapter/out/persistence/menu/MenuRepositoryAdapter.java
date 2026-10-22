@@ -5,8 +5,11 @@ import com.greenlink.core.domain.menu.model.Menu;
 import com.greenlink.core.domain.menu.port.MenuRepository;
 import org.springframework.stereotype.Component;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 public class MenuRepositoryAdapter implements MenuRepository {
@@ -41,9 +44,17 @@ public class MenuRepositoryAdapter implements MenuRepository {
             entity = MenuJpaEntity.from(menu);
         }
 
-        entity.getRoles().clear();
+        Set<Role> newRoles = new HashSet<>(menu.getRoles());
+        Set<Role> existingRoles = entity.getRoles().stream()
+            .map(MenuRoleJpaEntity::getRole)
+            .collect(Collectors.toSet());
+
+        entity.getRoles().removeIf(r -> !newRoles.contains(r.getRole()));
+
         for (Role role : menu.getRoles()) {
-            entity.getRoles().add(MenuRoleJpaEntity.of(entity, role));
+            if (!existingRoles.contains(role)) {
+                entity.getRoles().add(MenuRoleJpaEntity.of(entity, role));
+            }
         }
 
         return menuJpaRepository.save(entity).toDomain();
