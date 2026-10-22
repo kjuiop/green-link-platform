@@ -12,6 +12,7 @@ import com.greenlink.core.domain.admin.model.Role;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -44,8 +45,12 @@ public class MenuController {
     }
 
     @GetMapping("/by-role")
-    public ResponseEntity<List<MenuResult>> getByRole(@RequestParam String role) {
-        return ResponseEntity.ok(getMenusByRoleUseCase.getMenusByRole(Role.valueOf(role)));
+    public ResponseEntity<List<MenuResult>> getByRole(Authentication authentication) {
+        String roleName = authentication.getAuthorities().stream()
+            .findFirst()
+            .map(a -> a.getAuthority().replace("ROLE_", ""))
+            .orElse("SUPER_ADMIN");
+        return ResponseEntity.ok(getMenusByRoleUseCase.getMenusByRole(Role.valueOf(roleName)));
     }
 
     @PostMapping

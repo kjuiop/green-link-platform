@@ -20,7 +20,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { fetchMenusByRole } from '@/lib/api/menuApi'
-import { type MenuItem, type UserRole } from '@/types/menu'
+import { type MenuItem } from '@/types/menu'
 
 const ICON_MAP: Record<string, LucideIcon> = {
   '/dashboard': LayoutDashboard,
@@ -150,13 +150,7 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
 
   useEffect(() => {
     setUserName(localStorage.getItem('name') ?? '')
-    const stored = localStorage.getItem('menus')
-    if (stored) {
-      try { setMenus(JSON.parse(stored)) } catch { /* ignore */ }
-    } else {
-      const role = (localStorage.getItem('role') as UserRole) ?? 'SUPER_ADMIN'
-      fetchMenusByRole(role).then(setMenus).catch(() => {})
-    }
+    fetchMenusByRole().then(setMenus).catch(() => {})
   }, [])
 
   useEffect(() => {
