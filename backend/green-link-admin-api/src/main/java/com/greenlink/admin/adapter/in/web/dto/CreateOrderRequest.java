@@ -23,7 +23,7 @@ public record CreateOrderRequest(
         String eventInfo,
         String ribbonLeft,
         String ribbonRight,
-        @NotBlank String ordererName,
+        String ordererName,
         @NotBlank String ordererPhone,
         String recipientName,
         String recipientPhone,
