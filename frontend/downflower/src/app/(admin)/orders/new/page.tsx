@@ -21,7 +21,7 @@ export default function NewOrderPage() {
   const [quantity, setQuantity] = useState(1)
   const [amount, setAmount] = useState('')
   const [extraCost, setExtraCost] = useState('')
-  const [selectedPreset, setSelectedPreset] = useState('')
+  const [selectedExtraPreset, setSelectedExtraPreset] = useState('')
 
   // 배송정보
   const [deliveryDate, setDeliveryDate] = useState('')
@@ -71,7 +71,6 @@ export default function NewOrderPage() {
     deliveryDate?: string
     address?: string
     amount?: string
-    ordererName?: string
     ordererPhone?: string
   }>({})
   const [submitting, setSubmitting] = useState(false)
@@ -81,13 +80,12 @@ export default function NewOrderPage() {
     fetchVendors('ACTIVE').then(setVendors).catch(() => {})
   }, [])
 
-  const AMOUNT_PRESETS = [
-    { label: '기본32', value: 32000 },
-    { label: '대품42', value: 42000 },
-    { label: '특품52', value: 52000 },
-    { label: '4단62', value: 62000 },
-    { label: '쌀10키로62', value: 62000 },
-    { label: '오브제1단42', value: 42000 },
+  const EXTRA_COST_PRESETS = [
+    { label: '대품+1만', value: 10000 },
+    { label: '특품+2만', value: 20000 },
+    { label: '특대품+3만', value: 30000 },
+    { label: '4단+3만', value: 30000 },
+    { label: '쌀10키로+3만', value: 30000 },
   ]
 
   async function handleSubmit() {
@@ -97,7 +95,6 @@ export default function NewOrderPage() {
     if (!deliveryDate) next.deliveryDate = '배송날짜를 입력해주세요.'
     if (!address.trim()) next.address = '주소를 입력해주세요.'
     if (!amount) next.amount = '발주금액을 입력해주세요.'
-    if (!ordererName.trim()) next.ordererName = '주문자 성함을 입력해주세요.'
     if (!ordererPhone.trim()) next.ordererPhone = '주문자 휴대폰을 입력해주세요.'
     setErrors(next)
     if (Object.keys(next).length > 0) return
@@ -215,19 +212,30 @@ export default function NewOrderPage() {
                 type="number"
                 placeholder="0"
                 value={amount}
-                onChange={(e) => { setAmount(e.target.value); setSelectedPreset(''); setErrors((prev) => ({ ...prev, amount: undefined })) }}
+                onChange={(e) => { setAmount(e.target.value); setSelectedExtraPreset(''); setErrors((prev) => ({ ...prev, amount: undefined })) }}
                 className={cn(errors.amount && 'border-red-500 focus-visible:ring-red-500')}
               />
               {errors.amount && <p className="text-xs text-red-500">{errors.amount}</p>}
               <div className="flex flex-wrap gap-1.5">
-                {AMOUNT_PRESETS.map(({ label, value }) => (
+                {EXTRA_COST_PRESETS.map(({ label, value }) => (
                   <button
                     key={label}
                     type="button"
-                    onClick={() => { setAmount(String(value)); setSelectedPreset(label); setErrors((prev) => ({ ...prev, amount: undefined })) }}
+                    onClick={() => {
+                      const oldVal = EXTRA_COST_PRESETS.find((p) => p.label === selectedExtraPreset)?.value ?? 0
+                      const base = Number(amount) - oldVal
+                      if (selectedExtraPreset === label) {
+                        setAmount(base === 0 ? '' : String(base))
+                        setSelectedExtraPreset('')
+                      } else {
+                        setAmount(String(base + value))
+                        setSelectedExtraPreset(label)
+                      }
+                      setErrors((prev) => ({ ...prev, amount: undefined }))
+                    }}
                     className={cn(
                       'rounded-md border px-2.5 py-1 text-xs transition-colors',
-                      selectedPreset === label
+                      selectedExtraPreset === label
                         ? 'border-green-700 bg-green-700 text-white'
                         : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50',
                     )}
@@ -448,14 +456,12 @@ export default function NewOrderPage() {
             <CardContent className="space-y-3">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>주문자 성함 *</Label>
+                  <Label>주문자 성함</Label>
                   <Input
                     placeholder="주문자 성함"
                     value={ordererName}
-                    onChange={(e) => { setOrdererName(e.target.value); setErrors((prev) => ({ ...prev, ordererName: undefined })) }}
-                    className={cn(errors.ordererName && 'border-red-500 focus-visible:ring-red-500')}
+                    onChange={(e) => setOrdererName(e.target.value)}
                   />
-                  {errors.ordererName && <p className="text-xs text-red-500">{errors.ordererName}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label>주문자 휴대폰 *</Label>
