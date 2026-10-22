@@ -48,6 +48,6 @@ public class AdminLoginService implements AdminLoginUseCase {
 
         String role = admin.isVendor() ? "VENDOR" : "SUPER_ADMIN";
         String token = tokenProvider.generateToken(admin.getId(), List.of(role));
-        return new AdminLoginResult(token);
+        return new AdminLoginResult(token, admin.getName());
     }
 }

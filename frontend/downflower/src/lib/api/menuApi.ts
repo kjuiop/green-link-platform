@@ -29,8 +29,8 @@ export async function fetchAllMenus(): Promise<MenuItem[]> {
   return res.json()
 }
 
-export async function fetchMenusByRole(role: UserRole): Promise<MenuItem[]> {
-  const res = await fetch(`/api/menus/by-role?role=${role}`, { headers: authHeaders() })
+export async function fetchMenusByRole(): Promise<MenuItem[]> {
+  const res = await fetch('/api/menus/by-role', { headers: authHeaders() })
   if (!res.ok) throw new Error('메뉴 목록을 불러오지 못했습니다.')
   return res.json()
 }

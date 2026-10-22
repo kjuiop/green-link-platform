@@ -20,7 +20,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { fetchMenusByRole } from '@/lib/api/menuApi'
-import { type MenuItem, type UserRole } from '@/types/menu'
+import { type MenuItem } from '@/types/menu'
 
 const ICON_MAP: Record<string, LucideIcon> = {
   '/dashboard': LayoutDashboard,
@@ -46,16 +46,17 @@ interface SidebarNavProps {
   onNavClick?: () => void
   openId: number | null
   onToggle: (id: number) => void
+  userName?: string
 }
 
-function SidebarNav({ menus, onNavClick, openId, onToggle }: SidebarNavProps) {
+function SidebarNav({ menus, onNavClick, openId, onToggle, userName }: SidebarNavProps) {
   const pathname = usePathname()
 
   return (
     <>
       <div className="flex h-14 items-center border-b px-4">
         <span className="text-sm font-bold text-green-700">🌿 다운플라워</span>
-        <span className="ml-2 text-xs text-gray-400">관리자</span>
+        {userName && <span className="ml-2 text-xs text-gray-400">{userName}</span>}
       </div>
 
       <nav className="flex-1 overflow-y-auto py-2">
@@ -145,12 +146,11 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   const pathname = usePathname()
   const [menus, setMenus] = useState<MenuItem[]>([])
   const [openId, setOpenId] = useState<number | null>(null)
+  const [userName, setUserName] = useState<string>('')
 
   useEffect(() => {
-    const role = (localStorage.getItem('role') as UserRole) ?? 'SUPER_ADMIN'
-    fetchMenusByRole(role)
-      .then(setMenus)
-      .catch(() => {})
+    setUserName(localStorage.getItem('name') ?? '')
+    fetchMenusByRole().then(setMenus).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -164,7 +164,7 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   return (
     <>
       <aside className="hidden h-screen w-56 flex-col border-r bg-white md:flex">
-        <SidebarNav menus={menus} openId={openId} onToggle={handleToggle} />
+        <SidebarNav menus={menus} openId={openId} onToggle={handleToggle} userName={userName} />
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={(open) => { if (!open) onMobileClose?.() }}>
@@ -174,6 +174,7 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
             onNavClick={onMobileClose}
             openId={openId}
             onToggle={handleToggle}
+            userName={userName}
           />
         </SheetContent>
       </Sheet>
