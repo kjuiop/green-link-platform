@@ -10,6 +10,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -47,7 +48,8 @@ public class DataInitializer implements ApplicationRunner {
         }
     }
 
-    private void fixMenuRoles() {
+    @Transactional
+    public void fixMenuRoles() {
         menuRepository.findAll().stream()
             .filter(m -> "/settings".equals(m.getUrl()))
             .filter(m -> m.getRoles().contains(Role.VENDOR) || m.getRoles().contains(Role.ORDERING))
