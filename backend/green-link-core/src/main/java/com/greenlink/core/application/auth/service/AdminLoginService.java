@@ -46,7 +46,8 @@ public class AdminLoginService implements AdminLoginUseCase {
             throw new BusinessException(AuthErrorCode.ACCOUNT_INACTIVE);
         }
 
-        String token = tokenProvider.generateToken(admin.getId(), List.of("SUPER_ADMIN"));
-        return new AdminLoginResult(token);
+        String role = admin.isVendor() ? "VENDOR" : "SUPER_ADMIN";
+        String token = tokenProvider.generateToken(admin.getId(), List.of(role));
+        return new AdminLoginResult(token, admin.getName());
     }
 }

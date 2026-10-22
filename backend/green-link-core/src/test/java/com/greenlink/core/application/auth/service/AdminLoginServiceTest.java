@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -96,5 +97,28 @@ class AdminLoginServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(AuthErrorCode.ACCOUNT_INACTIVE));
+    }
+
+    @Test
+    void login_asVendor_generatesVendorRoleToken() {
+        Admin vendor = Admin.of(4L, "vendor03", "hashedPw", "홍길동", "010-5555-6666", 1L, AdminStatus.ACTIVE, null);
+        given(adminRepository.findByLoginId("vendor03")).willReturn(Optional.of(vendor));
+        given(passwordEncoder.matches("rawPw", "hashedPw")).willReturn(true);
+        given(tokenProvider.generateToken(eq(4L), eq(java.util.List.of("VENDOR")))).willReturn("vendor-token");
+
+        AdminLoginResult result = service.login(new AdminLoginCommand("vendor03", "rawPw"));
+
+        assertThat(result.accessToken()).isEqualTo("vendor-token");
+    }
+
+    @Test
+    void login_asSuperAdmin_generatesSuperAdminRoleToken() {
+        given(adminRepository.findByLoginId("admin01")).willReturn(Optional.of(activeAdmin()));
+        given(passwordEncoder.matches("rawPw", "hashedPw")).willReturn(true);
+        given(tokenProvider.generateToken(eq(1L), eq(java.util.List.of("SUPER_ADMIN")))).willReturn("admin-token");
+
+        AdminLoginResult result = service.login(new AdminLoginCommand("admin01", "rawPw"));
+
+        assertThat(result.accessToken()).isEqualTo("admin-token");
     }
 }

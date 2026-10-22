@@ -27,6 +27,7 @@ export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
 
+  const [role, setRole] = useState<string>('SUPER_ADMIN')
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -39,6 +40,7 @@ export default function OrderDetailPage() {
   const [history, setHistory] = useState<OrderHistoryItem[]>([])
 
   useEffect(() => {
+    setRole(localStorage.getItem('role') ?? 'SUPER_ADMIN')
     fetchOrder(id)
       .then((o) => { setOrder(o); setDraft(o) })
       .catch(() => setLoadError('발주 정보를 불러오지 못했습니다.'))
@@ -46,6 +48,8 @@ export default function OrderDetailPage() {
     fetchPhotos(id).then(setPhotos).catch(() => {})
     fetchOrderHistory(id).then(setHistory).catch(() => {})
   }, [id])
+
+  const isVendor = role === 'VENDOR'
 
   if (loading) return <div className="p-8 text-sm text-gray-400">불러오는 중...</div>
   if (loadError) return <div className="p-8 text-sm text-red-500">{loadError}</div>
@@ -131,6 +135,34 @@ export default function OrderDetailPage() {
     }
   }
 
+  async function handleAccept() {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const updated = await updateOrderStatus(id, 'accept')
+      setOrder(updated)
+      setDraft(updated)
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : '수주 승인에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleReject() {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const updated = await updateOrderStatus(id, 'reject')
+      setOrder(updated)
+      setDraft(updated)
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : '수주 거절에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   function handleDelete() {
     router.push('/orders')
   }
@@ -152,10 +184,19 @@ export default function OrderDetailPage() {
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <PrintButton orderId={order.id} />
+          {/* 수주사: 수주승인·수주거절 */}
+          {isVendor && order.status === '발주대기' && (
+            <>
+              <Button variant="outline" className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50" onClick={handleReject} disabled={saving}>수주거절</Button>
+              <Button className="bg-green-700 hover:bg-green-800" onClick={handleAccept} disabled={saving}>수주승인</Button>
+            </>
+          )}
+          {/* 배송완료 처리 — 수주사·관리자 공통 */}
           {order.status === '수주완료' && !isEditing && !confirmDelete && (
             <Button className="bg-blue-700 hover:bg-blue-800" onClick={handleComplete} disabled={saving}>배송완료 처리</Button>
           )}
-          {isEditing && (
+          {/* 관리자 전용: 수정·삭제 */}
+          {!isVendor && isEditing && (
             <>
               <Button variant="outline" className="gap-1.5" onClick={cancelEdit} disabled={saving}>
                 <X className="h-3.5 w-3.5" />
@@ -167,13 +208,13 @@ export default function OrderDetailPage() {
               </Button>
             </>
           )}
-          {!isEditing && !confirmDelete && (
+          {!isVendor && !isEditing && !confirmDelete && (
             <Button variant="outline" className="gap-1.5" onClick={startEdit}>
               <Pencil className="h-3.5 w-3.5" />
               수정
             </Button>
           )}
-          {!isEditing && !confirmDelete && (
+          {!isVendor && !isEditing && !confirmDelete && (
             <Button
               variant="outline"
               className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50"
@@ -183,7 +224,7 @@ export default function OrderDetailPage() {
               삭제
             </Button>
           )}
-          {confirmDelete && (
+          {!isVendor && confirmDelete && (
             <>
               <span className="self-center text-sm text-red-600">정말 삭제하시겠습니까?</span>
               <Button
