@@ -8,7 +8,7 @@ import { Order } from '@/types/order'
 export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
-  const [role, setRole] = useState<string>('SUPER_ADMIN')
+  const [role, setRole] = useState<string | null>(null)
 
   useEffect(() => {
     setRole(localStorage.getItem('role') ?? 'SUPER_ADMIN')
@@ -17,6 +17,8 @@ export default function DashboardPage() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  if (role === null) return null
 
   const isVendor = role === 'VENDOR'
 

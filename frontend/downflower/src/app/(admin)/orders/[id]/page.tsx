@@ -185,7 +185,7 @@ export default function OrderDetailPage() {
         <div className="flex shrink-0 flex-wrap gap-2">
           <PrintButton orderId={order.id} />
           {/* 수주사: 수주승인·수주거절 */}
-          {isVendor && order.status === '발주대기' && !saving && (
+          {isVendor && order.status === '발주대기' && (
             <>
               <Button variant="outline" className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50" onClick={handleReject} disabled={saving}>수주거절</Button>
               <Button className="bg-green-700 hover:bg-green-800" onClick={handleAccept} disabled={saving}>수주승인</Button>
