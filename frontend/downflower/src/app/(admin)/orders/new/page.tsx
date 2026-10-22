@@ -83,6 +83,7 @@ export default function NewOrderPage() {
   const EXTRA_COST_PRESETS = [
     { label: '대품+1만', value: 10000 },
     { label: '특품+2만', value: 20000 },
+    { label: '특대품+3만', value: 30000 },
     { label: '4단+3만', value: 30000 },
     { label: '쌀10키로+3만', value: 30000 },
   ]
