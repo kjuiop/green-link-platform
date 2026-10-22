@@ -71,7 +71,6 @@ export default function NewOrderPage() {
     deliveryDate?: string
     address?: string
     amount?: string
-    ordererName?: string
     ordererPhone?: string
   }>({})
   const [submitting, setSubmitting] = useState(false)
@@ -460,10 +459,8 @@ export default function NewOrderPage() {
                   <Input
                     placeholder="주문자 성함"
                     value={ordererName}
-                    onChange={(e) => { setOrdererName(e.target.value); setErrors((prev) => ({ ...prev, ordererName: undefined })) }}
-                    className={cn(errors.ordererName && 'border-red-500 focus-visible:ring-red-500')}
+                    onChange={(e) => setOrdererName(e.target.value)}
                   />
-                  {errors.ordererName && <p className="text-xs text-red-500">{errors.ordererName}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label>주문자 휴대폰 *</Label>
