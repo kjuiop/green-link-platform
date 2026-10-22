@@ -38,12 +38,24 @@ public class DataInitializer implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         initAdmin();
         initMenus();
+        fixMenuRoles();
     }
 
     private void initAdmin() {
         if (!adminRepository.existsByLoginId(initLoginId)) {
             adminRepository.save(Admin.create(initLoginId, passwordEncoder.encode(initPassword)));
         }
+    }
+
+    private void fixMenuRoles() {
+        menuRepository.findAll().stream()
+            .filter(m -> "/settings".equals(m.getUrl()))
+            .filter(m -> m.getRoles().contains(Role.VENDOR) || m.getRoles().contains(Role.ORDERING))
+            .findFirst()
+            .ifPresent(m -> {
+                m.updateInfo(m.getName(), m.getUrl(), m.getSortOrder(), List.of(Role.SUPER_ADMIN));
+                menuRepository.save(m);
+            });
     }
 
     private void initMenus() {
@@ -87,13 +99,13 @@ public class DataInitializer implements ApplicationRunner {
             List.of(Role.SUPER_ADMIN, Role.ORDERING, Role.VENDOR)
         ));
 
-        // 설정 (루트 메뉴, 모든 역할)
+        // 설정 (루트 메뉴, 최고관리자 전용)
         Menu settings = menuRepository.save(Menu.create(
             "설정",
             "/settings",
             6,
             null,
-            List.of(Role.SUPER_ADMIN, Role.ORDERING, Role.VENDOR)
+            List.of(Role.SUPER_ADMIN)
         ));
 
         // 설정 하위: 문자 발송내역
