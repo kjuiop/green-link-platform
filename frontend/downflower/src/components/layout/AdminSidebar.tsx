@@ -149,11 +149,14 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   const [userName, setUserName] = useState<string>('')
 
   useEffect(() => {
-    const role = (localStorage.getItem('role') as UserRole) ?? 'SUPER_ADMIN'
     setUserName(localStorage.getItem('name') ?? '')
-    fetchMenusByRole(role)
-      .then(setMenus)
-      .catch(() => {})
+    const stored = localStorage.getItem('menus')
+    if (stored) {
+      try { setMenus(JSON.parse(stored)) } catch { /* ignore */ }
+    } else {
+      const role = (localStorage.getItem('role') as UserRole) ?? 'SUPER_ADMIN'
+      fetchMenusByRole(role).then(setMenus).catch(() => {})
+    }
   }, [])
 
   useEffect(() => {

@@ -31,9 +31,10 @@ export default function LoginPage() {
         setError(data.message ?? '아이디 또는 비밀번호가 올바르지 않습니다.')
         return
       }
-      const { accessToken, name } = await res.json()
+      const { accessToken, name, menus } = await res.json()
       localStorage.setItem('accessToken', accessToken)
       if (name) localStorage.setItem('name', name)
+      if (menus) localStorage.setItem('menus', JSON.stringify(menus))
       try {
         const base64 = accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
         const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')

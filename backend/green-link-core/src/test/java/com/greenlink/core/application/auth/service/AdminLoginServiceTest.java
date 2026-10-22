@@ -3,8 +3,10 @@ package com.greenlink.core.application.auth.service;
 import com.greenlink.core.application.auth.dto.AdminLoginCommand;
 import com.greenlink.core.application.auth.dto.AdminLoginResult;
 import com.greenlink.core.application.auth.port.TokenProvider;
+import com.greenlink.core.application.menu.usecase.GetMenusByRoleUseCase;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.model.AdminStatus;
+import com.greenlink.core.domain.admin.model.Role;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
@@ -15,10 +17,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -31,12 +35,14 @@ class AdminLoginServiceTest {
     @Mock AdminRepository adminRepository;
     @Mock PasswordEncoder passwordEncoder;
     @Mock TokenProvider tokenProvider;
+    @Mock GetMenusByRoleUseCase getMenusByRoleUseCase;
 
     private AdminLoginService service;
 
     @BeforeEach
     void setUp() {
-        service = new AdminLoginService(adminRepository, passwordEncoder, tokenProvider);
+        service = new AdminLoginService(adminRepository, passwordEncoder, tokenProvider, getMenusByRoleUseCase);
+        given(getMenusByRoleUseCase.getMenusByRole(any(Role.class))).willReturn(List.of());
     }
 
     private Admin activeAdmin() {

@@ -1,3 +1,7 @@
 package com.greenlink.core.application.auth.dto;
 
-public record AdminLoginResult(String accessToken, String name) {}
+import com.greenlink.core.application.menu.dto.MenuResult;
+
+import java.util.List;
+
+public record AdminLoginResult(String accessToken, String name, List<MenuResult> menus) {}

@@ -4,7 +4,10 @@ import com.greenlink.core.application.auth.dto.AdminLoginCommand;
 import com.greenlink.core.application.auth.dto.AdminLoginResult;
 import com.greenlink.core.application.auth.port.TokenProvider;
 import com.greenlink.core.application.auth.usecase.AdminLoginUseCase;
+import com.greenlink.core.application.menu.dto.MenuResult;
+import com.greenlink.core.application.menu.usecase.GetMenusByRoleUseCase;
 import com.greenlink.core.domain.admin.model.AdminStatus;
+import com.greenlink.core.domain.admin.model.Role;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
@@ -21,13 +24,16 @@ public class AdminLoginService implements AdminLoginUseCase {
     private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenProvider tokenProvider;
+    private final GetMenusByRoleUseCase getMenusByRoleUseCase;
 
     public AdminLoginService(AdminRepository adminRepository,
                               PasswordEncoder passwordEncoder,
-                              TokenProvider tokenProvider) {
+                              TokenProvider tokenProvider,
+                              GetMenusByRoleUseCase getMenusByRoleUseCase) {
         this.adminRepository = adminRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
+        this.getMenusByRoleUseCase = getMenusByRoleUseCase;
     }
 
     @Override
@@ -46,8 +52,9 @@ public class AdminLoginService implements AdminLoginUseCase {
             throw new BusinessException(AuthErrorCode.ACCOUNT_INACTIVE);
         }
 
-        String role = admin.isVendor() ? "VENDOR" : "SUPER_ADMIN";
-        String token = tokenProvider.generateToken(admin.getId(), List.of(role));
-        return new AdminLoginResult(token, admin.getName());
+        Role role = admin.isVendor() ? Role.VENDOR : Role.SUPER_ADMIN;
+        String token = tokenProvider.generateToken(admin.getId(), List.of(role.name()));
+        List<MenuResult> menus = getMenusByRoleUseCase.getMenusByRole(role);
+        return new AdminLoginResult(token, admin.getName(), menus);
     }
 }
