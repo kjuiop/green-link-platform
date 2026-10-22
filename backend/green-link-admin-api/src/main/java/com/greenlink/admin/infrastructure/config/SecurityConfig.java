@@ -3,6 +3,7 @@ package com.greenlink.admin.infrastructure.config;
 import com.greenlink.admin.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -39,6 +40,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/vendor/**").hasRole("VENDOR")
                 .requestMatchers("/api/ordering/**").hasRole("ORDERING")
                 .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/menus/by-role").authenticated()
                 .requestMatchers("/api/menus", "/api/menus/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/vendors", "/api/vendors/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/photos", "/api/photos/**").hasRole("SUPER_ADMIN")
