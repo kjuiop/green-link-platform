@@ -9,6 +9,8 @@ import com.greenlink.core.application.menu.usecase.GetAllMenusUseCase;
 import com.greenlink.core.application.menu.usecase.GetMenusByRoleUseCase;
 import com.greenlink.core.application.menu.usecase.UpdateMenuUseCase;
 import com.greenlink.core.domain.admin.model.Role;
+import com.greenlink.core.global.exception.BusinessException;
+import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -49,8 +51,13 @@ public class MenuController {
         String roleName = authentication.getAuthorities().stream()
             .findFirst()
             .map(a -> a.getAuthority().replace("ROLE_", ""))
-            .orElse("SUPER_ADMIN");
-        return ResponseEntity.ok(getMenusByRoleUseCase.getMenusByRole(Role.valueOf(roleName)));
+            .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_ROLE));
+        try {
+            Role role = Role.valueOf(roleName);
+            return ResponseEntity.ok(getMenusByRoleUseCase.getMenusByRole(role));
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(AuthErrorCode.INVALID_ROLE);
+        }
     }
 
     @PostMapping
