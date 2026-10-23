@@ -34,6 +34,8 @@ export default function LoginPage() {
       const { accessToken, name, vendorId, companyName } = await res.json()
       localStorage.setItem('accessToken', accessToken)
       if (name) localStorage.setItem('name', name)
+      localStorage.removeItem('vendorId')
+      localStorage.removeItem('companyName')
       if (vendorId != null) localStorage.setItem('vendorId', String(vendorId))
       if (companyName) localStorage.setItem('companyName', companyName)
       localStorage.setItem('loginId', loginId)
