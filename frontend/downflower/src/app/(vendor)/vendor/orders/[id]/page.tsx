@@ -5,20 +5,12 @@ import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { VendorOrderStatusBadge } from '@/components/common/StatusBadge'
-import { fetchOrder, fetchPhotos, updateOrderStatus, uploadPhotos, PhotoResult } from '@/lib/api/orderApi'
+import { fetchOrder, updateOrderStatus, fetchReceiptConfirmation, uploadReceiptPhotos, ReceiptConfirmationResult } from '@/lib/api/orderApi'
 import { PrintButton } from '@/components/common/PrintButton'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
+import { Upload } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Upload, X } from 'lucide-react'
 import { Order } from '@/types/order'
-
-interface LocalPhoto {
-  id: string
-  url: string
-  file?: File
-  uploaded?: boolean
-  remoteId?: number
-}
 
 export default function VendorOrderDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -28,22 +20,16 @@ export default function VendorOrderDetailPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [acting, setActing] = useState(false)
-  const [localPhotos, setLocalPhotos] = useState<LocalPhoto[]>([])
-
-  const photoInputRef = useRef<HTMLInputElement>(null)
+  const [receiptConfirmation, setReceiptConfirmation] = useState<ReceiptConfirmationResult | null>(null)
 
   useEffect(() => {
-    Promise.all([fetchOrder(id), fetchPhotos(id).catch(() => [] as PhotoResult[])])
-      .then(([orderData, photos]) => {
+    Promise.all([
+      fetchOrder(id),
+      fetchReceiptConfirmation(id).catch(() => null),
+    ])
+      .then(([orderData, receipt]) => {
         setOrder(orderData)
-        setLocalPhotos(
-          photos.map((p) => ({
-            id: `remote-${p.id}`,
-            url: p.photoUrl,
-            uploaded: true,
-            remoteId: p.id,
-          }))
-        )
+        setReceiptConfirmation(receipt)
       })
       .catch(() => setLoadError('주문 정보를 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
@@ -53,7 +39,20 @@ export default function VendorOrderDetailPage() {
   if (loadError) return <div className="p-8 text-sm text-red-500">{loadError}</div>
   if (!order) return <div className="p-8 text-sm text-gray-400">주문을 찾을 수 없습니다.</div>
 
-  const hasPhotos = localPhotos.length > 0
+  const hasPhotos = (receiptConfirmation?.photoUrls.length ?? 0) > 0
+  const photoInputRef = useRef<HTMLInputElement>(null)
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    if (files.length === 0) return
+    try {
+      const updated = await uploadReceiptPhotos(id, files)
+      setReceiptConfirmation(updated)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : '사진 업로드에 실패했습니다.')
+    }
+  }
 
   async function handleAccept() {
     setActing(true)
@@ -81,39 +80,10 @@ export default function VendorOrderDetailPage() {
     }
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? [])
-    const newPhotos: LocalPhoto[] = files.map((file, i) => ({
-      id: `local-${Date.now()}-${i}`,
-      url: URL.createObjectURL(file),
-      file,
-      uploaded: false,
-    }))
-    setLocalPhotos((prev) => [...prev, ...newPhotos])
-    e.target.value = ''
-  }
-
-  function removePhoto(photoId: string) {
-    setLocalPhotos((prev) => prev.filter((p) => p.id !== photoId))
-  }
-
   async function handleComplete() {
-    if (!hasPhotos) return
     setActing(true)
     setActionError(null)
     try {
-      const pending = localPhotos.filter((p) => !p.uploaded && p.file)
-
-      if (pending.length > 0) {
-        const uploadedResults = await uploadPhotos(id, pending.map((p) => p.file!), 'SITE')
-        setLocalPhotos((prev) =>
-          prev.map((p, idx) => {
-            const matched = uploadedResults[pending.findIndex((q) => q.id === p.id)]
-            return matched ? { ...p, uploaded: true, remoteId: matched.id } : p
-          })
-        )
-      }
-
       const updated = await updateOrderStatus(id, 'complete')
       setOrder(updated)
     } catch (e) {
@@ -228,27 +198,18 @@ export default function VendorOrderDetailPage() {
             <CardHeader>
               <CardTitle className="text-sm">
                 배송사진
-                {localPhotos.length > 0 && <span className="ml-1.5 text-xs font-normal text-gray-400">({localPhotos.length}장)</span>}
+                {hasPhotos && (
+                  <span className="ml-1.5 text-xs font-normal text-gray-400">
+                    ({receiptConfirmation!.photoUrls.length}장)
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex flex-wrap gap-2">
-                {localPhotos.map((photo) => (
-                  <div key={photo.id} className="relative h-24 w-24">
-                    <img
-                      src={photo.url}
-                      alt="배송사진"
-                      className="h-full w-full rounded border object-cover"
-                    />
-                    {order.status !== '배송완료' && (
-                      <button
-                        type="button"
-                        onClick={() => removePhoto(photo.id)}
-                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
+                {receiptConfirmation?.photoUrls.map((url, idx) => (
+                  <div key={idx} className="relative h-24 w-24">
+                    <img src={url} alt="배송사진" className="h-full w-full rounded border object-cover" />
                   </div>
                 ))}
                 {order.status !== '배송완료' && (
@@ -267,7 +228,7 @@ export default function VendorOrderDetailPage() {
                   accept="image/*"
                   multiple
                   className="hidden"
-                  onChange={handleFileChange}
+                  onChange={handlePhotoUpload}
                 />
               </div>
               {order.status === '수주완료' && !hasPhotos && (

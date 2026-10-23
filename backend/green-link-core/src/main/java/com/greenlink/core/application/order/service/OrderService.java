@@ -20,6 +20,7 @@ import com.greenlink.core.domain.order.model.OrderStatus;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
+import com.greenlink.core.domain.receipt.port.ReceiptConfirmationRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
 import org.springframework.data.domain.Page;
@@ -51,15 +52,18 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
 
     private final OrderRepository orderRepository;
     private final PhotoRepository photoRepository;
+    private final ReceiptConfirmationRepository receiptConfirmationRepository;
     private final RecordOrderHistoryUseCase recordOrderHistoryUseCase;
     private final AdminRepository adminRepository;
     private final CompanyRepository companyRepository;
 
     public OrderService(OrderRepository orderRepository, PhotoRepository photoRepository,
+                        ReceiptConfirmationRepository receiptConfirmationRepository,
                         RecordOrderHistoryUseCase recordOrderHistoryUseCase,
                         AdminRepository adminRepository, CompanyRepository companyRepository) {
         this.orderRepository = orderRepository;
         this.photoRepository = photoRepository;
+        this.receiptConfirmationRepository = receiptConfirmationRepository;
         this.recordOrderHistoryUseCase = recordOrderHistoryUseCase;
         this.adminRepository = adminRepository;
         this.companyRepository = companyRepository;
@@ -257,7 +261,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
             case "reject" -> order.reject();
             case "cancel" -> order.cancel();
             case "complete" -> {
-                if (!photoRepository.existsByOrderId(id)) {
+                if (!receiptConfirmationRepository.existsWithPhotosByOrderId(id)) {
                     throw new BusinessException(OrderErrorCode.SITE_PHOTO_REQUIRED);
                 }
                 order.complete(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));

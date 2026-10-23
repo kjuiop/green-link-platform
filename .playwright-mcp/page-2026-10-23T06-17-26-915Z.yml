@@ -1,0 +1,38 @@
+- generic [active] [ref=f3e1]:
+  - generic [ref=f3e3]:
+    - banner [ref=f3e4]:
+      - button "메뉴 열기" [ref=f3e5]
+      - generic [ref=f3e7]:
+        - generic [ref=f3e8]:
+          - generic [ref=f3e9]: TEL
+          - generic [ref=f3e10]: 1855-4400
+        - generic [ref=f3e11]:
+          - generic [ref=f3e12]: PHONE
+          - generic [ref=f3e13]: 010-7551-1922
+      - button "관리자" [ref=f3e14]
+    - main [ref=f3e19]:
+      - generic [ref=f3e21]:
+        - generic [ref=f3e22]:
+          - heading "업체 계정관리" [level=1] [ref=f3e23]
+          - button "업체 등록" [ref=f3e24]
+        - generic [ref=f3e25]:
+          - generic [ref=f3e26]:
+            - generic [ref=f3e27] [cursor=pointer]:
+              - radio "전체" [checked] [ref=f3e28]
+              - generic [ref=f3e29]: 전체
+            - generic [ref=f3e30] [cursor=pointer]:
+              - radio "활성" [ref=f3e31]
+              - generic [ref=f3e32]: 활성
+            - generic [ref=f3e33] [cursor=pointer]:
+              - radio "대기" [ref=f3e34]
+              - generic [ref=f3e35]: 대기
+            - generic [ref=f3e36] [cursor=pointer]:
+              - radio "정지" [ref=f3e37]
+              - generic [ref=f3e38]: 정지
+          - generic [ref=f3e39]:
+            - textbox "업체명, 담당자명, 연락처로 검색" [ref=f3e44]
+            - button "검색" [ref=f3e45]
+            - button "초기화" [ref=f3e46]
+        - generic [ref=f3e47]: 불러오는 중...
+  - button "Open Next.js Dev Tools" [ref=f3e54] [cursor=pointer]
+  - alert [ref=f3e58]

@@ -1,0 +1,203 @@
+- generic [active] [ref=f3e1]:
+  - generic [ref=f3e3]:
+    - banner [ref=f3e4]:
+      - button "메뉴 열기" [ref=f3e5]
+      - generic [ref=f3e7]:
+        - generic [ref=f3e8]:
+          - generic [ref=f3e9]: TEL
+          - generic [ref=f3e10]: 1855-4400
+        - generic [ref=f3e11]:
+          - generic [ref=f3e12]: PHONE
+          - generic [ref=f3e13]: 010-7551-1922
+      - button "관리자" [ref=f3e14]
+    - main [ref=f3e19]:
+      - generic [ref=f3e21]:
+        - heading "신규 발주" [level=1] [ref=f3e22]
+        - generic [ref=f3e23]:
+          - generic [ref=f3e24]:
+            - generic [ref=f3e25]: 기본정보
+            - generic [ref=f3e27]:
+              - generic [ref=f3e28]:
+                - generic [ref=f3e29]: 주문번호
+                - textbox [disabled]: 자동 생성
+              - generic [ref=f3e30]:
+                - generic [ref=f3e31]: 수주업체 *
+                - combobox [ref=f3e32]:
+                  - option "업체 선택" [selected]
+                  - option "두번째꽃집"
+                  - option "테스트꽃집"
+              - generic [ref=f3e33]:
+                - generic [ref=f3e34]:
+                  - generic [ref=f3e35]: 상품명 *
+                  - combobox [ref=f3e36]:
+                    - option "상품 선택"
+                    - option "근조화환 3단 — 150,000원" [selected]
+                    - option "직접 입력"
+                - generic [ref=f3e37]:
+                  - generic [ref=f3e38]: 수량 *
+                  - spinbutton [ref=f3e39]: "1"
+              - generic [ref=f3e40]:
+                - generic [ref=f3e41]: 발주금액 *
+                - spinbutton "0" [ref=f3e42]: "150000"
+                - generic [ref=f3e43]:
+                  - button "대품+1만" [ref=f3e44]
+                  - button "특품+2만" [ref=f3e45]
+                  - button "특대품+3만" [ref=f3e46]
+                  - button "4단+3만" [ref=f3e47]
+                  - button "쌀10키로+3만" [ref=f3e48]
+              - generic [ref=f3e49]:
+                - generic [ref=f3e50]: 추가비용
+                - spinbutton "0" [ref=f3e51]
+                - paragraph [ref=f3e52]: 기본 발주금액 외 추가로 발생한 비용
+          - generic [ref=f3e53]:
+            - generic [ref=f3e54]: 배송정보
+            - generic [ref=f3e56]:
+              - generic [ref=f3e57]:
+                - generic [ref=f3e58]: 배송날짜 *
+                - textbox [ref=f3e59]
+              - generic [ref=f3e60]:
+                - generic [ref=f3e61]: 배송시간
+                - generic [ref=f3e62]:
+                  - combobox [ref=f3e63]:
+                    - option "시" [selected]
+                    - option "0시"
+                    - option "1시"
+                    - option "2시"
+                    - option "3시"
+                    - option "4시"
+                    - option "5시"
+                    - option "6시"
+                    - option "7시"
+                    - option "8시"
+                    - option "9시"
+                    - option "10시"
+                    - option "11시"
+                    - option "12시"
+                    - option "13시"
+                    - option "14시"
+                    - option "15시"
+                    - option "16시"
+                    - option "17시"
+                    - option "18시"
+                    - option "19시"
+                    - option "20시"
+                    - option "21시"
+                    - option "22시"
+                    - option "23시"
+                  - combobox [ref=f3e64]:
+                    - option "00분" [selected]
+                    - option "10분"
+                    - option "20분"
+                    - option "30분"
+                    - option "40분"
+                    - option "50분"
+                  - combobox [ref=f3e65]:
+                    - option "까지" [selected]
+                    - option "예식"
+                    - option "행사"
+                    - option "3시간내"
+                    - option "직접입력"
+              - generic [ref=f3e66]:
+                - generic [ref=f3e67]: 주소 *
+                - textbox "도로명 주소 검색" [ref=f3e68]
+              - generic [ref=f3e69]:
+                - generic [ref=f3e70]: 상세주소
+                - textbox "상세주소" [ref=f3e71]
+          - generic [ref=f3e73]:
+            - generic [ref=f3e74]: 행사정보
+            - generic [ref=f3e76]:
+              - generic [ref=f3e77]:
+                - paragraph [ref=f3e78]: 장례식
+                - generic [ref=f3e79]:
+                  - generic [ref=f3e80]:
+                    - generic [ref=f3e81]: 장례식장명
+                    - 'textbox "예: 한독병원장례식장" [ref=f3e82]'
+                  - generic [ref=f3e83]:
+                    - generic [ref=f3e84]: 빈소
+                    - 'textbox "예: 무궁화실" [ref=f3e85]'
+                - generic [ref=f3e86]:
+                  - generic [ref=f3e87]: 고인명
+                  - 'textbox "예: 고인 김순영" [ref=f3e88]'
+              - separator [ref=f3e89]
+              - generic [ref=f3e90]:
+                - paragraph [ref=f3e91]: 결혼식
+                - generic [ref=f3e92]:
+                  - generic [ref=f3e93]:
+                    - generic [ref=f3e94]: 예식장명
+                    - 'textbox "예: 더파티움 강남" [ref=f3e95]'
+                  - generic [ref=f3e96]:
+                    - generic [ref=f3e97]: 홀
+                    - 'textbox "예: 그랜드볼룸 A홀" [ref=f3e98]'
+                - generic [ref=f3e99]:
+                  - generic [ref=f3e100]: 신랑/신부명
+                  - 'textbox "예: 김철수 ♥ 이영희" [ref=f3e101]'
+              - separator [ref=f3e102]
+              - generic [ref=f3e103]:
+                - paragraph [ref=f3e104]: 기타
+                - generic [ref=f3e105]:
+                  - generic [ref=f3e106]:
+                    - generic [ref=f3e107]: 행사명
+                    - 'textbox "예: 주식회사 효진토건 창립기념식" [ref=f3e108]'
+                  - generic [ref=f3e109]:
+                    - generic [ref=f3e110]: 장소
+                    - 'textbox "예: 강남파이낸스센터 1층" [ref=f3e111]'
+          - generic [ref=f3e112]:
+            - generic [ref=f3e113]:
+              - generic [ref=f3e114]: 주문자 / 받는 분
+              - generic [ref=f3e116]:
+                - generic [ref=f3e117]:
+                  - generic [ref=f3e118]:
+                    - generic [ref=f3e119]: 주문자 성함
+                    - textbox "주문자 성함" [ref=f3e120]
+                  - generic [ref=f3e121]:
+                    - generic [ref=f3e122]: 주문자 휴대폰
+                    - textbox "010-0000-0000" [ref=f3e123]
+                - generic [ref=f3e124]:
+                  - generic [ref=f3e125]:
+                    - generic [ref=f3e126]: 받는 분 성함
+                    - textbox "받는 분 성함" [ref=f3e127]
+                  - generic [ref=f3e128]:
+                    - generic [ref=f3e129]: 받는 분 휴대폰
+                    - textbox "010-0000-0000" [ref=f3e130]
+                - generic [ref=f3e131]:
+                  - generic [ref=f3e132]: 문자 발송 대상
+                  - generic [ref=f3e133]:
+                    - generic [ref=f3e134]:
+                      - checkbox "주문자에게 발송" [checked] [ref=f3e135]
+                      - text: 주문자에게 발송
+                    - generic [ref=f3e136]:
+                      - checkbox "받는 분에게 발송" [ref=f3e137]
+                      - text: 받는 분에게 발송
+                - generic [ref=f3e138]:
+                  - generic [ref=f3e139]: 문자 발송 설정
+                  - generic [ref=f3e140]:
+                    - generic [ref=f3e141] [cursor=pointer]:
+                      - radio "자동발송 배송완료 처리 즉시 발송" [checked] [ref=f3e142]
+                      - generic [ref=f3e143]: 자동발송
+                      - generic [ref=f3e144]: 배송완료 처리 즉시 발송
+                    - generic [ref=f3e145] [cursor=pointer]:
+                      - radio "예약발송" [ref=f3e146]
+                      - generic [ref=f3e147]: 예약발송
+            - generic [ref=f3e148]:
+              - generic [ref=f3e149]: 리본 문구
+              - generic [ref=f3e151]:
+                - generic [ref=f3e152]:
+                  - generic [ref=f3e153]: 리본 왼쪽 (보내는 사람·회사명)
+                  - 'textbox "예: 주식회사 효진토건 부장 신효섭" [ref=f3e154]'
+                - generic [ref=f3e155]:
+                  - generic [ref=f3e156]: 리본 오른쪽 (축하·근조 문구)
+                  - 'textbox "예: 삼가 고인의 명복을 빕니다" [ref=f3e157]'
+            - generic [ref=f3e158]:
+              - generic [ref=f3e159]: 기타
+              - generic [ref=f3e161]:
+                - generic [ref=f3e162]:
+                  - generic [ref=f3e163]: 관리자 메모
+                  - textbox "내부 메모" [ref=f3e164]
+                - generic [ref=f3e165]:
+                  - generic [ref=f3e166]: 수주업체 전달사항
+                  - textbox "업체에 전달할 내용" [ref=f3e167]
+        - generic [ref=f3e168]:
+          - button "취소" [ref=f3e169]
+          - button "발주 등록" [ref=f3e170]
+  - button "Open Next.js Dev Tools" [ref=f3e176] [cursor=pointer]
+  - alert [ref=f3e180]

@@ -1,0 +1,28 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e3]:
+    - generic [ref=f2e4]:
+      - heading "🌿 다운플라워" [level=1] [ref=f2e5]
+      - paragraph [ref=f2e6]: 발주·수주 관리 시스템
+    - generic [ref=f2e7]:
+      - generic [ref=f2e8]: 로그인
+      - generic [ref=f2e10]:
+        - generic [ref=f2e11]:
+          - generic [ref=f2e12]: 아이디
+          - textbox "아이디" [ref=f2e13]:
+            - /placeholder: 아이디를 입력하세요
+        - generic [ref=f2e14]:
+          - generic [ref=f2e15]: 비밀번호
+          - textbox "비밀번호" [ref=f2e16]:
+            - /placeholder: 비밀번호를 입력하세요
+        - button "로그인" [ref=f2e17]
+        - generic [ref=f2e18]:
+          - link "회원가입" [ref=f2e19] [cursor=pointer]:
+            - /url: /signup
+          - generic [ref=f2e20]: "|"
+          - link "아이디 찾기" [ref=f2e21] [cursor=pointer]:
+            - /url: /find-id
+          - generic [ref=f2e22]: "|"
+          - link "비밀번호 찾기" [ref=f2e23] [cursor=pointer]:
+            - /url: /find-password
+  - button "Open Next.js Dev Tools" [ref=f2e29] [cursor=pointer]
+  - alert [ref=f2e33]

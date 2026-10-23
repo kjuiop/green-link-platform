@@ -1,0 +1,21 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: green-link-mysql-local
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: green-dev
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: "green123$$"
+    volumes:
+      - green-link-mysql-local:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "admin", "-pgreen123$$"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  green-link-mysql-local:

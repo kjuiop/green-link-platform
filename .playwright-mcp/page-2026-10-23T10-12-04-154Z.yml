@@ -1,0 +1,88 @@
+- generic [active] [ref=f3e1]:
+  - generic [ref=f3e3]:
+    - banner [ref=f3e4]:
+      - button "메뉴 열기" [ref=f3e5]
+      - generic [ref=f3e7]:
+        - generic [ref=f3e8]:
+          - generic [ref=f3e9]: TEL
+          - generic [ref=f3e10]: 1855-4400
+        - generic [ref=f3e11]:
+          - generic [ref=f3e12]: PHONE
+          - generic [ref=f3e13]: 010-7551-1922
+      - button "관리자" [ref=f3e14]
+    - main [ref=f3e19]:
+      - generic [ref=f3e21]:
+        - generic [ref=f3e22]:
+          - heading "발주 목록" [level=1] [ref=f3e23]
+          - link "신규 발주" [ref=f3e24] [cursor=pointer]:
+            - /url: /orders/new
+        - generic [ref=f3e26]:
+          - generic [ref=f3e27]:
+            - generic [ref=f3e28] [cursor=pointer]:
+              - radio "전체" [checked] [ref=f3e29]
+              - generic [ref=f3e30]: 전체
+            - generic [ref=f3e31] [cursor=pointer]:
+              - radio "발주대기" [ref=f3e32]
+              - generic [ref=f3e33]: 발주대기
+            - generic [ref=f3e34] [cursor=pointer]:
+              - radio "수주완료" [ref=f3e35]
+              - generic [ref=f3e36]: 수주완료
+            - generic [ref=f3e37] [cursor=pointer]:
+              - radio "배송완료" [ref=f3e38]
+              - generic [ref=f3e39]: 배송완료
+            - generic [ref=f3e40] [cursor=pointer]:
+              - radio "수주거절" [ref=f3e41]
+              - generic [ref=f3e42]: 수주거절
+          - generic [ref=f3e43]:
+            - generic [ref=f3e44]: 배송날짜
+            - textbox [ref=f3e45]
+            - generic [ref=f3e46]: ~
+            - textbox [ref=f3e47]
+            - combobox [ref=f3e48]:
+              - option "정상" [selected]
+              - option "삭제"
+              - option "전체"
+          - generic [ref=f3e49]:
+            - generic [ref=f3e50]:
+              - combobox [ref=f3e51]:
+                - option "발주사명"
+                - option "수주사명"
+                - option "주문일"
+                - option "배송일"
+                - option "주문자"
+                - option "받는분"
+                - option "배달장소"
+                - option "보내는분"
+                - option "인수자"
+                - option "주문번호" [selected]
+              - textbox "주문번호 검색" [ref=f3e52]
+            - generic [ref=f3e53]:
+              - combobox [ref=f3e54]:
+                - option "발주사명"
+                - option "수주사명" [selected]
+                - option "주문일"
+                - option "배송일"
+                - option "주문자"
+                - option "받는분"
+                - option "배달장소"
+                - option "보내는분"
+                - option "인수자"
+                - option "주문번호"
+              - textbox "수주사명 검색" [ref=f3e55]
+            - button "검색" [ref=f3e56]
+            - button "초기화" [ref=f3e57]
+        - generic [ref=f3e58]:
+          - generic [ref=f3e59]:
+            - generic [ref=f3e60]:
+              - text: 건수
+              - strong [ref=f3e61]: "0"
+              - text: 건
+            - generic [ref=f3e62]: "|"
+            - generic [ref=f3e63]:
+              - text: 발주금액
+              - strong [ref=f3e64]: "0"
+              - text: 원
+          - button "엑셀 다운로드" [disabled] [ref=f3e65]
+        - generic [ref=f3e69]: 불러오는 중...
+  - button "Open Next.js Dev Tools" [ref=f3e76] [cursor=pointer]
+  - alert [ref=f3e80]
