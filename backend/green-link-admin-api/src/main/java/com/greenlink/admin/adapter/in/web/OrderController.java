@@ -60,11 +60,11 @@ public class OrderController {
             @RequestParam(required = false) String deliveryDateFrom,
             @RequestParam(required = false) String deliveryDateTo) {
         Long resolvedVendorId = vendorId;
-        if (auth != null) {
+        if (auth != null && auth.isAuthenticated()) {
             boolean isVendor = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
             if (isVendor) {
-                resolvedVendorId = Long.parseLong((String) auth.getPrincipal());
+                resolvedVendorId = Long.parseLong(String.valueOf(auth.getPrincipal()));
             }
         }
         OrderSearchCondition condition = OrderSearchCondition.of(
