@@ -1,5 +1,7 @@
 package com.greenlink.core.application.receipt.service;
 
+import com.greenlink.core.application.orderhistory.usecase.RecordOrderHistoryUseCase;
+import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
 import com.greenlink.core.application.receipt.dto.ReceiptConfirmationResult;
 import com.greenlink.core.application.receipt.dto.SaveReceiptConfirmationCommand;
 import com.greenlink.core.application.receipt.usecase.GetReceiptConfirmationUseCase;
@@ -19,10 +21,14 @@ public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCas
 
     private final ReceiptConfirmationRepository repository;
     private final PhotoStorage photoStorage;
+    private final RecordOrderHistoryUseCase recordOrderHistoryUseCase;
 
-    public ReceiptConfirmationService(ReceiptConfirmationRepository repository, PhotoStorage photoStorage) {
+    public ReceiptConfirmationService(ReceiptConfirmationRepository repository,
+                                      PhotoStorage photoStorage,
+                                      RecordOrderHistoryUseCase recordOrderHistoryUseCase) {
         this.repository = repository;
         this.photoStorage = photoStorage;
+        this.recordOrderHistoryUseCase = recordOrderHistoryUseCase;
     }
 
     @Override
@@ -42,7 +48,9 @@ public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCas
             ReceiptConfirmation confirmation = ReceiptConfirmation.create(
                     command.orderId(), command.receiverName(), command.receiverRelation(),
                     command.delivered(), command.memo(), command.confirmedAt(), photoUrls);
-            return toResult(repository.save(confirmation));
+            ReceiptConfirmationResult result = toResult(repository.save(confirmation));
+            recordOrderHistoryUseCase.record(command.orderId(), OrderHistoryAction.UPDATED, "인수확인 저장");
+            return result;
         } catch (Exception e) {
             uploadedKeys.forEach(photoStorage::delete);
             throw e;
