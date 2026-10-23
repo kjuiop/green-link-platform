@@ -72,7 +72,6 @@ export default function NewOrderPage() {
     deliveryDate?: string
     address?: string
     amount?: string
-    ordererPhone?: string
   }>({})
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -96,7 +95,6 @@ export default function NewOrderPage() {
     if (!deliveryDate) next.deliveryDate = '배송날짜를 입력해주세요.'
     if (!address.trim()) next.address = '주소를 입력해주세요.'
     if (!amount) next.amount = '발주금액을 입력해주세요.'
-    if (!ordererPhone.trim()) next.ordererPhone = '주문자 휴대폰을 입력해주세요.'
     setErrors(next)
     if (Object.keys(next).length > 0) return
 
@@ -464,14 +462,12 @@ export default function NewOrderPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>주문자 휴대폰 *</Label>
+                  <Label>주문자 휴대폰</Label>
                   <Input
                     placeholder="010-0000-0000"
                     value={ordererPhone}
-                    onChange={(e) => { setOrdererPhone(e.target.value); setErrors((prev) => ({ ...prev, ordererPhone: undefined })) }}
-                    className={cn(errors.ordererPhone && 'border-red-500 focus-visible:ring-red-500')}
+                    onChange={(e) => setOrdererPhone(e.target.value)}
                   />
-                  {errors.ordererPhone && <p className="text-xs text-red-500">{errors.ordererPhone}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

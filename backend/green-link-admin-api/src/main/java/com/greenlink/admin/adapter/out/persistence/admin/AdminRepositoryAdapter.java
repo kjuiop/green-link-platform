@@ -53,7 +53,12 @@ public class AdminRepositoryAdapter implements AdminRepository {
 
     @Override
     public List<Admin> findAllVendors() {
-        return jpaRepository.findByCompanyIdIsNotNull().stream()
+        return queryFactory
+            .selectFrom(adminJpaEntity)
+            .where(adminJpaEntity.companyId.isNotNull())
+            .orderBy(adminJpaEntity.createdAt.desc())
+            .fetch()
+            .stream()
             .map(AdminJpaEntity::toDomain)
             .toList();
     }
