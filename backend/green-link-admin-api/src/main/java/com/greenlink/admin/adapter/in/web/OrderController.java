@@ -5,7 +5,6 @@ import com.greenlink.admin.adapter.in.web.dto.UpdateOrderRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateOrderStatusRequest;
 import com.greenlink.core.application.order.dto.OrderResult;
 import com.greenlink.core.application.orderhistory.dto.OrderHistoryResult;
-import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.application.order.usecase.CreateOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrderUseCase;
@@ -33,7 +32,6 @@ public class OrderController {
     private final UpdateOrderStatusUseCase updateOrderStatusUseCase;
     private final GetOrderHistoryUseCase getOrderHistoryUseCase;
     private final SendDeliveryMmsUseCase sendDeliveryMmsUseCase;
-    private final AdminRepository adminRepository;
 
     public OrderController(GetOrdersUseCase getOrdersUseCase,
                            GetOrderUseCase getOrderUseCase,
@@ -41,8 +39,7 @@ public class OrderController {
                            UpdateOrderUseCase updateOrderUseCase,
                            UpdateOrderStatusUseCase updateOrderStatusUseCase,
                            GetOrderHistoryUseCase getOrderHistoryUseCase,
-                           SendDeliveryMmsUseCase sendDeliveryMmsUseCase,
-                           AdminRepository adminRepository) {
+                           SendDeliveryMmsUseCase sendDeliveryMmsUseCase) {
         this.getOrdersUseCase = getOrdersUseCase;
         this.getOrderUseCase = getOrderUseCase;
         this.createOrderUseCase = createOrderUseCase;
@@ -50,7 +47,6 @@ public class OrderController {
         this.updateOrderStatusUseCase = updateOrderStatusUseCase;
         this.getOrderHistoryUseCase = getOrderHistoryUseCase;
         this.sendDeliveryMmsUseCase = sendDeliveryMmsUseCase;
-        this.adminRepository = adminRepository;
     }
 
     @GetMapping
@@ -68,10 +64,7 @@ public class OrderController {
             boolean isVendor = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
             if (isVendor) {
-                Long adminId = Long.parseLong((String) auth.getPrincipal());
-                resolvedVendorId = adminRepository.findById(adminId)
-                        .map(admin -> admin.getCompanyId())
-                        .orElse(null);
+                resolvedVendorId = Long.parseLong((String) auth.getPrincipal());
             }
         }
         OrderSearchCondition condition = OrderSearchCondition.of(
