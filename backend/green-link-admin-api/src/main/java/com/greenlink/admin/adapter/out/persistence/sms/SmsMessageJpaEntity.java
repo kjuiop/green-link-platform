@@ -32,6 +32,9 @@ public class SmsMessageJpaEntity extends BaseJpaEntity {
     @Column(length = 30)
     private String sentAt;
 
+    @Column(columnDefinition = "TEXT")
+    private String imageUrl;
+
     protected SmsMessageJpaEntity() {}
 
     public static SmsMessageJpaEntity from(SmsMessage message) {
@@ -43,10 +46,11 @@ public class SmsMessageJpaEntity extends BaseJpaEntity {
         e.failReason = message.getFailReason();
         e.aligoMsgId = message.getAligoMsgId();
         e.sentAt = message.getSentAt();
+        e.imageUrl = message.getImageUrl();
         return e;
     }
 
     public SmsMessage toDomain() {
-        return SmsMessage.of(id, orderId, receiver, status, failReason, aligoMsgId, sentAt);
+        return SmsMessage.of(id, orderId, receiver, status, failReason, aligoMsgId, sentAt, imageUrl);
     }
 }

@@ -7,5 +7,6 @@ public record SmsMessageResult(
         String status,
         String failReason,
         String aligoMsgId,
-        String sentAt
+        String sentAt,
+        String imageUrl
 ) {}
