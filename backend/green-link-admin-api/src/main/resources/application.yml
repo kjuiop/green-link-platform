@@ -34,7 +34,7 @@ aws:
 aligo:
   key: ${ALIGO_KEY:}
   userid: ${ALIGO_USERID:}
-  sender: ${ALIGO_SENDER:}
+  sender: ${ALIGO_SENDER:1855-4400}
   url: https://apis.aligo.in/send/
 
 server:
