@@ -4,6 +4,7 @@ import com.greenlink.core.domain.product.model.Product;
 import com.greenlink.core.domain.product.port.ProductRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -35,7 +36,8 @@ public class ProductRepositoryAdapter implements ProductRepository {
 
     @Override
     public List<Product> findAll() {
-        return jpaRepository.findAll().stream().map(ProductJpaEntity::toDomain).toList();
+        return jpaRepository.findAll(Sort.by("name").ascending())
+                .stream().map(ProductJpaEntity::toDomain).toList();
     }
 
     @Override

@@ -80,8 +80,12 @@ public class AdminRepositoryAdapter implements AdminRepository {
         BooleanBuilder where = new BooleanBuilder();
         where.and(adminJpaEntity.companyId.isNotNull());
         if (status != null && !status.isBlank()) {
-            AdminStatus adminStatus = AdminStatus.valueOf(status.toUpperCase());
-            where.and(adminJpaEntity.status.eq(adminStatus));
+            try {
+                AdminStatus adminStatus = AdminStatus.valueOf(status.toUpperCase());
+                where.and(adminJpaEntity.status.eq(adminStatus));
+            } catch (IllegalArgumentException e) {
+                // 알 수 없는 status 값이면 필터 무시
+            }
         }
 
         List<AdminJpaEntity> content = queryFactory
