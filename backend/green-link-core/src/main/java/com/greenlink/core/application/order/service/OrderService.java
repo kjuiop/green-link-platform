@@ -123,21 +123,29 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     @Override
     public List<OrderResult> getOrders(OrderSearchCondition condition) {
         List<Order> orders = orderRepository.search(condition);
-        Map<Long, String> vendorNameMap = buildVendorNameMap();
+        Map<Long, VendorInfo> infoMap = buildVendorInfoMap();
         return orders.stream()
-                .map(o -> toResult(o, vendorNameMap.get(o.getVendorId())))
+                .map(o -> {
+                    VendorInfo v = infoMap.get(o.getVendorId());
+                    return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null);
+                })
                 .toList();
     }
 
     @Override
     public PageResult<OrderResult> getOrdersPaged(OrderSearchCondition condition, Pageable pageable) {
         Page<Order> page = orderRepository.searchPaged(condition, pageable);
-        Map<Long, String> vendorNameMap = buildVendorNameMap();
-        Page<OrderResult> resultPage = page.map(o -> toResult(o, vendorNameMap.get(o.getVendorId())));
+        Map<Long, VendorInfo> infoMap = buildVendorInfoMap();
+        Page<OrderResult> resultPage = page.map(o -> {
+            VendorInfo v = infoMap.get(o.getVendorId());
+            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null);
+        });
         return PageResult.of(resultPage);
     }
 
-    private Map<Long, String> buildVendorNameMap() {
+    private record VendorInfo(String name, String phone) {}
+
+    private Map<Long, VendorInfo> buildVendorInfoMap() {
         List<Admin> vendors = adminRepository.findAllVendors();
         List<Long> companyIds = vendors.stream()
                 .map(Admin::getCompanyId)
@@ -145,22 +153,23 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 .toList();
         Map<Long, Company> companyById = companyRepository.findAllByIdIn(companyIds).stream()
                 .collect(Collectors.toMap(Company::getId, c -> c));
-        Map<Long, String> result = new HashMap<>();
+        Map<Long, VendorInfo> result = new HashMap<>();
         for (Admin a : vendors) {
             if (a.getCompanyId() != null) {
                 Company c = companyById.get(a.getCompanyId());
-                result.put(a.getId(), c != null ? c.getCompanyName() : null);
+                result.put(a.getId(), c != null ? new VendorInfo(c.getCompanyName(), c.getPhone()) : new VendorInfo(null, null));
             }
         }
         return result;
     }
 
-    private OrderResult toResult(Order order, String vendorName) {
+    private OrderResult toResult(Order order, String vendorName, String vendorPhone) {
         return new OrderResult(
                 order.getId(),
                 order.getOrderNumber(),
                 order.getVendorId(),
                 vendorName,
+                vendorPhone,
                 order.getStatus() != null ? order.getStatus().name() : null,
                 order.getProductName(),
                 order.getQuantity(),
@@ -267,7 +276,16 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         if (vendorId == null) return null;
         return adminRepository.findById(vendorId)
                 .map(admin -> companyRepository.findById(admin.getCompanyId())
-                        .map(company -> company.getCompanyName())
+                        .map(Company::getCompanyName)
+                        .orElse(null))
+                .orElse(null);
+    }
+
+    private String resolveVendorPhone(Long vendorId) {
+        if (vendorId == null) return null;
+        return adminRepository.findById(vendorId)
+                .map(admin -> companyRepository.findById(admin.getCompanyId())
+                        .map(Company::getPhone)
                         .orElse(null))
                 .orElse(null);
     }
@@ -278,6 +296,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 order.getOrderNumber(),
                 order.getVendorId(),
                 resolveVendorName(order.getVendorId()),
+                resolveVendorPhone(order.getVendorId()),
                 order.getStatus() != null ? order.getStatus().name() : null,
                 order.getProductName(),
                 order.getQuantity(),

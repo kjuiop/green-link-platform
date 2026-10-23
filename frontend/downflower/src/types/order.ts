@@ -10,6 +10,7 @@ export interface Order {
   orderedAt: string
   vendorId: string
   vendorName: string
+  vendorPhone?: string
   productName: string
   quantity: number
   amount: number

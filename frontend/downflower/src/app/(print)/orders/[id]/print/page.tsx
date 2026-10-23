@@ -72,7 +72,7 @@ export default function PrintOrderPage() {
             <tr>
               <td>수주화원</td>
               <td>{order.vendorName}</td>
-              <td>TEL: —</td>
+              <td>TEL: {order.vendorPhone || '—'}</td>
             </tr>
             <tr>
               <td>상품명</td>
@@ -137,7 +137,7 @@ export default function PrintOrderPage() {
             <tr>
               <td>수주화원</td>
               <td>{order.vendorName}</td>
-              <td>TEL: —</td>
+              <td>TEL: {order.vendorPhone || '—'}</td>
             </tr>
             <tr>
               <td>상품명</td>
