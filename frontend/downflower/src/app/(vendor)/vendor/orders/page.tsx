@@ -7,6 +7,7 @@ import { fetchOrders } from '@/lib/api/orderApi'
 import { Order, OrderStatus } from '@/types/order'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
+import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 
 const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '전체', value: 'ALL' },
@@ -207,6 +208,13 @@ export default function VendorOrdersPage() {
               </div>
               <div className="mt-1.5">
                 <MessageStatusBadge status={order.messageStatus} />
+              </div>
+              <div className="mt-2" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                <ReceiptConfirmButton
+                  orderNumber={order.orderNumber}
+                  senderName={order.ribbonLeft}
+                  recipientName={order.recipientName}
+                />
               </div>
             </Link>
           ))
