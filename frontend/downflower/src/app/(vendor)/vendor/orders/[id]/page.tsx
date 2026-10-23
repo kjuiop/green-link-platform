@@ -12,12 +12,9 @@ import { cn } from '@/lib/utils'
 import { Upload, X } from 'lucide-react'
 import { Order } from '@/types/order'
 
-type PhotoCategory = 'store' | 'site'
-
 interface LocalPhoto {
   id: string
   url: string
-  category: PhotoCategory
   file?: File
   uploaded?: boolean
   remoteId?: number
@@ -33,8 +30,7 @@ export default function VendorOrderDetailPage() {
   const [acting, setActing] = useState(false)
   const [localPhotos, setLocalPhotos] = useState<LocalPhoto[]>([])
 
-  const storeInputRef = useRef<HTMLInputElement>(null)
-  const siteInputRef = useRef<HTMLInputElement>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     Promise.all([fetchOrder(id), fetchPhotos(id).catch(() => [] as PhotoResult[])])
@@ -44,7 +40,6 @@ export default function VendorOrderDetailPage() {
           photos.map((p) => ({
             id: `remote-${p.id}`,
             url: p.photoUrl,
-            category: p.photoType === 'STORE' ? 'store' : 'site',
             uploaded: true,
             remoteId: p.id,
           }))
@@ -58,9 +53,7 @@ export default function VendorOrderDetailPage() {
   if (loadError) return <div className="p-8 text-sm text-red-500">{loadError}</div>
   if (!order) return <div className="p-8 text-sm text-gray-400">주문을 찾을 수 없습니다.</div>
 
-  const storePhotos = localPhotos.filter((p) => p.category === 'store')
-  const sitePhotos = localPhotos.filter((p) => p.category === 'site')
-  const hasSitePhotos = sitePhotos.length > 0
+  const hasPhotos = localPhotos.length > 0
 
   async function handleAccept() {
     setActing(true)
@@ -88,12 +81,11 @@ export default function VendorOrderDetailPage() {
     }
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>, category: PhotoCategory) {
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
     const newPhotos: LocalPhoto[] = files.map((file, i) => ({
-      id: `local-${category}-${Date.now()}-${i}`,
+      id: `local-${Date.now()}-${i}`,
       url: URL.createObjectURL(file),
-      category,
       file,
       uploaded: false,
     }))
@@ -106,32 +98,21 @@ export default function VendorOrderDetailPage() {
   }
 
   async function handleComplete() {
-    if (!hasSitePhotos) return
+    if (!hasPhotos) return
     setActing(true)
     setActionError(null)
     try {
-      const pendingStore = localPhotos.filter((p) => p.category === 'store' && !p.uploaded && p.file)
-      const pendingSite = localPhotos.filter((p) => p.category === 'site' && !p.uploaded && p.file)
+      const pending = localPhotos.filter((p) => !p.uploaded && p.file)
 
-      let uploadedResults: PhotoResult[] = []
-      if (pendingStore.length > 0) {
-        const r = await uploadPhotos(id, pendingStore.map((p) => p.file!), 'STORE')
-        uploadedResults = [...uploadedResults, ...r]
+      if (pending.length > 0) {
+        const uploadedResults = await uploadPhotos(id, pending.map((p) => p.file!), 'SITE')
+        setLocalPhotos((prev) =>
+          prev.map((p, idx) => {
+            const matched = uploadedResults[pending.findIndex((q) => q.id === p.id)]
+            return matched ? { ...p, uploaded: true, remoteId: matched.id } : p
+          })
+        )
       }
-      if (pendingSite.length > 0) {
-        const r = await uploadPhotos(id, pendingSite.map((p) => p.file!), 'SITE')
-        uploadedResults = [...uploadedResults, ...r]
-      }
-
-      setLocalPhotos((prev) =>
-        prev.map((p) => {
-          const matched = uploadedResults.find((r) =>
-            (r.photoType === 'STORE' && p.category === 'store') ||
-            (r.photoType === 'SITE' && p.category === 'site')
-          )
-          return matched ? { ...p, uploaded: true, remoteId: matched.id } : p
-        })
-      )
 
       const updated = await updateOrderStatus(id, 'complete')
       setOrder(updated)
@@ -172,13 +153,13 @@ export default function VendorOrderDetailPage() {
             <Button
               className={cn(
                 'gap-1.5',
-                hasSitePhotos
+                hasPhotos
                   ? 'bg-blue-700 hover:bg-blue-800'
                   : 'cursor-not-allowed bg-gray-300 text-gray-500',
               )}
-              disabled={!hasSitePhotos || acting}
+              disabled={!hasPhotos || acting}
               onClick={handleComplete}
-              title={!hasSitePhotos ? '현장사진을 먼저 업로드해주세요' : undefined}
+              title={!hasPhotos ? '배송사진을 1장 이상 업로드해주세요' : undefined}
             >
               {acting ? '처리 중…' : '배송완료 처리'}
             </Button>
@@ -245,36 +226,53 @@ export default function VendorOrderDetailPage() {
         {(order.status === '수주완료' || order.status === '배송완료') && (
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle className="text-sm">배송사진 업로드</CardTitle>
+              <CardTitle className="text-sm">
+                배송사진
+                {localPhotos.length > 0 && <span className="ml-1.5 text-xs font-normal text-gray-400">({localPhotos.length}장)</span>}
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-5">
-              <PhotoUploadSection
-                label="매장사진"
-                description="매장에서 제품을 촬영한 사진"
-                photos={storePhotos}
-                inputRef={storeInputRef}
-                onAdd={() => storeInputRef.current?.click()}
-                onRemove={removePhoto}
-                onChange={(e) => handleFileChange(e, 'store')}
-                disabled={order.status === '배송완료'}
-              />
-
-              <hr />
-
-              <PhotoUploadSection
-                label="현장사진"
-                description="배송 현장에서 촬영한 사진"
-                photos={sitePhotos}
-                inputRef={siteInputRef}
-                onAdd={() => siteInputRef.current?.click()}
-                onRemove={removePhoto}
-                onChange={(e) => handleFileChange(e, 'site')}
-                disabled={order.status === '배송완료'}
-              />
-
-              {order.status === '수주완료' && !hasSitePhotos && (
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {localPhotos.map((photo) => (
+                  <div key={photo.id} className="relative h-24 w-24">
+                    <img
+                      src={photo.url}
+                      alt="배송사진"
+                      className="h-full w-full rounded border object-cover"
+                    />
+                    {order.status !== '배송완료' && (
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(photo.id)}
+                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {order.status !== '배송완료' && (
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:text-gray-600"
+                  >
+                    <Upload className="h-5 w-5" />
+                    <span className="text-xs">추가</span>
+                  </button>
+                )}
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+              </div>
+              {order.status === '수주완료' && !hasPhotos && (
                 <p className="text-xs text-amber-600">
-                  현장사진을 1장 이상 업로드해야 배송완료 처리 및 문자 발송이 가능합니다.
+                  배송사진을 1장 이상 업로드해야 배송완료 처리가 가능합니다.
                 </p>
               )}
             </CardContent>
@@ -285,67 +283,6 @@ export default function VendorOrderDetailPage() {
   )
 }
 
-interface PhotoUploadSectionProps {
-  label: string
-  description: string
-  photos: LocalPhoto[]
-  inputRef: React.RefObject<HTMLInputElement | null>
-  onAdd: () => void
-  onRemove: (id: string) => void
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  disabled: boolean
-}
-
-function PhotoUploadSection({
-  label, description, photos, inputRef, onAdd, onRemove, onChange, disabled,
-}: PhotoUploadSectionProps) {
-  return (
-    <div className="space-y-2">
-      <div>
-        <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-gray-400">{description}</p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {photos.map((photo) => (
-          <div key={photo.id} className="relative h-24 w-24">
-            <img
-              src={photo.url}
-              alt={label}
-              className="h-full w-full rounded border object-cover"
-            />
-            {!disabled && (
-              <button
-                type="button"
-                onClick={() => onRemove(photo.id)}
-                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
-        ))}
-        {!disabled && (
-          <button
-            type="button"
-            onClick={onAdd}
-            className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:text-gray-600"
-          >
-            <Upload className="h-5 w-5" />
-            <span className="text-xs">추가</span>
-          </button>
-        )}
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={onChange}
-        />
-      </div>
-    </div>
-  )
-}
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
