@@ -9,20 +9,22 @@ public class SmsMessage {
     private String failReason;
     private String aligoMsgId;
     private String sentAt;
+    private String imageUrl;
 
     private SmsMessage() {}
 
-    public static SmsMessage create(Long orderId, String receiver) {
+    public static SmsMessage create(Long orderId, String receiver, String imageUrl) {
         SmsMessage m = new SmsMessage();
         m.orderId = orderId;
         m.receiver = receiver;
         m.status = SmsStatus.FAIL;
+        m.imageUrl = imageUrl;
         return m;
     }
 
     public static SmsMessage of(Long id, Long orderId, String receiver,
                                  SmsStatus status, String failReason,
-                                 String aligoMsgId, String sentAt) {
+                                 String aligoMsgId, String sentAt, String imageUrl) {
         SmsMessage m = new SmsMessage();
         m.id = id;
         m.orderId = orderId;
@@ -31,6 +33,7 @@ public class SmsMessage {
         m.failReason = failReason;
         m.aligoMsgId = aligoMsgId;
         m.sentAt = sentAt;
+        m.imageUrl = imageUrl;
         return m;
     }
 
@@ -53,4 +56,5 @@ public class SmsMessage {
     public String getFailReason() { return failReason; }
     public String getAligoMsgId() { return aligoMsgId; }
     public String getSentAt() { return sentAt; }
+    public String getImageUrl() { return imageUrl; }
 }

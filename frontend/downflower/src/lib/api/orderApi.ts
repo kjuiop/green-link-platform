@@ -318,11 +318,11 @@ export async function uploadReceiptPhotos(orderId: string, files: File[]): Promi
   return res.json()
 }
 
-export async function updateOrderStatus(id: string, action: string): Promise<Order> {
+export async function updateOrderStatus(id: string, action: string, photoUrls?: string[]): Promise<Order> {
   const res = await fetch(`/api/orders/${id}/status`, {
     method: 'PUT',
     headers: authHeaders(),
-    body: JSON.stringify({ action }),
+    body: JSON.stringify({ action, photoUrls: photoUrls ?? [] }),
   })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
