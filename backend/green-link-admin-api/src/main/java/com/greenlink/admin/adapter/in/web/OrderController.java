@@ -75,9 +75,8 @@ public class OrderController {
             if (isVendor) {
                 resolvedVendorId = Long.parseLong(String.valueOf(auth.getPrincipal()));
             } else if (isOrdering) {
-                // ORDERING 역할: JWT detail에서 companyId 강제 적용
-                Object details = ((org.springframework.security.authentication.UsernamePasswordAuthenticationToken) auth).getDetails();
-                if (details instanceof Long cid) {
+                if (auth instanceof org.springframework.security.authentication.UsernamePasswordAuthenticationToken token
+                        && token.getDetails() instanceof Long cid) {
                     resolvedOrderingCompanyId = cid;
                 }
             }
@@ -97,11 +96,10 @@ public class OrderController {
     public ResponseEntity<OrderResult> create(Authentication auth,
                                                @RequestBody @Valid CreateOrderRequest req) {
         Long orderingCompanyId = null;
-        if (auth != null && auth.isAuthenticated()) {
-            Object details = ((org.springframework.security.authentication.UsernamePasswordAuthenticationToken) auth).getDetails();
-            if (details instanceof Long cid) {
-                orderingCompanyId = cid;
-            }
+        if (auth != null && auth.isAuthenticated()
+                && auth instanceof org.springframework.security.authentication.UsernamePasswordAuthenticationToken token
+                && token.getDetails() instanceof Long cid) {
+            orderingCompanyId = cid;
         }
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(createOrderUseCase.createOrder(req.toCommand(orderingCompanyId)));
