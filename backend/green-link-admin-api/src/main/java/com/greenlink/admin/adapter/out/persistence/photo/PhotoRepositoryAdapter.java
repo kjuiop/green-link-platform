@@ -42,6 +42,11 @@ public class PhotoRepositoryAdapter implements PhotoRepository {
     }
 
     @Override
+    public boolean existsByOrderId(Long orderId) {
+        return jpaRepository.existsByOrderId(orderId);
+    }
+
+    @Override
     public boolean existsByOrderIdAndPhotoType(Long orderId, PhotoType photoType) {
         return jpaRepository.existsByOrderIdAndPhotoType(orderId, photoType);
     }
