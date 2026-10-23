@@ -1,5 +1,6 @@
 package com.greenlink.core.application.order.service;
 
+import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.order.dto.CreateOrderCommand;
 import com.greenlink.core.application.order.dto.OrderResult;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
@@ -22,6 +23,8 @@ import com.greenlink.core.domain.photo.model.PhotoType;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -124,6 +127,14 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         return orders.stream()
                 .map(o -> toResult(o, vendorNameMap.get(o.getVendorId())))
                 .toList();
+    }
+
+    @Override
+    public PageResult<OrderResult> getOrdersPaged(OrderSearchCondition condition, Pageable pageable) {
+        Page<Order> page = orderRepository.searchPaged(condition, pageable);
+        Map<Long, String> vendorNameMap = buildVendorNameMap();
+        Page<OrderResult> resultPage = page.map(o -> toResult(o, vendorNameMap.get(o.getVendorId())));
+        return PageResult.of(resultPage);
     }
 
     private Map<Long, String> buildVendorNameMap() {

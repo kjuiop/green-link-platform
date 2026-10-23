@@ -1,8 +1,13 @@
 package com.greenlink.admin.adapter.out.persistence.admin;
 
 import com.greenlink.core.domain.admin.model.Admin;
+import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -68,5 +73,32 @@ public class AdminRepositoryAdapter implements AdminRepository {
         return jpaRepository.findByCompanyId(companyId).stream()
             .map(AdminJpaEntity::toDomain)
             .toList();
+    }
+
+    @Override
+    public Page<Admin> findVendorsPaged(String status, Pageable pageable) {
+        BooleanBuilder where = new BooleanBuilder();
+        where.and(adminJpaEntity.companyId.isNotNull());
+        if (status != null && !status.isBlank()) {
+            AdminStatus adminStatus = AdminStatus.valueOf(status.toUpperCase());
+            where.and(adminJpaEntity.status.eq(adminStatus));
+        }
+
+        List<AdminJpaEntity> content = queryFactory
+                .selectFrom(adminJpaEntity)
+                .where(where)
+                .orderBy(adminJpaEntity.createdAt.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        Long total = queryFactory
+                .select(adminJpaEntity.count())
+                .from(adminJpaEntity)
+                .where(where)
+                .fetchOne();
+
+        return new PageImpl<>(content, pageable, total != null ? total : 0L)
+                .map(AdminJpaEntity::toDomain);
     }
 }

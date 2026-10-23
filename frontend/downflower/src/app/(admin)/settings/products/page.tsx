@@ -1,14 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import { Pagination } from '@/components/ui/Pagination'
 import { Product } from '@/types/product'
+import { PageResult } from '@/types/page'
 import { fetchProducts, createProduct, updateProduct, deleteProduct } from '@/lib/api/productApi'
+
+const PAGE_SIZE = 20
 
 const emptyForm = { name: '', price: '', memo: '' }
 
@@ -18,7 +22,8 @@ function formatPrice(value: string) {
 }
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([])
+  const [result, setResult] = useState<PageResult<Product> | null>(null)
+  const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(true)
   const [pageError, setPageError] = useState('')
 
@@ -31,12 +36,16 @@ export default function ProductsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  useEffect(() => {
-    fetchProducts()
-      .then(setProducts)
+  const load = useCallback((p: number) => {
+    setLoading(true)
+    setPageError('')
+    fetchProducts(p, PAGE_SIZE)
+      .then(setResult)
       .catch((e) => setPageError(e.message))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { load(page) }, [page, load])
 
   const openRegister = () => {
     setEditTarget(null)
@@ -65,20 +74,20 @@ export default function ProductsPage() {
     setModalError('')
     try {
       if (editTarget) {
-        const updated = await updateProduct(editTarget.id, {
+        await updateProduct(editTarget.id, {
           name: form.name.trim(),
           price: rawPrice,
           memo: form.memo.trim() || undefined,
         })
-        setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
       } else {
-        const created = await createProduct({
+        await createProduct({
           name: form.name.trim(),
           price: rawPrice,
           memo: form.memo.trim() || undefined,
         })
-        setProducts((prev) => [created, ...prev])
+        setPage(0)
       }
+      load(editTarget ? page : 0)
       setModalOpen(false)
     } catch (e: unknown) {
       setModalError(e instanceof Error ? e.message : '저장에 실패했습니다.')
@@ -92,14 +101,16 @@ export default function ProductsPage() {
     setDeleting(true)
     try {
       await deleteProduct(deleteTarget.id)
-      setProducts((prev) => prev.filter((p) => p.id !== deleteTarget.id))
       setDeleteTarget(null)
+      load(page)
     } catch (e: unknown) {
       setPageError(e instanceof Error ? e.message : '삭제에 실패했습니다.')
     } finally {
       setDeleting(false)
     }
   }
+
+  const products = result?.content ?? []
 
   return (
     <div className="space-y-4">
@@ -176,6 +187,17 @@ export default function ProductsPage() {
             )}
           </TableBody>
         </Table>
+        {result && result.totalPages > 1 && (
+          <div className="border-t px-4 py-3">
+            <Pagination
+              page={result.page}
+              totalPages={result.totalPages}
+              totalElements={result.totalElements}
+              size={result.size}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </div>
 
       {/* 모바일 카드 */}
@@ -224,6 +246,15 @@ export default function ProductsPage() {
               </div>
             </div>
           ))
+        )}
+        {result && result.totalPages > 1 && (
+          <Pagination
+            page={result.page}
+            totalPages={result.totalPages}
+            totalElements={result.totalElements}
+            size={result.size}
+            onPageChange={setPage}
+          />
         )}
       </div>
 

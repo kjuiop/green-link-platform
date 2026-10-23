@@ -1,5 +1,6 @@
 package com.greenlink.core.application.sms.service;
 
+import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.sms.dto.SmsMessageResult;
 import com.greenlink.core.application.sms.dto.SmsResult;
 import com.greenlink.core.application.sms.usecase.GetSmsMessagesUseCase;
@@ -15,6 +16,7 @@ import com.greenlink.core.domain.sms.port.SmsClient;
 import com.greenlink.core.domain.sms.port.SmsMessageRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -96,6 +98,12 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     @Transactional(readOnly = true)
     public List<SmsMessageResult> getMessagesByOrder(Long orderId) {
         return smsMessageRepository.findAllByOrderId(orderId).stream().map(this::toResult).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResult<SmsMessageResult> getMessagesPaged(Pageable pageable) {
+        return PageResult.of(smsMessageRepository.findAll(pageable).map(this::toResult));
     }
 
     private void sendAndRecord(Long orderId, String receiver, String msg, String imageUrl, String sentAt) {

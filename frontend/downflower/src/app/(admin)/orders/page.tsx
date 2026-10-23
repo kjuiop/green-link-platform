@@ -7,8 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { OrderStatusBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
-import { fetchOrders, OrderSearchParams } from '@/lib/api/orderApi'
+import { fetchOrdersPaged, fetchOrders, OrderSearchParams } from '@/lib/api/orderApi'
 import { OrderStatus, Order } from '@/types/order'
+import { PageResult } from '@/types/page'
+import { Pagination } from '@/components/ui/Pagination'
 import { Plus, Download } from 'lucide-react'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
@@ -83,8 +85,11 @@ function downloadExcel(orders: Order[]) {
   XLSX.writeFile(wb, `발주목록_${dateStr}.xlsx`)
 }
 
+const PAGE_SIZE = 20
+
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([])
+  const [result, setResult] = useState<PageResult<Order> | null>(null)
+  const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -115,11 +120,11 @@ export default function OrdersPage() {
     return params
   }
 
-  function loadOrders(params: OrderSearchParams = {}) {
+  function loadOrders(params: OrderSearchParams = {}, p = 0) {
     setLoading(true)
     setLoadError('')
-    fetchOrders(params)
-      .then(setOrders)
+    fetchOrdersPaged(params, p, PAGE_SIZE)
+      .then(setResult)
       .catch((err) => setLoadError(err instanceof Error ? err.message : '목록을 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
   }
@@ -132,7 +137,8 @@ export default function OrdersPage() {
     setApplied1Value(SERVER_FIELD_MAP[search1Field] ? '' : search1Value)
     setApplied2Field(search2Field)
     setApplied2Value(SERVER_FIELD_MAP[search2Field] ? '' : search2Value)
-    loadOrders(buildServerParams())
+    setPage(0)
+    loadOrders(buildServerParams(), 0)
   }
 
   const handleReset = () => {
@@ -142,9 +148,16 @@ export default function OrdersPage() {
     setAppliedDeletedFilter('정상')
     setApplied1Field('주문번호'); setApplied1Value('')
     setApplied2Field('수주사명'); setApplied2Value('')
-    loadOrders()
+    setPage(0)
+    loadOrders({}, 0)
   }
 
+  const handlePageChange = (p: number) => {
+    setPage(p)
+    loadOrders(buildServerParams(), p)
+  }
+
+  const orders = result?.content ?? []
   const filtered = orders.filter((o) => {
     const matchDeleted =
       appliedDeletedFilter === '전체' ||
@@ -269,7 +282,7 @@ export default function OrdersPage() {
       {/* 검색 결과 요약 + 엑셀 다운로드 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 text-sm">
-          <span className="text-gray-500">건수 <strong className="text-gray-900">{filtered.length}</strong>건</span>
+          <span className="text-gray-500">건수 <strong className="text-gray-900">{result?.totalElements ?? 0}</strong>건</span>
           <span className="text-gray-300">|</span>
           <span className="text-gray-500">발주금액 <strong className="text-gray-900">{filtered.reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
         </div>
@@ -381,6 +394,17 @@ export default function OrdersPage() {
             )}
           </TableBody>
         </Table>
+        {result && result.totalPages > 1 && (
+          <div className="border-t px-4 py-3">
+            <Pagination
+              page={result.page}
+              totalPages={result.totalPages}
+              totalElements={result.totalElements}
+              size={result.size}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )}
       </div>
 
       {/* 모바일 카드 */}
@@ -423,6 +447,15 @@ export default function OrdersPage() {
               </div>
             </Link>
           ))
+        )}
+        {result && result.totalPages > 1 && (
+          <Pagination
+            page={result.page}
+            totalPages={result.totalPages}
+            totalElements={result.totalElements}
+            size={result.size}
+            onPageChange={handlePageChange}
+          />
         )}
       </div>
     </div>

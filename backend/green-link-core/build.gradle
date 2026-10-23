@@ -10,4 +10,7 @@ dependencies {
 
     // BCrypt (Security 풀스택 없이 암호화만)
     implementation 'org.springframework.security:spring-security-crypto'
+
+    // Pagination (Page, Pageable)
+    implementation 'org.springframework.data:spring-data-commons'
 }

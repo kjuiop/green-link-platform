@@ -3,6 +3,7 @@ package com.greenlink.admin.adapter.in.web;
 import com.greenlink.admin.adapter.in.web.dto.CreateVendorRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateVendorRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateVendorStatusRequest;
+import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.vendor.dto.VendorResult;
 import com.greenlink.core.application.vendor.usecase.CreateVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.GetVendorUseCase;
@@ -10,6 +11,7 @@ import com.greenlink.core.application.vendor.usecase.GetVendorsUseCase;
 import com.greenlink.core.application.vendor.usecase.UpdateVendorStatusUseCase;
 import com.greenlink.core.application.vendor.usecase.UpdateVendorUseCase;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,9 +41,11 @@ public class VendorController {
     }
 
     @GetMapping
-    public ResponseEntity<List<VendorResult>> getAll(
-            @RequestParam(required = false) String status) {
-        return ResponseEntity.ok(getVendorsUseCase.getVendors(status));
+    public ResponseEntity<PageResult<VendorResult>> getAll(
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(getVendorsUseCase.getVendorsPaged(status, PageRequest.of(page, size)));
     }
 
     @GetMapping("/{id}")

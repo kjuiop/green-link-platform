@@ -1,4 +1,5 @@
 import { Order, OrderStatus } from '@/types/order'
+import { PageResult } from '@/types/page'
 
 const STATUS_MAP: Record<string, OrderStatus> = {
   PENDING: '발주대기',
@@ -141,7 +142,7 @@ export type OrderSearchParams = {
   deliveryDateTo?: string
 }
 
-export async function fetchOrders(params?: OrderSearchParams): Promise<Order[]> {
+function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: number): string {
   const query = new URLSearchParams()
   if (params?.status) query.set('status', params.status)
   if (params?.vendorId) query.set('vendorId', params.vendorId)
@@ -150,11 +151,25 @@ export async function fetchOrders(params?: OrderSearchParams): Promise<Order[]> 
   if (params?.ordererName) query.set('ordererName', params.ordererName)
   if (params?.deliveryDateFrom) query.set('deliveryDateFrom', params.deliveryDateFrom)
   if (params?.deliveryDateTo) query.set('deliveryDateTo', params.deliveryDateTo)
-  const qs = query.toString()
+  if (page !== undefined) query.set('page', String(page))
+  if (size !== undefined) query.set('size', String(size))
+  return query.toString()
+}
+
+export async function fetchOrders(params?: OrderSearchParams): Promise<Order[]> {
+  const qs = buildOrderQuery(params, 0, 10000)
   const res = await fetch(`/api/orders${qs ? `?${qs}` : ''}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('발주 목록을 불러오지 못했습니다.')
-  const data: BackendOrder[] = await res.json()
-  return data.map(toFrontend)
+  const data: PageResult<BackendOrder> = await res.json()
+  return data.content.map(toFrontend)
+}
+
+export async function fetchOrdersPaged(params?: OrderSearchParams, page = 0, size = 20): Promise<PageResult<Order>> {
+  const qs = buildOrderQuery(params, page, size)
+  const res = await fetch(`/api/orders${qs ? `?${qs}` : ''}`, { headers: authHeaders() })
+  if (!res.ok) throw new Error('발주 목록을 불러오지 못했습니다.')
+  const data: PageResult<BackendOrder> = await res.json()
+  return { ...data, content: data.content.map(toFrontend) }
 }
 
 export async function fetchOrder(id: string): Promise<Order> {

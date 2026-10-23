@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { fetchVendors } from '@/lib/api/vendorApi'
 import { createOrder } from '@/lib/api/orderApi'
-import { fetchProducts } from '@/lib/api/productApi'
+import { fetchAllProducts } from '@/lib/api/productApi'
 import { Vendor } from '@/types/vendor'
 import { Product } from '@/types/product'
 
@@ -83,7 +83,7 @@ export default function NewOrderPage() {
 
   useEffect(() => {
     fetchVendors('ACTIVE').then(setVendors).catch(() => {})
-    fetchProducts().then(setProducts).catch(() => {})
+    fetchAllProducts().then(setProducts).catch(() => {})
   }, [])
 
   const EXTRA_COST_PRESETS = [

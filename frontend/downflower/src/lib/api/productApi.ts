@@ -1,39 +1,79 @@
 import { Product, CreateProductRequest, UpdateProductRequest } from '@/types/product'
+import { PageResult } from '@/types/page'
 
-const MOCK_PRODUCTS: Product[] = [
-  { id: '1', name: '근조화환 3단', price: 150000, memo: '기본형', createdAt: '2026-09-01T00:00:00' },
-  { id: '2', name: '근조화환 2단', price: 120000, createdAt: '2026-09-01T00:00:00' },
-  { id: '3', name: '축하화환 대형', price: 180000, memo: '행사·개업용', createdAt: '2026-09-05T00:00:00' },
-  { id: '4', name: '축하화환 중형', price: 130000, createdAt: '2026-09-05T00:00:00' },
-  { id: '5', name: '졸업·입학 꽃다발', price: 50000, createdAt: '2026-09-10T00:00:00' },
-]
+type BackendProduct = {
+  id: number
+  name: string
+  price: number
+  memo: string | null
+  createdAt: string
+}
 
-let store = [...MOCK_PRODUCTS]
-let nextId = store.length + 1
+function authHeaders(): HeadersInit {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }
+}
 
-export async function fetchProducts(): Promise<Product[]> {
-  return [...store]
+function toFrontend(p: BackendProduct): Product {
+  return {
+    id: String(p.id),
+    name: p.name,
+    price: p.price,
+    memo: p.memo ?? undefined,
+    createdAt: p.createdAt ?? '',
+  }
+}
+
+export async function fetchProducts(page = 0, size = 20): Promise<PageResult<Product>> {
+  const res = await fetch(`/api/products?page=${page}&size=${size}`, { headers: authHeaders() })
+  if (!res.ok) throw new Error('상품 목록을 불러오지 못했습니다.')
+  const data: PageResult<BackendProduct> = await res.json()
+  return { ...data, content: data.content.map(toFrontend) }
+}
+
+export async function fetchAllProducts(): Promise<Product[]> {
+  const res = await fetch('/api/products/all', { headers: authHeaders() })
+  if (!res.ok) throw new Error('상품 목록을 불러오지 못했습니다.')
+  const data: BackendProduct[] = await res.json()
+  return data.map(toFrontend)
 }
 
 export async function createProduct(req: CreateProductRequest): Promise<Product> {
-  const product: Product = {
-    id: String(nextId++),
-    name: req.name,
-    price: req.price,
-    memo: req.memo,
-    createdAt: new Date().toISOString(),
+  const res = await fetch('/api/products', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ name: req.name, price: req.price, memo: req.memo }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message ?? '상품 등록에 실패했습니다.')
   }
-  store = [product, ...store]
-  return product
+  return toFrontend(await res.json())
 }
 
 export async function updateProduct(id: string, req: UpdateProductRequest): Promise<Product> {
-  const idx = store.findIndex((p) => p.id === id)
-  if (idx === -1) throw new Error('상품을 찾을 수 없습니다.')
-  store[idx] = { ...store[idx], ...req }
-  return store[idx]
+  const res = await fetch(`/api/products/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ name: req.name, price: req.price, memo: req.memo }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message ?? '상품 수정에 실패했습니다.')
+  }
+  return toFrontend(await res.json())
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  store = store.filter((p) => p.id !== id)
+  const res = await fetch(`/api/products/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message ?? '상품 삭제에 실패했습니다.')
+  }
 }

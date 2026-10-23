@@ -1,4 +1,5 @@
 import { Vendor } from '@/types/vendor'
+import { PageResult } from '@/types/page'
 
 type BackendVendor = {
   id: number
@@ -53,11 +54,21 @@ function toFrontend(v: BackendVendor): Vendor {
 }
 
 export async function fetchVendors(status?: string): Promise<Vendor[]> {
-  const url = status && status !== 'ALL' ? `/api/vendors?status=${status}` : '/api/vendors'
-  const res = await fetch(url, { headers: authHeaders() })
+  const query = new URLSearchParams({ page: '0', size: '1000' })
+  if (status && status !== 'ALL') query.set('status', status)
+  const res = await fetch(`/api/vendors?${query}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('업체 목록을 불러오지 못했습니다.')
-  const data: BackendVendor[] = await res.json()
-  return data.map(toFrontend)
+  const data: PageResult<BackendVendor> = await res.json()
+  return data.content.map(toFrontend)
+}
+
+export async function fetchVendorsPaged(status?: string, page = 0, size = 20): Promise<PageResult<Vendor>> {
+  const query = new URLSearchParams({ page: String(page), size: String(size) })
+  if (status && status !== 'ALL') query.set('status', status)
+  const res = await fetch(`/api/vendors?${query}`, { headers: authHeaders() })
+  if (!res.ok) throw new Error('업체 목록을 불러오지 못했습니다.')
+  const data: PageResult<BackendVendor> = await res.json()
+  return { ...data, content: data.content.map(toFrontend) }
 }
 
 export async function fetchVendor(id: string): Promise<Vendor> {
