@@ -126,6 +126,15 @@
 - 브랜치 전략: `main` (배포) / `develop` (개발) / `feature/*` (기능)
 - 커밋 메시지: `[#이슈번호] feat:`, `fix:`, `refactor:`, `docs:` prefix 사용
 
+## AWS 자격증명 규칙
+
+- **로컬 개발**: `AWS_PROFILE=green-link` 환경변수로 백엔드 실행 → `AWS_PROFILE=green-link make back`
+  - `application-local.yml`에 AWS access key 직접 기입 금지 (보안 위험)
+  - `S3Config`는 key 없으면 `DefaultCredentialsProvider` fallback — `AWS_PROFILE`로 프로파일 지정
+- **개발/운영 서버(EC2)**: IAM 인스턴스 프로파일로 자동 인증 — access key 불필요
+
+---
+
 ## 브랜치 보호 규칙
 
 **`main`과 `develop`에는 직접 커밋·push 금지.**  
