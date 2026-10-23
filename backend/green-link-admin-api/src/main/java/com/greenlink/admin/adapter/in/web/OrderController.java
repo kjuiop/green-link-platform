@@ -56,6 +56,7 @@ public class OrderController {
             Authentication auth,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long vendorId,
+            @RequestParam(required = false) Long orderingCompanyId,
             @RequestParam(required = false) String orderNumber,
             @RequestParam(required = false) String productName,
             @RequestParam(required = false) String ordererName,
@@ -64,15 +65,26 @@ public class OrderController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Long resolvedVendorId = vendorId;
+        Long resolvedOrderingCompanyId = orderingCompanyId;
+
         if (auth != null && auth.isAuthenticated()) {
             boolean isVendor = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
+            boolean isOrdering = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ORDERING"));
             if (isVendor) {
                 resolvedVendorId = Long.parseLong(String.valueOf(auth.getPrincipal()));
+            } else if (isOrdering) {
+                // ORDERING 역할: JWT detail에서 companyId 강제 적용
+                Object details = ((org.springframework.security.authentication.UsernamePasswordAuthenticationToken) auth).getDetails();
+                if (details instanceof Long cid) {
+                    resolvedOrderingCompanyId = cid;
+                }
             }
         }
         OrderSearchCondition condition = OrderSearchCondition.of(
-                status, resolvedVendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo);
+                status, resolvedVendorId, orderNumber, productName, ordererName,
+                deliveryDateFrom, deliveryDateTo, resolvedOrderingCompanyId);
         return ResponseEntity.ok(getOrdersUseCase.getOrdersPaged(condition, PageRequest.of(page, size)));
     }
 
@@ -82,9 +94,17 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<OrderResult> create(@RequestBody @Valid CreateOrderRequest req) {
+    public ResponseEntity<OrderResult> create(Authentication auth,
+                                               @RequestBody @Valid CreateOrderRequest req) {
+        Long orderingCompanyId = null;
+        if (auth != null && auth.isAuthenticated()) {
+            Object details = ((org.springframework.security.authentication.UsernamePasswordAuthenticationToken) auth).getDetails();
+            if (details instanceof Long cid) {
+                orderingCompanyId = cid;
+            }
+        }
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(createOrderUseCase.createOrder(req.toCommand()));
+                .body(createOrderUseCase.createOrder(req.toCommand(orderingCompanyId)));
     }
 
     @PutMapping("/{id}")

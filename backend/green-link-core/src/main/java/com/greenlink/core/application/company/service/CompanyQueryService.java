@@ -2,10 +2,12 @@ package com.greenlink.core.application.company.service;
 
 import com.greenlink.core.application.company.dto.CompanyInfo;
 import com.greenlink.core.application.company.usecase.CompanyQueryUseCase;
+import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -22,5 +24,12 @@ public class CompanyQueryService implements CompanyQueryUseCase {
     public Optional<CompanyInfo> findByBusinessNo(String businessNo) {
         return companyRepository.findByBusinessNo(businessNo)
             .map(CompanyInfo::from);
+    }
+
+    @Override
+    public List<CompanyInfo> findAllByType(CompanyType type) {
+        return companyRepository.findAllByType(type).stream()
+            .map(CompanyInfo::from)
+            .toList();
     }
 }

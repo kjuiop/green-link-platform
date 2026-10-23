@@ -21,6 +21,15 @@ public class Admin {
         return a;
     }
 
+    public static Admin createOrdering(String loginId, String encodedPassword, Long companyId) {
+        Admin a = new Admin();
+        a.loginId = loginId;
+        a.password = encodedPassword;
+        a.companyId = companyId;
+        a.status = AdminStatus.ACTIVE;
+        return a;
+    }
+
     public static Admin createVendor(String loginId, String encodedPassword,
                                       String name, String phone, Long companyId) {
         Admin a = new Admin();

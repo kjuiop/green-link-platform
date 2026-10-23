@@ -5,6 +5,7 @@ public class Order {
     private Long id;
     private String orderNumber;
     private Long vendorId;
+    private Long orderingCompanyId;
     private OrderStatus status;
     private String productName;
     private int quantity;
@@ -41,6 +42,7 @@ public class Order {
 
     public static Order create(
             Long vendorId,
+            Long orderingCompanyId,
             String orderNumber,
             String productName,
             int quantity,
@@ -73,6 +75,7 @@ public class Order {
     ) {
         Order o = new Order();
         o.vendorId = vendorId;
+        o.orderingCompanyId = orderingCompanyId;
         o.orderNumber = orderNumber;
         o.status = OrderStatus.PENDING;
         o.productName = productName;
@@ -110,6 +113,7 @@ public class Order {
             Long id,
             String orderNumber,
             Long vendorId,
+            Long orderingCompanyId,
             OrderStatus status,
             String productName,
             int quantity,
@@ -146,6 +150,7 @@ public class Order {
         o.id = id;
         o.orderNumber = orderNumber;
         o.vendorId = vendorId;
+        o.orderingCompanyId = orderingCompanyId;
         o.status = status;
         o.productName = productName;
         o.quantity = quantity;
@@ -277,6 +282,7 @@ public class Order {
     public Long getId() { return id; }
     public String getOrderNumber() { return orderNumber; }
     public Long getVendorId() { return vendorId; }
+    public Long getOrderingCompanyId() { return orderingCompanyId; }
     public OrderStatus getStatus() { return status; }
     public String getProductName() { return productName; }
     public int getQuantity() { return quantity; }
