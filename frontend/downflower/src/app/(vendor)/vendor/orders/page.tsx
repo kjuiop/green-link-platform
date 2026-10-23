@@ -211,6 +211,7 @@ export default function VendorOrdersPage() {
               </div>
               <div className="mt-2" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
                 <ReceiptConfirmButton
+                  orderId={order.id}
                   orderNumber={order.orderNumber}
                   senderName={order.ribbonLeft}
                   recipientName={order.recipientName}

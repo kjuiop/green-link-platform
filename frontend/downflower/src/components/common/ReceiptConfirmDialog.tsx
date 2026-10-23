@@ -5,27 +5,49 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ClipboardCheck, Upload, X, Images, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-interface SavedData {
-  receiverName: string
-  photos: { id: string; url: string }[]
-}
+import { fetchReceiptConfirmation, saveReceiptConfirmation, ReceiptConfirmationResult } from '@/lib/api/orderApi'
 
 interface Props {
+  orderId: string
   orderNumber: string
   senderName?: string
   recipientName?: string
-  initialSaved?: SavedData
 }
 
-
-export function ReceiptConfirmButton({ orderNumber, senderName, recipientName, initialSaved }: Props) {
+export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipientName }: Props) {
   const [formOpen, setFormOpen] = useState(false)
   const [viewerOpen, setViewerOpen] = useState(false)
-  const [saved, setSaved] = useState<SavedData | null>(initialSaved ?? null)
+  // undefined = 아직 fetch 안함, null = fetch 완료 but 데이터 없음, object = 데이터 있음
+  const [saved, setSaved] = useState<ReceiptConfirmationResult | null | undefined>(undefined)
+  const [fetching, setFetching] = useState(false)
 
-  function handleSave(data: SavedData) {
-    setSaved(data)
+  async function handleOpen(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (fetching) return
+
+    if (saved !== undefined) {
+      if (saved) setViewerOpen(true)
+      else setFormOpen(true)
+      return
+    }
+
+    setFetching(true)
+    try {
+      const data = await fetchReceiptConfirmation(orderId)
+      setSaved(data)
+      if (data) setViewerOpen(true)
+      else setFormOpen(true)
+    } catch {
+      setSaved(null)
+      setFormOpen(true)
+    } finally {
+      setFetching(false)
+    }
+  }
+
+  function handleSave(result: ReceiptConfirmationResult) {
+    setSaved(result)
     setFormOpen(false)
   }
 
@@ -33,7 +55,7 @@ export function ReceiptConfirmButton({ orderNumber, senderName, recipientName, i
     return (
       <div className="space-y-1">
         <div className="text-sm font-medium">{saved.receiverName || '-'}</div>
-        {saved.photos.length > 0 && (
+        {saved.photoUrls.length > 0 && (
           <>
             <button
               type="button"
@@ -47,7 +69,7 @@ export function ReceiptConfirmButton({ orderNumber, senderName, recipientName, i
             <PhotoViewerDialog
               open={viewerOpen}
               onClose={() => setViewerOpen(false)}
-              photos={saved.photos}
+              photos={saved.photoUrls.map((url, i) => ({ id: String(i), url }))}
               orderNumber={orderNumber}
             />
           </>
@@ -60,17 +82,19 @@ export function ReceiptConfirmButton({ orderNumber, senderName, recipientName, i
     <>
       <button
         type="button"
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFormOpen(true) }}
-        className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:bg-gray-50"
+        onClick={handleOpen}
+        disabled={fetching}
+        className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:bg-gray-50 disabled:cursor-wait"
       >
         <ClipboardCheck className="h-3 w-3" />
-        인수확인
+        {fetching ? '확인 중…' : '인수확인'}
       </button>
 
       <ReceiptFormDialog
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSave={handleSave}
+        orderId={orderId}
         orderNumber={orderNumber}
         senderName={senderName}
         recipientName={recipientName}
@@ -84,29 +108,32 @@ export function ReceiptConfirmButton({ orderNumber, senderName, recipientName, i
 interface FormDialogProps {
   open: boolean
   onClose: () => void
-  onSave: (data: SavedData) => void
+  onSave: (result: ReceiptConfirmationResult) => void
+  orderId: string
   orderNumber: string
   senderName?: string
   recipientName?: string
 }
 
-function ReceiptFormDialog({ open, onClose, onSave, orderNumber, senderName, recipientName }: FormDialogProps) {
-  const [photos, setPhotos] = useState<{ id: string; url: string }[]>([])
+function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, senderName, recipientName }: FormDialogProps) {
+  const [photoFiles, setPhotoFiles] = useState<{ id: string; file: File; url: string }[]>([])
   const [receiverName, setReceiverName] = useState('')
   const [receiverRelation, setReceiverRelation] = useState('')
   const [delivered, setDelivered] = useState(false)
   const [memo, setMemo] = useState('')
   const [confirmTime, setConfirmTime] = useState('')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (open) {
-      photos.forEach((p) => URL.revokeObjectURL(p.url))
-      setPhotos([])
+      photoFiles.forEach((p) => URL.revokeObjectURL(p.url))
+      setPhotoFiles([])
       setReceiverName('')
       setReceiverRelation('')
       setDelivered(false)
       setMemo('')
+      setError(null)
       const now = new Date()
       setConfirmTime(
         `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ` +
@@ -120,19 +147,29 @@ function ReceiptFormDialog({ open, onClose, onSave, orderNumber, senderName, rec
     const files = Array.from(e.target.files ?? [])
     const next = files.map((f, i) => ({
       id: `rc-${Date.now()}-${i}`,
+      file: f,
       url: URL.createObjectURL(f),
     }))
-    setPhotos((prev) => [...prev, ...next])
+    setPhotoFiles((prev) => [...prev, ...next])
     e.target.value = ''
   }
 
-  function handleSave() {
+  async function handleSave() {
     setSaving(true)
-    // TODO: 인수확인 저장 API 호출
-    setTimeout(() => {
+    setError(null)
+    try {
+      const result = await saveReceiptConfirmation(
+        orderId,
+        { receiverName, receiverRelation, delivered, memo, confirmedAt: confirmTime },
+        photoFiles.map((p) => p.file)
+      )
+      photoFiles.forEach((p) => URL.revokeObjectURL(p.url))
+      onSave(result)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '저장에 실패했습니다.')
+    } finally {
       setSaving(false)
-      onSave({ receiverName, photos })
-    }, 800)
+    }
   }
 
   return (
@@ -169,26 +206,30 @@ function ReceiptFormDialog({ open, onClose, onSave, orderNumber, senderName, rec
               <td className="px-3 py-2.5 align-top text-gray-500">배송사진</td>
               <td colSpan={3} className="px-3 py-2.5">
                 <div className="flex flex-wrap gap-2">
-                  {photos.map((p) => (
+                  {photoFiles.map((p) => (
                     <div key={p.id} className="relative h-16 w-16">
                       <img src={p.url} alt="배송사진" className="h-full w-full rounded border object-cover" />
                       <button
                         type="button"
-                        onClick={() => { URL.revokeObjectURL(p.url); setPhotos((prev) => prev.filter((x) => x.id !== p.id)) }}
+                        onClick={() => { URL.revokeObjectURL(p.url); setPhotoFiles((prev) => prev.filter((x) => x.id !== p.id)) }}
                         className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
                       >
                         <X className="h-2.5 w-2.5" />
                       </button>
                     </div>
                   ))}
-                  <label
-                    htmlFor={`receipt-photo-${orderNumber}`}
-                    className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
-                  >
+                  {/* overlay 방식: input이 버튼 위를 덮어 직접 클릭됨 */}
+                  <div className="relative flex h-16 w-16 flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      onChange={handleFileChange}
+                    />
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
-                  </label>
-                  <input id={`receipt-photo-${orderNumber}`} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+                  </div>
                 </div>
               </td>
             </tr>
@@ -250,6 +291,10 @@ function ReceiptFormDialog({ open, onClose, onSave, orderNumber, senderName, rec
             </tr>
           </tbody>
         </table>
+
+        {error && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
+        )}
 
         <Button className="w-full bg-green-700 hover:bg-green-800" disabled={saving} onClick={handleSave}>
           {saving ? '저장 중…' : '저장하기'}

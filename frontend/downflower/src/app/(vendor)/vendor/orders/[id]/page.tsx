@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { VendorOrderStatusBadge } from '@/components/common/StatusBadge'
 import { fetchOrder, updateOrderStatus, uploadPhotos, PhotoResult } from '@/lib/api/orderApi'
 import { PrintButton } from '@/components/common/PrintButton'
+import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { cn } from '@/lib/utils'
 import { Upload, X } from 'lucide-react'
 import { Order } from '@/types/order'
@@ -215,6 +216,20 @@ export default function VendorOrderDetailPage() {
             </CardContent>
           </Card>
         )}
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm">인수확인</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ReceiptConfirmButton
+              orderId={order.id}
+              orderNumber={order.orderNumber}
+              senderName={order.ribbonLeft}
+              recipientName={order.recipientName}
+            />
+          </CardContent>
+        </Card>
 
         {(order.status === '수주완료' || order.status === '배송완료') && (
           <Card className="lg:col-span-2">
