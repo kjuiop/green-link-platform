@@ -17,7 +17,12 @@ public class ReceiptConfirmationRepositoryAdapter implements ReceiptConfirmation
 
     @Override
     public ReceiptConfirmation save(ReceiptConfirmation confirmation) {
-        ReceiptConfirmationJpaEntity entity = ReceiptConfirmationJpaEntity.from(confirmation);
+        ReceiptConfirmationJpaEntity entity = jpaRepository.findByOrderId(confirmation.getOrderId())
+                .orElseGet(() -> ReceiptConfirmationJpaEntity.from(confirmation));
+
+        entity.update(confirmation.getReceiverName(), confirmation.getReceiverRelation(),
+                confirmation.isDelivered(), confirmation.getMemo(), confirmation.getConfirmedAt());
+        entity.clearPhotos();
         for (String url : confirmation.getPhotoUrls()) {
             entity.addPhoto(url, "");
         }

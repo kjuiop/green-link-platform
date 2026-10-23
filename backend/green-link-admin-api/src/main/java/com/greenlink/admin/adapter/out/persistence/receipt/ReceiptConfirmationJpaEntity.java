@@ -50,6 +50,19 @@ public class ReceiptConfirmationJpaEntity extends BaseJpaEntity {
         return e;
     }
 
+    public void update(String receiverName, String receiverRelation,
+                       boolean delivered, String memo, LocalDateTime confirmedAt) {
+        this.receiverName = receiverName;
+        this.receiverRelation = receiverRelation;
+        this.delivered = delivered;
+        this.memo = memo;
+        this.confirmedAt = confirmedAt;
+    }
+
+    public void clearPhotos() {
+        photos.clear();
+    }
+
     public void addPhoto(String photoUrl, String s3Key) {
         ReceiptPhotoJpaEntity photo = new ReceiptPhotoJpaEntity(this, photoUrl, s3Key);
         photos.add(photo);

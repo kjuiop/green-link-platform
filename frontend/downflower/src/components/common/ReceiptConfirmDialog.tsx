@@ -17,22 +17,39 @@ interface Props {
 export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipientName }: Props) {
   const [formOpen, setFormOpen] = useState(false)
   const [viewerOpen, setViewerOpen] = useState(false)
-  const [saved, setSaved] = useState<ReceiptConfirmationResult | null>(null)
-  const [loading, setLoading] = useState(true)
+  // undefined = 아직 fetch 안함, null = fetch 완료 but 데이터 없음, object = 데이터 있음
+  const [saved, setSaved] = useState<ReceiptConfirmationResult | null | undefined>(undefined)
+  const [fetching, setFetching] = useState(false)
 
-  useEffect(() => {
-    fetchReceiptConfirmation(orderId)
-      .then(setSaved)
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [orderId])
+  async function handleOpen(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (fetching) return
+
+    if (saved !== undefined) {
+      if (saved) setViewerOpen(true)
+      else setFormOpen(true)
+      return
+    }
+
+    setFetching(true)
+    try {
+      const data = await fetchReceiptConfirmation(orderId)
+      setSaved(data)
+      if (data) setViewerOpen(true)
+      else setFormOpen(true)
+    } catch {
+      setSaved(null)
+      setFormOpen(true)
+    } finally {
+      setFetching(false)
+    }
+  }
 
   function handleSave(result: ReceiptConfirmationResult) {
     setSaved(result)
     setFormOpen(false)
   }
-
-  if (loading) return null
 
   if (saved) {
     return (
@@ -65,11 +82,12 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
     <>
       <button
         type="button"
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFormOpen(true) }}
-        className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:bg-gray-50"
+        onClick={handleOpen}
+        disabled={fetching}
+        className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:bg-gray-50 disabled:cursor-wait"
       >
         <ClipboardCheck className="h-3 w-3" />
-        인수확인
+        {fetching ? '확인 중…' : '인수확인'}
       </button>
 
       <ReceiptFormDialog
