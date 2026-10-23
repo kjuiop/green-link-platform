@@ -23,7 +23,7 @@ public class SmsMessageJpaEntity extends BaseJpaEntity {
     @Column(nullable = false, length = 10)
     private SmsStatus status;
 
-    @Column(length = 200)
+    @Column(length = 500)
     private String failReason;
 
     @Column(length = 50)
