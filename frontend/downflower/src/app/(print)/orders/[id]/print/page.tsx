@@ -67,7 +67,7 @@ export default function PrintOrderPage() {
             <tr>
               <td>발주화원</td>
               <td>다운플라워</td>
-              <td>TEL: —</td>
+              <td>TEL: 1855-4400</td>
             </tr>
             <tr>
               <td>수주화원</td>
@@ -132,7 +132,7 @@ export default function PrintOrderPage() {
             <tr>
               <td>발주화원</td>
               <td>다운플라워</td>
-              <td>TEL: —</td>
+              <td>TEL: 1855-4400</td>
             </tr>
             <tr>
               <td>수주화원</td>
