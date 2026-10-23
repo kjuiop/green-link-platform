@@ -187,8 +187,8 @@ export default function OrderDetailPage() {
           {/* 수주사·관리자: 수주승인·수주거절 */}
           {order.status === '발주대기' && !isEditing && !confirmDelete && (
             <>
-              <Button variant="outline" className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50" onClick={handleReject} disabled={saving}>수주거절</Button>
               <Button className="bg-green-700 hover:bg-green-800" onClick={handleAccept} disabled={saving}>수주승인</Button>
+              <Button variant="outline" className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50" onClick={handleReject} disabled={saving}>수주거절</Button>
             </>
           )}
           {/* 배송완료 처리 — 수주사·관리자 공통 */}
