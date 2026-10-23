@@ -11,14 +11,14 @@ const navItems = [
   { label: '수주 목록', href: '/vendor/orders', icon: List },
 ]
 
-function SidebarNav({ onNavClick }: { onNavClick?: () => void }) {
+function SidebarNav({ onNavClick, companyName }: { onNavClick?: () => void; companyName?: string }) {
   const pathname = usePathname()
 
   return (
     <>
       <div className="flex h-14 items-center border-b px-4">
         <span className="text-sm font-bold text-green-700">🌿 다운플라워</span>
-        <span className="ml-2 text-xs text-gray-400">수주업체</span>
+        {companyName && <span className="ml-2 truncate text-xs text-gray-500">{companyName}</span>}
       </div>
 
       <nav className="flex-1 overflow-y-auto py-2">
@@ -51,20 +51,21 @@ function SidebarNav({ onNavClick }: { onNavClick?: () => void }) {
 interface VendorSidebarProps {
   mobileOpen?: boolean
   onMobileClose?: () => void
+  companyName?: string
 }
 
-export function VendorSidebar({ mobileOpen, onMobileClose }: VendorSidebarProps) {
+export function VendorSidebar({ mobileOpen, onMobileClose, companyName }: VendorSidebarProps) {
   return (
     <>
       {/* 데스크톱 사이드바 */}
       <aside className="hidden h-screen w-56 flex-col border-r bg-white md:flex">
-        <SidebarNav />
+        <SidebarNav companyName={companyName} />
       </aside>
 
       {/* 모바일 드로어 */}
       <Sheet open={mobileOpen} onOpenChange={(open) => { if (!open) onMobileClose?.() }}>
         <SheetContent side="left" className="w-56 p-0" showCloseButton={false}>
-          <SidebarNav onNavClick={onMobileClose} />
+          <SidebarNav onNavClick={onMobileClose} companyName={companyName} />
         </SheetContent>
       </Sheet>
     </>

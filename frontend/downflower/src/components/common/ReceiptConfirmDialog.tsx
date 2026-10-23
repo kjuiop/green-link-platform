@@ -19,31 +19,21 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
   const [viewerOpen, setViewerOpen] = useState(false)
   // undefined = 아직 fetch 안함, null = fetch 완료 but 데이터 없음, object = 데이터 있음
   const [saved, setSaved] = useState<ReceiptConfirmationResult | null | undefined>(undefined)
-  const [fetching, setFetching] = useState(false)
+  const [fetching, setFetching] = useState(true)
+
+  useEffect(() => {
+    fetchReceiptConfirmation(orderId)
+      .then(data => setSaved(data))
+      .catch(() => setSaved(null))
+      .finally(() => setFetching(false))
+  }, [orderId])
 
   async function handleOpen(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
     if (fetching) return
-
-    if (saved !== undefined) {
-      if (saved) setViewerOpen(true)
-      else setFormOpen(true)
-      return
-    }
-
-    setFetching(true)
-    try {
-      const data = await fetchReceiptConfirmation(orderId)
-      setSaved(data)
-      if (data) setViewerOpen(true)
-      else setFormOpen(true)
-    } catch {
-      setSaved(null)
-      setFormOpen(true)
-    } finally {
-      setFetching(false)
-    }
+    if (saved) setViewerOpen(true)
+    else setFormOpen(true)
   }
 
   function handleSave(result: ReceiptConfirmationResult) {

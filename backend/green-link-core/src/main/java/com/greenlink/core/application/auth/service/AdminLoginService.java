@@ -6,6 +6,7 @@ import com.greenlink.core.application.auth.port.TokenProvider;
 import com.greenlink.core.application.auth.usecase.AdminLoginUseCase;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
+import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,13 +20,16 @@ import java.util.List;
 public class AdminLoginService implements AdminLoginUseCase {
 
     private final AdminRepository adminRepository;
+    private final CompanyRepository companyRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenProvider tokenProvider;
 
     public AdminLoginService(AdminRepository adminRepository,
+                              CompanyRepository companyRepository,
                               PasswordEncoder passwordEncoder,
                               TokenProvider tokenProvider) {
         this.adminRepository = adminRepository;
+        this.companyRepository = companyRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
     }
@@ -48,6 +52,12 @@ public class AdminLoginService implements AdminLoginUseCase {
 
         String role = admin.isVendor() ? "VENDOR" : "SUPER_ADMIN";
         String token = tokenProvider.generateToken(admin.getId(), List.of(role));
-        return new AdminLoginResult(token, admin.getName());
+
+        Long vendorId = admin.getCompanyId();
+        String companyName = vendorId != null
+            ? companyRepository.findById(vendorId).map(c -> c.getCompanyName()).orElse(null)
+            : null;
+
+        return new AdminLoginResult(token, admin.getName(), vendorId, companyName);
     }
 }
