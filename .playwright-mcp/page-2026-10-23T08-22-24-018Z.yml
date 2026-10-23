@@ -1,0 +1,67 @@
+- generic [ref=f6e1]:
+  - generic [aria-hidden] [ref=f6e2]:
+    - complementary [ref=f6e3]:
+      - generic [ref=f6e4]:
+        - generic [ref=f6e5]: 🌿 다운플라워
+        - generic [ref=f6e49]: 테스트담당자
+      - navigation [ref=f6e6]:
+        - link [ref=f6e74] [cursor=pointer]:
+          - /url: /dashboard
+          - text: 대시보드
+        - link [ref=f6e75] [cursor=pointer]:
+          - /url: /orders/new
+          - text: 신규 발주
+        - link [ref=f6e76] [cursor=pointer]:
+          - /url: /orders
+          - text: 발주 목록
+        - link [ref=f6e77] [cursor=pointer]:
+          - /url: /orders/received
+          - text: 수주 목록
+        - button [ref=f6e78]: 설정
+    - generic [ref=f6e7]:
+      - banner [ref=f6e8]:
+        - generic [ref=f6e9]:
+          - generic [ref=f6e10]:
+            - generic [ref=f6e11]: TEL
+            - generic [ref=f6e12]: 1855-4400
+          - generic [ref=f6e13]:
+            - generic [ref=f6e14]: PHONE
+            - generic [ref=f6e15]: 010-7551-1922
+        - button [ref=f6e79]:
+          - generic [ref=f6e17]: 관리자
+      - main [ref=f6e21]:
+        - generic [ref=f6e23]:
+          - generic [ref=f6e24]:
+            - heading [level=1] [ref=f6e80]: 상품관리
+            - button [ref=f6e81]: 상품 등록
+          - table [ref=f6e29]:
+            - rowgroup [ref=f6e30]:
+              - row [ref=f6e82]:
+                - columnheader [ref=f6e83]: 상품명
+                - columnheader [ref=f6e84]: 기본가격
+                - columnheader [ref=f6e85]: 메모
+                - columnheader [ref=f6e86]: 등록일
+                - columnheader [ref=f6e87]: 관리
+            - rowgroup [ref=f6e37]:
+              - row [ref=f6e88]:
+                - cell [ref=f6e89]: 등록된 상품이 없습니다.
+  - button "Open Next.js Dev Tools" [ref=f6e45] [cursor=pointer]
+  - alert [ref=f6e73]
+  - dialog [ref=f6e93]:
+    - heading "상품 등록" [level=2] [ref=f6e95]
+    - generic [ref=f6e96]:
+      - generic [ref=f6e97]:
+        - generic [ref=f6e98]: 상품명 *
+        - 'textbox "예: 근조화환 3단" [active] [ref=f6e99]'
+      - generic [ref=f6e100]:
+        - generic [ref=f6e101]: 기본가격 *
+        - generic [ref=f6e102]:
+          - textbox "0" [ref=f6e103]
+          - generic [ref=f6e104]: 원
+      - generic [ref=f6e105]:
+        - generic [ref=f6e106]: 메모
+        - textbox "용도, 특이사항 등 (선택)" [ref=f6e107]
+    - generic [ref=f6e108]:
+      - button "취소" [ref=f6e109]
+      - button "등록" [ref=f6e110]
+    - button "Close" [ref=f6e111]

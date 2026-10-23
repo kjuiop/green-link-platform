@@ -6,6 +6,7 @@ import com.greenlink.core.application.auth.port.TokenProvider;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
+import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +30,7 @@ import static org.mockito.BDDMockito.given;
 class AdminLoginServiceTest {
 
     @Mock AdminRepository adminRepository;
+    @Mock CompanyRepository companyRepository;
     @Mock PasswordEncoder passwordEncoder;
     @Mock TokenProvider tokenProvider;
 
@@ -36,7 +38,7 @@ class AdminLoginServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AdminLoginService(adminRepository, passwordEncoder, tokenProvider);
+        service = new AdminLoginService(adminRepository, companyRepository, passwordEncoder, tokenProvider);
     }
 
     private Admin activeAdmin() {

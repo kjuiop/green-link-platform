@@ -305,6 +305,19 @@ export async function saveReceiptConfirmation(
   return res.json()
 }
 
+export async function uploadReceiptPhotos(orderId: string, files: File[]): Promise<ReceiptConfirmationResult> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
+  const formData = new FormData()
+  files.forEach((f) => formData.append('files', f))
+  const res = await fetch(`/api/orders/${orderId}/receipt/photos`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  })
+  if (!res.ok) throw new Error('배송사진 업로드에 실패했습니다.')
+  return res.json()
+}
+
 export async function updateOrderStatus(id: string, action: string): Promise<Order> {
   const res = await fetch(`/api/orders/${id}/status`, {
     method: 'PUT',

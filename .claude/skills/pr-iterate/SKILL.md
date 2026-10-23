@@ -8,12 +8,11 @@ description: PR 리뷰 → 코드 반영을 LGTM이 나올 때까지 자동으�
 ## 전체 흐름
 
 ```
-[REVIEW] → 새 이슈 있음 → [APPLY] → [REVIEW] → 새 이슈 있음 → [APPLY] → ... → LGTM ✅
+[REVIEW] → 새 이슈 있음 → [APPLY] → [REVIEW] → ... → LGTM ✅ → [QA] → PASS → [SQUASH MERGE]
 ```
 
 각 이터레이션은 REVIEW → APPLY 한 쌍입니다.  
-**REVIEW 단계에서 `pr-review`가 LGTM 코멘트를 PR에 등록하면 루프를 종료합니다.**  
-LGTM 판단과 PR 코멘트 등록은 `pr-review` 스킬이 담당합니다. `pr-iterate`는 결과만 감지해 루프를 멈춥니다.
+**REVIEW 단계에서 LGTM 코멘트를 PR에 등록하면 루프를 종료하고 QA → Squash Merge로 진행합니다.**
 
 최대 5 이터레이션까지 시도하고, 그래도 끝나지 않으면 사용자에게 알립니다.
 
@@ -120,11 +119,34 @@ PHASE 1 (REVIEW) 로 돌아갑니다.
 
 ---
 
-## PHASE 3 — 종료
+## PHASE 3 — QA (Playwright 브라우저 검증)
 
-LGTM 확인. 최종 요약을 출력합니다:
-- 총 이터레이션 횟수
-- 이터레이션별 발견된 이슈 수 / 반영된 커밋 SHA
+LGTM 확인 후 `pr-qa` 스킬을 실행해 실제 브라우저에서 동작을 검증합니다.
+
+- **QA PASS** → PHASE 4 (Squash Merge) 로 이동
+- **QA FAIL** → 실패 항목을 사용자에게 보고하고 중단 (자동 머지 하지 않음)
+
+---
+
+## PHASE 4 — SQUASH MERGE
+
+QA 통과 후 squash merge를 수행합니다.
+
+```bash
+gh pr merge {pr_number} --squash --subject "[#이슈번호] {PR 제목}" --delete-branch
+```
+
+- `--squash`: 커밋을 하나로 합쳐 develop 브랜치에 머지
+- `--delete-branch`: feature 브랜치 자동 삭제
+- merge 후 로컬 브랜치도 develop으로 전환:
+  ```bash
+  git checkout develop && git pull origin develop
+  ```
+
+머지 완료 후 최종 요약을 출력합니다:
+- 총 이터레이션 횟수 / 이터레이션별 발견 이슈 수
+- QA 결과 요약
+- 머지된 커밋 SHA
 
 ---
 
@@ -132,5 +154,6 @@ LGTM 확인. 최종 요약을 출력합니다:
 
 - 열린 PR이 없으면 안내 후 중단
 - **무한 루프 방지**: 5 이터레이션을 초과하면 중단하고 남은 이슈 목록을 사용자에게 보고합니다
-- 사용자 확인 없이 코드 수정·커밋·푸시를 자동으로 진행합니다 — 이 스킬을 호출한 것 자체가 자동 실행 승인입니다
+- 사용자 확인 없이 코드 수정·커밋·푸시·머지를 자동으로 진행합니다 — 이 스킬을 호출한 것 자체가 자동 실행 승인입니다
 - `gh pr comment`는 사용하지 않습니다 — 답댓글은 반드시 `in_reply_to`로 해당 스레드에 등록합니다
+- **QA FAIL 시 절대 자동 머지하지 않습니다** — 실패 항목을 보고하고 사용자 판단에 맡깁니다
