@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { VendorOrderStatusBadge } from '@/components/common/StatusBadge'
-import { fetchOrder, updateOrderStatus, uploadPhotos, PhotoResult } from '@/lib/api/orderApi'
+import { fetchOrder, fetchPhotos, updateOrderStatus, uploadPhotos, PhotoResult } from '@/lib/api/orderApi'
 import { PrintButton } from '@/components/common/PrintButton'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { cn } from '@/lib/utils'
@@ -37,8 +37,19 @@ export default function VendorOrderDetailPage() {
   const siteInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    fetchOrder(id)
-      .then(setOrder)
+    Promise.all([fetchOrder(id), fetchPhotos(id).catch(() => [] as PhotoResult[])])
+      .then(([orderData, photos]) => {
+        setOrder(orderData)
+        setLocalPhotos(
+          photos.map((p) => ({
+            id: `remote-${p.id}`,
+            url: p.photoUrl,
+            category: p.photoType === 'STORE' ? 'store' : 'site',
+            uploaded: true,
+            remoteId: p.id,
+          }))
+        )
+      })
       .catch(() => setLoadError('주문 정보를 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
   }, [id])
