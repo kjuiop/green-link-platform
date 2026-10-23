@@ -8,7 +8,7 @@ import { VendorOrderStatusBadge } from '@/components/common/StatusBadge'
 import { fetchOrder, updateOrderStatus, fetchReceiptConfirmation, uploadReceiptPhotos, ReceiptConfirmationResult } from '@/lib/api/orderApi'
 import { PrintButton } from '@/components/common/PrintButton'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
-import { Upload } from 'lucide-react'
+import { Upload, Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Order } from '@/types/order'
 
@@ -21,6 +21,9 @@ export default function VendorOrderDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [acting, setActing] = useState(false)
   const [receiptConfirmation, setReceiptConfirmation] = useState<ReceiptConfirmationResult | null>(null)
+
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
+  const [selectedPhotoUrls, setSelectedPhotoUrls] = useState<string[]>([])
 
   useEffect(() => {
     Promise.all([
@@ -80,11 +83,23 @@ export default function VendorOrderDetailPage() {
     }
   }
 
+  function openCompleteDialog() {
+    setSelectedPhotoUrls([])
+    setCompleteDialogOpen(true)
+  }
+
+  function togglePhotoSelection(url: string) {
+    setSelectedPhotoUrls(prev =>
+      prev.includes(url) ? prev.filter(u => u !== url) : [...prev, url]
+    )
+  }
+
   async function handleComplete() {
+    setCompleteDialogOpen(false)
     setActing(true)
     setActionError(null)
     try {
-      const updated = await updateOrderStatus(id, 'complete')
+      const updated = await updateOrderStatus(id, 'complete', selectedPhotoUrls)
       setOrder(updated)
     } catch (e) {
       setActionError(e instanceof Error ? e.message : '배송완료 처리에 실패했습니다.')
@@ -128,7 +143,7 @@ export default function VendorOrderDetailPage() {
                   : 'cursor-not-allowed bg-gray-300 text-gray-500',
               )}
               disabled={!hasPhotos || acting}
-              onClick={handleComplete}
+              onClick={openCompleteDialog}
               title={!hasPhotos ? '배송사진을 1장 이상 업로드해주세요' : undefined}
             >
               {acting ? '처리 중…' : '배송완료 처리'}
@@ -140,6 +155,61 @@ export default function VendorOrderDetailPage() {
       {actionError && (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
           {actionError}
+        </div>
+      )}
+
+      {/* 배송완료 팝업 */}
+      {completeDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b px-5 py-4">
+              <h2 className="font-semibold">발송할 배송사진 선택</h2>
+              <button onClick={() => setCompleteDialogOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-5">
+              <p className="mb-3 text-sm text-gray-500">
+                선택한 사진 수만큼 MMS가 각각 발송됩니다. 선택하지 않으면 사진 없이 SMS만 발송됩니다.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {receiptConfirmation?.photoUrls.map((url, idx) => {
+                  const selected = selectedPhotoUrls.includes(url)
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => togglePhotoSelection(url)}
+                      className={cn(
+                        'relative h-24 w-24 overflow-hidden rounded border-2 transition-all',
+                        selected ? 'border-blue-500' : 'border-transparent',
+                      )}
+                    >
+                      <img src={url} alt="배송사진" className="h-full w-full object-cover" />
+                      {selected && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-blue-500/30">
+                          <Check className="h-6 w-6 text-white drop-shadow" />
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+              {selectedPhotoUrls.length > 0 && (
+                <p className="mt-2 text-xs text-blue-600">
+                  {selectedPhotoUrls.length}장 선택됨 — MMS {selectedPhotoUrls.length}건 발송 예정
+                </p>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 border-t px-5 py-4">
+              <Button variant="outline" onClick={() => setCompleteDialogOpen(false)}>
+                취소
+              </Button>
+              <Button className="bg-blue-700 hover:bg-blue-800" onClick={handleComplete} disabled={acting}>
+                배송완료 처리
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

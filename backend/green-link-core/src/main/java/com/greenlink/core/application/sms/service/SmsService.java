@@ -8,8 +8,6 @@ import com.greenlink.core.application.sms.usecase.ResendMmsUseCase;
 import com.greenlink.core.application.sms.usecase.SendDeliveryMmsUseCase;
 import com.greenlink.core.domain.order.model.Order;
 import com.greenlink.core.domain.order.port.OrderRepository;
-import com.greenlink.core.domain.photo.model.Photo;
-import com.greenlink.core.domain.photo.port.PhotoRepository;
 import com.greenlink.core.domain.sms.model.SmsMessage;
 import com.greenlink.core.domain.sms.model.SmsStatus;
 import com.greenlink.core.domain.sms.port.SmsClient;
@@ -22,47 +20,48 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 
 @Service
 public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, GetSmsMessagesUseCase {
 
     private final OrderRepository orderRepository;
-    private final PhotoRepository photoRepository;
     private final SmsMessageRepository smsMessageRepository;
     private final SmsClient smsClient;
 
     public SmsService(OrderRepository orderRepository,
-                      PhotoRepository photoRepository,
                       SmsMessageRepository smsMessageRepository,
                       SmsClient smsClient) {
         this.orderRepository = orderRepository;
-        this.photoRepository = photoRepository;
         this.smsMessageRepository = smsMessageRepository;
         this.smsClient = smsClient;
     }
 
     @Override
     @Transactional
-    public void send(Long orderId) {
+    public void send(Long orderId, List<String> photoUrls) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
 
-        List<Photo> selectedPhotos = photoRepository.findSelectedByOrderId(orderId);
-        String imageUrl = selectedPhotos.isEmpty() ? null : selectedPhotos.get(0).getPhotoUrl();
+        // 사진 없으면 null 1건으로 처리 (사진 없는 SMS 1건 발송)
+        List<String> urls = (photoUrls != null && !photoUrls.isEmpty())
+                ? photoUrls
+                : Collections.singletonList(null);
 
         String msg = buildMessage(order);
         String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
-        if (order.isSendPhotoToOrderer() && isValidPhone(order.getOrdererPhone())) {
-            sendAndRecord(orderId, order.getOrdererPhone(), msg, imageUrl, now);
-        }
-        if (order.isSendPhotoToRecipient() && isValidPhone(order.getRecipientPhone())) {
-            // 주문자·받는 분 번호 동일 시 중복 발송 방지
-            boolean isSamePhone = order.getOrdererPhone() != null
-                    && order.getOrdererPhone().equals(order.getRecipientPhone());
-            boolean ordererAlreadySent = order.isSendPhotoToOrderer() && isValidPhone(order.getOrdererPhone());
-            if (!(isSamePhone && ordererAlreadySent)) {
+        boolean ordererValid = order.isSendPhotoToOrderer() && isValidPhone(order.getOrdererPhone());
+        boolean recipientValid = order.isSendPhotoToRecipient() && isValidPhone(order.getRecipientPhone());
+        boolean samePhone = ordererValid && recipientValid
+                && order.getOrdererPhone().equals(order.getRecipientPhone());
+
+        for (String imageUrl : urls) {
+            if (ordererValid) {
+                sendAndRecord(orderId, order.getOrdererPhone(), msg, imageUrl, now);
+            }
+            if (recipientValid && !samePhone) {
                 sendAndRecord(orderId, order.getRecipientPhone(), msg, imageUrl, now);
             }
         }
@@ -78,13 +77,11 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
-        List<Photo> selectedPhotos = photoRepository.findSelectedByOrderId(orderId);
-        String imageUrl = selectedPhotos.isEmpty() ? null : selectedPhotos.get(0).getPhotoUrl();
         String msg = buildMessage(order);
         String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
         for (SmsMessage m : failed) {
-            sendAndRecord(orderId, m.getReceiver(), msg, imageUrl, now);
+            sendAndRecord(orderId, m.getReceiver(), msg, m.getImageUrl(), now);
         }
     }
 
@@ -107,7 +104,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     }
 
     private void sendAndRecord(Long orderId, String receiver, String msg, String imageUrl, String sentAt) {
-        SmsMessage smsMessage = SmsMessage.create(orderId, receiver);
+        SmsMessage smsMessage = SmsMessage.create(orderId, receiver, imageUrl);
         try {
             SmsResult result = smsClient.send(receiver, msg, imageUrl);
             if (result.success()) {
@@ -132,7 +129,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     private SmsMessageResult toResult(SmsMessage m) {
         return new SmsMessageResult(
                 m.getId(), m.getOrderId(), m.getReceiver(),
-                m.getStatus().name(), m.getFailReason(), m.getAligoMsgId(), m.getSentAt()
+                m.getStatus().name(), m.getFailReason(), m.getAligoMsgId(), m.getSentAt(), m.getImageUrl()
         );
     }
 }

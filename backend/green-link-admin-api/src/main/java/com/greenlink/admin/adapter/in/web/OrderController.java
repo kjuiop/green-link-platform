@@ -99,7 +99,7 @@ public class OrderController {
         OrderResult result = updateOrderStatusUseCase.updateOrderStatus(id, req.action());
         if ("complete".equalsIgnoreCase(req.action())) {
             try {
-                sendDeliveryMmsUseCase.send(id);
+                sendDeliveryMmsUseCase.send(id, req.photoUrls());
             } catch (Exception ignored) {
                 // MMS 발송 실패는 배송완료 처리를 막지 않음
             }
