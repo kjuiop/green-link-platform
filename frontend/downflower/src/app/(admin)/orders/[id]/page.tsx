@@ -10,6 +10,7 @@ import { OrderStatusBadge, MessageStatusBadge, DeliveryTimeTypeBadge } from '@/c
 import { fetchOrder, updateOrder, updateOrderStatus, fetchPhotos, selectPhoto, fetchOrderHistory, PhotoResult, OrderHistoryItem } from '@/lib/api/orderApi'
 import Image from 'next/image'
 import { PrintButton } from '@/components/common/PrintButton'
+import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { Pencil, X, Check, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Order } from '@/types/order'
@@ -564,6 +565,21 @@ export default function OrderDetailPage() {
                 <p className="text-xs text-gray-400">사진을 클릭해 고객 발송 여부를 선택할 수 있습니다.</p>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        {/* 인수확인 */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm">인수확인</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ReceiptConfirmButton
+              orderId={order.id}
+              orderNumber={order.orderNumber}
+              senderName={order.ribbonLeft}
+              recipientName={order.recipientName}
+            />
           </CardContent>
         </Card>
 

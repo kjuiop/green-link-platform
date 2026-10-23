@@ -337,6 +337,7 @@ export default function ReceivedOrdersPage() {
                   </TableCell>
                   <TableCell>
                     <ReceiptConfirmButton
+                      orderId={order.id}
                       orderNumber={order.orderNumber}
                       senderName={order.ribbonLeft}
                       recipientName={order.recipientName}
@@ -397,6 +398,7 @@ export default function ReceivedOrdersPage() {
               </div>
               <div className="mt-2" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
                 <ReceiptConfirmButton
+                  orderId={order.id}
                   orderNumber={order.orderNumber}
                   senderName={order.ribbonLeft}
                   recipientName={order.recipientName}
