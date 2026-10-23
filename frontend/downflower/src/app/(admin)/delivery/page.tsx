@@ -60,7 +60,7 @@ export default function DeliveryPage() {
               orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell>
-                    <Link href={`/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
+                    <Link href={`/ordering/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
                       {order.orderNumber}
                     </Link>
                   </TableCell>
@@ -76,7 +76,7 @@ export default function DeliveryPage() {
                   </TableCell>
                   <TableCell>
                     <Link
-                      href={`/orders/${order.id}`}
+                      href={`/ordering/orders/${order.id}`}
                       className="text-xs text-blue-600 hover:underline"
                     >
                       상세보기
