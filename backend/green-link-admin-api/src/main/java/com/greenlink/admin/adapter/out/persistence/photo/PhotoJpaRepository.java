@@ -9,6 +9,8 @@ public interface PhotoJpaRepository extends JpaRepository<PhotoJpaEntity, Long> 
 
     List<PhotoJpaEntity> findAllByOrderId(Long orderId);
 
+    boolean existsByOrderId(Long orderId);
+
     boolean existsByOrderIdAndPhotoType(Long orderId, PhotoType photoType);
 
     List<PhotoJpaEntity> findByOrderIdAndIsSendToCustomerTrue(Long orderId);

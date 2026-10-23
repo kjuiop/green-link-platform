@@ -19,7 +19,6 @@ import com.greenlink.core.domain.order.model.Order;
 import com.greenlink.core.domain.order.model.OrderStatus;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
-import com.greenlink.core.domain.photo.model.PhotoType;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
@@ -258,7 +257,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
             case "reject" -> order.reject();
             case "cancel" -> order.cancel();
             case "complete" -> {
-                if (!photoRepository.existsByOrderIdAndPhotoType(id, PhotoType.SITE)) {
+                if (!photoRepository.existsByOrderId(id)) {
                     throw new BusinessException(OrderErrorCode.SITE_PHOTO_REQUIRED);
                 }
                 order.complete(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
