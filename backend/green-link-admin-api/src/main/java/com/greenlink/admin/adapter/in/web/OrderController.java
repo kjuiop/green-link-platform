@@ -5,6 +5,7 @@ import com.greenlink.admin.adapter.in.web.dto.UpdateOrderRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateOrderStatusRequest;
 import com.greenlink.core.application.order.dto.OrderResult;
 import com.greenlink.core.application.orderhistory.dto.OrderHistoryResult;
+import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.application.order.usecase.CreateOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrderUseCase;
@@ -16,6 +17,7 @@ import com.greenlink.core.application.sms.usecase.SendDeliveryMmsUseCase;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,6 +33,7 @@ public class OrderController {
     private final UpdateOrderStatusUseCase updateOrderStatusUseCase;
     private final GetOrderHistoryUseCase getOrderHistoryUseCase;
     private final SendDeliveryMmsUseCase sendDeliveryMmsUseCase;
+    private final AdminRepository adminRepository;
 
     public OrderController(GetOrdersUseCase getOrdersUseCase,
                            GetOrderUseCase getOrderUseCase,
@@ -38,7 +41,8 @@ public class OrderController {
                            UpdateOrderUseCase updateOrderUseCase,
                            UpdateOrderStatusUseCase updateOrderStatusUseCase,
                            GetOrderHistoryUseCase getOrderHistoryUseCase,
-                           SendDeliveryMmsUseCase sendDeliveryMmsUseCase) {
+                           SendDeliveryMmsUseCase sendDeliveryMmsUseCase,
+                           AdminRepository adminRepository) {
         this.getOrdersUseCase = getOrdersUseCase;
         this.getOrderUseCase = getOrderUseCase;
         this.createOrderUseCase = createOrderUseCase;
@@ -46,10 +50,12 @@ public class OrderController {
         this.updateOrderStatusUseCase = updateOrderStatusUseCase;
         this.getOrderHistoryUseCase = getOrderHistoryUseCase;
         this.sendDeliveryMmsUseCase = sendDeliveryMmsUseCase;
+        this.adminRepository = adminRepository;
     }
 
     @GetMapping
     public ResponseEntity<List<OrderResult>> getAll(
+            Authentication auth,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long vendorId,
             @RequestParam(required = false) String orderNumber,
@@ -57,8 +63,19 @@ public class OrderController {
             @RequestParam(required = false) String ordererName,
             @RequestParam(required = false) String deliveryDateFrom,
             @RequestParam(required = false) String deliveryDateTo) {
+        Long resolvedVendorId = vendorId;
+        if (auth != null) {
+            boolean isVendor = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
+            if (isVendor) {
+                Long adminId = Long.parseLong((String) auth.getPrincipal());
+                resolvedVendorId = adminRepository.findById(adminId)
+                        .map(admin -> admin.getCompanyId())
+                        .orElse(null);
+            }
+        }
         OrderSearchCondition condition = OrderSearchCondition.of(
-                status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo);
+                status, resolvedVendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo);
         return ResponseEntity.ok(getOrdersUseCase.getOrders(condition));
     }
 
