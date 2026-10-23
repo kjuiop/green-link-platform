@@ -14,6 +14,7 @@ type BackendOrder = {
   orderNumber: string
   vendorId: number
   vendorName: string | null
+  vendorPhone: string | null
   status: string
   productName: string
   quantity: number
@@ -96,6 +97,7 @@ function toFrontend(o: BackendOrder): Order {
     orderedAt: o.createdAt ?? '',
     vendorId: String(o.vendorId),
     vendorName: o.vendorName ?? '',
+    vendorPhone: o.vendorPhone ?? undefined,
     status: STATUS_MAP[o.status] ?? '발주대기',
     productName: o.productName,
     quantity: o.quantity,
