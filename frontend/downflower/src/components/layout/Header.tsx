@@ -13,9 +13,10 @@ import {
 interface HeaderProps {
   userName?: string
   onMenuOpen?: () => void
+  accountHref?: string
 }
 
-export function Header({ userName, onMenuOpen }: HeaderProps) {
+export function Header({ userName, onMenuOpen, accountHref = '/settings/account' }: HeaderProps) {
   const router = useRouter()
 
   return (
@@ -47,7 +48,7 @@ export function Header({ userName, onMenuOpen }: HeaderProps) {
         <DropdownMenuContent align="end" className="w-36">
           <DropdownMenuItem
             className="cursor-pointer"
-            onClick={() => router.push('/settings/account')}
+            onClick={() => router.push(accountHref)}
           >
             <Settings className="mr-2 h-4 w-4" />
             내 계정

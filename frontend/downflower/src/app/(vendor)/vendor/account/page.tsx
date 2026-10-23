@@ -47,6 +47,10 @@ export default function VendorAccountPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-1.5">
+              <Label>아이디</Label>
+              <Input defaultValue={vendor.loginId} readOnly className="bg-gray-50 text-gray-500" />
+            </div>
+            <div className="space-y-1.5">
               <Label>업체명</Label>
               <Input defaultValue={vendor.name} readOnly />
             </div>

@@ -510,58 +510,27 @@ export default function OrderDetailPage() {
               <p className="text-sm text-gray-400">등록된 배송사진이 없습니다.</p>
             ) : (
               <>
-                {photos.filter((p) => p.photoType === 'STORE').length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-gray-500">매장사진</p>
-                    <div className="flex flex-wrap gap-3">
-                      {photos.filter((p) => p.photoType === 'STORE').map((photo) => (
-                        <button
-                          key={photo.id}
-                          type="button"
-                          onClick={() => handleSelectPhoto(photo.id, !photo.isSendToCustomer)}
-                          className={cn(
-                            'relative h-28 w-28 overflow-hidden rounded-lg border-2 transition-colors',
-                            photo.isSendToCustomer ? 'border-green-600' : 'border-transparent',
-                          )}
-                          title={photo.isSendToCustomer ? '발송 해제' : '발송 선택'}
-                        >
-                          <Image src={photo.photoUrl} alt="매장사진" fill className="object-cover" />
-                          {photo.isSendToCustomer && (
-                            <span className="absolute bottom-1 left-1 rounded bg-green-700 px-1 py-0.5 text-[10px] text-white">
-                              발송
-                            </span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {photos.filter((p) => p.photoType === 'SITE').length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-gray-500">현장사진</p>
-                    <div className="flex flex-wrap gap-3">
-                      {photos.filter((p) => p.photoType === 'SITE').map((photo) => (
-                        <button
-                          key={photo.id}
-                          type="button"
-                          onClick={() => handleSelectPhoto(photo.id, !photo.isSendToCustomer)}
-                          className={cn(
-                            'relative h-28 w-28 overflow-hidden rounded-lg border-2 transition-colors',
-                            photo.isSendToCustomer ? 'border-green-600' : 'border-transparent',
-                          )}
-                          title={photo.isSendToCustomer ? '발송 해제' : '발송 선택'}
-                        >
-                          <Image src={photo.photoUrl} alt="현장사진" fill className="object-cover" />
-                          {photo.isSendToCustomer && (
-                            <span className="absolute bottom-1 left-1 rounded bg-green-700 px-1 py-0.5 text-[10px] text-white">
-                              발송
-                            </span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <div className="flex flex-wrap gap-3">
+                  {photos.map((photo) => (
+                    <button
+                      key={photo.id}
+                      type="button"
+                      onClick={() => handleSelectPhoto(photo.id, !photo.isSendToCustomer)}
+                      className={cn(
+                        'relative h-28 w-28 overflow-hidden rounded-lg border-2 transition-colors',
+                        photo.isSendToCustomer ? 'border-green-600' : 'border-transparent',
+                      )}
+                      title={photo.isSendToCustomer ? '발송 해제' : '발송 선택'}
+                    >
+                      <Image src={photo.photoUrl} alt="배송사진" fill className="object-cover" />
+                      {photo.isSendToCustomer && (
+                        <span className="absolute bottom-1 left-1 rounded bg-green-700 px-1 py-0.5 text-[10px] text-white">
+                          발송
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
                 <p className="text-xs text-gray-400">사진을 클릭해 고객 발송 여부를 선택할 수 있습니다.</p>
               </>
             )}
