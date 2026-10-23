@@ -1,0 +1,15 @@
+- generic [active] [ref=f8e1]:
+  - generic [ref=f8e3]:
+    - banner [ref=f8e4]:
+      - button "메뉴 열기" [ref=f8e5]
+      - generic [ref=f8e7]:
+        - generic [ref=f8e8]:
+          - generic [ref=f8e9]: TEL
+          - generic [ref=f8e10]: 1855-4400
+        - generic [ref=f8e11]:
+          - generic [ref=f8e12]: PHONE
+          - generic [ref=f8e13]: 010-7551-1922
+      - button "관리자" [ref=f8e14]
+    - main [ref=f8e19]:
+      - generic [ref=f8e20]: 불러오는 중...
+  - alert [ref=f8e22]

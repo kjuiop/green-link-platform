@@ -4,6 +4,7 @@ import com.greenlink.core.application.orderhistory.usecase.RecordOrderHistoryUse
 import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
 import com.greenlink.core.application.receipt.dto.ReceiptConfirmationResult;
 import com.greenlink.core.application.receipt.dto.SaveReceiptConfirmationCommand;
+import com.greenlink.core.application.receipt.usecase.AddReceiptPhotosUseCase;
 import com.greenlink.core.application.receipt.usecase.GetReceiptConfirmationUseCase;
 import com.greenlink.core.application.receipt.usecase.SaveReceiptConfirmationUseCase;
 import com.greenlink.core.domain.photo.port.PhotoStorage;
@@ -17,7 +18,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCase, GetReceiptConfirmationUseCase {
+public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCase, GetReceiptConfirmationUseCase, AddReceiptPhotosUseCase {
 
     private final ReceiptConfirmationRepository repository;
     private final PhotoStorage photoStorage;
@@ -57,6 +58,27 @@ public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCas
         recordOrderHistoryUseCase.record(command.orderId(), OrderHistoryAction.UPDATED, "인수확인 저장");
         return result;
 
+    }
+
+    @Override
+    @Transactional
+    public ReceiptConfirmationResult addPhotos(Long orderId, List<SaveReceiptConfirmationCommand.PhotoFile> photoFiles) {
+        List<String> photoUrls = new ArrayList<>();
+        List<String> uploadedKeys = new ArrayList<>();
+
+        for (SaveReceiptConfirmationCommand.PhotoFile pf : photoFiles) {
+            PhotoStorage.UploadResult uploaded = photoStorage.store(
+                    orderId, pf.originalFileName(), pf.content(), pf.contentType());
+            photoUrls.add(uploaded.url());
+            uploadedKeys.add(uploaded.s3Key());
+        }
+
+        try {
+            return toResult(repository.appendPhotos(orderId, photoUrls));
+        } catch (Exception e) {
+            uploadedKeys.forEach(photoStorage::delete);
+            throw e;
+        }
     }
 
     @Override

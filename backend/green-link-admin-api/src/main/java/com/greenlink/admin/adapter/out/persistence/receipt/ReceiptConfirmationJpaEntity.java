@@ -39,6 +39,12 @@ public class ReceiptConfirmationJpaEntity extends BaseJpaEntity {
 
     protected ReceiptConfirmationJpaEntity() {}
 
+    public void initForOrder(Long orderId) {
+        this.orderId = orderId;
+        this.delivered = false;
+        this.confirmedAt = LocalDateTime.now();
+    }
+
     public static ReceiptConfirmationJpaEntity from(ReceiptConfirmation rc) {
         ReceiptConfirmationJpaEntity e = new ReceiptConfirmationJpaEntity();
         e.orderId = rc.getOrderId();

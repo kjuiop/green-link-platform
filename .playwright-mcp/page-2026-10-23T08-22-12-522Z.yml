@@ -1,0 +1,32 @@
+- generic [active] [ref=f6e1]:
+  - generic [ref=f6e2]:
+    - complementary [ref=f6e3]:
+      - generic [ref=f6e4]: 🌿 다운플라워
+      - navigation [ref=f6e6]
+    - generic [ref=f6e7]:
+      - banner [ref=f6e8]:
+        - generic [ref=f6e9]:
+          - generic [ref=f6e10]:
+            - generic [ref=f6e11]: TEL
+            - generic [ref=f6e12]: 1855-4400
+          - generic [ref=f6e13]:
+            - generic [ref=f6e14]: PHONE
+            - generic [ref=f6e15]: 010-7551-1922
+        - button "관리자" [ref=f6e16]
+      - main [ref=f6e21]:
+        - generic [ref=f6e23]:
+          - generic [ref=f6e24]:
+            - heading "상품관리" [level=1] [ref=f6e25]
+            - button "상품 등록" [ref=f6e26]
+          - table [ref=f6e29]:
+            - rowgroup [ref=f6e30]:
+              - row [ref=f6e31]:
+                - columnheader "상품명" [ref=f6e32]
+                - columnheader "기본가격" [ref=f6e33]
+                - columnheader "메모" [ref=f6e34]
+                - columnheader "등록일" [ref=f6e35]
+                - columnheader "관리" [ref=f6e36]
+            - rowgroup [ref=f6e37]:
+              - row [ref=f6e38]:
+                - cell "불러오는 중..." [ref=f6e39]
+  - button "Open Next.js Dev Tools" [ref=f6e45] [cursor=pointer]

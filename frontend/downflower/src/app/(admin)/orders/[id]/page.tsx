@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { OrderStatusBadge, MessageStatusBadge, DeliveryTimeTypeBadge } from '@/components/common/StatusBadge'
-import { fetchOrder, updateOrder, updateOrderStatus, fetchPhotos, selectPhoto, fetchOrderHistory, PhotoResult, OrderHistoryItem } from '@/lib/api/orderApi'
-import Image from 'next/image'
+import { fetchOrder, updateOrder, updateOrderStatus, fetchOrderHistory, fetchReceiptConfirmation, OrderHistoryItem, ReceiptConfirmationResult } from '@/lib/api/orderApi'
 import { PrintButton } from '@/components/common/PrintButton'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { Pencil, X, Check, Trash2 } from 'lucide-react'
@@ -37,7 +36,7 @@ export default function OrderDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [photos, setPhotos] = useState<PhotoResult[]>([])
+  const [receiptConfirmation, setReceiptConfirmation] = useState<ReceiptConfirmationResult | null>(null)
   const [history, setHistory] = useState<OrderHistoryItem[]>([])
 
   useEffect(() => {
@@ -46,7 +45,7 @@ export default function OrderDetailPage() {
       .then((o) => { setOrder(o); setDraft(o) })
       .catch(() => setLoadError('발주 정보를 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
-    fetchPhotos(id).then(setPhotos).catch(() => {})
+    fetchReceiptConfirmation(id).then(setReceiptConfirmation).catch(() => {})
     fetchOrderHistory(id).then(setHistory).catch(() => {})
   }, [id])
 
@@ -55,15 +54,6 @@ export default function OrderDetailPage() {
   if (loading) return <div className="p-8 text-sm text-gray-400">불러오는 중...</div>
   if (loadError) return <div className="p-8 text-sm text-red-500">{loadError}</div>
   if (!order || !draft) return <div className="p-8 text-sm text-gray-400">주문을 찾을 수 없습니다.</div>
-
-  async function handleSelectPhoto(photoId: number, selected: boolean) {
-    try {
-      const updated = await selectPhoto(id, photoId, selected)
-      setPhotos((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
-    } catch {
-      // silent — selection failure shouldn't interrupt the user
-    }
-  }
 
   function startEdit() {
     setDraft({ ...order! })
@@ -502,37 +492,22 @@ export default function OrderDetailPage() {
           <CardHeader>
             <CardTitle className="text-sm">
               배송사진
-              {photos.length > 0 && <span className="ml-1.5 text-xs font-normal text-gray-400">({photos.length}장)</span>}
+              {receiptConfirmation && receiptConfirmation.photoUrls.length > 0 && (
+                <span className="ml-1.5 text-xs font-normal text-gray-400">({receiptConfirmation.photoUrls.length}장)</span>
+              )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-5">
-            {photos.length === 0 ? (
+          <CardContent>
+            {!receiptConfirmation || receiptConfirmation.photoUrls.length === 0 ? (
               <p className="text-sm text-gray-400">등록된 배송사진이 없습니다.</p>
             ) : (
-              <>
-                <div className="flex flex-wrap gap-3">
-                  {photos.map((photo) => (
-                    <button
-                      key={photo.id}
-                      type="button"
-                      onClick={() => handleSelectPhoto(photo.id, !photo.isSendToCustomer)}
-                      className={cn(
-                        'relative h-28 w-28 overflow-hidden rounded-lg border-2 transition-colors',
-                        photo.isSendToCustomer ? 'border-green-600' : 'border-transparent',
-                      )}
-                      title={photo.isSendToCustomer ? '발송 해제' : '발송 선택'}
-                    >
-                      <Image src={photo.photoUrl} alt="배송사진" fill className="object-cover" />
-                      {photo.isSendToCustomer && (
-                        <span className="absolute bottom-1 left-1 rounded bg-green-700 px-1 py-0.5 text-[10px] text-white">
-                          발송
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-400">사진을 클릭해 고객 발송 여부를 선택할 수 있습니다.</p>
-              </>
+              <div className="flex flex-wrap gap-3">
+                {receiptConfirmation.photoUrls.map((url, idx) => (
+                  <div key={idx} className="relative h-28 w-28 overflow-hidden rounded-lg border">
+                    <img src={url} alt="배송사진" className="h-full w-full object-cover" />
+                  </div>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>

@@ -1,0 +1,44 @@
+- generic [active] [ref=f4e1]:
+  - button "Open Next.js Dev Tools" [ref=f4e34] [cursor=pointer]:
+    - generic [ref=f4e37]:
+      - text: Rendering
+      - generic [ref=f4e38]:
+        - generic [ref=f4e39]: .
+        - generic [ref=f4e40]: .
+        - generic [ref=f4e41]: .
+  - alert [ref=f4e33]
+  - generic [ref=f4e42]:
+    - complementary [ref=f4e43]:
+      - generic [ref=f4e44]:
+        - generic [ref=f4e45]: 🌿 다운플라워
+        - generic [ref=f4e46]: 테스트담당자
+      - navigation [ref=f4e47]
+    - generic [ref=f4e48]:
+      - banner [ref=f4e49]:
+        - generic [ref=f4e50]:
+          - generic [ref=f4e51]:
+            - generic [ref=f4e52]: TEL
+            - generic [ref=f4e53]: 1855-4400
+          - generic [ref=f4e54]:
+            - generic [ref=f4e55]: PHONE
+            - generic [ref=f4e56]: 010-7551-1922
+        - button "관리자" [ref=f4e57]
+      - main [ref=f4e62]:
+        - generic [ref=f4e64]:
+          - heading "대시보드" [level=1] [ref=f4e65]
+          - generic [ref=f4e66]:
+            - generic [ref=f4e67]:
+              - generic [ref=f4e68]: 전체 주문
+              - paragraph [ref=f4e71]: "-"
+            - generic [ref=f4e72]:
+              - generic [ref=f4e73]: 미승인 주문
+              - paragraph [ref=f4e76]: "-"
+            - generic [ref=f4e77]:
+              - generic [ref=f4e78]: 배송완료
+              - paragraph [ref=f4e81]: "-"
+            - generic [ref=f4e82]:
+              - generic [ref=f4e83]: 문자 발송 실패
+              - paragraph [ref=f4e86]: "-"
+          - generic [ref=f4e87]:
+            - generic [ref=f4e88]: 최근 주문
+            - paragraph [ref=f4e91]: 주문 목록은 발주 리스트에서 확인하세요.

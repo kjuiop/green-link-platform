@@ -4,6 +4,8 @@ import com.greenlink.core.domain.receipt.model.ReceiptConfirmation;
 import com.greenlink.core.domain.receipt.port.ReceiptConfirmationRepository;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -32,5 +34,24 @@ public class ReceiptConfirmationRepositoryAdapter implements ReceiptConfirmation
     @Override
     public Optional<ReceiptConfirmation> findByOrderId(Long orderId) {
         return jpaRepository.findByOrderId(orderId).map(ReceiptConfirmationJpaEntity::toDomain);
+    }
+
+    @Override
+    public boolean existsWithPhotosByOrderId(Long orderId) {
+        return jpaRepository.existsPhotosByOrderId(orderId);
+    }
+
+    @Override
+    public ReceiptConfirmation appendPhotos(Long orderId, List<String> photoUrls) {
+        ReceiptConfirmationJpaEntity entity = jpaRepository.findByOrderId(orderId)
+                .orElseGet(() -> {
+                    ReceiptConfirmationJpaEntity newEntity = new ReceiptConfirmationJpaEntity();
+                    newEntity.initForOrder(orderId);
+                    return newEntity;
+                });
+        for (String url : photoUrls) {
+            entity.addPhoto(url, "");
+        }
+        return jpaRepository.save(entity).toDomain();
     }
 }

@@ -11,6 +11,7 @@ import com.greenlink.core.domain.order.model.OrderStatus;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
+import com.greenlink.core.domain.receipt.port.ReceiptConfirmationRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +36,7 @@ class OrderServiceTest {
 
     @Mock OrderRepository orderRepository;
     @Mock PhotoRepository photoRepository;
+    @Mock ReceiptConfirmationRepository receiptConfirmationRepository;
     @Mock RecordOrderHistoryUseCase recordOrderHistoryUseCase;
     @Mock AdminRepository adminRepository;
     @Mock CompanyRepository companyRepository;
@@ -44,7 +46,8 @@ class OrderServiceTest {
     @BeforeEach
     void setUp() {
         service = new OrderService(orderRepository, photoRepository,
-                recordOrderHistoryUseCase, adminRepository, companyRepository);
+                receiptConfirmationRepository, recordOrderHistoryUseCase,
+                adminRepository, companyRepository);
     }
 
     private CreateOrderCommand sampleCommand() {
@@ -134,7 +137,7 @@ class OrderServiceTest {
     void updateOrderStatus_complete_whenNoPhoto_throwsSitePhotoRequired() {
         Order accepted = savedOrder(1L, OrderStatus.ACCEPTED);
         given(orderRepository.findById(1L)).willReturn(Optional.of(accepted));
-        given(photoRepository.existsByOrderId(1L)).willReturn(false);
+        given(receiptConfirmationRepository.existsWithPhotosByOrderId(1L)).willReturn(false);
 
         assertThatThrownBy(() -> service.updateOrderStatus(1L, "complete"))
                 .isInstanceOf(BusinessException.class)
@@ -146,7 +149,7 @@ class OrderServiceTest {
     void updateOrderStatus_complete_whenPhotoExists_setsDelivered() {
         Order accepted = savedOrder(1L, OrderStatus.ACCEPTED);
         given(orderRepository.findById(1L)).willReturn(Optional.of(accepted));
-        given(photoRepository.existsByOrderId(1L)).willReturn(true);
+        given(receiptConfirmationRepository.existsWithPhotosByOrderId(1L)).willReturn(true);
         given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
         given(adminRepository.findById(anyLong())).willReturn(Optional.empty());
 
