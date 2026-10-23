@@ -24,7 +24,7 @@ public record CreateOrderRequest(
         String ribbonLeft,
         String ribbonRight,
         String ordererName,
-        @NotBlank String ordererPhone,
+        String ordererPhone,
         String recipientName,
         String recipientPhone,
         boolean sendPhotoToOrderer,

@@ -16,6 +16,7 @@ import com.greenlink.core.application.sms.usecase.SendDeliveryMmsUseCase;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -50,6 +51,7 @@ public class OrderController {
 
     @GetMapping
     public ResponseEntity<List<OrderResult>> getAll(
+            Authentication auth,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long vendorId,
             @RequestParam(required = false) String orderNumber,
@@ -57,8 +59,16 @@ public class OrderController {
             @RequestParam(required = false) String ordererName,
             @RequestParam(required = false) String deliveryDateFrom,
             @RequestParam(required = false) String deliveryDateTo) {
+        Long resolvedVendorId = vendorId;
+        if (auth != null && auth.isAuthenticated()) {
+            boolean isVendor = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
+            if (isVendor) {
+                resolvedVendorId = Long.parseLong(String.valueOf(auth.getPrincipal()));
+            }
+        }
         OrderSearchCondition condition = OrderSearchCondition.of(
-                status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo);
+                status, resolvedVendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo);
         return ResponseEntity.ok(getOrdersUseCase.getOrders(condition));
     }
 
