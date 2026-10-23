@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Pagination } from '@/components/ui/Pagination'
 import { fetchOrders } from '@/lib/api/orderApi'
 import { fetchSmsMessages, resendMms, SmsMessage } from '@/lib/api/smsApi'
 import { Order } from '@/types/order'
 import Link from 'next/link'
 import { Search, RefreshCw } from 'lucide-react'
+
+const PAGE_SIZE = 20
 
 type SmsStatusFilter = 'ALL' | 'SUCCESS' | 'FAIL'
 
@@ -29,8 +32,9 @@ export default function MessagesPage() {
   const [appliedQuery, setAppliedQuery] = useState('')
   const [appliedStatus, setAppliedStatus] = useState<SmsStatusFilter>('ALL')
   const [resendingIds, setResendingIds] = useState<Set<number>>(new Set())
+  const [page, setPage] = useState(0)
 
-  useEffect(() => {
+  const loadData = () =>
     Promise.all([fetchSmsMessages(), fetchOrders()])
       .then(([messages, orders]) => {
         const orderMap = new Map(orders.map((o) => [Number(o.id), o]))
@@ -38,25 +42,26 @@ export default function MessagesPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+
+  useEffect(() => { loadData() }, [])
 
   const handleSearch = () => {
     setAppliedQuery(query)
     setAppliedStatus(statusFilter)
+    setPage(0)
   }
 
   const handleReset = () => {
     setQuery(''); setStatusFilter('ALL')
     setAppliedQuery(''); setAppliedStatus('ALL')
+    setPage(0)
   }
 
   const handleResend = async (orderId: number) => {
     setResendingIds((prev) => new Set(prev).add(orderId))
     try {
       await resendMms(orderId)
-      const [messages, orders] = await Promise.all([fetchSmsMessages(), fetchOrders()])
-      const orderMap = new Map(orders.map((o) => [Number(o.id), o]))
-      setRows(messages.map((sms) => ({ sms, order: orderMap.get(sms.orderId) })))
+      await loadData()
     } catch {
       alert('재발송에 실패했습니다.')
     } finally {
@@ -74,6 +79,9 @@ export default function MessagesPage() {
       sms.receiver.includes(appliedQuery)
     return matchStatus && matchQuery
   })
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paginatedRows = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   return (
     <div className="space-y-4">
@@ -143,14 +151,14 @@ export default function MessagesPage() {
                   불러오는 중...
                 </TableCell>
               </TableRow>
-            ) : filtered.length === 0 ? (
+            ) : paginatedRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map(({ sms, order }) => (
+              paginatedRows.map(({ sms, order }) => (
                 <TableRow key={sms.id}>
                   <TableCell>
                     {order ? (
@@ -194,18 +202,29 @@ export default function MessagesPage() {
             )}
           </TableBody>
         </Table>
+        {totalPages > 1 && (
+          <div className="border-t px-4 py-3">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalElements={filtered.length}
+              size={PAGE_SIZE}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </div>
 
       {/* 모바일 카드 */}
       <div className="space-y-3 md:hidden">
         {loading ? (
           <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">불러오는 중...</div>
-        ) : filtered.length === 0 ? (
+        ) : paginatedRows.length === 0 ? (
           <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
             검색 결과가 없습니다.
           </div>
         ) : (
-          filtered.map(({ sms, order }) => (
+          paginatedRows.map(({ sms, order }) => (
             <div key={sms.id} className="rounded-lg border bg-white p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -244,6 +263,15 @@ export default function MessagesPage() {
               </div>
             </div>
           ))
+        )}
+        {totalPages > 1 && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalElements={filtered.length}
+            size={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         )}
       </div>
     </div>

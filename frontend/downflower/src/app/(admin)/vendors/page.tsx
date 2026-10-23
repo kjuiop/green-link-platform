@@ -1,15 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import { Pagination } from '@/components/ui/Pagination'
 import { Vendor, VendorStatus } from '@/types/vendor'
-import { fetchVendors, createVendor, updateVendor, updateVendorStatus } from '@/lib/api/vendorApi'
+import { PageResult } from '@/types/page'
+import { fetchVendorsPaged, createVendor, updateVendor, updateVendorStatus } from '@/lib/api/vendorApi'
 import { Search } from 'lucide-react'
+
+const PAGE_SIZE = 20
 
 const STATUS_FILTERS = [
   { label: '전체', value: 'ALL' },
@@ -39,7 +43,8 @@ function formatPhone(value: string) {
 }
 
 export default function VendorsPage() {
-  const [vendors, setVendors] = useState<Vendor[]>([])
+  const [result, setResult] = useState<PageResult<Vendor> | null>(null)
+  const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL')
@@ -56,16 +61,21 @@ export default function VendorsPage() {
   const [modalError, setModalError] = useState('')
   const [modalSaving, setModalSaving] = useState(false)
 
-  useEffect(() => {
-    fetchVendors()
-      .then(setVendors)
+  const load = useCallback((status: FilterStatus, p: number) => {
+    setLoading(true)
+    setPageError('')
+    fetchVendorsPaged(status !== 'ALL' ? status : undefined, p, PAGE_SIZE)
+      .then(setResult)
       .catch((e) => setPageError(e.message))
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => { load(appliedStatus, page) }, [page, appliedStatus, load])
+
   const handleSearch = () => {
     setAppliedQuery(query)
     setAppliedStatus(statusFilter)
+    setPage(0)
     setSelected(new Set())
     setStaged({})
   }
@@ -73,18 +83,20 @@ export default function VendorsPage() {
   const handleReset = () => {
     setQuery(''); setStatusFilter('ALL')
     setAppliedQuery(''); setAppliedStatus('ALL')
+    setPage(0)
     setSelected(new Set())
     setStaged({})
   }
 
+  const vendors = result?.content ?? []
+
   const filtered = vendors.filter((v) => {
-    const matchStatus = appliedStatus === 'ALL' || v.status === appliedStatus
-    const matchQuery =
-      !appliedQuery ||
+    if (!appliedQuery) return true
+    return (
       v.name.includes(appliedQuery) ||
       v.managerName.includes(appliedQuery) ||
       v.phone.includes(appliedQuery)
-    return matchStatus && matchQuery
+    )
   })
 
   const allChecked = filtered.length > 0 && filtered.every((v) => selected.has(v.id))
@@ -120,8 +132,7 @@ export default function VendorsPage() {
           updateVendorStatus(id, status === 'ACTIVE' ? 'activate' : 'suspend')
         )
       )
-      const updated = await fetchVendors()
-      setVendors(updated)
+      load(appliedStatus, page)
       setStaged({})
       setSelected(new Set())
     } catch (e: unknown) {
@@ -179,14 +190,20 @@ export default function VendorsPage() {
           password: form.password,
         })
       }
-      const updated = await fetchVendors()
-      setVendors(updated)
+      load(appliedStatus, editTarget ? page : 0)
+      if (!editTarget) setPage(0)
       setModalOpen(false)
     } catch (e: unknown) {
       setModalError(e instanceof Error ? e.message : '저장에 실패했습니다.')
     } finally {
       setModalSaving(false)
     }
+  }
+
+  const handlePageChange = (p: number) => {
+    setPage(p)
+    setSelected(new Set())
+    setStaged({})
   }
 
   return (
@@ -312,6 +329,17 @@ export default function VendorsPage() {
             )}
           </TableBody>
         </Table>
+        {result && result.totalPages > 1 && (
+          <div className="border-t px-4 py-3">
+            <Pagination
+              page={result.page}
+              totalPages={result.totalPages}
+              totalElements={result.totalElements}
+              size={result.size}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )}
       </div>
 
       {/* 모바일 카드 */}
@@ -362,6 +390,15 @@ export default function VendorsPage() {
               </div>
             </div>
           ))
+        )}
+        {result && result.totalPages > 1 && (
+          <Pagination
+            page={result.page}
+            totalPages={result.totalPages}
+            totalElements={result.totalElements}
+            size={result.size}
+            onPageChange={handlePageChange}
+          />
         )}
       </div>
 

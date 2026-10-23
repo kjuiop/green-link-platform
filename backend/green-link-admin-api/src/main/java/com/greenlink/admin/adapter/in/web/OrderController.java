@@ -3,6 +3,7 @@ package com.greenlink.admin.adapter.in.web;
 import com.greenlink.admin.adapter.in.web.dto.CreateOrderRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateOrderRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateOrderStatusRequest;
+import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.order.dto.OrderResult;
 import com.greenlink.core.application.orderhistory.dto.OrderHistoryResult;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
@@ -14,6 +15,7 @@ import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
 import com.greenlink.core.application.orderhistory.usecase.GetOrderHistoryUseCase;
 import com.greenlink.core.application.sms.usecase.SendDeliveryMmsUseCase;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -50,7 +52,7 @@ public class OrderController {
     }
 
     @GetMapping
-    public ResponseEntity<List<OrderResult>> getAll(
+    public ResponseEntity<PageResult<OrderResult>> getAll(
             Authentication auth,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long vendorId,
@@ -58,7 +60,9 @@ public class OrderController {
             @RequestParam(required = false) String productName,
             @RequestParam(required = false) String ordererName,
             @RequestParam(required = false) String deliveryDateFrom,
-            @RequestParam(required = false) String deliveryDateTo) {
+            @RequestParam(required = false) String deliveryDateTo,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         Long resolvedVendorId = vendorId;
         if (auth != null && auth.isAuthenticated()) {
             boolean isVendor = auth.getAuthorities().stream()
@@ -69,7 +73,7 @@ public class OrderController {
         }
         OrderSearchCondition condition = OrderSearchCondition.of(
                 status, resolvedVendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo);
-        return ResponseEntity.ok(getOrdersUseCase.getOrders(condition));
+        return ResponseEntity.ok(getOrdersUseCase.getOrdersPaged(condition, PageRequest.of(page, size)));
     }
 
     @GetMapping("/{id}")

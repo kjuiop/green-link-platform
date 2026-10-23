@@ -1,3 +1,5 @@
+import { PageResult } from '@/types/page'
+
 export type SmsMessage = {
   id: number
   orderId: number
@@ -17,7 +19,14 @@ function authHeaders(): HeadersInit {
 }
 
 export async function fetchSmsMessages(): Promise<SmsMessage[]> {
-  const res = await fetch('/api/messages', { headers: authHeaders() })
+  const res = await fetch('/api/messages?page=0&size=10000', { headers: authHeaders() })
+  if (!res.ok) throw new Error('발송내역을 불러오지 못했습니다.')
+  const data: PageResult<SmsMessage> = await res.json()
+  return data.content
+}
+
+export async function fetchSmsMessagesPaged(page = 0, size = 20): Promise<PageResult<SmsMessage>> {
+  const res = await fetch(`/api/messages?page=${page}&size=${size}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('발송내역을 불러오지 못했습니다.')
   return res.json()
 }
