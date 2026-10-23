@@ -263,6 +263,46 @@ export async function fetchOrderHistory(orderId: string): Promise<OrderHistoryIt
   return res.json()
 }
 
+export type ReceiptConfirmationResult = {
+  id: number
+  orderId: number
+  receiverName: string | null
+  receiverRelation: string | null
+  delivered: boolean
+  memo: string | null
+  confirmedAt: string | null
+  photoUrls: string[]
+}
+
+export async function fetchReceiptConfirmation(orderId: string): Promise<ReceiptConfirmationResult | null> {
+  const res = await fetch(`/api/orders/${orderId}/receipt`, { headers: authHeaders() })
+  if (res.status === 204) return null
+  if (!res.ok) throw new Error('인수확인 정보를 불러오지 못했습니다.')
+  return res.json()
+}
+
+export async function saveReceiptConfirmation(
+  orderId: string,
+  data: { receiverName: string; receiverRelation: string; delivered: boolean; memo: string; confirmedAt: string },
+  files: File[]
+): Promise<ReceiptConfirmationResult> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
+  const formData = new FormData()
+  if (data.receiverName) formData.append('receiverName', data.receiverName)
+  if (data.receiverRelation) formData.append('receiverRelation', data.receiverRelation)
+  formData.append('delivered', String(data.delivered))
+  if (data.memo) formData.append('memo', data.memo)
+  if (data.confirmedAt) formData.append('confirmedAt', data.confirmedAt)
+  files.forEach((f) => formData.append('files', f))
+  const res = await fetch(`/api/orders/${orderId}/receipt`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  })
+  if (!res.ok) throw new Error('인수확인 저장에 실패했습니다.')
+  return res.json()
+}
+
 export async function updateOrderStatus(id: string, action: string): Promise<Order> {
   const res = await fetch(`/api/orders/${id}/status`, {
     method: 'PUT',

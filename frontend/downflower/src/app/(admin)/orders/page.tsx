@@ -377,16 +377,10 @@ export default function OrdersPage() {
                   </TableCell>
                   <TableCell>
                     <ReceiptConfirmButton
+                      orderId={order.id}
                       orderNumber={order.orderNumber}
                       senderName={order.ribbonLeft}
                       recipientName={order.recipientName}
-                      initialSaved={order.id === '1' ? {
-                        receiverName: '김민준',
-                        photos: [
-                          { id: 'demo-1', url: 'https://picsum.photos/seed/receipt1/400/400' },
-                          { id: 'demo-2', url: 'https://picsum.photos/seed/receipt2/400/400' },
-                        ],
-                      } : undefined}
                     />
                   </TableCell>
                 </TableRow>
