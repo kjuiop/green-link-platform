@@ -188,7 +188,7 @@ function ReceiptFormDialog({ open, onClose, onSave, orderNumber, senderName, rec
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
                   </label>
-                  <input id={`receipt-photo-${orderNumber}`} type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handleFileChange} />
+                  <input id={`receipt-photo-${orderNumber}`} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
                 </div>
               </td>
             </tr>
