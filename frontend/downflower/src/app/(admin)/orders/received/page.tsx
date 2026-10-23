@@ -395,6 +395,13 @@ export default function ReceivedOrdersPage() {
                 <span>{order.placeName}</span>
                 <span>{order.amount.toLocaleString()}원 · {order.quantity}개</span>
               </div>
+              <div className="mt-2" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                <ReceiptConfirmButton
+                  orderNumber={order.orderNumber}
+                  senderName={order.ribbonLeft}
+                  recipientName={order.recipientName}
+                />
+              </div>
             </Link>
           ))
         )}

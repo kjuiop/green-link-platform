@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ClipboardCheck, Upload, X, Images, Download } from 'lucide-react'
@@ -91,7 +91,6 @@ interface FormDialogProps {
 }
 
 function ReceiptFormDialog({ open, onClose, onSave, orderNumber, senderName, recipientName }: FormDialogProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [photos, setPhotos] = useState<{ id: string; url: string }[]>([])
   const [receiverName, setReceiverName] = useState('')
   const [receiverRelation, setReceiverRelation] = useState('')
@@ -182,15 +181,14 @@ function ReceiptFormDialog({ open, onClose, onSave, orderNumber, senderName, rec
                       </button>
                     </div>
                   ))}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex h-16 w-16 flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
+                  <label
+                    htmlFor={`receipt-photo-${orderNumber}`}
+                    className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
                   >
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
-                  </button>
-                  <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+                  </label>
+                  <input id={`receipt-photo-${orderNumber}`} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
                 </div>
               </td>
             </tr>
