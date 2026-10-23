@@ -2,6 +2,8 @@ package com.greenlink.admin.adapter.out.persistence.sms;
 
 import com.greenlink.core.domain.sms.model.SmsMessage;
 import com.greenlink.core.domain.sms.port.SmsMessageRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -32,5 +34,10 @@ public class SmsMessageRepositoryAdapter implements SmsMessageRepository {
         return jpaRepository.findAll().stream()
                 .map(SmsMessageJpaEntity::toDomain)
                 .toList();
+    }
+
+    @Override
+    public Page<SmsMessage> findAll(Pageable pageable) {
+        return jpaRepository.findAll(pageable).map(SmsMessageJpaEntity::toDomain);
     }
 }

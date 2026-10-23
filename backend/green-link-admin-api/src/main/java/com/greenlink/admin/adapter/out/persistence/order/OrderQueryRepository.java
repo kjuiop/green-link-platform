@@ -6,6 +6,9 @@ import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.Arrays;
@@ -22,6 +25,35 @@ public class OrderQueryRepository {
 
     public List<OrderJpaEntity> search(OrderSearchCondition condition) {
         QOrderJpaEntity order = QOrderJpaEntity.orderJpaEntity;
+        return queryFactory
+                .selectFrom(order)
+                .where(buildWhere(condition, order))
+                .orderBy(order.createdAt.desc())
+                .fetch();
+    }
+
+    public Page<OrderJpaEntity> searchPaged(OrderSearchCondition condition, Pageable pageable) {
+        QOrderJpaEntity order = QOrderJpaEntity.orderJpaEntity;
+        BooleanBuilder where = buildWhere(condition, order);
+
+        List<OrderJpaEntity> content = queryFactory
+                .selectFrom(order)
+                .where(where)
+                .orderBy(order.createdAt.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        Long total = queryFactory
+                .select(order.count())
+                .from(order)
+                .where(where)
+                .fetchOne();
+
+        return new PageImpl<>(content, pageable, total != null ? total : 0L);
+    }
+
+    private BooleanBuilder buildWhere(OrderSearchCondition condition, QOrderJpaEntity order) {
         BooleanBuilder where = new BooleanBuilder();
 
         if (condition.status() != null && !condition.status().isBlank()) {
@@ -50,10 +82,6 @@ public class OrderQueryRepository {
             where.and(order.deliveryDate.loe(condition.deliveryDateTo()));
         }
 
-        return queryFactory
-                .selectFrom(order)
-                .where(where)
-                .orderBy(order.createdAt.desc())
-                .fetch();
+        return where;
     }
 }

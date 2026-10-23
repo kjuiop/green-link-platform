@@ -3,6 +3,8 @@ package com.greenlink.admin.adapter.out.persistence.order;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.domain.order.model.Order;
 import com.greenlink.core.domain.order.port.OrderRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -29,6 +31,11 @@ public class OrderRepositoryAdapter implements OrderRepository {
         return queryRepository.search(condition).stream()
                 .map(OrderJpaEntity::toDomain)
                 .toList();
+    }
+
+    @Override
+    public Page<Order> searchPaged(OrderSearchCondition condition, Pageable pageable) {
+        return queryRepository.searchPaged(condition, pageable).map(OrderJpaEntity::toDomain);
     }
 
     @Override

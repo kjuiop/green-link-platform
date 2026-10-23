@@ -10,7 +10,9 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { fetchVendors } from '@/lib/api/vendorApi'
 import { createOrder } from '@/lib/api/orderApi'
+import { fetchAllProducts } from '@/lib/api/productApi'
 import { Vendor } from '@/types/vendor'
+import { Product } from '@/types/product'
 
 export default function NewOrderPage() {
   const router = useRouter()
@@ -64,6 +66,9 @@ export default function NewOrderPage() {
 
   // 업체 목록
   const [vendors, setVendors] = useState<Vendor[]>([])
+  // 상품 목록
+  const [products, setProducts] = useState<Product[]>([])
+  const [selectedProductId, setSelectedProductId] = useState('')
 
   // 제출 상태
   const [errors, setErrors] = useState<{
@@ -78,6 +83,7 @@ export default function NewOrderPage() {
 
   useEffect(() => {
     fetchVendors('ACTIVE').then(setVendors).catch(() => {})
+    fetchAllProducts().then(setProducts).catch(() => {})
   }, [])
 
   const EXTRA_COST_PRESETS = [
@@ -187,12 +193,49 @@ export default function NewOrderPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>상품명 *</Label>
-                <Input
-                  placeholder="예: 근조화환 3단"
-                  value={productName}
-                  onChange={(e) => { setProductName(e.target.value); setErrors((prev) => ({ ...prev, productName: undefined })) }}
-                  className={cn(errors.productName && 'border-red-500 focus-visible:ring-red-500')}
-                />
+                <select
+                  value={selectedProductId}
+                  onChange={(e) => {
+                    const id = e.target.value
+                    setSelectedProductId(id)
+                    if (id === '__direct__') {
+                      setProductName('')
+                      setAmount('')
+                      setBaseAmount('')
+                    } else if (id === '') {
+                      setProductName('')
+                    } else {
+                      const found = products.find((p) => p.id === id)
+                      if (found) {
+                        setProductName(found.name)
+                        setAmount(String(found.price))
+                        setBaseAmount(String(found.price))
+                        setSelectedExtraPreset('')
+                      }
+                    }
+                    setErrors((prev) => ({ ...prev, productName: undefined }))
+                  }}
+                  className={cn(
+                    'w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700',
+                    errors.productName && 'border-red-500',
+                  )}
+                >
+                  <option value="">상품 선택</option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} — {p.price.toLocaleString()}원
+                    </option>
+                  ))}
+                  <option value="__direct__">직접 입력</option>
+                </select>
+                {selectedProductId === '__direct__' && (
+                  <Input
+                    placeholder="예: 근조화환 3단"
+                    value={productName}
+                    onChange={(e) => { setProductName(e.target.value); setErrors((prev) => ({ ...prev, productName: undefined })) }}
+                    className={cn(errors.productName && 'border-red-500 focus-visible:ring-red-500')}
+                  />
+                )}
                 {errors.productName && <p className="text-xs text-red-500">{errors.productName}</p>}
               </div>
               <div className="space-y-1.5">

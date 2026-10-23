@@ -1,5 +1,6 @@
 package com.greenlink.core.application.vendor.service;
 
+import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.vendor.dto.CreateVendorCommand;
 import com.greenlink.core.application.vendor.dto.UpdateVendorCommand;
 import com.greenlink.core.application.vendor.dto.VendorResult;
@@ -17,12 +18,15 @@ import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.vendor.VendorErrorCode;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -62,6 +66,17 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
         return results.stream()
             .filter(r -> r.status().equalsIgnoreCase(status))
             .toList();
+    }
+
+    @Override
+    public PageResult<VendorResult> getVendorsPaged(String status, Pageable pageable) {
+        Page<Admin> adminPage = adminRepository.findVendorsPaged(status, pageable);
+        List<Long> companyIds = adminPage.getContent().stream()
+                .map(Admin::getCompanyId).filter(Objects::nonNull).toList();
+        Map<Long, Company> companyMap = companyRepository.findAllByIdIn(companyIds).stream()
+                .collect(Collectors.toMap(Company::getId, c -> c));
+        Page<VendorResult> resultPage = adminPage.map(a -> toResult(a, companyMap.get(a.getCompanyId())));
+        return PageResult.of(resultPage);
     }
 
     @Override
