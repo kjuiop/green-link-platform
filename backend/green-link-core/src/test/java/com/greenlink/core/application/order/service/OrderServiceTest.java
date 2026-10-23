@@ -10,7 +10,6 @@ import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.domain.order.model.OrderStatus;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
-import com.greenlink.core.domain.photo.model.PhotoType;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
@@ -132,10 +131,10 @@ class OrderServiceTest {
     }
 
     @Test
-    void updateOrderStatus_complete_whenNoSitePhoto_throwsSitePhotoRequired() {
+    void updateOrderStatus_complete_whenNoPhoto_throwsSitePhotoRequired() {
         Order accepted = savedOrder(1L, OrderStatus.ACCEPTED);
         given(orderRepository.findById(1L)).willReturn(Optional.of(accepted));
-        given(photoRepository.existsByOrderIdAndPhotoType(1L, PhotoType.SITE)).willReturn(false);
+        given(photoRepository.existsByOrderId(1L)).willReturn(false);
 
         assertThatThrownBy(() -> service.updateOrderStatus(1L, "complete"))
                 .isInstanceOf(BusinessException.class)
@@ -144,10 +143,10 @@ class OrderServiceTest {
     }
 
     @Test
-    void updateOrderStatus_complete_whenSitePhotoExists_setsDelivered() {
+    void updateOrderStatus_complete_whenPhotoExists_setsDelivered() {
         Order accepted = savedOrder(1L, OrderStatus.ACCEPTED);
         given(orderRepository.findById(1L)).willReturn(Optional.of(accepted));
-        given(photoRepository.existsByOrderIdAndPhotoType(1L, PhotoType.SITE)).willReturn(true);
+        given(photoRepository.existsByOrderId(1L)).willReturn(true);
         given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
         given(adminRepository.findById(anyLong())).willReturn(Optional.empty());
 
