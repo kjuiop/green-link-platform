@@ -44,17 +44,19 @@ public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCas
             uploadedKeys.add(uploaded.s3Key());
         }
 
+        ReceiptConfirmationResult result;
         try {
             ReceiptConfirmation confirmation = ReceiptConfirmation.create(
                     command.orderId(), command.receiverName(), command.receiverRelation(),
                     command.delivered(), command.memo(), command.confirmedAt(), photoUrls);
-            ReceiptConfirmationResult result = toResult(repository.save(confirmation));
-            recordOrderHistoryUseCase.record(command.orderId(), OrderHistoryAction.UPDATED, "인수확인 저장");
-            return result;
+            result = toResult(repository.save(confirmation));
         } catch (Exception e) {
             uploadedKeys.forEach(photoStorage::delete);
             throw e;
         }
+        recordOrderHistoryUseCase.record(command.orderId(), OrderHistoryAction.UPDATED, "인수확인 저장");
+        return result;
+
     }
 
     @Override
