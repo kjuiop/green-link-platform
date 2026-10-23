@@ -35,8 +35,11 @@ function matchField(o: Order, field: SearchField, value: string): boolean {
 
 const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '전체', value: 'ALL' },
+  { label: '발주대기', value: '발주대기' },
   { label: '수주완료', value: '수주완료' },
   { label: '배송완료', value: '배송완료' },
+  { label: '수주거절', value: '수주거절' },
+  { label: '주문취소', value: '주문취소' },
 ]
 
 function downloadExcel(orders: Order[]) {
@@ -92,7 +95,7 @@ export default function ReceivedOrdersPage() {
 
   useEffect(() => {
     fetchOrders()
-      .then((all) => setBaseOrders(all.filter((o) => o.status === '수주완료' || o.status === '배송완료')))
+      .then(setBaseOrders)
       .catch(() => setLoadError('수주 목록을 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
   }, [])
