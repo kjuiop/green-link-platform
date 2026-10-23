@@ -140,6 +140,12 @@
 **`main`과 `develop`에는 직접 커밋·push 금지.**  
 모든 변경은 반드시 `feature/*` 브랜치에서 PR을 통해 머지한다.
 
+### 머지 순서 (예외 없음)
+1. `feature/*` → **squash merge** → `develop`
+2. `develop` → **merge** → `main` (`/deploy` 스킬로 PR 생성 후 머지)
+
+`main`에 직접 squash merge 금지 — 반드시 develop을 거친다.
+
 - 작업은 항상 `feature/{이슈번호}` 브랜치에서 시작
 - 완료 후 PR 생성 → develop 머지
 - 배포 시 `/deploy` 스킬로 develop → main PR 생성
