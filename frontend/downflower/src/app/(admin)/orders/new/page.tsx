@@ -360,7 +360,7 @@ export default function NewOrderPage() {
                   <div className="space-y-1.5">
                     <Label>고인명</Label>
                     <Input
-                      placeholder="예: 고인 김순영"
+                      placeholder="예: 고인 홍길동"
                       value={funeralPerson}
                       onChange={(e) => setFuneralPerson(e.target.value)}
                     />
@@ -392,7 +392,7 @@ export default function NewOrderPage() {
                   <div className="space-y-1.5">
                     <Label>신랑/신부명</Label>
                     <Input
-                      placeholder="예: 김철수 ♥ 이영희"
+                      placeholder="예: 홍길동 ♥ 홍길순"
                       value={weddingPerson}
                       onChange={(e) => setWeddingPerson(e.target.value)}
                     />
@@ -434,7 +434,7 @@ export default function NewOrderPage() {
               <div className="space-y-1.5">
                 <Label>리본 왼쪽 (보내는 사람·회사명)</Label>
                 <Input
-                  placeholder="예: 주식회사 효진토건 부장 신효섭"
+                  placeholder="예: 주식회사 OO 부장 홍길동"
                   value={ribbonLeft}
                   onChange={(e) => setRibbonLeft(e.target.value)}
                 />

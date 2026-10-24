@@ -97,7 +97,7 @@ export default function SettingsMessagesPage() {
           <div className="space-y-1.5">
             <Label>발신자명</Label>
             <Input
-              placeholder="다운플라워"
+              placeholder="온우림"
               value={senderName}
               onChange={(e) => setSenderName(e.target.value)}
               disabled={loading}
