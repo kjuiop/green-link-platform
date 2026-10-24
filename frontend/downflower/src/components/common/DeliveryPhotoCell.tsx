@@ -20,11 +20,13 @@ interface PhotoSendDialogProps {
   ordererPhone?: string
   recipientName?: string
   recipientPhone?: string
+  onSend?: () => Promise<void>
 }
 
 function PhotoSendDialog({
   open, onClose, photos, orderNumber,
   ordererName, ordererPhone, recipientName, recipientPhone,
+  onSend,
 }: PhotoSendDialogProps) {
   const [checkedPhotos, setCheckedPhotos] = useState<Set<number>>(new Set())
   const [sendToOrderer, setSendToOrderer] = useState(!!ordererPhone)
@@ -54,15 +56,21 @@ function PhotoSendDialog({
 
   const canSend = checkedPhotos.size > 0 && (sendToOrderer || sendToRecipient)
 
-  function handleSend() {
+  async function handleSend() {
     if (!canSend) return
     setSending(true)
-    // TODO: 문자 발송 API 호출
-    setTimeout(() => {
-      setSending(false)
+    try {
+      if (onSend) {
+        await onSend()
+      } else {
+        // TODO: 문자 발송 API 호출
+        await new Promise((r) => setTimeout(r, 1000))
+      }
       setSent(true)
       setTimeout(() => setSent(false), 2500)
-    }, 1000)
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -430,9 +438,13 @@ export function ClickableMessageBadge({
             {status}
           </Badge>
         </button>
-        {orderId && (
-          <ResendDialog open={open} onClose={() => setOpen(false)} orderId={orderId} orderNumber={orderNumber} />
-        )}
+        <PhotoSendDialog
+          open={open} onClose={() => setOpen(false)}
+          photos={photos ?? []} orderNumber={orderNumber}
+          ordererName={ordererName} ordererPhone={ordererPhone}
+          recipientName={recipientName} recipientPhone={recipientPhone}
+          onSend={orderId ? () => resendMms(orderId) : undefined}
+        />
       </>
     )
   }
