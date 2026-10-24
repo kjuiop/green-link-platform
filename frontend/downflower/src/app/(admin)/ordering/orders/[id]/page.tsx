@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -47,8 +47,6 @@ export default function OrderingOrderDetailPage() {
 
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
   const [selectedPhotoUrls, setSelectedPhotoUrls] = useState<string[]>([])
-
-  const photoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     Promise.all([
