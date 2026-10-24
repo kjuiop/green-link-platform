@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Send, Check, RefreshCw } from 'lucide-react'
+import { X, Send, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -20,11 +20,13 @@ interface PhotoSendDialogProps {
   ordererPhone?: string
   recipientName?: string
   recipientPhone?: string
+  onSend?: () => Promise<void>
 }
 
 function PhotoSendDialog({
   open, onClose, photos, orderNumber,
   ordererName, ordererPhone, recipientName, recipientPhone,
+  onSend,
 }: PhotoSendDialogProps) {
   const [checkedPhotos, setCheckedPhotos] = useState<Set<number>>(new Set())
   const [sendToOrderer, setSendToOrderer] = useState(!!ordererPhone)
@@ -32,6 +34,7 @@ function PhotoSendDialog({
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
 
   useEffect(() => {
     if (open) {
@@ -41,6 +44,7 @@ function PhotoSendDialog({
       setMessage('')
       setSending(false)
       setSent(false)
+      setSendError(null)
     }
   }, [open, ordererPhone, recipientPhone])
 
@@ -54,15 +58,24 @@ function PhotoSendDialog({
 
   const canSend = checkedPhotos.size > 0 && (sendToOrderer || sendToRecipient)
 
-  function handleSend() {
+  async function handleSend() {
     if (!canSend) return
     setSending(true)
-    // TODO: 문자 발송 API 호출
-    setTimeout(() => {
-      setSending(false)
+    setSendError(null)
+    try {
+      if (onSend) {
+        await onSend()
+      } else {
+        // TODO: 문자 발송 API 호출
+        await new Promise((r) => setTimeout(r, 1000))
+      }
       setSent(true)
       setTimeout(() => setSent(false), 2500)
-    }, 1000)
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : '발송에 실패했습니다.')
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -134,6 +147,9 @@ function PhotoSendDialog({
               {sent ? '발송 완료' : sending ? '발송 중…' : '문자 발송'}
             </Button>
           </div>
+          {sendError && (
+            <p className="text-xs text-red-500">{sendError}</p>
+          )}
         </div>
 
         {/* 사진 그리드 */}
@@ -300,90 +316,6 @@ function SmsHistoryDialog({ open, onClose, orderId, orderNumber }: {
   )
 }
 
-// ---- 재발송 다이얼로그 ----
-
-function ResendDialog({ open, onClose, orderId, orderNumber, onResent }: {
-  open: boolean; onClose: () => void; orderId: string; orderNumber?: string; onResent?: () => void
-}) {
-  const [messages, setMessages] = useState<SmsMessageResult[]>([])
-  const [loading, setLoading] = useState(false)
-  const [sending, setSending] = useState(false)
-  const [done, setDone] = useState(false)
-
-  useEffect(() => {
-    if (!open) { setDone(false); return }
-    setLoading(true)
-    fetchSmsMessages(orderId)
-      .then(setMessages)
-      .finally(() => setLoading(false))
-  }, [open, orderId])
-
-  async function handleResend() {
-    setSending(true)
-    try {
-      await resendMms(orderId)
-      setDone(true)
-      onResent?.()
-    } finally {
-      setSending(false)
-    }
-  }
-
-  const failed = messages.filter((m) => m.status === 'FAIL')
-
-  return (
-    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose() }}>
-      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
-        <DialogTitle>
-          문자 재발송
-          {orderNumber && <span className="ml-2 text-xs font-normal text-gray-400">{orderNumber}</span>}
-        </DialogTitle>
-        {loading ? (
-          <p className="py-6 text-center text-sm text-gray-400">불러오는 중...</p>
-        ) : done ? (
-          <div className="py-8 text-center space-y-2">
-            <Check className="mx-auto h-8 w-8 text-green-600" />
-            <p className="text-sm font-medium text-green-700">재발송 완료</p>
-          </div>
-        ) : (
-          <>
-            {failed[0]?.message && (
-              <div className="rounded-lg border bg-gray-50 p-3 text-sm">
-                <p className="mb-1 text-xs font-medium text-gray-500">발송 문구</p>
-                <p className="whitespace-pre-wrap text-gray-800">{failed[0].message}</p>
-              </div>
-            )}
-            <ul className="space-y-2">
-              {failed.map((m) => (
-                <li key={m.id} className="rounded-lg border p-3 text-sm space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{m.receiver}</span>
-                    <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">미발송</span>
-                  </div>
-                  {m.imageUrl && (
-                    <img src={m.imageUrl} alt="발송 사진" className="h-28 w-28 rounded border object-cover" />
-                  )}
-                </li>
-              ))}
-            </ul>
-            <div className="flex justify-end pt-2">
-              <Button
-                size="sm"
-                disabled={sending || failed.length === 0}
-                onClick={handleResend}
-                className="gap-1.5 bg-green-700 hover:bg-green-800"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                {sending ? '발송 중…' : '재발송'}
-              </Button>
-            </div>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 // ---- 문자발송 상태 배지 ----
 
 interface ClickableMessageBadgeProps {
@@ -430,9 +362,13 @@ export function ClickableMessageBadge({
             {status}
           </Badge>
         </button>
-        {orderId && (
-          <ResendDialog open={open} onClose={() => setOpen(false)} orderId={orderId} orderNumber={orderNumber} />
-        )}
+        <PhotoSendDialog
+          open={open} onClose={() => setOpen(false)}
+          photos={photos ?? []} orderNumber={orderNumber}
+          ordererName={ordererName} ordererPhone={ordererPhone}
+          recipientName={recipientName} recipientPhone={recipientPhone}
+          onSend={orderId ? () => resendMms(orderId) : undefined}
+        />
       </>
     )
   }
