@@ -120,27 +120,31 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     @Transactional
     public void notify(Long orderId, String vendorPhone) {
         if (vendorPhone == null || vendorPhone.isBlank()) return;
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
-
-        SmsSettings settings = smsSettingsRepository.get();
-        String sender = settings.getSenderNumber();
-        String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-        String msg = buildNotificationMessage(order);
-
-        SmsMessage smsMessage = SmsMessage.createNotification(orderId, vendorPhone, msg);
         try {
-            SmsResult result = smsClient.send(vendorPhone, msg, null, sender);
-            if (result.success()) {
-                smsMessage.markSuccess(result.msgId(), now);
-            } else {
-                smsMessage.markFail(result.failReason(), now);
+            Order order = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+
+            SmsSettings settings = smsSettingsRepository.get();
+            String sender = settings.getSenderNumber();
+            String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            String msg = buildNotificationMessage(order);
+
+            SmsMessage smsMessage = SmsMessage.createNotification(orderId, vendorPhone, msg);
+            try {
+                SmsResult result = smsClient.send(vendorPhone, msg, null, sender);
+                if (result.success()) {
+                    smsMessage.markSuccess(result.msgId(), now);
+                } else {
+                    smsMessage.markFail(result.failReason(), now);
+                }
+            } catch (Exception e) {
+                smsMessage.markFail(e.getMessage(), now);
             }
+            smsMessageRepository.save(smsMessage);
         } catch (Exception e) {
-            smsMessage.markFail(e.getMessage(), now);
+            org.slf4j.LoggerFactory.getLogger(SmsService.class)
+                    .error("[발주 알림 SMS 실패] orderId={}, error={}", orderId, e.getMessage(), e);
         }
-        smsMessageRepository.save(smsMessage);
     }
 
     private String buildNotificationMessage(Order order) {
