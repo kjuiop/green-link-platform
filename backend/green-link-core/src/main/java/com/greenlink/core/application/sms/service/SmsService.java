@@ -56,7 +56,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         SmsSettings settings = smsSettingsRepository.get();
         String msg = buildMessage(order, settings);
         String sender = settings.getSenderNumber();
-        String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
         boolean ordererValid = order.isSendPhotoToOrderer() && isValidPhone(order.getOrdererPhone());
         boolean recipientValid = order.isSendPhotoToRecipient() && isValidPhone(order.getRecipientPhone());
@@ -86,7 +86,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         SmsSettings settings = smsSettingsRepository.get();
         String msg = buildMessage(order, settings);
         String sender = settings.getSenderNumber();
-        String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
         for (SmsMessage m : failed) {
             sendAndRecord(orderId, m.getReceiver(), msg, m.getImageUrl(), sender, now);

@@ -142,7 +142,9 @@ export default function NewOrderPage() {
         quantity,
         amount: Number(amount),
         extraCost: extraCost ? Number(extraCost) : undefined,
-        deliveryDate,
+        deliveryDate: deliveryHour
+          ? `${deliveryDate} ${String(deliveryHour).padStart(2, '0')}:${deliveryMinute}`
+          : deliveryDate,
         deliveryTimeType,
         deliveryTimeHour: deliveryHour,
         deliveryTimeMinute: deliveryMinute,
