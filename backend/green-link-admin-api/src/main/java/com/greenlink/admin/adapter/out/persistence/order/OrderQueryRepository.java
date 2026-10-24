@@ -48,7 +48,6 @@ public class OrderQueryRepository {
                 .limit(pageable.getPageSize())
                 .fetch();
 
-
         Long total = queryFactory
                 .select(order.count())
                 .from(order)
