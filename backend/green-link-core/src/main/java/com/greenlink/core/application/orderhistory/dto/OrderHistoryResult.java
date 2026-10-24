@@ -7,5 +7,7 @@ public record OrderHistoryResult(
         Long orderId,
         OrderHistoryAction action,
         String detail,
+        String actorCompany,
+        String actorName,
         String createdAt
 ) {}

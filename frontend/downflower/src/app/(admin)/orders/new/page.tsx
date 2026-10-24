@@ -332,11 +332,11 @@ export default function NewOrderPage() {
 
         {/* 배송정보 */}
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm">배송정보</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-1.5">
+          <CardContent className="space-y-2 pt-2 pb-3">
+            <div className="space-y-1">
               <Label>배송날짜 *</Label>
               <Input
                 type="date"
@@ -349,13 +349,13 @@ export default function NewOrderPage() {
               />
               {errors.deliveryDate && <p className="text-xs text-red-500">{errors.deliveryDate}</p>}
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label>배송시간</Label>
               <div className="flex flex-wrap items-center gap-2">
                 <select
                   value={deliveryHour}
                   onChange={(e) => setDeliveryHour(e.target.value)}
-                  className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                  className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
                 >
                   <option value="">시</option>
                   {Array.from({ length: 24 }, (_, i) => (
@@ -365,7 +365,7 @@ export default function NewOrderPage() {
                 <select
                   value={deliveryMinute}
                   onChange={(e) => setDeliveryMinute(e.target.value)}
-                  className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                  className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
                 >
                   {['00', '10', '20', '30', '40', '50'].map((m) => (
                     <option key={m} value={m}>{m}분</option>
@@ -374,7 +374,7 @@ export default function NewOrderPage() {
                 <select
                   value={deliveryTimeType}
                   onChange={(e) => setDeliveryTimeType(e.target.value)}
-                  className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                  className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
                 >
                   {['까지', '예식', '행사', '3시간내', '직접입력'].map((opt) => (
                     <option key={opt} value={opt}>{opt}</option>
@@ -390,7 +390,7 @@ export default function NewOrderPage() {
               )}
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label>주소 *</Label>
               <Input
                 placeholder="도로명 주소 검색"
@@ -403,7 +403,7 @@ export default function NewOrderPage() {
               />
               {errors.address && <p className="text-xs text-red-500">{errors.address}</p>}
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label>상세주소</Label>
               <Input
                 placeholder="상세주소"

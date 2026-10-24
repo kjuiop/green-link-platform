@@ -24,6 +24,12 @@ public class OrderHistoryJpaEntity extends BaseJpaEntity {
     @Column(length = 500)
     private String detail;
 
+    @Column(name = "actor_company", length = 100)
+    private String actorCompany;
+
+    @Column(name = "actor_name", length = 100)
+    private String actorName;
+
     protected OrderHistoryJpaEntity() {}
 
     public static OrderHistoryJpaEntity from(OrderHistory h) {
@@ -32,12 +38,14 @@ public class OrderHistoryJpaEntity extends BaseJpaEntity {
         e.orderId = h.getOrderId();
         e.action = h.getAction();
         e.detail = h.getDetail();
+        e.actorCompany = h.getActorCompany();
+        e.actorName = h.getActorName();
         return e;
     }
 
     public OrderHistory toDomain() {
         return OrderHistory.of(
-                id, orderId, action, detail,
+                id, orderId, action, detail, actorCompany, actorName,
                 getCreatedAt() != null ? getCreatedAt().toString() : null
         );
     }
