@@ -179,6 +179,7 @@ export default function SignupPage() {
   const [verified, setVerified] = useState(false)
   const [codeError, setCodeError] = useState('')
   const [countdown, setCountdown] = useState(0)
+  const [errors, setErrors] = useState<{ verified?: string; businessDoc?: string; bankDoc?: string }>({})
 
   // 첨부서류
   const [businessDoc, setBusinessDoc] = useState<File | null>(null)
@@ -234,20 +235,45 @@ export default function SignupPage() {
     setCompanySearched(true)
   }
 
-  const handleSendCode = () => {
-    setCodeSent(true)
-    setCodeValue('')
-    setCodeError('')
-    setVerified(false)
-    setCountdown(60)
+  const handleSendCode = async () => {
+    if (!phone) return
+    try {
+      const res = await fetch('/api/auth/phone/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        alert(body?.message ?? '인증번호 발송에 실패했습니다.')
+        return
+      }
+      setCodeSent(true)
+      setCodeValue('')
+      setCodeError('')
+      setVerified(false)
+      setCountdown(180)
+    } catch {
+      alert('인증번호 발송 중 오류가 발생했습니다.')
+    }
   }
 
-  const handleVerify = () => {
-    if (codeValue === '123456') {
-      setVerified(true)
-      setCodeError('')
-    } else {
-      setCodeError('인증번호가 올바르지 않습니다.')
+  const handleVerify = async () => {
+    try {
+      const res = await fetch('/api/auth/phone/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, code: codeValue }),
+      })
+      if (res.ok) {
+        setVerified(true)
+        setCodeError('')
+        setErrors((prev) => ({ ...prev, verified: undefined }))
+      } else {
+        setCodeError('인증번호가 올바르지 않거나 만료되었습니다.')
+      }
+    } catch {
+      setCodeError('인증 확인 중 오류가 발생했습니다.')
     }
   }
 
@@ -267,6 +293,12 @@ export default function SignupPage() {
   }
 
   const handleSubmit = async () => {
+    const nextErrors: { verified?: string; businessDoc?: string; bankDoc?: string } = {}
+    if (!verified) nextErrors.verified = '휴대폰 인증을 완료해주세요.'
+    if (!businessDoc) nextErrors.businessDoc = '사업자 사본을 첨부해주세요.'
+    if ((selectedRole === 'VENDOR' || selectedRole === 'BOTH') && !bankDoc) nextErrors.bankDoc = '통장 사본을 첨부해주세요.'
+    if (Object.keys(nextErrors).length > 0) { setErrors(nextErrors); return }
+    setErrors({})
     if (password !== passwordConfirm) {
       alert('비밀번호가 일치하지 않습니다.')
       return
@@ -628,6 +660,9 @@ export default function SignupPage() {
                 <span>✓</span> 휴대폰 인증이 완료되었습니다.
               </p>
             )}
+            {!verified && errors.verified && (
+              <p className="text-xs text-red-500">{errors.verified}</p>
+            )}
 
             <div className="space-y-1.5">
               <Label>이메일</Label>
@@ -643,14 +678,23 @@ export default function SignupPage() {
             {(selectedRole === 'VENDOR' || selectedRole === 'BOTH') && (
               <div className="space-y-3 rounded-lg border bg-gray-50 p-3">
                 <p className="text-xs font-medium text-gray-500">첨부서류 (수주업체 필수)</p>
-                <FileUploadField label="사업자 사본" required file={businessDoc} onChange={setBusinessDoc} />
-                <FileUploadField label="통장 사본" required file={bankDoc} onChange={setBankDoc} />
+                <div>
+                  <FileUploadField label="사업자 사본" required file={businessDoc} onChange={(f) => { setBusinessDoc(f); if (f) setErrors((prev) => ({ ...prev, businessDoc: undefined })) }} />
+                  {!businessDoc && errors.businessDoc && <p className="mt-1 text-xs text-red-500">{errors.businessDoc}</p>}
+                </div>
+                <div>
+                  <FileUploadField label="통장 사본" required file={bankDoc} onChange={(f) => { setBankDoc(f); if (f) setErrors((prev) => ({ ...prev, bankDoc: undefined })) }} />
+                  {!bankDoc && errors.bankDoc && <p className="mt-1 text-xs text-red-500">{errors.bankDoc}</p>}
+                </div>
               </div>
             )}
             {selectedRole === 'ORDERING' && (
               <div className="space-y-3 rounded-lg border bg-gray-50 p-3">
                 <p className="text-xs font-medium text-gray-500">첨부서류</p>
-                <FileUploadField label="사업자 사본" required file={businessDoc} onChange={setBusinessDoc} />
+                <div>
+                  <FileUploadField label="사업자 사본" required file={businessDoc} onChange={(f) => { setBusinessDoc(f); if (f) setErrors((prev) => ({ ...prev, businessDoc: undefined })) }} />
+                  {!businessDoc && errors.businessDoc && <p className="mt-1 text-xs text-red-500">{errors.businessDoc}</p>}
+                </div>
               </div>
             )}
 

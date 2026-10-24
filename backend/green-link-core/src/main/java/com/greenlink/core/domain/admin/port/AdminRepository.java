@@ -15,4 +15,6 @@ public interface AdminRepository {
     List<Admin> findAllVendors();
     List<Admin> findAllByCompanyId(Long companyId);
     Page<Admin> findVendorsPaged(String status, Pageable pageable);
+    Optional<Admin> findByPhone(String phone);
+    Admin updatePassword(Long id, String encodedPassword);
 }

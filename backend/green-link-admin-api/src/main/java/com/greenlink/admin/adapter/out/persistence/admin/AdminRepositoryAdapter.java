@@ -105,4 +105,18 @@ public class AdminRepositoryAdapter implements AdminRepository {
         return new PageImpl<>(content, pageable, total != null ? total : 0L)
                 .map(AdminJpaEntity::toDomain);
     }
+
+    @Override
+    public Optional<Admin> findByPhone(String phone) {
+        return jpaRepository.findByPhone(phone).map(AdminJpaEntity::toDomain);
+    }
+
+    @Override
+    public Admin updatePassword(Long id, String encodedPassword) {
+        AdminJpaEntity entity = jpaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Admin not found: " + id));
+        Admin admin = entity.toDomain();
+        admin.changePassword(encodedPassword);
+        return jpaRepository.save(AdminJpaEntity.from(admin)).toDomain();
+    }
 }

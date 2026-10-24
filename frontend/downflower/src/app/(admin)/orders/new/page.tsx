@@ -183,6 +183,7 @@ export default function NewOrderPage() {
       <h1 className="text-xl font-bold">신규 발주</h1>
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+        <div className="space-y-4">
         {/* 기본정보 */}
         <Card>
           <CardHeader>
@@ -310,96 +311,7 @@ export default function NewOrderPage() {
           </CardContent>
         </Card>
 
-        {/* 배송정보 */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">배송정보</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 pt-2 pb-3">
-            <div className="space-y-1">
-              <Label>배송날짜 *</Label>
-              <Input
-                type="date"
-                value={deliveryDate}
-                onChange={(e) => {
-                  setDeliveryDate(e.target.value)
-                  if (e.target.value) setErrors((prev) => ({ ...prev, deliveryDate: undefined }))
-                }}
-                className={cn(errors.deliveryDate && 'border-red-500 focus-visible:ring-red-500')}
-              />
-              {errors.deliveryDate && <p className="text-xs text-red-500">{errors.deliveryDate}</p>}
-            </div>
-            <div className="space-y-1">
-              <Label>배송시간 *</Label>
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={deliveryHour}
-                  onChange={(e) => {
-                    setDeliveryHour(e.target.value)
-                    if (e.target.value) setErrors((prev) => ({ ...prev, deliveryHour: undefined }))
-                  }}
-                  className={cn('rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700', errors.deliveryHour && 'border-red-500')}
-                >
-                  <option value="">시</option>
-                  {Array.from({ length: 24 }, (_, i) => (
-                    <option key={i} value={String(i)}>{i}시</option>
-                  ))}
-                </select>
-                <select
-                  value={deliveryMinute}
-                  onChange={(e) => setDeliveryMinute(e.target.value)}
-                  className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-                >
-                  {['00', '10', '20', '30', '40', '50'].map((m) => (
-                    <option key={m} value={m}>{m}분</option>
-                  ))}
-                </select>
-                <select
-                  value={deliveryTimeType}
-                  onChange={(e) => setDeliveryTimeType(e.target.value)}
-                  className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-                >
-                  {['까지', '예식', '행사', '3시간내', '직접입력'].map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-              </div>
-              {deliveryTimeType === '직접입력' && (
-                <Input
-                  placeholder="직접 입력"
-                  value={deliveryTimeCustom}
-                  onChange={(e) => setDeliveryTimeCustom(e.target.value)}
-                />
-              )}
-              {errors.deliveryHour && <p className="text-xs text-red-500">{errors.deliveryHour}</p>}
-            </div>
-
-            <div className="space-y-1">
-              <Label>주소 *</Label>
-              <Input
-                placeholder="도로명 주소 검색"
-                value={address}
-                onChange={(e) => {
-                  setAddress(e.target.value)
-                  if (e.target.value.trim()) setErrors((prev) => ({ ...prev, address: undefined }))
-                }}
-                className={cn(errors.address && 'border-red-500 focus-visible:ring-red-500')}
-              />
-              {errors.address && <p className="text-xs text-red-500">{errors.address}</p>}
-            </div>
-            <div className="space-y-1">
-              <Label>상세주소</Label>
-              <Input
-                placeholder="상세주소"
-                value={addressDetail}
-                onChange={(e) => setAddressDetail(e.target.value)}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
         {/* 행사정보 */}
-        <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-sm">행사정보</CardTitle>
@@ -561,8 +473,96 @@ export default function NewOrderPage() {
           </Card>
         </div>
 
-        {/* 주문자 / 받는 분 + 기타 */}
         <div className="space-y-4">
+        {/* 배송정보 */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">배송정보</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 pt-2 pb-3">
+            <div className="space-y-1">
+              <Label>배송날짜 *</Label>
+              <Input
+                type="date"
+                value={deliveryDate}
+                onChange={(e) => {
+                  setDeliveryDate(e.target.value)
+                  if (e.target.value) setErrors((prev) => ({ ...prev, deliveryDate: undefined }))
+                }}
+                className={cn(errors.deliveryDate && 'border-red-500 focus-visible:ring-red-500')}
+              />
+              {errors.deliveryDate && <p className="text-xs text-red-500">{errors.deliveryDate}</p>}
+            </div>
+            <div className="space-y-1">
+              <Label>배송시간 *</Label>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={deliveryHour}
+                  onChange={(e) => {
+                    setDeliveryHour(e.target.value)
+                    if (e.target.value) setErrors((prev) => ({ ...prev, deliveryHour: undefined }))
+                  }}
+                  className={cn('rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700', errors.deliveryHour && 'border-red-500')}
+                >
+                  <option value="">시</option>
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={String(i)}>{i}시</option>
+                  ))}
+                </select>
+                <select
+                  value={deliveryMinute}
+                  onChange={(e) => setDeliveryMinute(e.target.value)}
+                  className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                >
+                  {['00', '10', '20', '30', '40', '50'].map((m) => (
+                    <option key={m} value={m}>{m}분</option>
+                  ))}
+                </select>
+                <select
+                  value={deliveryTimeType}
+                  onChange={(e) => setDeliveryTimeType(e.target.value)}
+                  className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                >
+                  {['까지', '예식', '행사', '3시간내', '직접입력'].map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+              {deliveryTimeType === '직접입력' && (
+                <Input
+                  placeholder="직접 입력"
+                  value={deliveryTimeCustom}
+                  onChange={(e) => setDeliveryTimeCustom(e.target.value)}
+                />
+              )}
+              {errors.deliveryHour && <p className="text-xs text-red-500">{errors.deliveryHour}</p>}
+            </div>
+
+            <div className="space-y-1">
+              <Label>주소 *</Label>
+              <Input
+                placeholder="도로명 주소 검색"
+                value={address}
+                onChange={(e) => {
+                  setAddress(e.target.value)
+                  if (e.target.value.trim()) setErrors((prev) => ({ ...prev, address: undefined }))
+                }}
+                className={cn(errors.address && 'border-red-500 focus-visible:ring-red-500')}
+              />
+              {errors.address && <p className="text-xs text-red-500">{errors.address}</p>}
+            </div>
+            <div className="space-y-1">
+              <Label>상세주소</Label>
+              <Input
+                placeholder="상세주소"
+                value={addressDetail}
+                onChange={(e) => setAddressDetail(e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 주문자 / 받는 분 + 기타 */}
           <Card>
             <CardHeader>
               <CardTitle className="text-sm">주문자 / 받는 분</CardTitle>

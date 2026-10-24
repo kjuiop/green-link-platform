@@ -14,6 +14,7 @@ export default function FindIdPage() {
   const [verified, setVerified] = useState(false)
   const [codeError, setCodeError] = useState('')
   const [countdown, setCountdown] = useState(0)
+  const [result, setResult] = useState<{ loginId: string; createdAt: string } | null>(null)
 
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 11)
@@ -28,24 +29,61 @@ export default function FindIdPage() {
     return () => clearInterval(timer)
   }, [countdown])
 
-  const handleSendCode = () => {
-    setCodeSent(true)
-    setCodeValue('')
-    setCodeError('')
-    setCountdown(60)
-  }
+  const formatCountdown = (s: number) =>
+    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 
-  const handleVerify = () => {
-    if (codeValue === '123456') {
-      setVerified(true)
+  const handleSendCode = async () => {
+    if (!phone) return
+    try {
+      const res = await fetch('/api/auth/phone/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        alert(body?.message ?? '인증번호 발송에 실패했습니다.')
+        return
+      }
+      setCodeSent(true)
+      setCodeValue('')
       setCodeError('')
-    } else {
-      setCodeError('인증번호가 올바르지 않습니다.')
+      setCountdown(180)
+    } catch {
+      alert('인증번호 발송 중 오류가 발생했습니다.')
     }
   }
 
-  const formatCountdown = (s: number) =>
-    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+  const handleVerify = async () => {
+    try {
+      const verifyRes = await fetch('/api/auth/phone/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, code: codeValue }),
+      })
+      if (!verifyRes.ok) {
+        setCodeError('인증번호가 올바르지 않거나 만료되었습니다.')
+        return
+      }
+
+      const findRes = await fetch('/api/auth/find-id', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      if (!findRes.ok) {
+        const body = await findRes.json().catch(() => null)
+        setCodeError(body?.message ?? '가입된 계정을 찾을 수 없습니다.')
+        return
+      }
+      const data = await findRes.json()
+      setResult(data)
+      setVerified(true)
+      setCodeError('')
+    } catch {
+      setCodeError('인증 확인 중 오류가 발생했습니다.')
+    }
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -128,8 +166,12 @@ export default function FindIdPage() {
             <CardContent className="space-y-4">
               <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center">
                 <p className="text-xs text-gray-500">고객님의 아이디</p>
-                <p className="mt-1 text-lg font-bold text-green-700">vendor_001</p>
-                <p className="mt-1 text-xs text-gray-400">가입일: 2026-01-15</p>
+                <p className="mt-1 text-lg font-bold text-green-700">{result?.loginId}</p>
+                {result?.createdAt && (
+                  <p className="mt-1 text-xs text-gray-400">
+                    가입일: {result.createdAt.slice(0, 10)}
+                  </p>
+                )}
               </div>
 
               <div className="flex gap-2">
