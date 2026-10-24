@@ -196,7 +196,8 @@ export default function OrdersPage() {
 
       {/* 검색 영역 */}
       <div className="rounded-lg border bg-white p-4">
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="w-14 shrink-0 text-xs font-medium text-gray-500">주문 상태</span>
           {STATUS_FILTERS.map(({ label, value }) => (
             <label key={value} className="flex cursor-pointer items-center gap-1.5">
               <input
@@ -212,7 +213,7 @@ export default function OrdersPage() {
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <span className="text-xs text-gray-400">문자현황</span>
+          <span className="w-14 shrink-0 text-xs font-medium text-gray-500">문자현황</span>
           {MSG_STATUS_FILTERS.map(({ label, value }) => (
             <label key={value} className="flex cursor-pointer items-center gap-1.5">
               <input
@@ -229,7 +230,7 @@ export default function OrdersPage() {
 
         {/* 배송날짜 + 정상/삭제 */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <label className="whitespace-nowrap text-sm text-gray-500">배송날짜</label>
+          <span className="w-14 shrink-0 text-xs font-medium text-gray-500">배송날짜</span>
           <input
             type="date"
             value={dateFrom}
@@ -330,6 +331,7 @@ export default function OrdersPage() {
               <TableHead>주문번호</TableHead>
               <TableHead><div>배송요구일</div><div className="font-normal text-gray-400">주문접수일</div></TableHead>
               <TableHead><div>주문자</div><div className="font-normal text-gray-400">받는분</div></TableHead>
+              <TableHead>수주업체</TableHead>
               <TableHead><div>상품명</div><div className="font-normal text-gray-400">배송지</div></TableHead>
               <TableHead>수량</TableHead>
               <TableHead>발주금액</TableHead>
@@ -341,13 +343,13 @@ export default function OrdersPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={10} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={10} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -381,6 +383,7 @@ export default function OrdersPage() {
                     <div className="text-sm">{order.ordererName}</div>
                     {order.recipientName && <div className="text-sm text-gray-400">{order.recipientName}</div>}
                   </TableCell>
+                  <TableCell className="text-sm text-gray-700">{order.vendorName || '—'}</TableCell>
                   <TableCell>
                     <div className="text-sm">{order.productName}</div>
                     <div className="text-sm text-gray-400">{[order.placeName, order.address].filter(Boolean).join(' ')}</div>
