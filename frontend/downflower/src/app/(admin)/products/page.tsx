@@ -62,6 +62,7 @@ export default function ProductsPage() {
   }, [])
 
   useEffect(() => {
+    if (role === '') return
     if (role === 'SUPER_ADMIN' && selectedCompanyId == null) return
     load(page, selectedCompanyId)
   }, [page, load, role, selectedCompanyId])
