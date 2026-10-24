@@ -29,7 +29,15 @@ const STATUS_TO_API: Partial<Record<OrderStatus, string>> = {
 const SERVER_FIELD_MAP: Partial<Record<SearchField, keyof OrderSearchParams>> = {
   '주문번호': 'orderNumber',
   '주문자': 'ordererName',
+  '인수자': 'receiverName',
 }
+
+const MSG_STATUS_FILTERS: { label: string; value: string }[] = [
+  { label: '전체', value: 'ALL' },
+  { label: '미발송', value: 'NONE' },
+  { label: '발송', value: 'SENT' },
+  { label: '실패', value: 'FAIL' },
+]
 
 function matchField(o: Order, field: SearchField, value: string): boolean {
   if (!value.trim()) return true
@@ -43,7 +51,7 @@ function matchField(o: Order, field: SearchField, value: string): boolean {
     case '받는분':   return (o.recipientName ?? '').includes(v)
     case '배달장소': return `${o.placeName} ${o.roomName} ${o.address}`.includes(v)
     case '보내는분': return o.ribbonLeft.includes(v)
-    case '인수자':   return (o.recipientName ?? '').includes(v)
+    case '인수자':   return true  // server-side
     case '주문번호': return o.orderNumber.includes(v)
   }
 }
@@ -93,6 +101,7 @@ export default function OrdersPage() {
   const [loadError, setLoadError] = useState('')
 
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL')
+  const [msgStatusFilter, setMsgStatusFilter] = useState('ALL')
   const [deletedFilter, setDeletedFilter] = useState<DeletedFilter>('정상')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -110,6 +119,7 @@ export default function OrdersPage() {
   function buildServerParams(): OrderSearchParams {
     const params: OrderSearchParams = {}
     if (statusFilter !== 'ALL') params.status = STATUS_TO_API[statusFilter]
+    if (msgStatusFilter !== 'ALL') params.messageStatus = msgStatusFilter
     if (dateFrom) params.deliveryDateFrom = dateFrom
     if (dateTo) params.deliveryDateTo = dateTo
     const key1 = SERVER_FIELD_MAP[search1Field]
@@ -141,7 +151,7 @@ export default function OrdersPage() {
   }
 
   const handleReset = () => {
-    setStatusFilter('ALL'); setDeletedFilter('정상'); setDateFrom(''); setDateTo('')
+    setStatusFilter('ALL'); setMsgStatusFilter('ALL'); setDeletedFilter('정상'); setDateFrom(''); setDateTo('')
     setSearch1Field('주문번호'); setSearch1Value('')
     setSearch2Field('수주사명'); setSearch2Value('')
     setAppliedDeletedFilter('정상')
@@ -193,6 +203,22 @@ export default function OrdersPage() {
                 name="statusFilter"
                 checked={statusFilter === value}
                 onChange={() => setStatusFilter(value)}
+                className="accent-green-700"
+              />
+              <span className="text-sm text-gray-700">{label}</span>
+            </label>
+          ))}
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <span className="text-xs text-gray-400">문자현황</span>
+          {MSG_STATUS_FILTERS.map(({ label, value }) => (
+            <label key={value} className="flex cursor-pointer items-center gap-1.5">
+              <input
+                type="radio"
+                name="msgStatusFilter"
+                checked={msgStatusFilter === value}
+                onChange={() => setMsgStatusFilter(value)}
                 className="accent-green-700"
               />
               <span className="text-sm text-gray-700">{label}</span>

@@ -161,6 +161,8 @@ export type OrderSearchParams = {
   ordererName?: string
   deliveryDateFrom?: string
   deliveryDateTo?: string
+  receiverName?: string
+  messageStatus?: string
 }
 
 function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: number): string {
@@ -173,6 +175,8 @@ function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: numbe
   if (params?.ordererName) query.set('ordererName', params.ordererName)
   if (params?.deliveryDateFrom) query.set('deliveryDateFrom', params.deliveryDateFrom)
   if (params?.deliveryDateTo) query.set('deliveryDateTo', params.deliveryDateTo)
+  if (params?.receiverName) query.set('receiverName', params.receiverName)
+  if (params?.messageStatus) query.set('messageStatus', params.messageStatus)
   if (page !== undefined) query.set('page', String(page))
   if (size !== undefined) query.set('size', String(size))
   return query.toString()

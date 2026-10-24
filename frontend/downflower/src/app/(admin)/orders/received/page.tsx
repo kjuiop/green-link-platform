@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { OrderStatusBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
-import { fetchOrders } from '@/lib/api/orderApi'
+import { fetchOrders, OrderSearchParams } from '@/lib/api/orderApi'
 import { OrderStatus, Order } from '@/types/order'
 import { Download } from 'lucide-react'
 
@@ -16,11 +16,32 @@ type DeletedFilter = '정상' | '삭제' | '전체'
 
 const SEARCH_FIELDS: SearchField[] = ['발주사명', '수주사명', '주문일', '배송일', '주문자', '받는분', '배달장소', '보내는분', '인수자', '주문번호']
 
+const STATUS_TO_API: Partial<Record<OrderStatus, string>> = {
+  '발주대기': 'PENDING',
+  '수주완료': 'ACCEPTED',
+  '배송완료': 'DELIVERED',
+  '수주거절': 'REJECTED',
+  '주문취소': 'CANCELLED',
+}
+
+const SERVER_FIELD_MAP: Partial<Record<SearchField, keyof OrderSearchParams>> = {
+  '주문번호': 'orderNumber',
+  '주문자': 'ordererName',
+  '인수자': 'receiverName',
+}
+
+const MSG_STATUS_FILTERS: { label: string; value: string }[] = [
+  { label: '전체', value: 'ALL' },
+  { label: '미발송', value: 'NONE' },
+  { label: '발송', value: 'SENT' },
+  { label: '실패', value: 'FAIL' },
+]
+
 function matchField(o: Order, field: SearchField, value: string): boolean {
   if (!value.trim()) return true
   const v = value.trim()
   switch (field) {
-    case '발주사명': return o.ordererName.includes(v)
+    case '발주사명': return (o.orderingCompanyName ?? '').includes(v)
     case '수주사명': return o.vendorName.includes(v)
     case '주문일':   return o.orderedAt.includes(v)
     case '배송일':   return o.deliveryAt.includes(v)
@@ -28,7 +49,7 @@ function matchField(o: Order, field: SearchField, value: string): boolean {
     case '받는분':   return (o.recipientName ?? '').includes(v)
     case '배달장소': return `${o.placeName} ${o.roomName} ${o.address}`.includes(v)
     case '보내는분': return o.ribbonLeft.includes(v)
-    case '인수자':   return (o.recipientName ?? '').includes(v)
+    case '인수자':   return true  // server-side
     case '주문번호': return o.orderNumber.includes(v)
   }
 }
@@ -76,6 +97,7 @@ export default function ReceivedOrdersPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL')
+  const [msgStatusFilter, setMsgStatusFilter] = useState('ALL')
   const [deletedFilter, setDeletedFilter] = useState<DeletedFilter>('정상')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -84,54 +106,63 @@ export default function ReceivedOrdersPage() {
   const [search2Field, setSearch2Field] = useState<SearchField>('수주사명')
   const [search2Value, setSearch2Value] = useState('')
 
-  const [appliedStatus, setAppliedStatus] = useState<OrderStatus | 'ALL'>('ALL')
   const [appliedDeletedFilter, setAppliedDeletedFilter] = useState<DeletedFilter>('정상')
-  const [appliedFrom, setAppliedFrom] = useState('')
-  const [appliedTo, setAppliedTo] = useState('')
   const [applied1Field, setApplied1Field] = useState<SearchField>('주문번호')
   const [applied1Value, setApplied1Value] = useState('')
   const [applied2Field, setApplied2Field] = useState<SearchField>('수주사명')
   const [applied2Value, setApplied2Value] = useState('')
 
-  useEffect(() => {
-    fetchOrders()
+  function buildServerParams(): OrderSearchParams {
+    const params: OrderSearchParams = {}
+    if (statusFilter !== 'ALL') params.status = STATUS_TO_API[statusFilter]
+    if (msgStatusFilter !== 'ALL') params.messageStatus = msgStatusFilter
+    if (dateFrom) params.deliveryDateFrom = dateFrom
+    if (dateTo) params.deliveryDateTo = dateTo
+    const key1 = SERVER_FIELD_MAP[search1Field]
+    if (key1 && search1Value) params[key1] = search1Value
+    const key2 = SERVER_FIELD_MAP[search2Field]
+    if (key2 && search2Value) params[key2] = search2Value
+    return params
+  }
+
+  function loadOrders(params: OrderSearchParams = {}) {
+    setLoading(true)
+    setLoadError(null)
+    fetchOrders(params)
       .then(setBaseOrders)
       .catch(() => setLoadError('수주 목록을 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { loadOrders() }, [])
 
   const handleSearch = () => {
-    setAppliedStatus(statusFilter)
     setAppliedDeletedFilter(deletedFilter)
-    setAppliedFrom(dateFrom)
-    setAppliedTo(dateTo)
     setApplied1Field(search1Field)
-    setApplied1Value(search1Value)
+    setApplied1Value(SERVER_FIELD_MAP[search1Field] ? '' : search1Value)
     setApplied2Field(search2Field)
-    setApplied2Value(search2Value)
+    setApplied2Value(SERVER_FIELD_MAP[search2Field] ? '' : search2Value)
+    loadOrders(buildServerParams())
   }
 
   const handleReset = () => {
-    setStatusFilter('ALL'); setDeletedFilter('정상'); setDateFrom(''); setDateTo('')
+    setStatusFilter('ALL'); setMsgStatusFilter('ALL'); setDeletedFilter('정상'); setDateFrom(''); setDateTo('')
     setSearch1Field('주문번호'); setSearch1Value('')
     setSearch2Field('수주사명'); setSearch2Value('')
-    setAppliedStatus('ALL'); setAppliedDeletedFilter('정상'); setAppliedFrom(''); setAppliedTo('')
+    setAppliedDeletedFilter('정상')
     setApplied1Field('주문번호'); setApplied1Value('')
     setApplied2Field('수주사명'); setApplied2Value('')
+    loadOrders({})
   }
 
   const filtered = baseOrders.filter((o) => {
-    const matchStatus = appliedStatus === 'ALL' || o.status === appliedStatus
     const matchDeleted =
       appliedDeletedFilter === '전체' ||
       (appliedDeletedFilter === '정상' && !o.isDeleted) ||
       (appliedDeletedFilter === '삭제' && !!o.isDeleted)
-    const deliveryDate = o.deliveryAt.slice(0, 10)
-    const matchFrom = !appliedFrom || deliveryDate >= appliedFrom
-    const matchTo = !appliedTo || deliveryDate <= appliedTo
-    const match1 = matchField(o, applied1Field, applied1Value)
-    const match2 = matchField(o, applied2Field, applied2Value)
-    return matchStatus && matchDeleted && matchFrom && matchTo && match1 && match2
+    const match1 = !SERVER_FIELD_MAP[applied1Field] ? matchField(o, applied1Field, applied1Value) : true
+    const match2 = !SERVER_FIELD_MAP[applied2Field] ? matchField(o, applied2Field, applied2Value) : true
+    return matchDeleted && match1 && match2
   })
 
   return (
@@ -154,6 +185,22 @@ export default function ReceivedOrdersPage() {
                 name="statusFilter"
                 checked={statusFilter === value}
                 onChange={() => setStatusFilter(value)}
+                className="accent-green-700"
+              />
+              <span className="text-sm text-gray-700">{label}</span>
+            </label>
+          ))}
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <span className="text-xs text-gray-400">문자현황</span>
+          {MSG_STATUS_FILTERS.map(({ label, value }) => (
+            <label key={value} className="flex cursor-pointer items-center gap-1.5">
+              <input
+                type="radio"
+                name="msgStatusFilter"
+                checked={msgStatusFilter === value}
+                onChange={() => setMsgStatusFilter(value)}
                 className="accent-green-700"
               />
               <span className="text-sm text-gray-700">{label}</span>
