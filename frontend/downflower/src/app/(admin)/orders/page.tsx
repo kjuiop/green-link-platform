@@ -172,7 +172,7 @@ export default function OrdersPage() {
     if (selectedIds.size === 0) return
     setExcelLoading(true)
     try { await downloadOrdersExcel(Array.from(selectedIds)) }
-    catch { /* silent */ }
+    catch { alert('엑셀 다운로드에 실패했습니다. 잠시 후 다시 시도해 주세요.') }
     finally { setExcelLoading(false) }
   }
 
