@@ -6,7 +6,7 @@ public record UpdateReceiptInfoCommand(
         Long orderId,
         String receiverName,
         String receiverRelation,
-        boolean delivered,
+        Boolean delivered,
         String memo,
         LocalDateTime confirmedAt
 ) {}

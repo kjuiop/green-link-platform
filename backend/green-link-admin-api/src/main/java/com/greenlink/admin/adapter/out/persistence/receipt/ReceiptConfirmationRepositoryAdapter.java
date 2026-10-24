@@ -61,11 +61,12 @@ public class ReceiptConfirmationRepositoryAdapter implements ReceiptConfirmation
 
     @Override
     public ReceiptConfirmation updateReceiverInfo(Long orderId, String receiverName, String receiverRelation,
-                                                   boolean delivered, String memo, LocalDateTime confirmedAt) {
+                                                   Boolean delivered, String memo, LocalDateTime confirmedAt) {
         ReceiptConfirmationJpaEntity entity = jpaRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new EntityNotFoundException("인수확인 정보를 찾을 수 없습니다. orderId=" + orderId));
+        boolean effectiveDelivered = delivered != null ? delivered : entity.isDelivered();
         LocalDateTime effectiveConfirmedAt = confirmedAt != null ? confirmedAt : entity.getConfirmedAt();
-        entity.update(receiverName, receiverRelation, delivered, memo, effectiveConfirmedAt);
+        entity.update(receiverName, receiverRelation, effectiveDelivered, memo, effectiveConfirmedAt);
         return jpaRepository.save(entity).toDomain();
     }
 }

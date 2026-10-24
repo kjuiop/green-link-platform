@@ -83,7 +83,7 @@ public class ReceiptConfirmationController {
             @PathVariable Long orderId,
             @RequestParam(required = false) String receiverName,
             @RequestParam(required = false) String receiverRelation,
-            @RequestParam(defaultValue = "false") boolean delivered,
+            @RequestParam(required = false) Boolean delivered,
             @RequestParam(required = false) String memo,
             @RequestParam(required = false) String confirmedAt) {
 
