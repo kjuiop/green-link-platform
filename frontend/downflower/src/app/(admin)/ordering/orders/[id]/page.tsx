@@ -612,21 +612,25 @@ export default function OrderingOrderDetailPage() {
             {smsMessages.length === 0 ? (
               <p className="text-xs text-gray-400">배송완료 처리 시 자동으로 발송됩니다.</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
+                {smsMessages[0]?.message && (
+                  <div className="rounded-lg border bg-gray-50 p-3">
+                    <p className="mb-1 text-xs font-medium text-gray-500">발송 문구</p>
+                    <p className="whitespace-pre-wrap text-sm text-gray-800">{smsMessages[0].message}</p>
+                  </div>
+                )}
                 {smsMessages.map((msg) => (
-                  <div key={msg.id} className="flex items-start gap-3 rounded-md border bg-gray-50 px-3 py-2">
-                    <div className="flex-1 space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{msg.receiver}</span>
-                        {msg.status === 'SUCCESS'
-                          ? <span className="text-xs text-green-600">✓ 발송성공</span>
-                          : <span className="text-xs text-red-500">✕ 발송실패</span>}
-                      </div>
-                      {msg.sentAt && <p className="text-xs text-gray-400">{msg.sentAt}</p>}
-                      {msg.failReason && <p className="text-xs text-red-400">{msg.failReason}</p>}
+                  <div key={msg.id} className="rounded-md border bg-gray-50 px-3 py-2.5 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{msg.receiver}</span>
+                      {msg.status === 'SUCCESS'
+                        ? <span className="text-xs text-green-600">✓ 발송성공</span>
+                        : <span className="text-xs text-red-500">✕ 발송실패</span>}
                     </div>
+                    {msg.sentAt && <p className="text-xs text-gray-400">{msg.sentAt}</p>}
+                    {msg.failReason && <p className="text-xs text-red-400">{msg.failReason}</p>}
                     {msg.imageUrl && (
-                      <img src={msg.imageUrl} alt="발송사진" className="h-12 w-12 rounded border object-cover" />
+                      <img src={msg.imageUrl} alt="발송사진" className="h-20 w-20 rounded border object-cover" />
                     )}
                   </div>
                 ))}

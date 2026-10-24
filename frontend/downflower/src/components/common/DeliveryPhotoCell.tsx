@@ -347,15 +347,22 @@ function ResendDialog({ open, onClose, orderId, orderNumber, onResent }: {
           </div>
         ) : (
           <>
+            {failed[0]?.message && (
+              <div className="rounded-lg border bg-gray-50 p-3 text-sm">
+                <p className="mb-1 text-xs font-medium text-gray-500">발송 문구</p>
+                <p className="whitespace-pre-wrap text-gray-800">{failed[0].message}</p>
+              </div>
+            )}
             <ul className="space-y-2">
               {failed.map((m) => (
-                <li key={m.id} className="rounded-lg border border-red-100 bg-red-50 p-3 text-sm space-y-1">
-                  <div className="flex items-center gap-2">
+                <li key={m.id} className="rounded-lg border p-3 text-sm space-y-2">
+                  <div className="flex items-center justify-between">
                     <span className="font-medium">{m.receiver}</span>
-                    <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">실패</span>
+                    <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">미발송</span>
                   </div>
-                  {m.failReason && <p className="text-xs text-red-500">{m.failReason}</p>}
-                  {m.sentAt && <p className="text-xs text-gray-400">{m.sentAt}</p>}
+                  {m.imageUrl && (
+                    <img src={m.imageUrl} alt="발송 사진" className="h-28 w-28 rounded border object-cover" />
+                  )}
                 </li>
               ))}
             </ul>
