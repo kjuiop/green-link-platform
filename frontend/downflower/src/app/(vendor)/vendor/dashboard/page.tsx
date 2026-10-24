@@ -20,7 +20,7 @@ export default function VendorDashboardPage() {
   const pending = orders.filter((o) => o.status === '발주대기').length
   const active = orders.filter((o) => o.status === '수주완료').length
   const completed = orders.filter((o) => o.status === '배송완료').length
-  const failed = orders.filter((o) => o.messageStatus === '발송실패').length
+  const failed = orders.filter((o) => o.messageStatus === '실패').length
 
   return (
     <div className="space-y-6">
