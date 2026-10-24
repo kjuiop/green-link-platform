@@ -649,6 +649,11 @@ export default function OrderingOrderDetailPage() {
                     <p className="text-xs text-gray-400">{h.createdAt}</p>
                     <p className="text-sm font-medium">{ACTION_LABEL[h.action]}</p>
                     <p className="text-xs text-gray-500">{h.detail}</p>
+                    {(h.actorCompany || h.actorName) && (
+                      <p className="text-xs text-gray-400">
+                        {[h.actorCompany, h.actorName].filter(Boolean).join(' / ')}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ol>

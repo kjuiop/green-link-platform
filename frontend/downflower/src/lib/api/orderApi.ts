@@ -275,6 +275,8 @@ export type OrderHistoryItem = {
   orderId: number
   action: 'CREATED' | 'UPDATED' | 'STATUS_CHANGED'
   detail: string
+  actorCompany: string | null
+  actorName: string | null
   createdAt: string
 }
 
