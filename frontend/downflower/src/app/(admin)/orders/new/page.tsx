@@ -30,8 +30,6 @@ export default function NewOrderPage() {
   const [quantity, setQuantity] = useState(1)
   const [amount, setAmount] = useState('')
   const [extraCost, setExtraCost] = useState('')
-  const [baseAmount, setBaseAmount] = useState('')
-  const [selectedExtraPreset, setSelectedExtraPreset] = useState('')
 
   // 배송정보
   const [deliveryDate, setDeliveryDate] = useState('')
@@ -88,6 +86,8 @@ export default function NewOrderPage() {
     deliveryDate?: string
     address?: string
     amount?: string
+    recipientName?: string
+    ordererPhone?: string
   }>({})
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -102,14 +102,6 @@ export default function NewOrderPage() {
     }
   }, [])
 
-  const EXTRA_COST_PRESETS = [
-    { label: '대품+1만', value: 10000 },
-    { label: '특품+2만', value: 20000 },
-    { label: '특대품+3만', value: 30000 },
-    { label: '4단+3만', value: 30000 },
-    { label: '쌀10키로+3만', value: 30000 },
-  ]
-
   async function handleSubmit() {
     const next: typeof errors = {}
     if (!vendorId) next.vendorId = '수주업체를 선택해주세요.'
@@ -117,6 +109,8 @@ export default function NewOrderPage() {
     if (!deliveryDate) next.deliveryDate = '배송날짜를 입력해주세요.'
     if (!address.trim()) next.address = '주소를 입력해주세요.'
     if (!amount) next.amount = '발주금액을 입력해주세요.'
+    if (!recipientName.trim()) next.recipientName = '받는 분 성함을 입력해주세요.'
+    if (!ordererPhone.trim()) next.ordererPhone = '주문자 휴대폰을 입력해주세요.'
     setErrors(next)
     if (Object.keys(next).length > 0) return
 
@@ -233,7 +227,6 @@ export default function NewOrderPage() {
                     if (id === '__direct__') {
                       setProductName('')
                       setAmount('')
-                      setBaseAmount('')
                     } else if (id === '') {
                       setProductName('')
                     } else {
@@ -241,8 +234,6 @@ export default function NewOrderPage() {
                       if (found) {
                         setProductName(found.name)
                         setAmount(String(found.price))
-                        setBaseAmount(String(found.price))
-                        setSelectedExtraPreset('')
                       }
                     }
                     setErrors((prev) => ({ ...prev, productName: undefined }))
@@ -286,37 +277,10 @@ export default function NewOrderPage() {
                 type="number"
                 placeholder="0"
                 value={amount}
-                onChange={(e) => { setAmount(e.target.value); setBaseAmount(e.target.value); setSelectedExtraPreset(''); setErrors((prev) => ({ ...prev, amount: undefined })) }}
+                onChange={(e) => { setAmount(e.target.value); setErrors((prev) => ({ ...prev, amount: undefined })) }}
                 className={cn(errors.amount && 'border-red-500 focus-visible:ring-red-500')}
               />
               {errors.amount && <p className="text-xs text-red-500">{errors.amount}</p>}
-              <div className="flex flex-wrap gap-1.5">
-                {EXTRA_COST_PRESETS.map(({ label, value }) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => {
-                      const base = Number(baseAmount) || 0
-                      if (selectedExtraPreset === label) {
-                        setAmount(baseAmount)
-                        setSelectedExtraPreset('')
-                      } else {
-                        setAmount(String(base + value))
-                        setSelectedExtraPreset(label)
-                      }
-                      setErrors((prev) => ({ ...prev, amount: undefined }))
-                    }}
-                    className={cn(
-                      'rounded-md border px-2.5 py-1 text-xs transition-colors',
-                      selectedExtraPreset === label
-                        ? 'border-green-700 bg-green-700 text-white'
-                        : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50',
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
               {amount && quantity > 1 && (
                 <p className="text-sm font-medium text-green-700">
                   총 발주금액: {(Number(amount) * quantity).toLocaleString()}원
@@ -537,22 +501,26 @@ export default function NewOrderPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>주문자 휴대폰</Label>
+                  <Label>주문자 휴대폰 *</Label>
                   <Input
                     placeholder="010-0000-0000"
                     value={ordererPhone}
-                    onChange={(e) => setOrdererPhone(formatPhone(e.target.value))}
+                    onChange={(e) => { setOrdererPhone(formatPhone(e.target.value)); setErrors((prev) => ({ ...prev, ordererPhone: undefined })) }}
+                    className={cn(errors.ordererPhone && 'border-red-500 focus-visible:ring-red-500')}
                   />
+                  {errors.ordererPhone && <p className="text-xs text-red-500">{errors.ordererPhone}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>받는 분 성함</Label>
+                  <Label>받는 분 성함 *</Label>
                   <Input
                     placeholder="받는 분 성함"
                     value={recipientName}
-                    onChange={(e) => setRecipientName(e.target.value)}
+                    onChange={(e) => { setRecipientName(e.target.value); setErrors((prev) => ({ ...prev, recipientName: undefined })) }}
+                    className={cn(errors.recipientName && 'border-red-500 focus-visible:ring-red-500')}
                   />
+                  {errors.recipientName && <p className="text-xs text-red-500">{errors.recipientName}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label>받는 분 휴대폰</Label>
