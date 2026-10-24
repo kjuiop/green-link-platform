@@ -361,6 +361,7 @@ export default function ReceivedOrdersPage() {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">{order.ordererName}</div>
+                    <div className="text-xs text-gray-400">수주사 {order.vendorName || '—'}</div>
                     {order.recipientName && <div className="text-sm text-gray-400">{order.recipientName}</div>}
                   </TableCell>
                   <TableCell>

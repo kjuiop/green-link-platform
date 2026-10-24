@@ -521,6 +521,28 @@ export default function NewOrderPage() {
                   onChange={(e) => setRibbonRight(e.target.value)}
                 />
               </div>
+              <div className="space-y-1.5">
+                <p className="text-xs text-gray-400">경조문구 선택 (클릭하면 위 입력란에 자동 입력)</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    '祝結婚', '축결혼', '祝華婚', '축화혼', '謹弔', '근조',
+                    '祝發展', '축발전', '祝開業', '축개업', '祝榮轉', '축영전',
+                    '祝昇進', '축승진', '祝生日', '축생일', '祝古稀', '축고희',
+                    '祝開院', '축개원', '祝就任', '축취임', '祝移轉', '축이전',
+                    '結婚을 祝賀드립니다', '삼가 故人의 冥福을 빕니다', '대박나세요',
+                    '無窮한 發展을 祈願합니다', '삼가 고인의 명복을 빕니다', '생신을 축하드립니다',
+                  ].map((phrase) => (
+                    <button
+                      key={phrase}
+                      type="button"
+                      onClick={() => setRibbonRight(phrase)}
+                      className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:border-green-600 hover:bg-green-50 hover:text-green-700"
+                    >
+                      {phrase}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
