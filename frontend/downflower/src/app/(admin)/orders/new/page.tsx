@@ -88,6 +88,7 @@ export default function NewOrderPage() {
     vendorId?: string
     productName?: string
     deliveryDate?: string
+    deliveryHour?: string
     address?: string
     amount?: string
     recipientName?: string
@@ -111,6 +112,7 @@ export default function NewOrderPage() {
     if (!vendorId) next.vendorId = '수주업체를 선택해주세요.'
     if (!productName.trim()) next.productName = '상품명을 입력해주세요.'
     if (!deliveryDate) next.deliveryDate = '배송날짜를 입력해주세요.'
+    if (!deliveryHour) next.deliveryHour = '배송시간을 선택해주세요.'
     if (!address.trim()) next.address = '주소를 입력해주세요.'
     if (!amount) next.amount = '발주금액을 입력해주세요.'
     if (!recipientName.trim()) next.recipientName = '받는 분 성함을 입력해주세요.'
@@ -328,12 +330,15 @@ export default function NewOrderPage() {
               {errors.deliveryDate && <p className="text-xs text-red-500">{errors.deliveryDate}</p>}
             </div>
             <div className="space-y-1">
-              <Label>배송시간</Label>
+              <Label>배송시간 *</Label>
               <div className="flex flex-wrap items-center gap-2">
                 <select
                   value={deliveryHour}
-                  onChange={(e) => setDeliveryHour(e.target.value)}
-                  className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                  onChange={(e) => {
+                    setDeliveryHour(e.target.value)
+                    if (e.target.value) setErrors((prev) => ({ ...prev, deliveryHour: undefined }))
+                  }}
+                  className={cn('rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700', errors.deliveryHour && 'border-red-500')}
                 >
                   <option value="">시</option>
                   {Array.from({ length: 24 }, (_, i) => (
@@ -366,6 +371,7 @@ export default function NewOrderPage() {
                   onChange={(e) => setDeliveryTimeCustom(e.target.value)}
                 />
               )}
+              {errors.deliveryHour && <p className="text-xs text-red-500">{errors.deliveryHour}</p>}
             </div>
 
             <div className="space-y-1">
