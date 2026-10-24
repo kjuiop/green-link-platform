@@ -4,6 +4,7 @@ import com.greenlink.admin.adapter.out.persistence.BaseJpaEntity;
 import com.greenlink.core.domain.order.model.Order;
 import com.greenlink.core.domain.order.model.OrderStatus;
 import jakarta.persistence.*;
+import java.time.format.DateTimeFormatter;
 
 @Entity
 @Table(name = "orders")
@@ -38,7 +39,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
     @Column
     private Long extraCost;
 
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, length = 16)
     private String deliveryDate;
 
     @Column(nullable = false, length = 20)
@@ -190,7 +191,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
                 adminMemo,
                 vendorMemo,
                 completedAt,
-                getCreatedAt() != null ? getCreatedAt().toString() : null
+                getCreatedAt() != null ? getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null
         );
     }
 }

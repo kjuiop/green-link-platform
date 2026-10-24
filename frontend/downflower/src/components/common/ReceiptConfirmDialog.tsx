@@ -130,7 +130,8 @@ interface FormDialogProps {
 }
 
 function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, senderName, recipientName }: FormDialogProps) {
-  const [photoFiles, setPhotoFiles] = useState<{ id: string; file: File; url: string }[]>([])
+  const [sitePhotoFiles, setSitePhotoFiles] = useState<{ id: string; file: File; url: string }[]>([])
+  const [storePhotoFiles, setStorePhotoFiles] = useState<{ id: string; file: File; url: string }[]>([])
   const [receiverName, setReceiverName] = useState('')
   const [receiverRelation, setReceiverRelation] = useState('')
   const [delivered, setDelivered] = useState(false)
@@ -141,8 +142,10 @@ function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, sender
 
   useEffect(() => {
     if (open) {
-      photoFiles.forEach((p) => URL.revokeObjectURL(p.url))
-      setPhotoFiles([])
+      sitePhotoFiles.forEach((p) => URL.revokeObjectURL(p.url))
+      storePhotoFiles.forEach((p) => URL.revokeObjectURL(p.url))
+      setSitePhotoFiles([])
+      setStorePhotoFiles([])
       setReceiverName('')
       setReceiverRelation('')
       setDelivered(false)
@@ -157,27 +160,44 @@ function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, sender
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? [])
-    const next = files.map((f, i) => ({
-      id: `rc-${Date.now()}-${i}`,
-      file: f,
-      url: URL.createObjectURL(f),
-    }))
-    setPhotoFiles((prev) => [...prev, ...next])
-    e.target.value = ''
+  function makeFileChangeHandler(setter: React.Dispatch<React.SetStateAction<{ id: string; file: File; url: string }[]>>) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files ?? [])
+      const next = files.map((f, i) => ({
+        id: `rc-${Date.now()}-${i}`,
+        file: f,
+        url: URL.createObjectURL(f),
+      }))
+      setter((prev) => [...prev, ...next])
+      e.target.value = ''
+    }
+  }
+
+  function removeFile(
+    setter: React.Dispatch<React.SetStateAction<{ id: string; file: File; url: string }[]>>,
+    id: string,
+    url: string
+  ) {
+    URL.revokeObjectURL(url)
+    setter((prev) => prev.filter((x) => x.id !== id))
   }
 
   async function handleSave() {
+    if (sitePhotoFiles.length === 0) {
+      setError('현장사진을 1장 이상 업로드해주세요.')
+      return
+    }
     setSaving(true)
     setError(null)
     try {
       const result = await saveReceiptConfirmation(
         orderId,
         { receiverName, receiverRelation, delivered, memo, confirmedAt: confirmTime },
-        photoFiles.map((p) => p.file)
+        sitePhotoFiles.map((p) => p.file),
+        storePhotoFiles.map((p) => p.file)
       )
-      photoFiles.forEach((p) => URL.revokeObjectURL(p.url))
+      sitePhotoFiles.forEach((p) => URL.revokeObjectURL(p.url))
+      storePhotoFiles.forEach((p) => URL.revokeObjectURL(p.url))
       onSave(result)
     } catch (e) {
       setError(e instanceof Error ? e.message : '저장에 실패했습니다.')
@@ -214,15 +234,18 @@ function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, sender
           </colgroup>
           <tbody className="divide-y">
             <tr>
-              <td className="px-3 py-2.5 align-top text-gray-500">배송사진</td>
+              <td className="px-3 py-2.5 align-top text-gray-500">
+                현장사진
+                <span className="ml-0.5 text-red-500">*</span>
+              </td>
               <td colSpan={3} className="px-3 py-2.5">
                 <div className="flex flex-wrap gap-2">
-                  {photoFiles.map((p) => (
+                  {sitePhotoFiles.map((p) => (
                     <div key={p.id} className="relative h-16 w-16">
-                      <img src={p.url} alt="배송사진" className="h-full w-full rounded border object-cover" />
+                      <img src={p.url} alt="현장사진" className="h-full w-full rounded border object-cover" />
                       <button
                         type="button"
-                        onClick={() => { URL.revokeObjectURL(p.url); setPhotoFiles((prev) => prev.filter((x) => x.id !== p.id)) }}
+                        onClick={() => removeFile(setSitePhotoFiles, p.id, p.url)}
                         className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
                       >
                         <X className="h-2.5 w-2.5" />
@@ -232,13 +255,32 @@ function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, sender
                   <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400">
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={handleFileChange}
-                    />
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={makeFileChangeHandler(setSitePhotoFiles)} />
+                  </label>
+                </div>
+              </td>
+            </tr>
+
+            <tr>
+              <td className="px-3 py-2.5 align-top text-gray-500">매장사진</td>
+              <td colSpan={3} className="px-3 py-2.5">
+                <div className="flex flex-wrap gap-2">
+                  {storePhotoFiles.map((p) => (
+                    <div key={p.id} className="relative h-16 w-16">
+                      <img src={p.url} alt="매장사진" className="h-full w-full rounded border object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeFile(setStorePhotoFiles, p.id, p.url)}
+                        className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                      >
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </div>
+                  ))}
+                  <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400">
+                    <Upload className="h-4 w-4" />
+                    <span className="text-[10px]">업로드</span>
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={makeFileChangeHandler(setStorePhotoFiles)} />
                   </label>
                 </div>
               </td>

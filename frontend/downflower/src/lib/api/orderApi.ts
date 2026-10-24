@@ -315,7 +315,8 @@ export async function fetchReceiptConfirmation(orderId: string): Promise<Receipt
 export async function saveReceiptConfirmation(
   orderId: string,
   data: { receiverName: string; receiverRelation: string; delivered: boolean; memo: string; confirmedAt: string },
-  files: File[]
+  siteFiles: File[],
+  storeFiles: File[]
 ): Promise<ReceiptConfirmationResult> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
   const formData = new FormData()
@@ -324,7 +325,8 @@ export async function saveReceiptConfirmation(
   formData.append('delivered', String(data.delivered))
   if (data.memo) formData.append('memo', data.memo)
   if (data.confirmedAt) formData.append('confirmedAt', data.confirmedAt)
-  files.forEach((f) => formData.append('files', f))
+  siteFiles.forEach((f) => formData.append('siteFiles', f))
+  storeFiles.forEach((f) => formData.append('storeFiles', f))
   const res = await fetch(`/api/orders/${orderId}/receipt`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
