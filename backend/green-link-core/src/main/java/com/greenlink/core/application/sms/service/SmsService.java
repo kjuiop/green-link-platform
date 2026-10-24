@@ -118,7 +118,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
 
     @Override
     @Transactional
-    public void notify(Long orderId, String vendorPhone) {
+    public void notify(Long orderId, String vendorPhone, String vendorName, String orderingCompanyName) {
         if (vendorPhone == null || vendorPhone.isBlank()) return;
         try {
             Order order = orderRepository.findById(orderId)
@@ -127,7 +127,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
             SmsSettings settings = smsSettingsRepository.get();
             String sender = settings.getSenderNumber();
             String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            String msg = buildNotificationMessage(order);
+            String msg = buildNotificationMessage(order, vendorName, orderingCompanyName);
 
             SmsMessage smsMessage = SmsMessage.createNotification(orderId, vendorPhone, msg);
             try {
@@ -147,7 +147,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         }
     }
 
-    private String buildNotificationMessage(Order order) {
+    private String buildNotificationMessage(Order order, String vendorName, String orderingCompanyName) {
         String deliveryInfo = order.getDeliveryDate() != null ? order.getDeliveryDate() : "-";
         if (order.getDeliveryTimeCustom() != null && !order.getDeliveryTimeCustom().isBlank()) {
             deliveryInfo += " " + order.getDeliveryTimeCustom();
@@ -162,8 +162,15 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
                 ? portalBaseUrl + "/vendor/orders/" + order.getId()
                 : "/vendor/orders/" + order.getId();
 
+        String orderingLine = (orderingCompanyName != null && !orderingCompanyName.isBlank())
+                ? "발주사: " + orderingCompanyName + "\n" : "";
+        String vendorLine = (vendorName != null && !vendorName.isBlank())
+                ? "수주업체: " + vendorName + "\n" : "";
+
         return "[온우림] 새 발주가 접수되었습니다.\n\n"
                 + "주문번호: " + order.getOrderNumber() + "\n"
+                + orderingLine
+                + vendorLine
                 + "주문자: " + order.getOrdererName() + " / " + order.getOrdererPhone() + "\n"
                 + "배송지: " + address + "\n"
                 + "배송요구일: " + deliveryInfo + "\n"

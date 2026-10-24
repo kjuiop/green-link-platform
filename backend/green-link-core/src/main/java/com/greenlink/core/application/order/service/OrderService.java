@@ -132,7 +132,9 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
 
         String vendorPhone = resolveVendorPhone(saved.getVendorId());
         if (vendorPhone != null && !vendorPhone.isBlank()) {
-            eventPublisher.publishEvent(new OrderCreatedEvent(saved.getId(), vendorPhone));
+            String vendorName = resolveVendorName(saved.getVendorId());
+            String orderingCompanyName = resolveOrderingCompanyName(saved.getOrderingCompanyId());
+            eventPublisher.publishEvent(new OrderCreatedEvent(saved.getId(), vendorPhone, vendorName, orderingCompanyName));
         }
 
         return toResult(saved);
