@@ -30,7 +30,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/orders/received': ListChecks,
   '/settlement': Calculator,
   '/settings': Settings,
-  '/messages': MessageSquare,
+  '/settings/message-log': MessageSquare,
   '/settings/messages': SlidersHorizontal,
   '/vendors': Users,
   '/settings/menus': Menu,
