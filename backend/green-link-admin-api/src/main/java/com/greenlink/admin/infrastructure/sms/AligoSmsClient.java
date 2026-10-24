@@ -29,7 +29,7 @@ public class AligoSmsClient implements SmsClient {
             body.add("key", props.key());
             body.add("userid", props.userid());
             body.add("sender", props.sender());
-            body.add("receiver", receiver);
+            body.add("receiver", receiver.replaceAll("[^0-9]", ""));
             body.add("msg", msg);
 
             if (imageUrl != null && !imageUrl.isBlank()) {

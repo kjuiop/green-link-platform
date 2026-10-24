@@ -327,6 +327,7 @@ export default function ReceivedOrdersPage() {
                   <TableCell>
                     <ClickableMessageBadge
                       status={order.messageStatus}
+                      orderId={order.id}
                       photos={order.deliveryPhotos}
                       orderNumber={order.orderNumber}
                       ordererName={order.ordererName}
@@ -382,6 +383,7 @@ export default function ReceivedOrdersPage() {
                   <OrderStatusBadge status={order.status} />
                   <ClickableMessageBadge
                     status={order.messageStatus}
+                    orderId={order.id}
                     photos={order.deliveryPhotos}
                     orderNumber={order.orderNumber}
                     ordererName={order.ordererName}
