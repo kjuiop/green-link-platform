@@ -12,6 +12,8 @@ public interface OrderRepository {
 
     Optional<Order> findById(Long id);
 
+    List<Order> findAllByIds(List<Long> ids);
+
     List<Order> search(OrderSearchCondition condition);
 
     Page<Order> searchPaged(OrderSearchCondition condition, Pageable pageable);

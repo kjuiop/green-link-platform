@@ -41,6 +41,13 @@ public class ReceiptConfirmationRepositoryAdapter implements ReceiptConfirmation
     }
 
     @Override
+    public List<ReceiptConfirmation> findAllByOrderIds(List<Long> orderIds) {
+        return jpaRepository.findAllByOrderIdIn(orderIds).stream()
+                .map(ReceiptConfirmationJpaEntity::toDomain)
+                .toList();
+    }
+
+    @Override
     public boolean existsWithPhotosByOrderId(Long orderId) {
         return jpaRepository.existsPhotosByOrderId(orderId);
     }

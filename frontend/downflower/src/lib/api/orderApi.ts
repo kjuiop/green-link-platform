@@ -418,6 +418,23 @@ export async function resendMms(orderId: string): Promise<void> {
   if (!res.ok) throw new Error('재발송에 실패했습니다.')
 }
 
+export async function downloadOrdersExcel(orderIds: string[]): Promise<void> {
+  const res = await fetch('/api/orders/export/excel', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ orderIds: orderIds.map(Number) }),
+  })
+  if (!res.ok) throw new Error('엑셀 다운로드에 실패했습니다.')
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  a.href = url
+  a.download = `orders_${today}.xlsx`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export async function updateOrderStatus(id: string, action: string, photoUrls?: string[]): Promise<Order> {
   const res = await fetch(`/api/orders/${id}/status`, {
     method: 'PUT',

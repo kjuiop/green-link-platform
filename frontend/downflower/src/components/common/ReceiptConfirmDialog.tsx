@@ -49,7 +49,7 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
 
   if (saved) {
     return (
-      <div className="space-y-1">
+      <div className="flex flex-col items-start gap-1">
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditOpen(true) }}
