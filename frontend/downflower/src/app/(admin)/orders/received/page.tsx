@@ -367,7 +367,11 @@ export default function ReceivedOrdersPage() {
                   <TableCell>
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-sm">{order.deliveryAt.split(' ')[0]}</span>
-                      <span className="text-sm font-medium text-red-500">{order.deliveryAt.split(' ')[1]}</span>
+                      {order.deliveryTimeHour && (
+                        <span className="text-sm font-medium text-red-500">
+                          {String(order.deliveryTimeHour).padStart(2, '0')}:{order.deliveryTimeMinute ?? '00'}
+                        </span>
+                      )}
                       {order.deliveryTimeType && (
                         <span className="text-xs font-bold text-red-500">
                           {order.deliveryTimeType === '직접입력' ? order.deliveryTimeCustom : order.deliveryTimeType}
