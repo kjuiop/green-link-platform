@@ -79,6 +79,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
 
         Order order = Order.create(
                 cmd.vendorId(),
+                cmd.orderingCompanyId(),
                 orderNumber,
                 cmd.productName(),
                 cmd.quantity(),
@@ -149,18 +150,25 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     private record VendorInfo(String name, String phone) {}
 
     private Map<Long, VendorInfo> buildVendorInfoMap() {
-        List<Admin> vendors = adminRepository.findAllVendors();
-        List<Long> companyIds = vendors.stream()
+        List<Admin> adminsWithCompany = adminRepository.findAllVendors();
+        List<Long> companyIds = adminsWithCompany.stream()
                 .map(Admin::getCompanyId)
                 .filter(Objects::nonNull)
                 .toList();
         Map<Long, Company> companyById = companyRepository.findAllByIdIn(companyIds).stream()
                 .collect(Collectors.toMap(Company::getId, c -> c));
         Map<Long, VendorInfo> result = new HashMap<>();
-        for (Admin a : vendors) {
+        for (Admin a : adminsWithCompany) {
             if (a.getCompanyId() != null) {
                 Company c = companyById.get(a.getCompanyId());
-                result.put(a.getId(), c != null ? new VendorInfo(c.getCompanyName(), c.getPhone()) : new VendorInfo(null, null));
+                // ORDERING 타입 회사는 수주사(vendor) 정보 맵에서 제외
+                if (c != null && c.getType() != null) {
+                    switch (c.getType()) {
+                        case VENDOR, BOTH -> result.put(a.getId(),
+                                new VendorInfo(c.getCompanyName(), c.getPhone()));
+                        default -> { /* ORDERING은 제외 */ }
+                    }
+                }
             }
         }
         return result;
@@ -173,6 +181,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 order.getVendorId(),
                 vendorName,
                 vendorPhone,
+                order.getOrderingCompanyId(),
                 order.getStatus() != null ? order.getStatus().name() : null,
                 order.getProductName(),
                 order.getQuantity(),
@@ -300,6 +309,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 order.getVendorId(),
                 resolveVendorName(order.getVendorId()),
                 resolveVendorPhone(order.getVendorId()),
+                order.getOrderingCompanyId(),
                 order.getStatus() != null ? order.getStatus().name() : null,
                 order.getProductName(),
                 order.getQuantity(),

@@ -30,13 +30,19 @@ public class JwtProvider implements TokenProvider {
     }
 
     public String generateToken(Long id, List<String> roles) {
-        return Jwts.builder()
+        return generateToken(id, roles, null);
+    }
+
+    public String generateToken(Long id, List<String> roles, Long companyId) {
+        var builder = Jwts.builder()
             .subject(String.valueOf(id))
             .claim("roles", roles)
             .issuedAt(new Date())
-            .expiration(new Date(System.currentTimeMillis() + expiration))
-            .signWith(key)
-            .compact();
+            .expiration(new Date(System.currentTimeMillis() + expiration));
+        if (companyId != null) {
+            builder.claim("companyId", companyId);
+        }
+        return builder.signWith(key).compact();
     }
 
     @SuppressWarnings("unchecked")
@@ -47,14 +53,20 @@ public class JwtProvider implements TokenProvider {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+            Long companyId = null;
+            Object companyIdClaim = payload.get("companyId");
+            if (companyIdClaim instanceof Number n) {
+                companyId = n.longValue();
+            }
             return new JwtClaims(
                 payload.getSubject(),
-                (List<String>) payload.get("roles")
+                (List<String>) payload.get("roles"),
+                companyId
             );
         } catch (Exception e) {
             return null;
         }
     }
 
-    public record JwtClaims(String subject, List<String> roles) {}
+    public record JwtClaims(String subject, List<String> roles, Long companyId) {}
 }

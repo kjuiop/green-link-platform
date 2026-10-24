@@ -3,6 +3,9 @@ package com.greenlink.admin.infrastructure.init;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.admin.model.Role;
+import com.greenlink.core.domain.company.model.Company;
+import com.greenlink.core.domain.company.model.CompanyType;
+import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.menu.model.Menu;
 import com.greenlink.core.domain.menu.port.MenuRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,8 +20,11 @@ import java.util.List;
 @Component
 public class DataInitializer implements ApplicationRunner {
 
+    private static final String DOWNFLOWER_COMPANY_NAME = "다운플라워";
+
     private final AdminRepository adminRepository;
     private final MenuRepository menuRepository;
+    private final CompanyRepository companyRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${admin.init.login-id:admin}")
@@ -29,23 +35,49 @@ public class DataInitializer implements ApplicationRunner {
 
     public DataInitializer(AdminRepository adminRepository,
                            MenuRepository menuRepository,
+                           CompanyRepository companyRepository,
                            PasswordEncoder passwordEncoder) {
         this.adminRepository = adminRepository;
         this.menuRepository = menuRepository;
+        this.companyRepository = companyRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        initAdmin();
+        Company downflower = initOrderingCompany();
+        initAdmin(downflower.getId());
         initMenus();
         fixMenuRoles();
     }
 
-    private void initAdmin() {
+    private Company initOrderingCompany() {
+        return companyRepository.findByCompanyName(DOWNFLOWER_COMPANY_NAME)
+                .orElseGet(() -> companyRepository.save(
+                        Company.create(null, DOWNFLOWER_COMPANY_NAME, null, null, null, null, CompanyType.ORDERING)
+                ));
+    }
+
+    private void initAdmin(Long downflowerCompanyId) {
         if (!adminRepository.existsByLoginId(initLoginId)) {
-            adminRepository.save(Admin.create(initLoginId, passwordEncoder.encode(initPassword)));
+            adminRepository.save(Admin.createOrdering(initLoginId, passwordEncoder.encode(initPassword), downflowerCompanyId));
+        } else {
+            // 기존 admin이 있고 companyId가 null이면 Downflower 회사 연결
+            adminRepository.findByLoginId(initLoginId).ifPresent(admin -> {
+                if (admin.getCompanyId() == null) {
+                    adminRepository.save(Admin.of(
+                            admin.getId(),
+                            admin.getLoginId(),
+                            admin.getPassword(),
+                            admin.getName(),
+                            admin.getPhone(),
+                            downflowerCompanyId,
+                            admin.getStatus(),
+                            admin.getCreatedAt()
+                    ));
+                }
+            });
         }
     }
 

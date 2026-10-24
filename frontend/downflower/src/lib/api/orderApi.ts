@@ -134,9 +134,22 @@ function toFrontend(o: BackendOrder): Order {
   }
 }
 
+export type OrderingCompany = {
+  id: number
+  companyName: string
+}
+
+export async function fetchOrderingCompanies(): Promise<OrderingCompany[]> {
+  const res = await fetch('/api/companies?type=ORDERING', { headers: authHeaders() })
+  if (!res.ok) return []
+  const data: Array<{ id: number; companyName: string }> = await res.json()
+  return data
+}
+
 export type OrderSearchParams = {
   status?: string
   vendorId?: string
+  orderingCompanyId?: string
   orderNumber?: string
   productName?: string
   ordererName?: string
@@ -148,6 +161,7 @@ function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: numbe
   const query = new URLSearchParams()
   if (params?.status) query.set('status', params.status)
   if (params?.vendorId) query.set('vendorId', params.vendorId)
+  if (params?.orderingCompanyId) query.set('orderingCompanyId', params.orderingCompanyId)
   if (params?.orderNumber) query.set('orderNumber', params.orderNumber)
   if (params?.productName) query.set('productName', params.productName)
   if (params?.ordererName) query.set('ordererName', params.ordererName)

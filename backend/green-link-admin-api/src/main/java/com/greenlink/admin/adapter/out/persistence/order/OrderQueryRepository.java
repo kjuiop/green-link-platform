@@ -81,6 +81,9 @@ public class OrderQueryRepository {
         if (condition.deliveryDateTo() != null && !condition.deliveryDateTo().isBlank()) {
             where.and(order.deliveryDate.loe(condition.deliveryDateTo()));
         }
+        if (condition.orderingCompanyId() != null) {
+            where.and(order.orderingCompanyId.eq(condition.orderingCompanyId()));
+        }
 
         return where;
     }

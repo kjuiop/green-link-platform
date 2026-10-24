@@ -1,6 +1,7 @@
 package com.greenlink.admin.adapter.out.persistence.company;
 
 import com.greenlink.core.domain.company.model.Company;
+import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.stereotype.Component;
@@ -51,5 +52,17 @@ public class CompanyRepositoryAdapter implements CompanyRepository {
         return jpaRepository.findByIdIn(ids).stream()
             .map(CompanyJpaEntity::toDomain)
             .toList();
+    }
+
+    @Override
+    public List<Company> findAllByType(CompanyType type) {
+        return jpaRepository.findByType(type).stream()
+            .map(CompanyJpaEntity::toDomain)
+            .toList();
+    }
+
+    @Override
+    public Optional<Company> findByCompanyName(String companyName) {
+        return jpaRepository.findByCompanyName(companyName).map(CompanyJpaEntity::toDomain);
     }
 }

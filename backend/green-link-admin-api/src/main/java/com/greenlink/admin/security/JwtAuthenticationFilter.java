@@ -41,6 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     null,
                     authorities
                 );
+                auth.setDetails(claims.companyId());
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
         }

@@ -6,6 +6,8 @@ import com.greenlink.core.application.auth.port.TokenProvider;
 import com.greenlink.core.application.auth.usecase.AdminLoginUseCase;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
+import com.greenlink.core.domain.company.model.Company;
+import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
@@ -50,14 +52,27 @@ public class AdminLoginService implements AdminLoginUseCase {
             throw new BusinessException(AuthErrorCode.ACCOUNT_INACTIVE);
         }
 
-        String role = admin.isVendor() ? "VENDOR" : "SUPER_ADMIN";
-        String token = tokenProvider.generateToken(admin.getId(), List.of(role));
+        Long companyId = admin.getCompanyId();
+        String role = "SUPER_ADMIN";
+        String companyName = null;
 
-        Long vendorId = admin.getCompanyId();
-        String companyName = vendorId != null
-            ? companyRepository.findById(vendorId).map(c -> c.getCompanyName()).orElse(null)
-            : null;
+        if (companyId != null) {
+            Company company = companyRepository.findById(companyId).orElse(null);
+            if (company != null) {
+                companyName = company.getCompanyName();
+                if (company.getType() == CompanyType.VENDOR) {
+                    role = "VENDOR";
+                } else if (company.getType() == CompanyType.ORDERING) {
+                    role = "ORDERING";
+                } else {
+                    // BOTH 타입은 VENDOR로 처리
+                    role = "VENDOR";
+                }
+            }
+        }
 
-        return new AdminLoginResult(token, admin.getName(), vendorId, companyName);
+        String token = tokenProvider.generateToken(admin.getId(), List.of(role), companyId);
+
+        return new AdminLoginResult(token, admin.getName(), companyId, companyName);
     }
 }
