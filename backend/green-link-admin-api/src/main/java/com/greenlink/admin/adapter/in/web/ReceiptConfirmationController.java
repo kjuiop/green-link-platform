@@ -53,16 +53,30 @@ public class ReceiptConfirmationController {
             @RequestParam(defaultValue = "false") boolean delivered,
             @RequestParam(required = false) String memo,
             @RequestParam(required = false) String confirmedAt,
-            @RequestParam(required = false) List<MultipartFile> files) throws IOException {
+            @RequestParam(required = false) List<MultipartFile> siteFiles,
+            @RequestParam(required = false) List<MultipartFile> storeFiles) throws IOException {
 
         List<PhotoFile> photoFiles = new ArrayList<>();
-        if (files != null) {
-            for (MultipartFile file : files) {
+        if (siteFiles != null) {
+            for (MultipartFile file : siteFiles) {
                 if (!file.isEmpty()) {
                     photoFiles.add(new PhotoFile(
                             file.getOriginalFilename(),
                             file.getBytes(),
-                            file.getContentType()
+                            file.getContentType(),
+                            "SITE"
+                    ));
+                }
+            }
+        }
+        if (storeFiles != null) {
+            for (MultipartFile file : storeFiles) {
+                if (!file.isEmpty()) {
+                    photoFiles.add(new PhotoFile(
+                            file.getOriginalFilename(),
+                            file.getBytes(),
+                            file.getContentType(),
+                            "STORE"
                     ));
                 }
             }
