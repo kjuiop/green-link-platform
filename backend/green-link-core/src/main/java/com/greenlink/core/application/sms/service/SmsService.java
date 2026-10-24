@@ -130,6 +130,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         String template = settings.resolveTemplate(order.getEventType());
         String placeName = order.getPlaceName() != null ? order.getPlaceName() : order.getAddress();
         return template
+                .replace("{업체명}", settings.getSenderName() != null ? settings.getSenderName() : "")
                 .replace("{주문자명}", order.getOrdererName() != null ? order.getOrdererName() : "")
                 .replace("{장소}", placeName != null ? placeName : "")
                 .replace("{주문번호}", order.getId() != null ? String.valueOf(order.getId()) : "")
