@@ -37,5 +37,8 @@ aligo:
   sender: ${ALIGO_SENDER:1855-4400}
   url: https://apis.aligo.in/send/
 
+app:
+  portal-base-url: ${PORTAL_BASE_URL:https://green-link-platform.vercel.app}
+
 server:
   port: 8080
