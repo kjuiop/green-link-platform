@@ -117,7 +117,7 @@ public class DataInitializer implements ApplicationRunner {
         // 설정 하위: 문자 발송내역
         menuRepository.save(Menu.create(
             "문자 발송내역",
-            "/messages",
+            "/settings/message-log",
             1,
             settings.getId(),
             List.of(Role.SUPER_ADMIN, Role.ORDERING)
