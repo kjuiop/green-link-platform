@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ClipboardCheck, Upload, X, Images, Download } from 'lucide-react'
@@ -106,6 +106,7 @@ interface FormDialogProps {
 }
 
 function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, senderName, recipientName }: FormDialogProps) {
+  const photoInputRef = useRef<HTMLInputElement>(null)
   const [photoFiles, setPhotoFiles] = useState<{ id: string; file: File; url: string }[]>([])
   const [receiverName, setReceiverName] = useState('')
   const [receiverRelation, setReceiverRelation] = useState('')
@@ -208,18 +209,22 @@ function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, sender
                       </button>
                     </div>
                   ))}
-                  {/* overlay 방식: input이 버튼 위를 덮어 직접 클릭됨 */}
-                  <div className="relative flex h-16 w-16 flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                      onChange={handleFileChange}
-                    />
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    className="flex h-16 w-16 flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
+                  >
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
-                  </div>
+                  </button>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
                 </div>
               </td>
             </tr>
