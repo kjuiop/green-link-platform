@@ -33,3 +33,5 @@ logs/
 
 # docs
 docs
+
+.playwright-mcp
