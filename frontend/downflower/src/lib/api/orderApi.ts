@@ -295,7 +295,8 @@ export type ReceiptConfirmationResult = {
   delivered: boolean
   memo: string | null
   confirmedAt: string | null
-  photoUrls: string[]
+  sitePhotoUrls: string[]
+  storePhotoUrls: string[]
 }
 
 export async function fetchReceiptConfirmation(orderId: string): Promise<ReceiptConfirmationResult | null> {
@@ -327,10 +328,11 @@ export async function saveReceiptConfirmation(
   return res.json()
 }
 
-export async function uploadReceiptPhotos(orderId: string, files: File[]): Promise<ReceiptConfirmationResult> {
+export async function uploadReceiptPhotos(orderId: string, files: File[], photoType: 'SITE' | 'STORE' = 'SITE'): Promise<ReceiptConfirmationResult> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
   const formData = new FormData()
   files.forEach((f) => formData.append('files', f))
+  formData.append('photoType', photoType)
   const res = await fetch(`/api/orders/${orderId}/receipt/photos`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},

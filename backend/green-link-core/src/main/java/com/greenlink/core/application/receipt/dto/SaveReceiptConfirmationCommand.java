@@ -12,5 +12,9 @@ public record SaveReceiptConfirmationCommand(
         LocalDateTime confirmedAt,
         List<PhotoFile> photoFiles
 ) {
-    public record PhotoFile(String originalFileName, byte[] content, String contentType) {}
+    public record PhotoFile(String originalFileName, byte[] content, String contentType, String photoType) {
+        public PhotoFile(String originalFileName, byte[] content, String contentType) {
+            this(originalFileName, content, contentType, "SITE");
+        }
+    }
 }

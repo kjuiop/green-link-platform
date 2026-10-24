@@ -9,5 +9,5 @@ public interface ReceiptConfirmationRepository {
     ReceiptConfirmation save(ReceiptConfirmation confirmation);
     Optional<ReceiptConfirmation> findByOrderId(Long orderId);
     boolean existsWithPhotosByOrderId(Long orderId);
-    ReceiptConfirmation appendPhotos(Long orderId, List<String> photoUrls);
+    ReceiptConfirmation appendPhotos(Long orderId, List<String> photoUrls, String photoType);
 }
