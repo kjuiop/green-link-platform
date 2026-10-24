@@ -344,6 +344,7 @@ export type SmsMessageResult = {
   id: number
   orderId: number
   receiver: string
+  message: string | null
   status: 'SUCCESS' | 'FAIL'
   failReason: string | null
   aligoMsgId: string | null

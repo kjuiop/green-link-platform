@@ -266,26 +266,34 @@ function SmsHistoryDialog({ open, onClose, orderId, orderNumber }: {
         ) : messages.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">발송 내역이 없습니다.</p>
         ) : (
-          <ul className="space-y-2">
-            {messages.map((m) => (
-              <li key={m.id} className="rounded-lg border p-3 text-sm space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{m.receiver}</span>
-                  <span className={cn(
-                    'rounded-full px-2 py-0.5 text-xs font-medium',
-                    m.status === 'SUCCESS' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  )}>
-                    {m.status === 'SUCCESS' ? '성공' : '실패'}
-                  </span>
-                </div>
-                {m.sentAt && <p className="text-xs text-gray-400">{m.sentAt}</p>}
-                {m.failReason && <p className="text-xs text-red-500">{m.failReason}</p>}
-                {m.imageUrl && (
-                  <img src={m.imageUrl} alt="발송 이미지" className="mt-1 h-20 w-20 rounded object-cover" />
-                )}
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-3">
+            {messages[0]?.message && (
+              <div className="rounded-lg border bg-gray-50 p-3 text-sm">
+                <p className="mb-1 text-xs font-medium text-gray-500">발송 메시지</p>
+                <p className="text-gray-800 whitespace-pre-wrap">{messages[0].message}</p>
+              </div>
+            )}
+            <ul className="space-y-2">
+              {messages.map((m) => (
+                <li key={m.id} className="rounded-lg border p-3 text-sm space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{m.receiver}</span>
+                    <span className={cn(
+                      'rounded-full px-2 py-0.5 text-xs font-medium',
+                      m.status === 'SUCCESS' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    )}>
+                      {m.status === 'SUCCESS' ? '성공' : '실패'}
+                    </span>
+                  </div>
+                  {m.sentAt && <p className="text-xs text-gray-400">{m.sentAt}</p>}
+                  {m.failReason && <p className="text-xs text-red-500">{m.failReason}</p>}
+                  {m.imageUrl && (
+                    <img src={m.imageUrl} alt="발송 사진" className="h-24 w-24 rounded border object-cover" />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </DialogContent>
     </Dialog>

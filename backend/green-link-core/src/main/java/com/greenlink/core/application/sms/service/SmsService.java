@@ -104,7 +104,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     }
 
     private void sendAndRecord(Long orderId, String receiver, String msg, String imageUrl, String sentAt) {
-        SmsMessage smsMessage = SmsMessage.create(orderId, receiver, imageUrl);
+        SmsMessage smsMessage = SmsMessage.create(orderId, receiver, msg, imageUrl);
         try {
             SmsResult result = smsClient.send(receiver, msg, imageUrl);
             if (result.success()) {
@@ -129,7 +129,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     private SmsMessageResult toResult(SmsMessage m) {
         return new SmsMessageResult(
                 m.getId(), m.getOrderId(), m.getReceiver(),
-                m.getStatus().name(), m.getFailReason(), m.getAligoMsgId(), m.getSentAt(), m.getImageUrl()
+                m.getMessage(), m.getStatus().name(), m.getFailReason(), m.getAligoMsgId(), m.getSentAt(), m.getImageUrl()
         );
     }
 }
