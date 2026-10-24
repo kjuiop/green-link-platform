@@ -198,8 +198,10 @@ export default function VendorOrdersPage() {
                   <TableCell className="text-sm">{order.placeName} {order.roomName}</TableCell>
                   <TableCell className="text-sm">
                     <span>{order.deliveryAt.split(' ')[0]}</span>
-                    {order.deliveryAt.split(' ')[1] && (
-                      <span className="ml-1 text-red-500">{order.deliveryAt.split(' ')[1]}</span>
+                    {order.deliveryTimeHour && (
+                      <span className="ml-1 text-red-500">
+                        {String(order.deliveryTimeHour).padStart(2, '0')}:{order.deliveryTimeMinute ?? '00'}
+                      </span>
                     )}
                   </TableCell>
                   <TableCell><DeliveryTimeTypeBadge type={order.deliveryTimeType} custom={order.deliveryTimeCustom} /></TableCell>
