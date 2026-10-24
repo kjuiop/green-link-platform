@@ -19,6 +19,9 @@ public class SmsMessageJpaEntity extends BaseJpaEntity {
     @Column(nullable = false, length = 20)
     private String receiver;
 
+    @Column(columnDefinition = "TEXT")
+    private String message;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private SmsStatus status;
@@ -37,20 +40,21 @@ public class SmsMessageJpaEntity extends BaseJpaEntity {
 
     protected SmsMessageJpaEntity() {}
 
-    public static SmsMessageJpaEntity from(SmsMessage message) {
+    public static SmsMessageJpaEntity from(SmsMessage sms) {
         SmsMessageJpaEntity e = new SmsMessageJpaEntity();
-        e.id = message.getId();
-        e.orderId = message.getOrderId();
-        e.receiver = message.getReceiver();
-        e.status = message.getStatus();
-        e.failReason = message.getFailReason();
-        e.aligoMsgId = message.getAligoMsgId();
-        e.sentAt = message.getSentAt();
-        e.imageUrl = message.getImageUrl();
+        e.id = sms.getId();
+        e.orderId = sms.getOrderId();
+        e.receiver = sms.getReceiver();
+        e.message = sms.getMessage();
+        e.status = sms.getStatus();
+        e.failReason = sms.getFailReason();
+        e.aligoMsgId = sms.getAligoMsgId();
+        e.sentAt = sms.getSentAt();
+        e.imageUrl = sms.getImageUrl();
         return e;
     }
 
     public SmsMessage toDomain() {
-        return SmsMessage.of(id, orderId, receiver, status, failReason, aligoMsgId, sentAt, imageUrl);
+        return SmsMessage.of(id, orderId, receiver, message, status, failReason, aligoMsgId, sentAt, imageUrl);
     }
 }

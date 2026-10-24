@@ -333,7 +333,7 @@ export default function OrderingOrderDetailPage() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         {/* 기본정보 */}
         <Card>
           <CardHeader><CardTitle className="text-sm">기본정보</CardTitle></CardHeader>
