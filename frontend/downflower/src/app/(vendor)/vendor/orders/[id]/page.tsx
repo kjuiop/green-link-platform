@@ -21,7 +21,7 @@ export default function VendorOrderDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [acting, setActing] = useState(false)
   const [receiptConfirmation, setReceiptConfirmation] = useState<ReceiptConfirmationResult | null>(null)
-
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     Promise.all([
@@ -41,7 +41,6 @@ export default function VendorOrderDetailPage() {
   if (!order) return <div className="p-8 text-sm text-gray-400">주문을 찾을 수 없습니다.</div>
 
   const hasPhotos = (receiptConfirmation?.photoUrls.length ?? 0) > 0
-  const photoInputRef = useRef<HTMLInputElement>(null)
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
