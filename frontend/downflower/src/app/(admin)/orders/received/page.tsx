@@ -8,6 +8,7 @@ import { OrderStatusBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { fetchOrders, OrderSearchParams } from '@/lib/api/orderApi'
+import { getDeliveryDateColor } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { Download } from 'lucide-react'
 
@@ -348,7 +349,7 @@ export default function ReceivedOrdersPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-sm text-blue-600">{order.deliveryAt.split(' ')[0]}</span>
+                      <span className={`text-sm ${getDeliveryDateColor(order.deliveryAt)}`}>{order.deliveryAt.split(' ')[0]}</span>
                       <span className="text-sm font-medium text-red-500">{order.deliveryAt.split(' ')[1]}</span>
                       {order.deliveryTimeType && (
                         <span className="text-xs font-bold text-red-500">

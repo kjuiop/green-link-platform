@@ -41,7 +41,7 @@ export default function NewOrderPage() {
   const [addressDetail, setAddressDetail] = useState('')
 
   // 행사정보
-  const [selectedEventType, setSelectedEventType] = useState<'' | '장례식' | '결혼식' | '기타'>('')
+  const [selectedEventType, setSelectedEventType] = useState<'장례식' | '결혼식' | '기타'>('장례식')
   const [funeralHall, setFuneralHall] = useState('')
   const [funeralRoom, setFuneralRoom] = useState('')
   const [funeralPerson, setFuneralPerson] = useState('')
@@ -393,24 +393,21 @@ export default function NewOrderPage() {
             <CardContent className="space-y-4">
               {/* 유형 선택 */}
               <div className="flex flex-wrap gap-1.5">
-                {(['없음', '장례식', '결혼식', '기타'] as const).map((type) => {
-                  const value = type === '없음' ? '' : type
-                  return (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setSelectedEventType(value)}
-                      className={cn(
-                        'rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
-                        selectedEventType === value
-                          ? 'border-green-700 bg-green-700 text-white'
-                          : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50',
-                      )}
-                    >
-                      {type}
-                    </button>
-                  )
-                })}
+                {(['장례식', '결혼식', '기타'] as const).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setSelectedEventType(type)}
+                    className={cn(
+                      'rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
+                      selectedEventType === type
+                        ? 'border-green-700 bg-green-700 text-white'
+                        : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50',
+                    )}
+                  >
+                    {type}
+                  </button>
+                ))}
               </div>
 
               {/* 장례식 */}
@@ -502,9 +499,33 @@ export default function NewOrderPage() {
               )}
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">리본 문구</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>리본 왼쪽 (보내는 사람·회사명)</Label>
+                <Input
+                  placeholder="예: 주식회사 효진토건 부장 신효섭"
+                  value={ribbonLeft}
+                  onChange={(e) => setRibbonLeft(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>리본 오른쪽 (축하·근조 문구)</Label>
+                <Input
+                  placeholder="예: 삼가 고인의 명복을 빕니다"
+                  value={ribbonRight}
+                  onChange={(e) => setRibbonRight(e.target.value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* 주문자 / 받는 분 + 리본 + 기타 */}
+        {/* 주문자 / 받는 분 + 기타 */}
         <div className="space-y-4">
           <Card>
             <CardHeader>
@@ -621,30 +642,6 @@ export default function NewOrderPage() {
                     )}
                   </label>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">리본 문구</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>리본 왼쪽 (보내는 사람·회사명)</Label>
-                <Input
-                  placeholder="예: 주식회사 효진토건 부장 신효섭"
-                  value={ribbonLeft}
-                  onChange={(e) => setRibbonLeft(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>리본 오른쪽 (축하·근조 문구)</Label>
-                <Input
-                  placeholder="예: 삼가 고인의 명복을 빕니다"
-                  value={ribbonRight}
-                  onChange={(e) => setRibbonRight(e.target.value)}
-                />
               </div>
             </CardContent>
           </Card>

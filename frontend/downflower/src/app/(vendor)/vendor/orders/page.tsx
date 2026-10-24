@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { VendorOrderStatusBadge, MessageStatusBadge, DeliveryTimeTypeBadge } from '@/components/common/StatusBadge'
 import { fetchOrders } from '@/lib/api/orderApi'
+import { getDeliveryDateColor } from '@/lib/utils'
 import { Order, OrderStatus } from '@/types/order'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
@@ -189,7 +190,12 @@ export default function VendorOrdersPage() {
                   </TableCell>
                   <TableCell className="text-sm">{order.productName}</TableCell>
                   <TableCell className="text-sm">{order.placeName} {order.roomName}</TableCell>
-                  <TableCell className="text-sm">{order.deliveryAt}</TableCell>
+                  <TableCell className="text-sm">
+                    <span className={getDeliveryDateColor(order.deliveryAt)}>{order.deliveryAt.split(' ')[0]}</span>
+                    {order.deliveryAt.split(' ')[1] && (
+                      <span className="ml-1 text-red-500">{order.deliveryAt.split(' ')[1]}</span>
+                    )}
+                  </TableCell>
                   <TableCell><DeliveryTimeTypeBadge type={order.deliveryTimeType} custom={order.deliveryTimeCustom} /></TableCell>
                   <TableCell className="text-sm">{order.completedAt ?? '-'}</TableCell>
                   <TableCell><VendorOrderStatusBadge status={order.status} /></TableCell>
