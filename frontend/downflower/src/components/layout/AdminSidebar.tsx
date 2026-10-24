@@ -62,7 +62,7 @@ function SidebarNav({ menus, onNavClick, openId, onToggle, userName }: SidebarNa
   return (
     <>
       <div className="flex h-14 items-center border-b px-4">
-        <span className="text-sm font-bold text-green-700">🌿 다운플라워</span>
+        <span className="text-sm font-bold text-green-700">🌿 온우림</span>
         {userName && <span className="ml-2 text-xs text-gray-400">{userName}</span>}
       </div>
 
