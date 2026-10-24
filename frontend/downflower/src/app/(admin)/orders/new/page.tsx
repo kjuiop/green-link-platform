@@ -499,9 +499,33 @@ export default function NewOrderPage() {
               )}
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">리본 문구</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>리본 왼쪽 (보내는 사람·회사명)</Label>
+                <Input
+                  placeholder="예: 주식회사 효진토건 부장 신효섭"
+                  value={ribbonLeft}
+                  onChange={(e) => setRibbonLeft(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>리본 오른쪽 (축하·근조 문구)</Label>
+                <Input
+                  placeholder="예: 삼가 고인의 명복을 빕니다"
+                  value={ribbonRight}
+                  onChange={(e) => setRibbonRight(e.target.value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* 주문자 / 받는 분 + 리본 + 기타 */}
+        {/* 주문자 / 받는 분 + 기타 */}
         <div className="space-y-4">
           <Card>
             <CardHeader>
@@ -618,30 +642,6 @@ export default function NewOrderPage() {
                     )}
                   </label>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">리본 문구</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>리본 왼쪽 (보내는 사람·회사명)</Label>
-                <Input
-                  placeholder="예: 주식회사 효진토건 부장 신효섭"
-                  value={ribbonLeft}
-                  onChange={(e) => setRibbonLeft(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>리본 오른쪽 (축하·근조 문구)</Label>
-                <Input
-                  placeholder="예: 삼가 고인의 명복을 빕니다"
-                  value={ribbonRight}
-                  onChange={(e) => setRibbonRight(e.target.value)}
-                />
               </div>
             </CardContent>
           </Card>
