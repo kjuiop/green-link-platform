@@ -89,7 +89,7 @@ export default function FindIdPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-sm space-y-4">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-green-700">🌿 다운플라워</h1>
+          <h1 className="text-2xl font-bold text-green-700">🌿 온우림</h1>
           <p className="mt-1 text-sm text-gray-500">발주·수주 관리 시스템</p>
         </div>
 
