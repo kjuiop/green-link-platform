@@ -29,6 +29,7 @@ export default function SettingsMessagesPage() {
     기타: '',
   })
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveResult, setSaveResult] = useState<'idle' | 'success' | 'error'>('idle')
 
@@ -43,7 +44,7 @@ export default function SettingsMessagesPage() {
           기타: data.templateOthers ?? '',
         })
       })
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false))
   }, [])
 
@@ -160,6 +161,10 @@ export default function SettingsMessagesPage() {
               disabled={loading}
             />
           </div>
+
+          {loadError && (
+            <p className="text-sm text-red-500">설정을 불러오지 못했습니다. 새로고침 해주세요.</p>
+          )}
 
           {saveResult === 'error' && (
             <p className="text-sm text-red-500">저장에 실패했습니다. 다시 시도해주세요.</p>
