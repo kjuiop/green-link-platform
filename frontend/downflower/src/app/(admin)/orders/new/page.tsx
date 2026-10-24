@@ -30,8 +30,6 @@ export default function NewOrderPage() {
   const [quantity, setQuantity] = useState(1)
   const [amount, setAmount] = useState('')
   const [extraCost, setExtraCost] = useState('')
-  const [baseAmount, setBaseAmount] = useState('')
-  const [selectedExtraPreset, setSelectedExtraPreset] = useState('')
 
   // 배송정보
   const [deliveryDate, setDeliveryDate] = useState('')
@@ -42,15 +40,14 @@ export default function NewOrderPage() {
   const [address, setAddress] = useState('')
   const [addressDetail, setAddressDetail] = useState('')
 
-  // 행사정보 — 장례식
+  // 행사정보
+  const [selectedEventType, setSelectedEventType] = useState<'' | '장례식' | '결혼식' | '기타'>('')
   const [funeralHall, setFuneralHall] = useState('')
   const [funeralRoom, setFuneralRoom] = useState('')
   const [funeralPerson, setFuneralPerson] = useState('')
-  // 행사정보 — 결혼식
   const [weddingHall, setWeddingHall] = useState('')
   const [weddingRoom, setWeddingRoom] = useState('')
   const [weddingPerson, setWeddingPerson] = useState('')
-  // 행사정보 — 기타
   const [eventHall, setEventHall] = useState('')
   const [eventRoom, setEventRoom] = useState('')
 
@@ -88,6 +85,8 @@ export default function NewOrderPage() {
     deliveryDate?: string
     address?: string
     amount?: string
+    recipientName?: string
+    ordererPhone?: string
   }>({})
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -102,14 +101,6 @@ export default function NewOrderPage() {
     }
   }, [])
 
-  const EXTRA_COST_PRESETS = [
-    { label: '대품+1만', value: 10000 },
-    { label: '특품+2만', value: 20000 },
-    { label: '특대품+3만', value: 30000 },
-    { label: '4단+3만', value: 30000 },
-    { label: '쌀10키로+3만', value: 30000 },
-  ]
-
   async function handleSubmit() {
     const next: typeof errors = {}
     if (!vendorId) next.vendorId = '수주업체를 선택해주세요.'
@@ -117,19 +108,21 @@ export default function NewOrderPage() {
     if (!deliveryDate) next.deliveryDate = '배송날짜를 입력해주세요.'
     if (!address.trim()) next.address = '주소를 입력해주세요.'
     if (!amount) next.amount = '발주금액을 입력해주세요.'
+    if (!recipientName.trim()) next.recipientName = '받는 분 성함을 입력해주세요.'
+    if (!ordererPhone.trim()) next.ordererPhone = '주문자 휴대폰을 입력해주세요.'
     setErrors(next)
     if (Object.keys(next).length > 0) return
 
-    let eventType = ''
+    let eventType = selectedEventType
     let placeName = ''
     let roomName = ''
     let eventInfo = ''
-    if (funeralHall || funeralRoom || funeralPerson) {
-      eventType = '장례식'; placeName = funeralHall; roomName = funeralRoom; eventInfo = funeralPerson
-    } else if (weddingHall || weddingRoom || weddingPerson) {
-      eventType = '결혼식'; placeName = weddingHall; roomName = weddingRoom; eventInfo = weddingPerson
-    } else if (eventHall || eventRoom) {
-      eventType = '기타'; placeName = eventHall; roomName = eventRoom
+    if (selectedEventType === '장례식') {
+      placeName = funeralHall; roomName = funeralRoom; eventInfo = funeralPerson
+    } else if (selectedEventType === '결혼식') {
+      placeName = weddingHall; roomName = weddingRoom; eventInfo = weddingPerson
+    } else if (selectedEventType === '기타') {
+      placeName = eventHall; roomName = eventRoom
     }
 
     setSubmitting(true)
@@ -233,7 +226,6 @@ export default function NewOrderPage() {
                     if (id === '__direct__') {
                       setProductName('')
                       setAmount('')
-                      setBaseAmount('')
                     } else if (id === '') {
                       setProductName('')
                     } else {
@@ -241,8 +233,6 @@ export default function NewOrderPage() {
                       if (found) {
                         setProductName(found.name)
                         setAmount(String(found.price))
-                        setBaseAmount(String(found.price))
-                        setSelectedExtraPreset('')
                       }
                     }
                     setErrors((prev) => ({ ...prev, productName: undefined }))
@@ -286,37 +276,10 @@ export default function NewOrderPage() {
                 type="number"
                 placeholder="0"
                 value={amount}
-                onChange={(e) => { setAmount(e.target.value); setBaseAmount(e.target.value); setSelectedExtraPreset(''); setErrors((prev) => ({ ...prev, amount: undefined })) }}
+                onChange={(e) => { setAmount(e.target.value); setErrors((prev) => ({ ...prev, amount: undefined })) }}
                 className={cn(errors.amount && 'border-red-500 focus-visible:ring-red-500')}
               />
               {errors.amount && <p className="text-xs text-red-500">{errors.amount}</p>}
-              <div className="flex flex-wrap gap-1.5">
-                {EXTRA_COST_PRESETS.map(({ label, value }) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => {
-                      const base = Number(baseAmount) || 0
-                      if (selectedExtraPreset === label) {
-                        setAmount(baseAmount)
-                        setSelectedExtraPreset('')
-                      } else {
-                        setAmount(String(base + value))
-                        setSelectedExtraPreset(label)
-                      }
-                      setErrors((prev) => ({ ...prev, amount: undefined }))
-                    }}
-                    className={cn(
-                      'rounded-md border px-2.5 py-1 text-xs transition-colors',
-                      selectedExtraPreset === label
-                        ? 'border-green-700 bg-green-700 text-white'
-                        : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50',
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
               {amount && quantity > 1 && (
                 <p className="text-sm font-medium text-green-700">
                   총 발주금액: {(Number(amount) * quantity).toLocaleString()}원
@@ -428,94 +391,115 @@ export default function NewOrderPage() {
               <CardTitle className="text-sm">행사정보</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* 장례식 */}
-              <div className="space-y-3">
-                <p className="text-xs font-semibold text-gray-400">장례식</p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>장례식장명</Label>
-                    <Input
-                      placeholder="예: 한독병원장례식장"
-                      value={funeralHall}
-                      onChange={(e) => setFuneralHall(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>빈소</Label>
-                    <Input
-                      placeholder="예: 무궁화실"
-                      value={funeralRoom}
-                      onChange={(e) => setFuneralRoom(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>고인명</Label>
-                  <Input
-                    placeholder="예: 고인 김순영"
-                    value={funeralPerson}
-                    onChange={(e) => setFuneralPerson(e.target.value)}
-                  />
-                </div>
+              {/* 유형 선택 */}
+              <div className="flex flex-wrap gap-1.5">
+                {(['없음', '장례식', '결혼식', '기타'] as const).map((type) => {
+                  const value = type === '없음' ? '' : type
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setSelectedEventType(value)}
+                      className={cn(
+                        'rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
+                        selectedEventType === value
+                          ? 'border-green-700 bg-green-700 text-white'
+                          : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50',
+                      )}
+                    >
+                      {type}
+                    </button>
+                  )
+                })}
               </div>
 
-              <hr />
+              {/* 장례식 */}
+              {selectedEventType === '장례식' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>장례식장명</Label>
+                      <Input
+                        placeholder="예: 한독병원장례식장"
+                        value={funeralHall}
+                        onChange={(e) => setFuneralHall(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>빈소</Label>
+                      <Input
+                        placeholder="예: 무궁화실"
+                        value={funeralRoom}
+                        onChange={(e) => setFuneralRoom(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>고인명</Label>
+                    <Input
+                      placeholder="예: 고인 김순영"
+                      value={funeralPerson}
+                      onChange={(e) => setFuneralPerson(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* 결혼식 */}
-              <div className="space-y-3">
-                <p className="text-xs font-semibold text-gray-400">결혼식</p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>예식장명</Label>
-                    <Input
-                      placeholder="예: 더파티움 강남"
-                      value={weddingHall}
-                      onChange={(e) => setWeddingHall(e.target.value)}
-                    />
+              {selectedEventType === '결혼식' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>예식장명</Label>
+                      <Input
+                        placeholder="예: 더파티움 강남"
+                        value={weddingHall}
+                        onChange={(e) => setWeddingHall(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>홀</Label>
+                      <Input
+                        placeholder="예: 그랜드볼룸 A홀"
+                        value={weddingRoom}
+                        onChange={(e) => setWeddingRoom(e.target.value)}
+                      />
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>홀</Label>
+                    <Label>신랑/신부명</Label>
                     <Input
-                      placeholder="예: 그랜드볼룸 A홀"
-                      value={weddingRoom}
-                      onChange={(e) => setWeddingRoom(e.target.value)}
+                      placeholder="예: 김철수 ♥ 이영희"
+                      value={weddingPerson}
+                      onChange={(e) => setWeddingPerson(e.target.value)}
                     />
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label>신랑/신부명</Label>
-                  <Input
-                    placeholder="예: 김철수 ♥ 이영희"
-                    value={weddingPerson}
-                    onChange={(e) => setWeddingPerson(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <hr />
+              )}
 
               {/* 기타 */}
-              <div className="space-y-3">
-                <p className="text-xs font-semibold text-gray-400">기타</p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>행사명</Label>
-                    <Input
-                      placeholder="예: 주식회사 효진토건 창립기념식"
-                      value={eventHall}
-                      onChange={(e) => setEventHall(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>장소</Label>
-                    <Input
-                      placeholder="예: 강남파이낸스센터 1층"
-                      value={eventRoom}
-                      onChange={(e) => setEventRoom(e.target.value)}
-                    />
+              {selectedEventType === '기타' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>행사명</Label>
+                      <Input
+                        placeholder="예: 주식회사 효진토건 창립기념식"
+                        value={eventHall}
+                        onChange={(e) => setEventHall(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>장소</Label>
+                      <Input
+                        placeholder="예: 강남파이낸스센터 1층"
+                        value={eventRoom}
+                        onChange={(e) => setEventRoom(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -537,22 +521,26 @@ export default function NewOrderPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>주문자 휴대폰</Label>
+                  <Label>주문자 휴대폰 *</Label>
                   <Input
                     placeholder="010-0000-0000"
                     value={ordererPhone}
-                    onChange={(e) => setOrdererPhone(formatPhone(e.target.value))}
+                    onChange={(e) => { setOrdererPhone(formatPhone(e.target.value)); setErrors((prev) => ({ ...prev, ordererPhone: undefined })) }}
+                    className={cn(errors.ordererPhone && 'border-red-500 focus-visible:ring-red-500')}
                   />
+                  {errors.ordererPhone && <p className="text-xs text-red-500">{errors.ordererPhone}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>받는 분 성함</Label>
+                  <Label>받는 분 성함 *</Label>
                   <Input
                     placeholder="받는 분 성함"
                     value={recipientName}
-                    onChange={(e) => setRecipientName(e.target.value)}
+                    onChange={(e) => { setRecipientName(e.target.value); setErrors((prev) => ({ ...prev, recipientName: undefined })) }}
+                    className={cn(errors.recipientName && 'border-red-500 focus-visible:ring-red-500')}
                   />
+                  {errors.recipientName && <p className="text-xs text-red-500">{errors.recipientName}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label>받는 분 휴대폰</Label>

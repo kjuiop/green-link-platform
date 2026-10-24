@@ -1,62 +1,71 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
+import { fetchSmsSettings, saveSmsSettings } from '@/lib/api/settingsApi'
 
 type EventType = '장례식' | '결혼식' | '기타'
 
 const EVENT_TABS: EventType[] = ['장례식', '결혼식', '기타']
 
-const DEFAULT_TEMPLATES: Record<EventType, string> = {
-  장례식: `안녕하세요, {주문자명}님.
-삼가 고인의 명복을 빕니다.
-주문하신 근조화환이 {장소}에 배송 완료되었습니다.
-
-[배송사진 확인]
-{사진링크}
-
-감사합니다.
-다운플라워 드림`,
-  결혼식: `안녕하세요, {주문자명}님.
-주문하신 축하화환이 {장소}에 배송 완료되었습니다.
-결혼을 진심으로 축하드립니다 🎊
-
-[배송사진 확인]
-{사진링크}
-
-감사합니다.
-다운플라워 드림`,
-  기타: `안녕하세요, {주문자명}님.
-주문하신 화환이 {장소}에 배송 완료되었습니다.
-
-[배송사진 확인]
-{사진링크}
-
-감사합니다.
-다운플라워 드림`,
-}
-
 const VARIABLES = [
   { key: '{주문자명}', desc: '주문자 이름' },
   { key: '{장소}', desc: '배송 장소명' },
-  { key: '{사진링크}', desc: '배송사진 링크 (자동 삽입)' },
   { key: '{주문번호}', desc: '주문번호' },
 ]
 
 export default function SettingsMessagesPage() {
   const [activeTab, setActiveTab] = useState<EventType>('장례식')
-  const [templates, setTemplates] = useState<Record<EventType, string>>(DEFAULT_TEMPLATES)
-  const [saved, setSaved] = useState(false)
+  const [senderNumber, setSenderNumber] = useState('')
+  const [senderName, setSenderName] = useState('')
+  const [templates, setTemplates] = useState<Record<EventType, string>>({
+    장례식: '',
+    결혼식: '',
+    기타: '',
+  })
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveResult, setSaveResult] = useState<'idle' | 'success' | 'error'>('idle')
 
-  function handleSave() {
-    // TODO: 저장 API 호출
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  useEffect(() => {
+    fetchSmsSettings()
+      .then((data) => {
+        setSenderNumber(data.senderNumber ?? '')
+        setSenderName(data.senderName ?? '')
+        setTemplates({
+          장례식: data.templateFuneral ?? '',
+          결혼식: data.templateWedding ?? '',
+          기타: data.templateOthers ?? '',
+        })
+      })
+      .catch(() => setLoadError(true))
+      .finally(() => setLoading(false))
+  }, [])
+
+  async function handleSave() {
+    setSaving(true)
+    setSaveResult('idle')
+    try {
+      await saveSmsSettings({
+        senderNumber,
+        senderName,
+        templateFuneral: templates['장례식'],
+        templateWedding: templates['결혼식'],
+        templateOthers: templates['기타'],
+      })
+      setSaveResult('success')
+      setTimeout(() => setSaveResult('idle'), 2000)
+    } catch {
+      setSaveResult('error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   function insertVariable(key: string) {
@@ -78,11 +87,21 @@ export default function SettingsMessagesPage() {
         <CardContent className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>발신번호</Label>
-            <Input placeholder="010-0000-0000" />
+            <Input
+              placeholder="010-0000-0000"
+              value={senderNumber}
+              onChange={(e) => setSenderNumber(e.target.value)}
+              disabled={loading}
+            />
           </div>
           <div className="space-y-1.5">
             <Label>발신자명</Label>
-            <Input placeholder="다운플라워" />
+            <Input
+              placeholder="다운플라워"
+              value={senderName}
+              onChange={(e) => setSenderName(e.target.value)}
+              disabled={loading}
+            />
           </div>
         </CardContent>
       </Card>
@@ -139,20 +158,27 @@ export default function SettingsMessagesPage() {
                 setTemplates((prev) => ({ ...prev, [activeTab]: e.target.value }))
               }
               className="font-mono text-sm"
+              disabled={loading}
             />
-            <p className="text-xs text-gray-400">
-              {'{사진링크}'}는 배송완료 처리 시 자동으로 실제 링크로 교체됩니다.
-            </p>
           </div>
+
+          {loadError && (
+            <p className="text-sm text-red-500">설정을 불러오지 못했습니다. 새로고침 해주세요.</p>
+          )}
+
+          {saveResult === 'error' && (
+            <p className="text-sm text-red-500">저장에 실패했습니다. 다시 시도해주세요.</p>
+          )}
 
           <Button
             onClick={handleSave}
+            disabled={saving || loading}
             className={cn(
               'min-w-20',
-              saved ? 'bg-green-600 hover:bg-green-700' : 'bg-green-700 hover:bg-green-800',
+              saveResult === 'success' ? 'bg-green-600 hover:bg-green-700' : 'bg-green-700 hover:bg-green-800',
             )}
           >
-            {saved ? '저장됨 ✓' : '저장'}
+            {saving ? '저장 중…' : saveResult === 'success' ? '저장됨 ✓' : '저장'}
           </Button>
         </CardContent>
       </Card>

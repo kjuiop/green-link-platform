@@ -332,6 +332,24 @@ export async function saveReceiptConfirmation(
   return res.json()
 }
 
+export async function updateReceiptInfo(
+  orderId: string,
+  data: { receiverName: string; receiverRelation: string; delivered: boolean; memo: string; confirmedAt?: string }
+): Promise<ReceiptConfirmationResult> {
+  const params = new URLSearchParams()
+  if (data.receiverName) params.append('receiverName', data.receiverName)
+  if (data.receiverRelation) params.append('receiverRelation', data.receiverRelation)
+  params.append('delivered', String(data.delivered))
+  if (data.memo) params.append('memo', data.memo)
+  if (data.confirmedAt) params.append('confirmedAt', data.confirmedAt)
+  const res = await fetch(`/api/orders/${orderId}/receipt/info?${params.toString()}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error('인수확인 정보 수정에 실패했습니다.')
+  return res.json()
+}
+
 export async function uploadReceiptPhotos(orderId: string, files: File[], photoType: 'SITE' | 'STORE' = 'SITE'): Promise<ReceiptConfirmationResult> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
   const formData = new FormData()

@@ -4,9 +4,11 @@ import com.greenlink.core.application.orderhistory.usecase.RecordOrderHistoryUse
 import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
 import com.greenlink.core.application.receipt.dto.ReceiptConfirmationResult;
 import com.greenlink.core.application.receipt.dto.SaveReceiptConfirmationCommand;
+import com.greenlink.core.application.receipt.dto.UpdateReceiptInfoCommand;
 import com.greenlink.core.application.receipt.usecase.AddReceiptPhotosUseCase;
 import com.greenlink.core.application.receipt.usecase.GetReceiptConfirmationUseCase;
 import com.greenlink.core.application.receipt.usecase.SaveReceiptConfirmationUseCase;
+import com.greenlink.core.application.receipt.usecase.UpdateReceiptInfoUseCase;
 import com.greenlink.core.domain.photo.port.PhotoStorage;
 import com.greenlink.core.domain.receipt.model.ReceiptConfirmation;
 import com.greenlink.core.domain.receipt.port.ReceiptConfirmationRepository;
@@ -18,7 +20,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCase, GetReceiptConfirmationUseCase, AddReceiptPhotosUseCase {
+public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCase, GetReceiptConfirmationUseCase, AddReceiptPhotosUseCase, UpdateReceiptInfoUseCase {
 
     private final ReceiptConfirmationRepository repository;
     private final PhotoStorage photoStorage;
@@ -97,6 +99,16 @@ public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCas
             uploadedKeys.forEach(photoStorage::delete);
             throw e;
         }
+    }
+
+    @Override
+    @Transactional
+    public ReceiptConfirmationResult updateInfo(UpdateReceiptInfoCommand command) {
+        ReceiptConfirmation updated = repository.updateReceiverInfo(
+                command.orderId(), command.receiverName(), command.receiverRelation(),
+                command.delivered(), command.memo(), command.confirmedAt());
+        recordOrderHistoryUseCase.record(command.orderId(), OrderHistoryAction.UPDATED, "인수확인 정보 수정");
+        return toResult(updated);
     }
 
     @Override
