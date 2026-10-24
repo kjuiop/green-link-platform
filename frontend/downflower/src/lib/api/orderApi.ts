@@ -332,6 +332,31 @@ export async function uploadReceiptPhotos(orderId: string, files: File[]): Promi
   return res.json()
 }
 
+export type SmsMessageResult = {
+  id: number
+  orderId: number
+  receiver: string
+  status: 'SUCCESS' | 'FAIL'
+  failReason: string | null
+  aligoMsgId: string | null
+  sentAt: string | null
+  imageUrl: string | null
+}
+
+export async function fetchSmsMessages(orderId: string): Promise<SmsMessageResult[]> {
+  const res = await fetch(`/api/messages/order/${orderId}`, { headers: authHeaders() })
+  if (!res.ok) throw new Error('발송 내역을 불러오지 못했습니다.')
+  return res.json()
+}
+
+export async function resendMms(orderId: string): Promise<void> {
+  const res = await fetch(`/api/orders/${orderId}/resend`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error('재발송에 실패했습니다.')
+}
+
 export async function updateOrderStatus(id: string, action: string, photoUrls?: string[]): Promise<Order> {
   const res = await fetch(`/api/orders/${id}/status`, {
     method: 'PUT',

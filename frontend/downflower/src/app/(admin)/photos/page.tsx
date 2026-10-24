@@ -62,7 +62,7 @@ export default function PhotosPage() {
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm">
-                  <Link href={`/orders/${order.id}`} className="text-blue-600 hover:underline">
+                  <Link href={`/ordering/orders/${order.id}`} className="text-blue-600 hover:underline">
                     {order.orderNumber}
                   </Link>
                 </CardTitle>
