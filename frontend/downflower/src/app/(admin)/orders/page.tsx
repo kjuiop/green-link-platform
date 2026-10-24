@@ -13,6 +13,7 @@ import { OrderStatus, Order } from '@/types/order'
 import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
 import { Plus, Download } from 'lucide-react'
+import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
 type DeletedFilter = '정상' | '삭제' | '전체'
@@ -386,7 +387,10 @@ export default function OrdersPage() {
                   </TableCell>
                   <TableCell className="text-sm text-gray-700">{order.vendorName || '—'}</TableCell>
                   <TableCell>
-                    <div className="text-sm">{order.productName}</div>
+                    <div className="flex items-center gap-1 text-sm">
+                      <span>{order.productName}</span>
+                      <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
+                    </div>
                     <div className="text-sm text-gray-400">{[order.placeName, order.address].filter(Boolean).join(' ')}</div>
                   </TableCell>
                   <TableCell className="text-sm">{order.quantity}</TableCell>

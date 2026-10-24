@@ -12,6 +12,7 @@ const STATUS_MAP: Record<string, OrderStatus> = {
 type BackendOrder = {
   id: number
   orderNumber: string
+  referencePhotoCount?: number
   vendorId: number
   vendorName: string | null
   vendorPhone: string | null
@@ -137,6 +138,7 @@ function toFrontend(o: BackendOrder): Order {
     completedAt: o.completedAt ?? undefined,
     messageStatus: o.messageStatus === 'SENT' ? '발송' : o.messageStatus === 'FAIL' ? '실패' : '미발송',
     isDeleted: false,
+    referencePhotoCount: o.referencePhotoCount ?? 0,
   }
 }
 
@@ -379,6 +381,32 @@ export type SmsMessageResult = {
 export async function fetchSmsMessages(orderId: string): Promise<SmsMessageResult[]> {
   const res = await fetch(`/api/messages/order/${orderId}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('발송 내역을 불러오지 못했습니다.')
+  return res.json()
+}
+
+export type ReferencePhotoResult = {
+  id: number
+  orderId: number
+  photoUrl: string
+  uploadedAt: string | null
+}
+
+export async function fetchReferencePhotos(orderId: string): Promise<ReferencePhotoResult[]> {
+  const res = await fetch(`/api/orders/${orderId}/reference-photos`, { headers: authHeaders() })
+  if (!res.ok) throw new Error('참고 이미지를 불러오지 못했습니다.')
+  return res.json()
+}
+
+export async function uploadReferencePhotos(orderId: string, files: File[]): Promise<ReferencePhotoResult[]> {
+  const formData = new FormData()
+  files.forEach((f) => formData.append('files', f))
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
+  const res = await fetch(`/api/orders/${orderId}/reference-photos`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  })
+  if (!res.ok) throw new Error('참고 이미지 업로드에 실패했습니다.')
   return res.json()
 }
 

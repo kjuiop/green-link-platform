@@ -8,6 +8,7 @@ import { getDeliveryDateRowBg } from '@/lib/utils'
 import { Order, OrderStatus } from '@/types/order'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
+import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 
 const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
@@ -188,7 +189,12 @@ export default function VendorOrdersPage() {
                       {order.orderNumber}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-sm">{order.productName}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1 text-sm">
+                      <span>{order.productName}</span>
+                      <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
+                    </div>
+                  </TableCell>
                   <TableCell className="text-sm">{order.placeName} {order.roomName}</TableCell>
                   <TableCell className="text-sm">
                     <span>{order.deliveryAt.split(' ')[0]}</span>
@@ -228,7 +234,10 @@ export default function VendorOrdersPage() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="font-mono text-xs text-blue-600">{order.orderNumber}</div>
-                  <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
+                  <div className="mt-1 flex items-center gap-1 text-sm font-medium">
+                    <span className="truncate">{order.productName}</span>
+                    <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
+                  </div>
                   <div className="mt-0.5 text-xs text-gray-500">{order.placeName} {order.roomName}</div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
