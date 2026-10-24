@@ -6,6 +6,9 @@ import com.greenlink.core.application.auth.port.TokenProvider;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
+import com.greenlink.core.domain.company.model.Company;
+import com.greenlink.core.domain.company.model.CompanyStatus;
+import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
@@ -16,14 +19,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,11 +46,15 @@ class AdminLoginServiceTest {
         return Admin.of(1L, "admin01", "hashedPw", "관리자", "010-0000-0000", null, AdminStatus.ACTIVE, null);
     }
 
+    private Company vendorCompany() {
+        return Company.of(1L, null, "테스트업체", null, null, null, null, CompanyType.VENDOR, CompanyStatus.ACTIVE);
+    }
+
     @Test
     void login_withValidCredentials_returnsToken() {
         given(adminRepository.findByLoginId("admin01")).willReturn(Optional.of(activeAdmin()));
         given(passwordEncoder.matches("rawPw", "hashedPw")).willReturn(true);
-        given(tokenProvider.generateToken(anyLong(), anyList())).willReturn("jwt-token");
+        given(tokenProvider.generateToken(anyLong(), anyList(), isNull())).willReturn("jwt-token");
 
         AdminLoginResult result = service.login(new AdminLoginCommand("admin01", "rawPw"));
 
@@ -106,7 +111,8 @@ class AdminLoginServiceTest {
         Admin vendor = Admin.of(4L, "vendor03", "hashedPw", "홍길동", "010-5555-6666", 1L, AdminStatus.ACTIVE, null);
         given(adminRepository.findByLoginId("vendor03")).willReturn(Optional.of(vendor));
         given(passwordEncoder.matches("rawPw", "hashedPw")).willReturn(true);
-        given(tokenProvider.generateToken(eq(4L), eq(java.util.List.of("VENDOR")))).willReturn("vendor-token");
+        given(companyRepository.findById(1L)).willReturn(Optional.of(vendorCompany()));
+        given(tokenProvider.generateToken(eq(4L), eq(List.of("VENDOR")), eq(1L))).willReturn("vendor-token");
 
         AdminLoginResult result = service.login(new AdminLoginCommand("vendor03", "rawPw"));
 
@@ -117,7 +123,7 @@ class AdminLoginServiceTest {
     void login_asSuperAdmin_generatesSuperAdminRoleToken() {
         given(adminRepository.findByLoginId("admin01")).willReturn(Optional.of(activeAdmin()));
         given(passwordEncoder.matches("rawPw", "hashedPw")).willReturn(true);
-        given(tokenProvider.generateToken(eq(1L), eq(java.util.List.of("SUPER_ADMIN")))).willReturn("admin-token");
+        given(tokenProvider.generateToken(eq(1L), eq(List.of("SUPER_ADMIN")), isNull())).willReturn("admin-token");
 
         AdminLoginResult result = service.login(new AdminLoginCommand("admin01", "rawPw"));
 
