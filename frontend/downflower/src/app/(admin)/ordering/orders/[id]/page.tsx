@@ -19,6 +19,8 @@ import { ReferencePhotoSection } from '@/components/common/ReferencePhotoViewer'
 import { Pencil, X, Check, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Order } from '@/types/order'
+import { fetchAllProducts } from '@/lib/api/productApi'
+import { Product } from '@/types/product'
 
 const AMOUNT_PRESETS = [
   { label: '기본32', value: 32000 },
@@ -48,8 +50,11 @@ export default function OrderingOrderDetailPage() {
 
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
   const [selectedPhotoUrls, setSelectedPhotoUrls] = useState<string[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [selectedProductId, setSelectedProductId] = useState('')
 
   useEffect(() => {
+    fetchAllProducts().then(setProducts).catch(() => setSelectedProductId('__direct__'))
     Promise.all([
       fetchOrder(id),
       fetchReceiptConfirmation(id).catch(() => null),
@@ -75,6 +80,8 @@ export default function OrderingOrderDetailPage() {
 
   function startEdit() {
     setDraft({ ...order! })
+    const match = products.find((p) => p.name === order!.productName)
+    setSelectedProductId(match ? match.id : order!.productName ? '__direct__' : '')
     setIsEditing(true)
     setSaveError(null)
   }
@@ -343,7 +350,32 @@ export default function OrderingOrderDetailPage() {
             {isEditing ? (
               <>
                 <Field label="상품명">
-                  <Input value={draft.productName} onChange={(e) => set('productName', e.target.value)} />
+                  <select
+                    value={selectedProductId}
+                    onChange={(e) => {
+                      const productId = e.target.value
+                      setSelectedProductId(productId)
+                      if (productId !== '__direct__') {
+                        const found = products.find((p) => p.id === productId)
+                        set('productName', found ? found.name : '')
+                      }
+                    }}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    <option value="">상품 선택</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                    <option value="__direct__">직접 입력</option>
+                  </select>
+                  {selectedProductId === '__direct__' && (
+                    <Input
+                      className="mt-1.5"
+                      placeholder="상품명 직접 입력"
+                      value={draft.productName}
+                      onChange={(e) => set('productName', e.target.value)}
+                    />
+                  )}
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="수량">
@@ -410,29 +442,61 @@ export default function OrderingOrderDetailPage() {
                 <Field label="상세주소">
                   <Input value={draft.addressDetail} onChange={(e) => set('addressDetail', e.target.value)} />
                 </Field>
+                <Field label="행사유형">
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {(['장례식', '결혼식', '기타'] as const).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => set('eventType', type)}
+                        className={cn(
+                          'rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
+                          draft.eventType === type
+                            ? 'border-green-700 bg-green-700 text-white'
+                            : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50',
+                        )}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="장소명">
-                    <Input value={draft.placeName} onChange={(e) => set('placeName', e.target.value)} />
+                  <Field label={draft.eventType === '장례식' ? '장례식장명' : draft.eventType === '결혼식' ? '예식장명' : '행사명'}>
+                    <Input
+                      placeholder={draft.eventType === '장례식' ? '예: 한독병원장례식장' : draft.eventType === '결혼식' ? '예: 더파티움 강남' : '예: 창립기념식'}
+                      value={draft.placeName ?? ''}
+                      onChange={(e) => set('placeName', e.target.value)}
+                    />
                   </Field>
-                  <Field label="빈소·호실">
-                    <Input value={draft.roomName} onChange={(e) => set('roomName', e.target.value)} />
+                  <Field label={draft.eventType === '장례식' ? '빈소' : draft.eventType === '결혼식' ? '홀' : '장소'}>
+                    <Input
+                      placeholder={draft.eventType === '장례식' ? '예: 무궁화실' : draft.eventType === '결혼식' ? '예: 그랜드볼룸 A홀' : '예: 강남파이낸스센터 1층'}
+                      value={draft.roomName ?? ''}
+                      onChange={(e) => set('roomName', e.target.value)}
+                    />
                   </Field>
                 </div>
-                <Field label="행사정보">
-                  <Input
-                    placeholder="행사정보"
-                    value={draft.eventInfo ?? ''}
-                    onChange={(e) => set('eventInfo', e.target.value || undefined)}
-                  />
-                </Field>
+                {draft.eventType !== '기타' && (
+                  <Field label={draft.eventType === '장례식' ? '고인명' : '신랑/신부명'}>
+                    <Input
+                      placeholder={draft.eventType === '장례식' ? '예: 고인 홍길동' : '예: 홍길동 ♥ 홍길순'}
+                      value={draft.eventInfo ?? ''}
+                      onChange={(e) => set('eventInfo', e.target.value || undefined)}
+                    />
+                  </Field>
+                )}
               </>
             ) : (
               <>
                 <Row label="배송예정" value={order.deliveryAt} />
-                <Row label="주소" value={`${order.address} ${order.addressDetail}`} />
-                <Row label="장소명" value={order.placeName} />
-                <Row label="빈소·호실" value={order.roomName} />
-                {order.eventInfo && <Row label="행사정보" value={order.eventInfo} />}
+                <Row label="주소" value={`${order.address} ${order.addressDetail ?? ''}`.trim()} />
+                <Row label="행사유형" value={order.eventType} />
+                <Row label={order.eventType === '장례식' ? '장례식장명' : order.eventType === '결혼식' ? '예식장명' : '행사명'} value={order.placeName || '-'} />
+                <Row label={order.eventType === '장례식' ? '빈소' : order.eventType === '결혼식' ? '홀' : '장소'} value={order.roomName || '-'} />
+                {order.eventType !== '기타' && (
+                  <Row label={order.eventType === '장례식' ? '고인명' : '신랑/신부명'} value={order.eventInfo || '-'} />
+                )}
               </>
             )}
           </CardContent>
