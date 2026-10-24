@@ -95,7 +95,7 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<OrderResult> create(Authentication auth,
                                                @RequestBody @Valid CreateOrderRequest req) {
-        Long orderingCompanyId = null;
+        Long orderingCompanyId = req.orderingCompanyId();
         if (auth != null && auth.isAuthenticated()
                 && auth instanceof org.springframework.security.authentication.UsernamePasswordAuthenticationToken token
                 && token.getDetails() instanceof Long cid) {
