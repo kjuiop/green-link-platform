@@ -54,7 +54,7 @@ export default function OrderingOrderDetailPage() {
   const [selectedProductId, setSelectedProductId] = useState('')
 
   useEffect(() => {
-    fetchAllProducts().then(setProducts).catch(() => {})
+    fetchAllProducts().then(setProducts).catch(() => setSelectedProductId('__direct__'))
     Promise.all([
       fetchOrder(id),
       fetchReceiptConfirmation(id).catch(() => null),
@@ -353,10 +353,10 @@ export default function OrderingOrderDetailPage() {
                   <select
                     value={selectedProductId}
                     onChange={(e) => {
-                      const id = e.target.value
-                      setSelectedProductId(id)
-                      if (id !== '__direct__') {
-                        const found = products.find((p) => p.id === id)
+                      const productId = e.target.value
+                      setSelectedProductId(productId)
+                      if (productId !== '__direct__') {
+                        const found = products.find((p) => p.id === productId)
                         set('productName', found ? found.name : '')
                       }
                     }}
