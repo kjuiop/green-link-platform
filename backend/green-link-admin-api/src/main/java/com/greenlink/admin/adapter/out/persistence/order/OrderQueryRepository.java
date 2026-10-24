@@ -32,7 +32,7 @@ public class OrderQueryRepository {
         return queryFactory
                 .selectFrom(order)
                 .where(buildWhere(condition, order))
-                .orderBy(order.createdAt.desc())
+                .orderBy(order.deliveryDate.asc(), order.createdAt.desc())
                 .fetch();
     }
 
@@ -43,10 +43,11 @@ public class OrderQueryRepository {
         List<OrderJpaEntity> content = queryFactory
                 .selectFrom(order)
                 .where(where)
-                .orderBy(order.createdAt.desc())
+                .orderBy(order.deliveryDate.asc(), order.createdAt.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
+
 
         Long total = queryFactory
                 .select(order.count())

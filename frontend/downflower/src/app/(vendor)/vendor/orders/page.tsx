@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { VendorOrderStatusBadge, MessageStatusBadge, DeliveryTimeTypeBadge } from '@/components/common/StatusBadge'
 import { fetchOrders } from '@/lib/api/orderApi'
-import { getDeliveryDateColor } from '@/lib/utils'
+import { getDeliveryDateRowBg } from '@/lib/utils'
 import { Order, OrderStatus } from '@/types/order'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
@@ -182,7 +182,7 @@ export default function VendorOrdersPage() {
               </TableRow>
             ) : (
               filtered.map((order) => (
-                <TableRow key={order.id} className="cursor-pointer hover:bg-gray-50">
+                <TableRow key={order.id} className={`cursor-pointer ${getDeliveryDateRowBg(order.deliveryAt)} hover:brightness-95`}>
                   <TableCell>
                     <Link href={`/vendor/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
                       {order.orderNumber}
@@ -191,7 +191,7 @@ export default function VendorOrdersPage() {
                   <TableCell className="text-sm">{order.productName}</TableCell>
                   <TableCell className="text-sm">{order.placeName} {order.roomName}</TableCell>
                   <TableCell className="text-sm">
-                    <span className={getDeliveryDateColor(order.deliveryAt)}>{order.deliveryAt.split(' ')[0]}</span>
+                    <span>{order.deliveryAt.split(' ')[0]}</span>
                     {order.deliveryAt.split(' ')[1] && (
                       <span className="ml-1 text-red-500">{order.deliveryAt.split(' ')[1]}</span>
                     )}
