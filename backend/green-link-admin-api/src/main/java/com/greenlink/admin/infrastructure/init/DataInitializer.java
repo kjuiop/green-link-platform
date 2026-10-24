@@ -49,7 +49,6 @@ public class DataInitializer implements ApplicationRunner {
         initOrderingCompany();
         initAdmin();
         initMenus();
-        fixMenuRoles();
     }
 
     private Company initOrderingCompany() {
@@ -63,17 +62,6 @@ public class DataInitializer implements ApplicationRunner {
         if (!adminRepository.existsByLoginId(initLoginId)) {
             adminRepository.save(Admin.create(initLoginId, passwordEncoder.encode(initPassword)));
         }
-    }
-
-    private void fixMenuRoles() {
-        menuRepository.findAll().stream()
-            .filter(m -> "/settings".equals(m.getUrl()))
-            .filter(m -> m.getRoles().contains(Role.VENDOR) || m.getRoles().contains(Role.ORDERING))
-            .findFirst()
-            .ifPresent(m -> {
-                m.updateInfo(m.getName(), m.getUrl(), m.getSortOrder(), List.of(Role.SUPER_ADMIN));
-                menuRepository.save(m);
-            });
     }
 
     private void initMenus() {

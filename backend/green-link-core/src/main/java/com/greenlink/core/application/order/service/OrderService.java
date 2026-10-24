@@ -302,18 +302,20 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     private String resolveVendorName(Long vendorId) {
         if (vendorId == null) return null;
         return adminRepository.findById(vendorId)
-                .map(admin -> companyRepository.findById(admin.getCompanyId())
-                        .map(Company::getCompanyName)
-                        .orElse(null))
+                .map(admin -> admin.getCompanyId() == null ? null :
+                        companyRepository.findById(admin.getCompanyId())
+                                .map(Company::getCompanyName)
+                                .orElse(null))
                 .orElse(null);
     }
 
     private String resolveVendorPhone(Long vendorId) {
         if (vendorId == null) return null;
         return adminRepository.findById(vendorId)
-                .map(admin -> companyRepository.findById(admin.getCompanyId())
-                        .map(Company::getPhone)
-                        .orElse(null))
+                .map(admin -> admin.getCompanyId() == null ? null :
+                        companyRepository.findById(admin.getCompanyId())
+                                .map(Company::getPhone)
+                                .orElse(null))
                 .orElse(null);
     }
 
