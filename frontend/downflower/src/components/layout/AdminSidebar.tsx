@@ -38,8 +38,11 @@ const ICON_MAP: Record<string, LucideIcon> = {
 }
 
 function isActive(pathname: string, url: string): boolean {
-  if (url === '/orders') return pathname === '/orders' || pathname.startsWith('/orders/')
-    && !pathname.startsWith('/orders/new') && !pathname.startsWith('/orders/received')
+  if (url === '/orders') return (
+    pathname === '/orders' ||
+    (pathname.startsWith('/orders/') && !pathname.startsWith('/orders/new') && !pathname.startsWith('/orders/received')) ||
+    pathname.startsWith('/ordering/orders/')
+  )
   return pathname === url || pathname.startsWith(url + '/')
 }
 

@@ -35,9 +35,10 @@ public record CreateOrderRequest(
         String adminMemo,
         String vendorMemo
 ) {
-    public CreateOrderCommand toCommand() {
+    public CreateOrderCommand toCommand(Long orderingCompanyId) {
         return new CreateOrderCommand(
                 vendorId,
+                orderingCompanyId,
                 productName,
                 quantity,
                 amount,

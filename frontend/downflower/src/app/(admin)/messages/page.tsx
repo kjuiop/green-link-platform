@@ -162,7 +162,7 @@ export default function MessagesPage() {
                 <TableRow key={sms.id}>
                   <TableCell>
                     {order ? (
-                      <Link href={`/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
+                      <Link href={`/ordering/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
                         {order.orderNumber}
                       </Link>
                     ) : (
@@ -229,7 +229,7 @@ export default function MessagesPage() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   {order ? (
-                    <Link href={`/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
+                    <Link href={`/ordering/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
                       {order.orderNumber}
                     </Link>
                   ) : (

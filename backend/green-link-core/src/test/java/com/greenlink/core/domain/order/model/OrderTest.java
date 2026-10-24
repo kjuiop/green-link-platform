@@ -9,7 +9,7 @@ class OrderTest {
 
     private Order pendingOrder() {
         return Order.create(
-                1L, "DF-20261022-0001", "장미꽃다발", 1, 50000L, null,
+                1L, null, "DF-20261022-0001", "장미꽃다발", 1, 50000L, null,
                 "2026-10-23", "FIXED", "14", "00", null,
                 "서울시 강남구", "101호", "생일", "그랜드볼룸", "A홀", null,
                 "축하합니다", "홍길동", "홍길동", "010-1234-5678",

@@ -134,9 +134,22 @@ function toFrontend(o: BackendOrder): Order {
   }
 }
 
+export type OrderingCompany = {
+  id: number
+  companyName: string
+}
+
+export async function fetchOrderingCompanies(): Promise<OrderingCompany[]> {
+  const res = await fetch('/api/companies?type=ORDERING', { headers: authHeaders() })
+  if (!res.ok) return []
+  const data: Array<{ id: number; companyName: string }> = await res.json()
+  return data
+}
+
 export type OrderSearchParams = {
   status?: string
   vendorId?: string
+  orderingCompanyId?: string
   orderNumber?: string
   productName?: string
   ordererName?: string
@@ -148,6 +161,7 @@ function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: numbe
   const query = new URLSearchParams()
   if (params?.status) query.set('status', params.status)
   if (params?.vendorId) query.set('vendorId', params.vendorId)
+  if (params?.orderingCompanyId) query.set('orderingCompanyId', params.orderingCompanyId)
   if (params?.orderNumber) query.set('orderNumber', params.orderNumber)
   if (params?.productName) query.set('productName', params.productName)
   if (params?.ordererName) query.set('ordererName', params.ordererName)
@@ -316,6 +330,31 @@ export async function uploadReceiptPhotos(orderId: string, files: File[]): Promi
   })
   if (!res.ok) throw new Error('배송사진 업로드에 실패했습니다.')
   return res.json()
+}
+
+export type SmsMessageResult = {
+  id: number
+  orderId: number
+  receiver: string
+  status: 'SUCCESS' | 'FAIL'
+  failReason: string | null
+  aligoMsgId: string | null
+  sentAt: string | null
+  imageUrl: string | null
+}
+
+export async function fetchSmsMessages(orderId: string): Promise<SmsMessageResult[]> {
+  const res = await fetch(`/api/messages/order/${orderId}`, { headers: authHeaders() })
+  if (!res.ok) throw new Error('발송 내역을 불러오지 못했습니다.')
+  return res.json()
+}
+
+export async function resendMms(orderId: string): Promise<void> {
+  const res = await fetch(`/api/orders/${orderId}/resend`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error('재발송에 실패했습니다.')
 }
 
 export async function updateOrderStatus(id: string, action: string, photoUrls?: string[]): Promise<Order> {
