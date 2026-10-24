@@ -114,7 +114,7 @@ function ReferencePhotoModal({
       <DialogContent className="sm:max-w-5xl" showCloseButton>
         <div className="flex items-center justify-between pr-8">
           <DialogTitle>
-            참고 이미지 ({photos.length}장)
+            참고 이미지{!loading && photos.length > 0 ? ` (${photos.length}장)` : ''}
           </DialogTitle>
           {photos.length > 0 && (
             <div className="flex gap-2">
