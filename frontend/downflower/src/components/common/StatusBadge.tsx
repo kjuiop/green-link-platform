@@ -11,8 +11,8 @@ const orderStatusConfig: Record<OrderStatus, { label: string; className: string 
 
 const messageStatusConfig: Record<MessageStatus, { label: string; className: string }> = {
   '미발송': { label: '미발송', className: 'bg-gray-100 text-gray-600 border-gray-200' },
-  '발송성공': { label: '발송성공', className: 'bg-green-100 text-green-800 border-green-200' },
-  '발송실패': { label: '발송실패', className: 'bg-red-100 text-red-800 border-red-200' },
+  '발송': { label: '발송', className: 'bg-green-100 text-green-800 border-green-200' },
+  '실패': { label: '실패', className: 'bg-red-100 text-red-800 border-red-200' },
 }
 
 export function OrderStatusBadge({ status }: { status: OrderStatus }) {

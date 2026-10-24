@@ -14,6 +14,13 @@ import { fetchAllProducts } from '@/lib/api/productApi'
 import { Vendor } from '@/types/vendor'
 import { Product } from '@/types/product'
 
+function formatPhone(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  if (digits.length <= 3) return digits
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
+}
+
 export default function NewOrderPage() {
   const router = useRouter()
 
@@ -534,7 +541,7 @@ export default function NewOrderPage() {
                   <Input
                     placeholder="010-0000-0000"
                     value={ordererPhone}
-                    onChange={(e) => setOrdererPhone(e.target.value)}
+                    onChange={(e) => setOrdererPhone(formatPhone(e.target.value))}
                   />
                 </div>
               </div>
@@ -552,7 +559,7 @@ export default function NewOrderPage() {
                   <Input
                     placeholder="010-0000-0000"
                     value={recipientPhone}
-                    onChange={(e) => setRecipientPhone(e.target.value)}
+                    onChange={(e) => setRecipientPhone(formatPhone(e.target.value))}
                   />
                 </div>
               </div>

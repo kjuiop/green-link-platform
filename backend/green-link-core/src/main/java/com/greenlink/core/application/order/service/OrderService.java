@@ -21,6 +21,9 @@ import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
 import com.greenlink.core.domain.receipt.port.ReceiptConfirmationRepository;
+import com.greenlink.core.domain.sms.model.SmsMessage;
+import com.greenlink.core.domain.sms.model.SmsStatus;
+import com.greenlink.core.domain.sms.port.SmsMessageRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
 import org.springframework.data.domain.Page;
@@ -56,17 +59,20 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     private final RecordOrderHistoryUseCase recordOrderHistoryUseCase;
     private final AdminRepository adminRepository;
     private final CompanyRepository companyRepository;
+    private final SmsMessageRepository smsMessageRepository;
 
     public OrderService(OrderRepository orderRepository, PhotoRepository photoRepository,
                         ReceiptConfirmationRepository receiptConfirmationRepository,
                         RecordOrderHistoryUseCase recordOrderHistoryUseCase,
-                        AdminRepository adminRepository, CompanyRepository companyRepository) {
+                        AdminRepository adminRepository, CompanyRepository companyRepository,
+                        SmsMessageRepository smsMessageRepository) {
         this.orderRepository = orderRepository;
         this.photoRepository = photoRepository;
         this.receiptConfirmationRepository = receiptConfirmationRepository;
         this.recordOrderHistoryUseCase = recordOrderHistoryUseCase;
         this.adminRepository = adminRepository;
         this.companyRepository = companyRepository;
+        this.smsMessageRepository = smsMessageRepository;
     }
 
     @Override
@@ -129,11 +135,13 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         List<Order> orders = orderRepository.search(condition);
         Map<Long, VendorInfo> infoMap = buildVendorInfoMap();
         Map<Long, String> orderingNameMap = buildOrderingCompanyNameMap();
+        List<Long> orderIds = orders.stream().map(Order::getId).toList();
+        Map<Long, String> msgStatusMap = buildMessageStatusMap(orderIds);
         return orders.stream()
                 .map(o -> {
                     VendorInfo v = infoMap.get(o.getVendorId());
                     String orderingName = o.getOrderingCompanyId() != null ? orderingNameMap.get(o.getOrderingCompanyId()) : null;
-                    return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, orderingName);
+                    return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, orderingName, msgStatusMap.get(o.getId()));
                 })
                 .toList();
     }
@@ -143,10 +151,12 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Page<Order> page = orderRepository.searchPaged(condition, pageable);
         Map<Long, VendorInfo> infoMap = buildVendorInfoMap();
         Map<Long, String> orderingNameMap = buildOrderingCompanyNameMap();
+        List<Long> orderIds = page.getContent().stream().map(Order::getId).toList();
+        Map<Long, String> msgStatusMap = buildMessageStatusMap(orderIds);
         Page<OrderResult> resultPage = page.map(o -> {
             VendorInfo v = infoMap.get(o.getVendorId());
             String orderingName = o.getOrderingCompanyId() != null ? orderingNameMap.get(o.getOrderingCompanyId()) : null;
-            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, orderingName);
+            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, orderingName, msgStatusMap.get(o.getId()));
         });
         return PageResult.of(resultPage);
     }
@@ -188,7 +198,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         return companyRepository.findById(orderingCompanyId).map(Company::getCompanyName).orElse(null);
     }
 
-    private OrderResult toResult(Order order, String vendorName, String vendorPhone, String orderingCompanyName) {
+    private OrderResult toResult(Order order, String vendorName, String vendorPhone, String orderingCompanyName, String messageStatus) {
         return new OrderResult(
                 order.getId(),
                 order.getOrderNumber(),
@@ -227,8 +237,28 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 order.getAdminMemo(),
                 order.getVendorMemo(),
                 order.getCompletedAt(),
-                order.getCreatedAt()
+                order.getCreatedAt(),
+                messageStatus
         );
+    }
+
+    private Map<Long, String> buildMessageStatusMap(List<Long> orderIds) {
+        if (orderIds.isEmpty()) return Map.of();
+        List<SmsMessage> messages = smsMessageRepository.findAllByOrderIdIn(orderIds);
+        Map<Long, List<SmsMessage>> byOrder = messages.stream()
+                .collect(Collectors.groupingBy(SmsMessage::getOrderId));
+        Map<Long, String> result = new HashMap<>();
+        for (Long id : orderIds) {
+            List<SmsMessage> msgs = byOrder.getOrDefault(id, List.of());
+            if (msgs.isEmpty()) {
+                result.put(id, "NONE");
+            } else if (msgs.stream().anyMatch(m -> m.getStatus() == SmsStatus.SUCCESS)) {
+                result.put(id, "SENT");
+            } else {
+                result.put(id, "FAIL");
+            }
+        }
+        return result;
     }
 
     @Override
@@ -320,6 +350,15 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     }
 
     private OrderResult toResult(Order order) {
+        List<SmsMessage> msgs = smsMessageRepository.findAllByOrderId(order.getId());
+        String messageStatus;
+        if (msgs.isEmpty()) {
+            messageStatus = "NONE";
+        } else if (msgs.stream().anyMatch(m -> m.getStatus() == SmsStatus.SUCCESS)) {
+            messageStatus = "SENT";
+        } else {
+            messageStatus = "FAIL";
+        }
         return new OrderResult(
                 order.getId(),
                 order.getOrderNumber(),
@@ -358,7 +397,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 order.getAdminMemo(),
                 order.getVendorMemo(),
                 order.getCompletedAt(),
-                order.getCreatedAt()
+                order.getCreatedAt(),
+                messageStatus
         );
     }
 }

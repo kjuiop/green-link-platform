@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface SmsMessageJpaRepository extends JpaRepository<SmsMessageJpaEntity, Long> {
     List<SmsMessageJpaEntity> findByOrderId(Long orderId);
+    List<SmsMessageJpaEntity> findByOrderIdIn(List<Long> orderIds);
 }

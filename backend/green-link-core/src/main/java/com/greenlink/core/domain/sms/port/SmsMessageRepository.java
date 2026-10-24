@@ -9,6 +9,7 @@ import java.util.List;
 public interface SmsMessageRepository {
     SmsMessage save(SmsMessage message);
     List<SmsMessage> findAllByOrderId(Long orderId);
+    List<SmsMessage> findAllByOrderIdIn(List<Long> orderIds);
     List<SmsMessage> findAll();
     Page<SmsMessage> findAll(Pageable pageable);
 }
