@@ -13,7 +13,8 @@ public enum AuthErrorCode implements ErrorCode {
     ACCOUNT_PENDING(403, "AUTH_007", "승인 대기 중인 계정입니다. 관리자 승인 후 로그인하실 수 있습니다."),
     PHONE_CODE_INVALID(400, "AUTH_008", "인증번호가 올바르지 않거나 만료되었습니다."),
     PHONE_NOT_VERIFIED(400, "AUTH_009", "휴대폰 인증을 먼저 완료해주세요."),
-    MEMBER_NOT_FOUND_BY_PHONE(404, "AUTH_010", "해당 연락처로 가입된 계정을 찾을 수 없습니다.");
+    MEMBER_NOT_FOUND_BY_PHONE(404, "AUTH_010", "해당 연락처로 가입된 계정을 찾을 수 없습니다."),
+    SMS_SEND_FAILED(500, "AUTH_011", "인증번호 발송에 실패했습니다. 잠시 후 다시 시도해주세요.");
 
     private final int status;
     private final String code;

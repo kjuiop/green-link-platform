@@ -48,7 +48,7 @@ public class PhoneVerificationService implements
         String msg = "[다운플라워] 인증번호: " + verification.getCode() + " (3분 이내 입력)";
         SmsResult result = smsClient.send(phone, msg, null, null);
         if (!result.success()) {
-            throw new BusinessException(AuthErrorCode.PHONE_CODE_INVALID);
+            throw new BusinessException(AuthErrorCode.SMS_SEND_FAILED);
         }
     }
 
@@ -66,7 +66,6 @@ public class PhoneVerificationService implements
     }
 
     @Override
-    @Transactional(readOnly = true)
     public FindIdResult findId(String phone) {
         PhoneVerification verification = verificationRepository.findLatestByPhone(phone)
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.PHONE_NOT_VERIFIED));
@@ -77,6 +76,9 @@ public class PhoneVerificationService implements
 
         Admin admin = adminRepository.findByPhone(phone)
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND_BY_PHONE));
+
+        verification.markUsed();
+        verificationRepository.save(verification);
 
         return new FindIdResult(admin.getLoginId(), admin.getCreatedAt());
     }

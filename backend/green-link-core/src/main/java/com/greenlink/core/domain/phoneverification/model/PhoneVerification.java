@@ -1,7 +1,7 @@
 package com.greenlink.core.domain.phoneverification.model;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.Random;
 
 public class PhoneVerification {
 
@@ -18,7 +18,7 @@ public class PhoneVerification {
     public static PhoneVerification create(String phone) {
         PhoneVerification v = new PhoneVerification();
         v.phone = phone;
-        v.code = String.format("%06d", new Random().nextInt(1_000_000));
+        v.code = String.format("%06d", new SecureRandom().nextInt(1_000_000));
         v.expiresAt = LocalDateTime.now().plusMinutes(3);
         v.verified = false;
         v.used = false;
