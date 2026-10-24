@@ -15,6 +15,7 @@ import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import com.greenlink.core.domain.sms.port.SmsClient;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -41,6 +42,7 @@ public class PhoneVerificationService implements
     }
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void send(String phone) {
         PhoneVerification verification = PhoneVerification.create(phone);
         verificationRepository.save(verification);
