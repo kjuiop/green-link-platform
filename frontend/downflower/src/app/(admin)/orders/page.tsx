@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { OrderStatusBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
-import { fetchOrdersPaged, fetchOrders, fetchOrderingCompanies, OrderSearchParams, OrderingCompany } from '@/lib/api/orderApi'
+import { fetchOrdersPaged, fetchOrders, OrderSearchParams } from '@/lib/api/orderApi'
 import { OrderStatus, Order } from '@/types/order'
 import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
@@ -29,14 +29,13 @@ const STATUS_TO_API: Partial<Record<OrderStatus, string>> = {
 const SERVER_FIELD_MAP: Partial<Record<SearchField, keyof OrderSearchParams>> = {
   '주문번호': 'orderNumber',
   '주문자': 'ordererName',
-  '발주사명': 'ordererName',
 }
 
 function matchField(o: Order, field: SearchField, value: string): boolean {
   if (!value.trim()) return true
   const v = value.trim()
   switch (field) {
-    case '발주사명': return o.ordererName.includes(v)
+    case '발주사명': return (o.orderingCompanyName ?? '').includes(v)
     case '수주사명': return o.vendorName.includes(v)
     case '주문일':   return o.orderedAt.includes(v)
     case '배송일':   return o.deliveryAt.includes(v)
@@ -108,24 +107,11 @@ export default function OrdersPage() {
   const [applied2Field, setApplied2Field] = useState<SearchField>('수주사명')
   const [applied2Value, setApplied2Value] = useState('')
 
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
-  const [orderingCompanies, setOrderingCompanies] = useState<OrderingCompany[]>([])
-  const [orderingCompanyId, setOrderingCompanyId] = useState('')
-
-  useEffect(() => {
-    const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null
-    if (role === 'SUPER_ADMIN') {
-      setIsSuperAdmin(true)
-      fetchOrderingCompanies().then(setOrderingCompanies).catch(() => {})
-    }
-  }, [])
-
   function buildServerParams(): OrderSearchParams {
     const params: OrderSearchParams = {}
     if (statusFilter !== 'ALL') params.status = STATUS_TO_API[statusFilter]
     if (dateFrom) params.deliveryDateFrom = dateFrom
     if (dateTo) params.deliveryDateTo = dateTo
-    if (orderingCompanyId) params.orderingCompanyId = orderingCompanyId
     const key1 = SERVER_FIELD_MAP[search1Field]
     if (key1 && search1Value) params[key1] = search1Value
     const key2 = SERVER_FIELD_MAP[search2Field]
@@ -161,7 +147,6 @@ export default function OrdersPage() {
     setAppliedDeletedFilter('정상')
     setApplied1Field('주문번호'); setApplied1Value('')
     setApplied2Field('수주사명'); setApplied2Value('')
-    setOrderingCompanyId('')
     setPage(0)
     loadOrders({}, 0)
   }
@@ -214,23 +199,6 @@ export default function OrdersPage() {
             </label>
           ))}
         </div>
-
-        {/* 발주업체 필터 (SUPER_ADMIN 전용) */}
-        {isSuperAdmin && orderingCompanies.length > 0 && (
-          <div className="mt-3 flex items-center gap-2">
-            <label className="whitespace-nowrap text-sm text-gray-500">발주업체</label>
-            <select
-              value={orderingCompanyId}
-              onChange={(e) => setOrderingCompanyId(e.target.value)}
-              className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-            >
-              <option value="">전체</option>
-              {orderingCompanies.map((c) => (
-                <option key={c.id} value={String(c.id)}>{c.companyName}</option>
-              ))}
-            </select>
-          </div>
-        )}
 
         {/* 배송날짜 + 정상/삭제 */}
         <div className="mt-3 flex flex-wrap items-center gap-2">

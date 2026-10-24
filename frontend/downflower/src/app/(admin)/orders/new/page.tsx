@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { fetchVendors } from '@/lib/api/vendorApi'
-import { createOrder } from '@/lib/api/orderApi'
+import { createOrder, fetchOrderingCompanies, OrderingCompany } from '@/lib/api/orderApi'
 import { fetchAllProducts } from '@/lib/api/productApi'
 import { Vendor } from '@/types/vendor'
 import { Product } from '@/types/product'
@@ -66,6 +66,10 @@ export default function NewOrderPage() {
 
   // 업체 목록
   const [vendors, setVendors] = useState<Vendor[]>([])
+  // 발주업체 (SUPER_ADMIN 전용)
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+  const [orderingCompanies, setOrderingCompanies] = useState<OrderingCompany[]>([])
+  const [orderingCompanyId, setOrderingCompanyId] = useState('')
   // 상품 목록
   const [products, setProducts] = useState<Product[]>([])
   const [selectedProductId, setSelectedProductId] = useState('')
@@ -84,6 +88,11 @@ export default function NewOrderPage() {
   useEffect(() => {
     fetchVendors('ACTIVE').then(setVendors).catch(() => {})
     fetchAllProducts().then(setProducts).catch(() => {})
+    const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null
+    if (role === 'SUPER_ADMIN') {
+      setIsSuperAdmin(true)
+      fetchOrderingCompanies().then(setOrderingCompanies).catch(() => {})
+    }
   }, [])
 
   const EXTRA_COST_PRESETS = [
@@ -121,6 +130,7 @@ export default function NewOrderPage() {
     try {
       await createOrder({
         vendorId: Number(vendorId),
+        ...(isSuperAdmin && orderingCompanyId ? { orderingCompanyId: Number(orderingCompanyId) } : {}),
         productName,
         quantity,
         amount: Number(amount),
@@ -173,6 +183,21 @@ export default function NewOrderPage() {
               <Label>주문번호</Label>
               <Input value="자동 생성" disabled className="bg-gray-50" />
             </div>
+            {isSuperAdmin && orderingCompanies.length > 0 && (
+              <div className="space-y-1.5">
+                <Label>발주업체</Label>
+                <select
+                  value={orderingCompanyId}
+                  onChange={(e) => setOrderingCompanyId(e.target.value)}
+                  className="w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                >
+                  <option value="">선택 안함</option>
+                  {orderingCompanies.map((c) => (
+                    <option key={c.id} value={String(c.id)}>{c.companyName}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>수주업체 *</Label>
               <select
