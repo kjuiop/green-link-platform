@@ -27,6 +27,13 @@ public class OrderRepositoryAdapter implements OrderRepository {
     }
 
     @Override
+    public List<Order> findAllByIds(List<Long> ids) {
+        return jpaRepository.findAllById(ids).stream()
+                .map(OrderJpaEntity::toDomain)
+                .toList();
+    }
+
+    @Override
     public List<Order> search(OrderSearchCondition condition) {
         return queryRepository.search(condition).stream()
                 .map(OrderJpaEntity::toDomain)
