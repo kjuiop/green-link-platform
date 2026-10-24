@@ -15,6 +15,7 @@ import {
 } from '@/lib/api/orderApi'
 import { PrintButton } from '@/components/common/PrintButton'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
+import { ReferencePhotoSection } from '@/components/common/ReferencePhotoViewer'
 import { Pencil, X, Check, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Order } from '@/types/order'
@@ -549,6 +550,14 @@ export default function OrderingOrderDetailPage() {
                 {!order.adminMemo && !order.vendorMemo && <p className="text-gray-400">메모 없음</p>}
               </>
             )}
+          </CardContent>
+        </Card>
+
+        {/* 참고 이미지 */}
+        <Card>
+          <CardHeader><CardTitle className="text-sm">참고 이미지</CardTitle></CardHeader>
+          <CardContent>
+            <ReferencePhotoSection orderId={id} />
           </CardContent>
         </Card>
 

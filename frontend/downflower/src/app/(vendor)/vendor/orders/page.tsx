@@ -8,6 +8,7 @@ import { getDeliveryDateRowBg } from '@/lib/utils'
 import { Order, OrderStatus } from '@/types/order'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
+import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 
 const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
@@ -188,7 +189,12 @@ export default function VendorOrdersPage() {
                       {order.orderNumber}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-sm">{order.productName}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1 text-sm">
+                      <span>{order.productName}</span>
+                      <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
+                    </div>
+                  </TableCell>
                   <TableCell className="text-sm">{order.placeName} {order.roomName}</TableCell>
                   <TableCell className="text-sm">
                     <span>{order.deliveryAt.split(' ')[0]}</span>

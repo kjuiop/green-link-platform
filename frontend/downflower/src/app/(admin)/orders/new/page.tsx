@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { fetchVendors } from '@/lib/api/vendorApi'
-import { createOrder, fetchOrderingCompanies, OrderingCompany } from '@/lib/api/orderApi'
+import { createOrder, fetchOrderingCompanies, uploadReferencePhotos, OrderingCompany } from '@/lib/api/orderApi'
 import { fetchAllProducts } from '@/lib/api/productApi'
 import { Vendor } from '@/types/vendor'
 import { Product } from '@/types/product'
@@ -67,6 +67,7 @@ export default function NewOrderPage() {
   const [ribbonRight, setRibbonRight] = useState('')
   const [adminMemo, setAdminMemo] = useState('')
   const [vendorMemo, setVendorMemo] = useState('')
+  const [referenceFiles, setReferenceFiles] = useState<File[]>([])
 
   // 업체 목록
   const [vendors, setVendors] = useState<Vendor[]>([])
@@ -128,7 +129,7 @@ export default function NewOrderPage() {
     setSubmitting(true)
     setSubmitError('')
     try {
-      await createOrder({
+      const created = await createOrder({
         vendorId: Number(vendorId),
         ...(isSuperAdmin && orderingCompanyId ? { orderingCompanyId: Number(orderingCompanyId) } : {}),
         productName,
@@ -160,6 +161,9 @@ export default function NewOrderPage() {
         adminMemo,
         vendorMemo,
       })
+      if (referenceFiles.length > 0) {
+        await uploadReferencePhotos(String(created.id), referenceFiles).catch(() => {})
+      }
       router.push('/orders')
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : '발주 등록에 실패했습니다.')
@@ -689,6 +693,39 @@ export default function NewOrderPage() {
                   value={vendorMemo}
                   onChange={(e) => setVendorMemo(e.target.value)}
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label>참고 이미지</Label>
+                <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 hover:border-gray-400 hover:bg-gray-50">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const added = Array.from(e.target.files ?? [])
+                      setReferenceFiles((prev) => [...prev, ...added])
+                      e.target.value = ''
+                    }}
+                  />
+                  + 이미지 추가
+                </label>
+                {referenceFiles.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {referenceFiles.map((f, idx) => (
+                      <div key={idx} className="relative h-16 w-16 overflow-hidden rounded border border-gray-200">
+                        <img src={URL.createObjectURL(f)} alt={f.name} className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setReferenceFiles((prev) => prev.filter((_, i) => i !== idx))}
+                          className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"
+                        >
+                          <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

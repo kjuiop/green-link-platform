@@ -48,4 +48,5 @@ export interface Order {
   messageStatus: MessageStatus
   completedAt?: string
   isDeleted?: boolean
+  referencePhotoCount?: number
 }
