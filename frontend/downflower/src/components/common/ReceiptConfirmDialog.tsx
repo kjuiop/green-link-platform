@@ -45,7 +45,7 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
     return (
       <div className="space-y-1">
         <div className="text-sm font-medium">{saved.receiverName || '-'}</div>
-        {saved.photoUrls.length > 0 && (
+        {(saved.sitePhotoUrls.length > 0 || saved.storePhotoUrls.length > 0) && (
           <>
             <button
               type="button"
@@ -59,7 +59,7 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
             <PhotoViewerDialog
               open={viewerOpen}
               onClose={() => setViewerOpen(false)}
-              photos={saved.photoUrls.map((url, i) => ({ id: String(i), url }))}
+              photos={[...saved.sitePhotoUrls, ...saved.storePhotoUrls].map((url, i) => ({ id: String(i), url }))}
               orderNumber={orderNumber}
             />
           </>

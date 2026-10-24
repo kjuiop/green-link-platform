@@ -39,14 +39,15 @@ export default function VendorOrderDetailPage() {
   if (loadError) return <div className="p-8 text-sm text-red-500">{loadError}</div>
   if (!order) return <div className="p-8 text-sm text-gray-400">주문을 찾을 수 없습니다.</div>
 
-  const hasPhotos = (receiptConfirmation?.photoUrls.length ?? 0) > 0
+  const hasSitePhotos = (receiptConfirmation?.sitePhotoUrls.length ?? 0) > 0
+  const hasPhotos = hasSitePhotos || (receiptConfirmation?.storePhotoUrls.length ?? 0) > 0
 
-  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>, photoType: 'SITE' | 'STORE') {
     const files = Array.from(e.target.files ?? [])
     e.target.value = ''
     if (files.length === 0) return
     try {
-      const updated = await uploadReceiptPhotos(id, files)
+      const updated = await uploadReceiptPhotos(id, files, photoType)
       setReceiptConfirmation(updated)
     } catch (err) {
       setActionError(err instanceof Error ? err.message : '사진 업로드에 실패했습니다.')
@@ -83,7 +84,7 @@ export default function VendorOrderDetailPage() {
     setActing(true)
     setActionError(null)
     try {
-      const autoPhotos = (receiptConfirmation?.photoUrls ?? []).slice(0, 2)
+      const autoPhotos = (receiptConfirmation?.sitePhotoUrls ?? []).slice(0, 2)
       const updated = await updateOrderStatus(id, 'complete', autoPhotos)
       setOrder(updated)
     } catch (e) {
@@ -123,13 +124,13 @@ export default function VendorOrderDetailPage() {
             <Button
               className={cn(
                 'gap-1.5',
-                hasPhotos
+                hasSitePhotos
                   ? 'bg-blue-700 hover:bg-blue-800'
                   : 'cursor-not-allowed bg-gray-300 text-gray-500',
               )}
-              disabled={!hasPhotos || acting}
+              disabled={!hasSitePhotos || acting}
               onClick={handleComplete}
-              title={!hasPhotos ? '배송사진을 1장 이상 업로드해주세요' : undefined}
+              title={!hasSitePhotos ? '현장사진을 1장 이상 업로드해주세요' : undefined}
             >
               {acting ? '처리 중…' : '배송완료 처리'}
             </Button>
@@ -197,39 +198,63 @@ export default function VendorOrderDetailPage() {
         {(order.status === '수주완료' || order.status === '배송완료') && (
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle className="text-sm">
-                배송사진
-                {hasPhotos && (
-                  <span className="ml-1.5 text-xs font-normal text-gray-400">
-                    ({receiptConfirmation!.photoUrls.length}장)
-                  </span>
-                )}
-              </CardTitle>
+              <CardTitle className="text-sm">배송사진</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {receiptConfirmation?.photoUrls.map((url, idx) => (
-                  <div key={idx} className="relative h-24 w-24">
-                    <img src={url} alt="배송사진" className="h-full w-full rounded border object-cover" />
-                  </div>
-                ))}
-                {order.status !== '배송완료' && (
-                  <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:text-gray-600">
-                    <Upload className="h-5 w-5" />
-                    <span className="text-xs">추가</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={handlePhotoUpload}
-                    />
-                  </label>
-                )}
+            <CardContent className="space-y-4">
+              {/* 현장사진 */}
+              <div>
+                <div className="mb-1.5 flex items-center gap-2">
+                  <span className="text-xs font-medium text-gray-600">현장사진</span>
+                  <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700">SMS 발송</span>
+                  {(receiptConfirmation?.sitePhotoUrls.length ?? 0) > 0 && (
+                    <span className="text-xs text-gray-400">({receiptConfirmation!.sitePhotoUrls.length}장)</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {receiptConfirmation?.sitePhotoUrls.map((url, idx) => (
+                    <div key={idx} className="h-24 w-24 overflow-hidden rounded border">
+                      <img src={url} alt="현장사진" className="h-full w-full object-cover" />
+                    </div>
+                  ))}
+                  {order.status !== '배송완료' && (
+                    <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded border-2 border-dashed border-blue-200 text-blue-400 hover:border-blue-400 hover:text-blue-600">
+                      <Upload className="h-5 w-5" />
+                      <span className="text-xs">추가</span>
+                      <input type="file" accept="image/*" multiple className="hidden"
+                        onChange={(e) => handlePhotoUpload(e, 'SITE')} />
+                    </label>
+                  )}
+                </div>
               </div>
-              {order.status === '수주완료' && !hasPhotos && (
+
+              {/* 매장사진 */}
+              <div>
+                <div className="mb-1.5 flex items-center gap-2">
+                  <span className="text-xs font-medium text-gray-600">매장사진</span>
+                  {(receiptConfirmation?.storePhotoUrls.length ?? 0) > 0 && (
+                    <span className="text-xs text-gray-400">({receiptConfirmation!.storePhotoUrls.length}장)</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {receiptConfirmation?.storePhotoUrls.map((url, idx) => (
+                    <div key={idx} className="h-24 w-24 overflow-hidden rounded border">
+                      <img src={url} alt="매장사진" className="h-full w-full object-cover" />
+                    </div>
+                  ))}
+                  {order.status !== '배송완료' && (
+                    <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:text-gray-600">
+                      <Upload className="h-5 w-5" />
+                      <span className="text-xs">추가</span>
+                      <input type="file" accept="image/*" multiple className="hidden"
+                        onChange={(e) => handlePhotoUpload(e, 'STORE')} />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {order.status === '수주완료' && !hasSitePhotos && (
                 <p className="text-xs text-amber-600">
-                  배송사진을 1장 이상 업로드해야 배송완료 처리가 가능합니다.
+                  현장사진을 1장 이상 업로드해야 배송완료 처리가 가능합니다.
                 </p>
               )}
             </CardContent>

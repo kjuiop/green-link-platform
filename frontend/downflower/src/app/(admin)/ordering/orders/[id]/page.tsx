@@ -68,7 +68,8 @@ export default function OrderingOrderDetailPage() {
   if (loadError) return <div className="p-8 text-sm text-red-500">{loadError}</div>
   if (!order || !draft) return <div className="p-8 text-sm text-gray-400">주문을 찾을 수 없습니다.</div>
 
-  const hasPhotos = (receiptConfirmation?.photoUrls.length ?? 0) > 0
+  const hasSitePhotos = (receiptConfirmation?.sitePhotoUrls.length ?? 0) > 0
+  const hasPhotos = hasSitePhotos || (receiptConfirmation?.storePhotoUrls.length ?? 0) > 0
   const hasSmsFailure = smsMessages.some((m) => m.status === 'FAIL')
 
   function startEdit() {
@@ -228,11 +229,11 @@ export default function OrderingOrderDetailPage() {
             <Button
               className={cn(
                 'gap-1.5',
-                hasPhotos ? 'bg-blue-700 hover:bg-blue-800' : 'cursor-not-allowed bg-gray-300 text-gray-500',
+                hasSitePhotos ? 'bg-blue-700 hover:bg-blue-800' : 'cursor-not-allowed bg-gray-300 text-gray-500',
               )}
-              disabled={!hasPhotos || saving}
+              disabled={!hasSitePhotos || saving}
               onClick={openCompleteDialog}
-              title={!hasPhotos ? '배송사진을 1장 이상 업로드해주세요' : undefined}
+              title={!hasSitePhotos ? '현장사진을 1장 이상 업로드해주세요' : undefined}
             >
               {saving ? '처리 중…' : '배송완료 처리'}
             </Button>
@@ -295,7 +296,7 @@ export default function OrderingOrderDetailPage() {
                 선택한 사진 수만큼 MMS가 각각 발송됩니다. 선택하지 않으면 사진 없이 SMS만 발송됩니다.
               </p>
               <div className="flex flex-wrap gap-2">
-                {receiptConfirmation?.photoUrls.map((url, idx) => {
+                {receiptConfirmation?.sitePhotoUrls.map((url, idx) => {
                   const selected = selectedPhotoUrls.includes(url)
                   return (
                     <button
@@ -554,26 +555,45 @@ export default function OrderingOrderDetailPage() {
         {/* 배송사진 */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-sm">
-              배송사진
-              {hasPhotos && (
-                <span className="ml-1.5 text-xs font-normal text-gray-400">
-                  ({receiptConfirmation!.photoUrls.length}장)
-                </span>
-              )}
-            </CardTitle>
+            <CardTitle className="text-sm">배송사진</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {!hasPhotos ? (
               <p className="text-sm text-gray-400">등록된 배송사진이 없습니다.</p>
             ) : (
-              <div className="flex flex-wrap gap-3">
-                {receiptConfirmation!.photoUrls.map((url, idx) => (
-                  <div key={idx} className="h-28 w-28 overflow-hidden rounded-lg border">
-                    <img src={url} alt="배송사진" className="h-full w-full object-cover" />
+              <>
+                {hasSitePhotos && (
+                  <div>
+                    <div className="mb-1.5 flex items-center gap-2">
+                      <span className="text-xs font-medium text-gray-600">현장사진</span>
+                      <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700">SMS 발송</span>
+                      <span className="text-xs text-gray-400">({receiptConfirmation!.sitePhotoUrls.length}장)</span>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {receiptConfirmation!.sitePhotoUrls.map((url, idx) => (
+                        <div key={idx} className="h-28 w-28 overflow-hidden rounded-lg border">
+                          <img src={url} alt="현장사진" className="h-full w-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
+                )}
+                {(receiptConfirmation?.storePhotoUrls.length ?? 0) > 0 && (
+                  <div>
+                    <div className="mb-1.5 flex items-center gap-2">
+                      <span className="text-xs font-medium text-gray-600">매장사진</span>
+                      <span className="text-xs text-gray-400">({receiptConfirmation!.storePhotoUrls.length}장)</span>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {receiptConfirmation!.storePhotoUrls.map((url, idx) => (
+                        <div key={idx} className="h-28 w-28 overflow-hidden rounded-lg border">
+                          <img src={url} alt="매장사진" className="h-full w-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

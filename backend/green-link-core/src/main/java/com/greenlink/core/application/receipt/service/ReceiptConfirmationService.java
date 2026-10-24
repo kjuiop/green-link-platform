@@ -35,21 +35,26 @@ public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCas
     @Override
     @Transactional
     public ReceiptConfirmationResult save(SaveReceiptConfirmationCommand command) {
-        List<String> photoUrls = new ArrayList<>();
+        List<String> sitePhotoUrls = new ArrayList<>();
+        List<String> storePhotoUrls = new ArrayList<>();
         List<String> uploadedKeys = new ArrayList<>();
 
         for (SaveReceiptConfirmationCommand.PhotoFile pf : command.photoFiles()) {
             PhotoStorage.UploadResult uploaded = photoStorage.store(
                     command.orderId(), pf.originalFileName(), pf.content(), pf.contentType());
-            photoUrls.add(uploaded.url());
             uploadedKeys.add(uploaded.s3Key());
+            if ("STORE".equals(pf.photoType())) {
+                storePhotoUrls.add(uploaded.url());
+            } else {
+                sitePhotoUrls.add(uploaded.url());
+            }
         }
 
         ReceiptConfirmationResult result;
         try {
             ReceiptConfirmation confirmation = ReceiptConfirmation.create(
                     command.orderId(), command.receiverName(), command.receiverRelation(),
-                    command.delivered(), command.memo(), command.confirmedAt(), photoUrls);
+                    command.delivered(), command.memo(), command.confirmedAt(), sitePhotoUrls, storePhotoUrls);
             result = toResult(repository.save(confirmation));
         } catch (Exception e) {
             uploadedKeys.forEach(photoStorage::delete);
@@ -63,18 +68,33 @@ public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCas
     @Override
     @Transactional
     public ReceiptConfirmationResult addPhotos(Long orderId, List<SaveReceiptConfirmationCommand.PhotoFile> photoFiles) {
-        List<String> photoUrls = new ArrayList<>();
+        List<String> sitePhotoUrls = new ArrayList<>();
+        List<String> storePhotoUrls = new ArrayList<>();
         List<String> uploadedKeys = new ArrayList<>();
 
         for (SaveReceiptConfirmationCommand.PhotoFile pf : photoFiles) {
             PhotoStorage.UploadResult uploaded = photoStorage.store(
                     orderId, pf.originalFileName(), pf.content(), pf.contentType());
-            photoUrls.add(uploaded.url());
             uploadedKeys.add(uploaded.s3Key());
+            if ("STORE".equals(pf.photoType())) {
+                storePhotoUrls.add(uploaded.url());
+            } else {
+                sitePhotoUrls.add(uploaded.url());
+            }
         }
 
         try {
-            return toResult(repository.appendPhotos(orderId, photoUrls));
+            ReceiptConfirmation result = null;
+            if (!sitePhotoUrls.isEmpty()) {
+                result = repository.appendPhotos(orderId, sitePhotoUrls, "SITE");
+            }
+            if (!storePhotoUrls.isEmpty()) {
+                result = repository.appendPhotos(orderId, storePhotoUrls, "STORE");
+            }
+            if (result == null) {
+                result = repository.findByOrderId(orderId).orElseThrow();
+            }
+            return toResult(result);
         } catch (Exception e) {
             uploadedKeys.forEach(photoStorage::delete);
             throw e;
@@ -96,7 +116,8 @@ public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCas
                 rc.isDelivered(),
                 rc.getMemo(),
                 rc.getConfirmedAt() != null ? rc.getConfirmedAt().toString() : null,
-                rc.getPhotoUrls()
+                rc.getSitePhotoUrls(),
+                rc.getStorePhotoUrls()
         );
     }
 }
