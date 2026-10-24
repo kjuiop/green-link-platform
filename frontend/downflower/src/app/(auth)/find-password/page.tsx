@@ -8,12 +8,17 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
 export default function FindPasswordPage() {
+  const [loginId, setLoginId] = useState('')
   const [phone, setPhone] = useState('')
   const [codeSent, setCodeSent] = useState(false)
   const [codeValue, setCodeValue] = useState('')
   const [verified, setVerified] = useState(false)
   const [codeError, setCodeError] = useState('')
   const [countdown, setCountdown] = useState(0)
+
+  const [newPassword, setNewPassword] = useState('')
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('')
+  const [resetDone, setResetDone] = useState(false)
 
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 11)
@@ -28,24 +33,74 @@ export default function FindPasswordPage() {
     return () => clearInterval(timer)
   }, [countdown])
 
-  const handleSendCode = () => {
-    setCodeSent(true)
-    setCodeValue('')
-    setCodeError('')
-    setCountdown(60)
-  }
+  const formatCountdown = (s: number) =>
+    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 
-  const handleVerify = () => {
-    if (codeValue === '123456') {
-      setVerified(true)
+  const handleSendCode = async () => {
+    if (!phone) return
+    try {
+      const res = await fetch('/api/auth/phone/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        alert(body?.message ?? '인증번호 발송에 실패했습니다.')
+        return
+      }
+      setCodeSent(true)
+      setCodeValue('')
       setCodeError('')
-    } else {
-      setCodeError('인증번호가 올바르지 않습니다.')
+      setCountdown(180)
+    } catch {
+      alert('인증번호 발송 중 오류가 발생했습니다.')
     }
   }
 
-  const formatCountdown = (s: number) =>
-    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+  const handleVerify = async () => {
+    try {
+      const res = await fetch('/api/auth/phone/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, code: codeValue }),
+      })
+      if (res.ok) {
+        setVerified(true)
+        setCodeError('')
+      } else {
+        setCodeError('인증번호가 올바르지 않거나 만료되었습니다.')
+      }
+    } catch {
+      setCodeError('인증 확인 중 오류가 발생했습니다.')
+    }
+  }
+
+  const handleResetPassword = async () => {
+    if (newPassword !== newPasswordConfirm) {
+      alert('비밀번호가 일치하지 않습니다.')
+      return
+    }
+    if (newPassword.length < 8) {
+      alert('비밀번호는 8자 이상이어야 합니다.')
+      return
+    }
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, loginId, newPassword }),
+      })
+      if (res.ok) {
+        setResetDone(true)
+      } else {
+        const body = await res.json().catch(() => null)
+        alert(body?.message ?? '비밀번호 변경에 실패했습니다.')
+      }
+    } catch {
+      alert('비밀번호 변경 중 오류가 발생했습니다.')
+    }
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -55,7 +110,23 @@ export default function FindPasswordPage() {
           <p className="mt-1 text-sm text-gray-500">발주·수주 관리 시스템</p>
         </div>
 
-        {!verified ? (
+        {resetDone ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">비밀번호 변경 완료</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-600 text-center">
+                비밀번호가 성공적으로 변경되었습니다.
+              </p>
+              <Link href="/login">
+                <Button className="w-full bg-green-700 hover:bg-green-800">
+                  로그인하러 가기
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : !verified ? (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">비밀번호 찾기</CardTitle>
@@ -63,7 +134,11 @@ export default function FindPasswordPage() {
             <CardContent className="space-y-3">
               <div className="space-y-1.5">
                 <Label>아이디</Label>
-                <Input placeholder="아이디를 입력하세요" />
+                <Input
+                  placeholder="아이디를 입력하세요"
+                  value={loginId}
+                  onChange={(e) => setLoginId(e.target.value)}
+                />
               </div>
 
               <div className="space-y-1.5">
@@ -135,18 +210,32 @@ export default function FindPasswordPage() {
 
               <div className="space-y-1.5">
                 <Label>새 비밀번호</Label>
-                <Input type="password" placeholder="8자 이상" />
+                <Input
+                  type="password"
+                  placeholder="8자 이상"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>새 비밀번호 확인</Label>
-                <Input type="password" placeholder="비밀번호 재입력" />
+                <Input
+                  type="password"
+                  placeholder="비밀번호 재입력"
+                  value={newPasswordConfirm}
+                  onChange={(e) => setNewPasswordConfirm(e.target.value)}
+                />
+                {newPassword && newPasswordConfirm && newPassword !== newPasswordConfirm && (
+                  <p className="text-xs text-red-500">비밀번호가 일치하지 않습니다.</p>
+                )}
               </div>
 
-              <Link href="/login">
-                <Button className="w-full bg-green-700 hover:bg-green-800">
-                  비밀번호 변경
-                </Button>
-              </Link>
+              <Button
+                className="w-full bg-green-700 hover:bg-green-800"
+                onClick={handleResetPassword}
+              >
+                비밀번호 변경
+              </Button>
             </CardContent>
           </Card>
         )}

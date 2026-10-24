@@ -73,6 +73,10 @@ public class Admin {
     public void activate() { this.status = AdminStatus.ACTIVE; }
     public void suspend() { this.status = AdminStatus.INACTIVE; }
 
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
     public void updateProfile(String name, String phone) {
         this.name = name;
         this.phone = phone;

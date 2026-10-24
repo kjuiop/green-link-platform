@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface AdminJpaRepository extends JpaRepository<AdminJpaEntity, Long> {
     List<AdminJpaEntity> findByCompanyId(Long companyId);
+    java.util.Optional<AdminJpaEntity> findByPhone(String phone);
 }
