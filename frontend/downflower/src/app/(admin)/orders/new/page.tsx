@@ -67,7 +67,11 @@ export default function NewOrderPage() {
   const [ribbonRight, setRibbonRight] = useState('')
   const [adminMemo, setAdminMemo] = useState('')
   const [vendorMemo, setVendorMemo] = useState('')
-  const [referenceFiles, setReferenceFiles] = useState<File[]>([])
+  const [referenceItems, setReferenceItems] = useState<{ file: File; url: string }[]>([])
+
+  useEffect(() => {
+    return () => referenceItems.forEach((item) => URL.revokeObjectURL(item.url))
+  }, [])
 
   // 업체 목록
   const [vendors, setVendors] = useState<Vendor[]>([])
@@ -161,8 +165,8 @@ export default function NewOrderPage() {
         adminMemo,
         vendorMemo,
       })
-      if (referenceFiles.length > 0) {
-        await uploadReferencePhotos(String(created.id), referenceFiles).catch(() => {})
+      if (referenceItems.length > 0) {
+        await uploadReferencePhotos(String(created.id), referenceItems.map((i) => i.file)).catch(() => {})
       }
       router.push('/orders')
     } catch (err) {
@@ -703,21 +707,24 @@ export default function NewOrderPage() {
                     multiple
                     className="hidden"
                     onChange={(e) => {
-                      const added = Array.from(e.target.files ?? [])
-                      setReferenceFiles((prev) => [...prev, ...added])
+                      const added = Array.from(e.target.files ?? []).map((f) => ({ file: f, url: URL.createObjectURL(f) }))
+                      setReferenceItems((prev) => [...prev, ...added])
                       e.target.value = ''
                     }}
                   />
                   + 이미지 추가
                 </label>
-                {referenceFiles.length > 0 && (
+                {referenceItems.length > 0 && (
                   <div className="flex flex-wrap gap-2 pt-1">
-                    {referenceFiles.map((f, idx) => (
+                    {referenceItems.map((item, idx) => (
                       <div key={idx} className="relative h-16 w-16 overflow-hidden rounded border border-gray-200">
-                        <img src={URL.createObjectURL(f)} alt={f.name} className="h-full w-full object-cover" />
+                        <img src={item.url} alt={item.file.name} className="h-full w-full object-cover" />
                         <button
                           type="button"
-                          onClick={() => setReferenceFiles((prev) => prev.filter((_, i) => i !== idx))}
+                          onClick={() => setReferenceItems((prev) => {
+                            URL.revokeObjectURL(prev[idx].url)
+                            return prev.filter((_, i) => i !== idx)
+                          })}
                           className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"
                         >
                           <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
