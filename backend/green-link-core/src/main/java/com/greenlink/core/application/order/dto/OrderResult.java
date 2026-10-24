@@ -39,5 +39,6 @@ public record OrderResult(
         String vendorMemo,
         String completedAt,
         String createdAt,
-        String messageStatus
+        String messageStatus,
+        int referencePhotoCount
 ) {}

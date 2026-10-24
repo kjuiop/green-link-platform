@@ -6,11 +6,12 @@ import * as XLSX from 'xlsx'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { OrderStatusBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
-import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
+import { ReceiptConfirmButton, ReceiptInfoCell } from '@/components/common/ReceiptConfirmDialog'
 import { fetchOrders, OrderSearchParams } from '@/lib/api/orderApi'
-import { getDeliveryDateColor } from '@/lib/utils'
+import { getDeliveryDateRowBg } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { Download } from 'lucide-react'
+import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
 type DeletedFilter = '정상' | '삭제' | '전체'
@@ -320,18 +321,19 @@ export default function ReceivedOrdersPage() {
               <TableHead>배송현황</TableHead>
               <TableHead>문자현황</TableHead>
               <TableHead>인수정보</TableHead>
+              <TableHead>인수확인</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={10} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={11} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={11} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -339,7 +341,7 @@ export default function ReceivedOrdersPage() {
               filtered.map((order) => (
                 <TableRow
                   key={order.id}
-                  className={order.isDeleted ? 'bg-red-50 opacity-60' : 'cursor-pointer hover:bg-gray-50'}
+                  className={order.isDeleted ? 'bg-red-50 opacity-60' : `cursor-pointer ${getDeliveryDateRowBg(order.deliveryAt)} hover:brightness-95`}
                 >
                   <TableCell>
                     <Link href={`/vendor/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
@@ -351,7 +353,7 @@ export default function ReceivedOrdersPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-baseline gap-1.5">
-                      <span className={`text-sm ${getDeliveryDateColor(order.deliveryAt)}`}>{order.deliveryAt.split(' ')[0]}</span>
+                      <span className="text-sm">{order.deliveryAt.split(' ')[0]}</span>
                       <span className="text-sm font-medium text-red-500">{order.deliveryAt.split(' ')[1]}</span>
                       {order.deliveryTimeType && (
                         <span className="text-xs font-bold text-red-500">
@@ -367,7 +369,10 @@ export default function ReceivedOrdersPage() {
                   </TableCell>
                   <TableCell className="text-sm text-gray-700">{order.vendorName || '—'}</TableCell>
                   <TableCell>
-                    <div className="text-sm">{order.productName}</div>
+                    <div className="flex items-center gap-1 text-sm">
+                      <span>{order.productName}</span>
+                      <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
+                    </div>
                     <div className="text-sm text-gray-400">{[order.placeName, order.address].filter(Boolean).join(' ')}</div>
                   </TableCell>
                   <TableCell className="text-sm">{order.quantity}</TableCell>
@@ -386,6 +391,9 @@ export default function ReceivedOrdersPage() {
                       recipientName={order.recipientName}
                       recipientPhone={order.recipientPhone}
                     />
+                  </TableCell>
+                  <TableCell>
+                    <ReceiptInfoCell orderId={order.id} />
                   </TableCell>
                   <TableCell>
                     <ReceiptConfirmButton

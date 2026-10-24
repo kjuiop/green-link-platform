@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { ClipboardCheck, Upload, X, Images, Download, Pencil } from 'lucide-react'
+import { ClipboardCheck, Upload, X, Images, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchReceiptConfirmation, saveReceiptConfirmation, updateReceiptInfo, ReceiptConfirmationResult } from '@/lib/api/orderApi'
 
@@ -50,17 +50,14 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
   if (saved) {
     return (
       <div className="space-y-1">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-medium">{saved.receiverName || '-'}</span>
-          <button
-            type="button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditOpen(true) }}
-            className="inline-flex items-center gap-0.5 rounded border border-gray-300 bg-white px-1.5 py-0.5 text-xs text-gray-500 hover:bg-gray-50"
-          >
-            <Pencil className="h-2.5 w-2.5" />
-            수정
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditOpen(true) }}
+          className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:bg-gray-50"
+        >
+          <ClipboardCheck className="h-3 w-3" />
+          인수확인
+        </button>
         {(saved.sitePhotoUrls.length > 0 || saved.storePhotoUrls.length > 0) && (
           <>
             <button
@@ -467,6 +464,30 @@ function ReceiptEditDialog({ open, onClose, onSave, orderId, orderNumber, sender
         </Button>
       </DialogContent>
     </Dialog>
+  )
+}
+
+// ---- 인수정보 표시 셀 (이름·관계만 표시, 버튼 없음) ----
+
+export function ReceiptInfoCell({ orderId }: { orderId: string }) {
+  const [saved, setSaved] = useState<ReceiptConfirmationResult | null | undefined>(undefined)
+
+  useEffect(() => {
+    fetchReceiptConfirmation(orderId)
+      .then(setSaved)
+      .catch(() => setSaved(null))
+  }, [orderId])
+
+  if (saved === undefined) return <span className="text-xs text-gray-300">…</span>
+  if (!saved) return <span className="text-xs text-gray-400">-</span>
+
+  return (
+    <div className="text-xs">
+      <span className="font-medium text-gray-800">{saved.receiverName || '-'}</span>
+      {saved.receiverRelation && (
+        <span className="ml-1 text-gray-400">({saved.receiverRelation})</span>
+      )}
+    </div>
   )
 }
 

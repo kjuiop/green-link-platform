@@ -21,6 +21,7 @@ import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
 import com.greenlink.core.domain.receipt.port.ReceiptConfirmationRepository;
+import com.greenlink.core.domain.referencephoto.port.ReferencePhotoRepository;
 import com.greenlink.core.domain.sms.model.SmsMessage;
 import com.greenlink.core.domain.sms.model.SmsStatus;
 import com.greenlink.core.domain.sms.port.SmsMessageRepository;
@@ -60,12 +61,14 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     private final AdminRepository adminRepository;
     private final CompanyRepository companyRepository;
     private final SmsMessageRepository smsMessageRepository;
+    private final ReferencePhotoRepository referencePhotoRepository;
 
     public OrderService(OrderRepository orderRepository, PhotoRepository photoRepository,
                         ReceiptConfirmationRepository receiptConfirmationRepository,
                         RecordOrderHistoryUseCase recordOrderHistoryUseCase,
                         AdminRepository adminRepository, CompanyRepository companyRepository,
-                        SmsMessageRepository smsMessageRepository) {
+                        SmsMessageRepository smsMessageRepository,
+                        ReferencePhotoRepository referencePhotoRepository) {
         this.orderRepository = orderRepository;
         this.photoRepository = photoRepository;
         this.receiptConfirmationRepository = receiptConfirmationRepository;
@@ -73,6 +76,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         this.adminRepository = adminRepository;
         this.companyRepository = companyRepository;
         this.smsMessageRepository = smsMessageRepository;
+        this.referencePhotoRepository = referencePhotoRepository;
     }
 
     @Override
@@ -127,7 +131,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     public OrderResult getOrder(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
-        return toResult(order);
+        int refCount = referencePhotoRepository.countByOrderIds(List.of(id)).getOrDefault(id, 0L).intValue();
+        return toResult(order, null, null, null, null, refCount);
     }
 
     @Override
@@ -137,11 +142,13 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Map<Long, String> orderingNameMap = buildOrderingCompanyNameMap();
         List<Long> orderIds = orders.stream().map(Order::getId).toList();
         Map<Long, String> msgStatusMap = buildMessageStatusMap(orderIds);
+        Map<Long, Long> refCountMap = orderIds.isEmpty() ? Map.of() : referencePhotoRepository.countByOrderIds(orderIds);
         return orders.stream()
                 .map(o -> {
                     VendorInfo v = infoMap.get(o.getVendorId());
                     String orderingName = o.getOrderingCompanyId() != null ? orderingNameMap.get(o.getOrderingCompanyId()) : null;
-                    return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, orderingName, msgStatusMap.get(o.getId()));
+                    int refCount = refCountMap.getOrDefault(o.getId(), 0L).intValue();
+                    return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, orderingName, msgStatusMap.get(o.getId()), refCount);
                 })
                 .toList();
     }
@@ -153,10 +160,12 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Map<Long, String> orderingNameMap = buildOrderingCompanyNameMap();
         List<Long> orderIds = page.getContent().stream().map(Order::getId).toList();
         Map<Long, String> msgStatusMap = buildMessageStatusMap(orderIds);
+        Map<Long, Long> refCountMap = orderIds.isEmpty() ? Map.of() : referencePhotoRepository.countByOrderIds(orderIds);
         Page<OrderResult> resultPage = page.map(o -> {
             VendorInfo v = infoMap.get(o.getVendorId());
             String orderingName = o.getOrderingCompanyId() != null ? orderingNameMap.get(o.getOrderingCompanyId()) : null;
-            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, orderingName, msgStatusMap.get(o.getId()));
+            int refCount = refCountMap.getOrDefault(o.getId(), 0L).intValue();
+            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, orderingName, msgStatusMap.get(o.getId()), refCount);
         });
         return PageResult.of(resultPage);
     }
@@ -198,7 +207,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         return companyRepository.findById(orderingCompanyId).map(Company::getCompanyName).orElse(null);
     }
 
-    private OrderResult toResult(Order order, String vendorName, String vendorPhone, String orderingCompanyName, String messageStatus) {
+    private OrderResult toResult(Order order, String vendorName, String vendorPhone, String orderingCompanyName, String messageStatus, int referencePhotoCount) {
         return new OrderResult(
                 order.getId(),
                 order.getOrderNumber(),
@@ -238,7 +247,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 order.getVendorMemo(),
                 order.getCompletedAt(),
                 order.getCreatedAt(),
-                messageStatus
+                messageStatus,
+                referencePhotoCount
         );
     }
 
@@ -359,46 +369,13 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         } else {
             messageStatus = "FAIL";
         }
-        return new OrderResult(
-                order.getId(),
-                order.getOrderNumber(),
-                order.getVendorId(),
+        int refCount = referencePhotoRepository.countByOrderIds(List.of(order.getId()))
+                .getOrDefault(order.getId(), 0L).intValue();
+        return toResult(order,
                 resolveVendorName(order.getVendorId()),
                 resolveVendorPhone(order.getVendorId()),
-                order.getOrderingCompanyId(),
                 resolveOrderingCompanyName(order.getOrderingCompanyId()),
-                order.getStatus() != null ? order.getStatus().name() : null,
-                order.getProductName(),
-                order.getQuantity(),
-                order.getAmount(),
-                order.getExtraCost(),
-                order.getDeliveryDate(),
-                order.getDeliveryTimeType(),
-                order.getDeliveryTimeHour(),
-                order.getDeliveryTimeMinute(),
-                order.getDeliveryTimeCustom(),
-                order.getAddress(),
-                order.getAddressDetail(),
-                order.getEventType(),
-                order.getPlaceName(),
-                order.getRoomName(),
-                order.getEventInfo(),
-                order.getRibbonLeft(),
-                order.getRibbonRight(),
-                order.getOrdererName(),
-                order.getOrdererPhone(),
-                order.getRecipientName(),
-                order.getRecipientPhone(),
-                order.isSendPhotoToOrderer(),
-                order.isSendPhotoToRecipient(),
-                order.getMessageSchedule(),
-                order.getScheduledMessageHour(),
-                order.getScheduledMessageMinute(),
-                order.getAdminMemo(),
-                order.getVendorMemo(),
-                order.getCompletedAt(),
-                order.getCreatedAt(),
-                messageStatus
-        );
+                messageStatus,
+                refCount);
     }
 }

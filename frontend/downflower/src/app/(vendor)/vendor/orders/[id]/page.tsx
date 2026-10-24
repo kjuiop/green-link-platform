@@ -8,6 +8,7 @@ import { VendorOrderStatusBadge } from '@/components/common/StatusBadge'
 import { fetchOrder, updateOrderStatus, fetchReceiptConfirmation, uploadReceiptPhotos, ReceiptConfirmationResult } from '@/lib/api/orderApi'
 import { PrintButton } from '@/components/common/PrintButton'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
+import { ReferencePhotoSection } from '@/components/common/ReferencePhotoViewer'
 import { Upload } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Order } from '@/types/order'
@@ -180,6 +181,13 @@ export default function VendorOrderDetailPage() {
             </CardContent>
           </Card>
         )}
+
+        <Card>
+          <CardHeader><CardTitle className="text-sm">참고 이미지</CardTitle></CardHeader>
+          <CardContent>
+            <ReferencePhotoSection orderId={id} />
+          </CardContent>
+        </Card>
 
         <Card className="lg:col-span-2">
           <CardHeader>
