@@ -69,17 +69,22 @@ public class ReceiptConfirmationJpaEntity extends BaseJpaEntity {
         photos.clear();
     }
 
-    public void addPhoto(String photoUrl, String s3Key) {
-        ReceiptPhotoJpaEntity photo = new ReceiptPhotoJpaEntity(this, photoUrl, s3Key);
+    public void addPhoto(String photoUrl, String s3Key, String photoType) {
+        ReceiptPhotoJpaEntity photo = new ReceiptPhotoJpaEntity(this, photoUrl, s3Key, photoType);
         photos.add(photo);
     }
 
     public ReceiptConfirmation toDomain() {
-        List<String> photoUrls = photos.stream()
+        List<String> sitePhotoUrls = photos.stream()
+                .filter(p -> "SITE".equals(p.getPhotoType()))
+                .map(ReceiptPhotoJpaEntity::getPhotoUrl)
+                .toList();
+        List<String> storePhotoUrls = photos.stream()
+                .filter(p -> "STORE".equals(p.getPhotoType()))
                 .map(ReceiptPhotoJpaEntity::getPhotoUrl)
                 .toList();
         return ReceiptConfirmation.of(id, orderId, receiverName, receiverRelation,
-                delivered, memo, confirmedAt, photoUrls);
+                delivered, memo, confirmedAt, sitePhotoUrls, storePhotoUrls);
     }
 
     public Long getId() { return id; }

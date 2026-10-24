@@ -10,5 +10,6 @@ public record ReceiptConfirmationResult(
         boolean delivered,
         String memo,
         String confirmedAt,
-        List<String> photoUrls
+        List<String> sitePhotoUrls,
+        List<String> storePhotoUrls
 ) {}

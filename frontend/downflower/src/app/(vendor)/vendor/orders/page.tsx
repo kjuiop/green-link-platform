@@ -17,16 +17,25 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '수주거절', value: '수주거절' },
 ]
 
+const MSG_STATUS_FILTERS: { label: string; value: string }[] = [
+  { label: '전체', value: 'ALL' },
+  { label: '미발송', value: '미발송' },
+  { label: '발송', value: '발송' },
+  { label: '실패', value: '실패' },
+]
+
 export default function VendorOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL')
+  const [msgStatusFilter, setMsgStatusFilter] = useState('ALL')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [appliedQuery, setAppliedQuery] = useState('')
   const [appliedStatus, setAppliedStatus] = useState<OrderStatus | 'ALL'>('ALL')
+  const [appliedMsgStatus, setAppliedMsgStatus] = useState('ALL')
   const [appliedFrom, setAppliedFrom] = useState('')
   const [appliedTo, setAppliedTo] = useState('')
 
@@ -41,17 +50,19 @@ export default function VendorOrdersPage() {
   const handleSearch = () => {
     setAppliedQuery(query)
     setAppliedStatus(statusFilter)
+    setAppliedMsgStatus(msgStatusFilter)
     setAppliedFrom(dateFrom)
     setAppliedTo(dateTo)
   }
 
   const handleReset = () => {
-    setQuery(''); setStatusFilter('ALL'); setDateFrom(''); setDateTo('')
-    setAppliedQuery(''); setAppliedStatus('ALL'); setAppliedFrom(''); setAppliedTo('')
+    setQuery(''); setStatusFilter('ALL'); setMsgStatusFilter('ALL'); setDateFrom(''); setDateTo('')
+    setAppliedQuery(''); setAppliedStatus('ALL'); setAppliedMsgStatus('ALL'); setAppliedFrom(''); setAppliedTo('')
   }
 
   const filtered = orders.filter((o) => {
     const matchStatus = appliedStatus === 'ALL' || o.status === appliedStatus
+    const matchMsgStatus = appliedMsgStatus === 'ALL' || o.messageStatus === appliedMsgStatus
     const matchQuery =
       !appliedQuery ||
       o.orderNumber.includes(appliedQuery) ||
@@ -59,7 +70,7 @@ export default function VendorOrdersPage() {
     const deliveryDate = o.deliveryAt.slice(0, 10)
     const matchFrom = !appliedFrom || deliveryDate >= appliedFrom
     const matchTo = !appliedTo || deliveryDate <= appliedTo
-    return matchStatus && matchQuery && matchFrom && matchTo
+    return matchStatus && matchMsgStatus && matchQuery && matchFrom && matchTo
   })
 
   return (
@@ -87,6 +98,23 @@ export default function VendorOrdersPage() {
             </label>
           ))}
         </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <span className="text-xs text-gray-400">문자현황</span>
+          {MSG_STATUS_FILTERS.map(({ label, value }) => (
+            <label key={value} className="flex cursor-pointer items-center gap-1.5">
+              <input
+                type="radio"
+                name="msgStatusFilter"
+                checked={msgStatusFilter === value}
+                onChange={() => setMsgStatusFilter(value)}
+                className="accent-green-700"
+              />
+              <span className="text-sm text-gray-700">{label}</span>
+            </label>
+          ))}
+        </div>
+
         <div className="mt-3 flex flex-wrap gap-2">
           <div className="flex flex-wrap items-center gap-1.5">
             <label className="whitespace-nowrap text-sm text-gray-500">배송날짜</label>

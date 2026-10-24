@@ -76,7 +76,12 @@ public class ReceiptConfirmationController {
     @PostMapping("/photos")
     public ResponseEntity<ReceiptConfirmationResult> addPhotos(
             @PathVariable Long orderId,
-            @RequestParam("files") List<MultipartFile> files) throws IOException {
+            @RequestParam("files") List<MultipartFile> files,
+            @RequestParam(value = "photoType", defaultValue = "SITE") String photoType) throws IOException {
+
+        if (!"SITE".equals(photoType) && !"STORE".equals(photoType)) {
+            return ResponseEntity.badRequest().build();
+        }
 
         List<PhotoFile> photoFiles = new ArrayList<>();
         for (MultipartFile file : files) {
@@ -84,7 +89,8 @@ public class ReceiptConfirmationController {
                 photoFiles.add(new PhotoFile(
                         file.getOriginalFilename(),
                         file.getBytes(),
-                        file.getContentType()
+                        file.getContentType(),
+                        photoType
                 ));
             }
         }

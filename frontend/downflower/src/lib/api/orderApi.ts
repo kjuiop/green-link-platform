@@ -161,6 +161,8 @@ export type OrderSearchParams = {
   ordererName?: string
   deliveryDateFrom?: string
   deliveryDateTo?: string
+  receiverName?: string
+  messageStatus?: string
 }
 
 function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: number): string {
@@ -173,6 +175,8 @@ function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: numbe
   if (params?.ordererName) query.set('ordererName', params.ordererName)
   if (params?.deliveryDateFrom) query.set('deliveryDateFrom', params.deliveryDateFrom)
   if (params?.deliveryDateTo) query.set('deliveryDateTo', params.deliveryDateTo)
+  if (params?.receiverName) query.set('receiverName', params.receiverName)
+  if (params?.messageStatus) query.set('messageStatus', params.messageStatus)
   if (page !== undefined) query.set('page', String(page))
   if (size !== undefined) query.set('size', String(size))
   return query.toString()
@@ -295,7 +299,8 @@ export type ReceiptConfirmationResult = {
   delivered: boolean
   memo: string | null
   confirmedAt: string | null
-  photoUrls: string[]
+  sitePhotoUrls: string[]
+  storePhotoUrls: string[]
 }
 
 export async function fetchReceiptConfirmation(orderId: string): Promise<ReceiptConfirmationResult | null> {
@@ -327,10 +332,11 @@ export async function saveReceiptConfirmation(
   return res.json()
 }
 
-export async function uploadReceiptPhotos(orderId: string, files: File[]): Promise<ReceiptConfirmationResult> {
+export async function uploadReceiptPhotos(orderId: string, files: File[], photoType: 'SITE' | 'STORE' = 'SITE'): Promise<ReceiptConfirmationResult> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
   const formData = new FormData()
   files.forEach((f) => formData.append('files', f))
+  formData.append('photoType', photoType)
   const res = await fetch(`/api/orders/${orderId}/receipt/photos`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},

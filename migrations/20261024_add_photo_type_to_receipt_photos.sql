@@ -1,0 +1,1 @@
+ALTER TABLE receipt_photos ADD COLUMN photo_type VARCHAR(10) NOT NULL DEFAULT 'SITE';

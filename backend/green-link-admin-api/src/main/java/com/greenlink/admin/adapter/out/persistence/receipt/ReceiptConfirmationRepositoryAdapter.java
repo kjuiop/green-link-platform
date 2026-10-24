@@ -25,8 +25,11 @@ public class ReceiptConfirmationRepositoryAdapter implements ReceiptConfirmation
         entity.update(confirmation.getReceiverName(), confirmation.getReceiverRelation(),
                 confirmation.isDelivered(), confirmation.getMemo(), confirmation.getConfirmedAt());
         entity.clearPhotos();
-        for (String url : confirmation.getPhotoUrls()) {
-            entity.addPhoto(url, "");
+        for (String url : confirmation.getSitePhotoUrls()) {
+            entity.addPhoto(url, "", "SITE");
+        }
+        for (String url : confirmation.getStorePhotoUrls()) {
+            entity.addPhoto(url, "", "STORE");
         }
         return jpaRepository.save(entity).toDomain();
     }
@@ -42,7 +45,7 @@ public class ReceiptConfirmationRepositoryAdapter implements ReceiptConfirmation
     }
 
     @Override
-    public ReceiptConfirmation appendPhotos(Long orderId, List<String> photoUrls) {
+    public ReceiptConfirmation appendPhotos(Long orderId, List<String> photoUrls, String photoType) {
         ReceiptConfirmationJpaEntity entity = jpaRepository.findByOrderId(orderId)
                 .orElseGet(() -> {
                     ReceiptConfirmationJpaEntity newEntity = new ReceiptConfirmationJpaEntity();
@@ -50,7 +53,7 @@ public class ReceiptConfirmationRepositoryAdapter implements ReceiptConfirmation
                     return newEntity;
                 });
         for (String url : photoUrls) {
-            entity.addPhoto(url, "");
+            entity.addPhoto(url, "", photoType);
         }
         return jpaRepository.save(entity).toDomain();
     }
