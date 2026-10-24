@@ -183,7 +183,7 @@ export default function NewOrderPage() {
               <Label>주문번호</Label>
               <Input value="자동 생성" disabled className="bg-gray-50" />
             </div>
-            {isSuperAdmin && orderingCompanies.length > 0 && (
+            {isSuperAdmin && (
               <div className="space-y-1.5">
                 <Label>발주업체</Label>
                 <select
