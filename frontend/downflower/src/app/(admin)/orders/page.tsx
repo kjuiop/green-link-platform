@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import * as XLSX from 'xlsx'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { OrderStatusBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { ReceiptConfirmButton, ReceiptInfoCell } from '@/components/common/ReceiptConfirmDialog'
-import { fetchOrdersPaged, fetchOrders, OrderSearchParams } from '@/lib/api/orderApi'
+import { fetchOrdersPaged, fetchOrders, downloadOrdersExcel, OrderSearchParams } from '@/lib/api/orderApi'
 import { getDeliveryDateRowBg } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { PageResult } from '@/types/page'
@@ -66,34 +65,6 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '수주거절', value: '수주거절' },
 ]
 
-function downloadExcel(orders: Order[]) {
-  const rows = orders.map((o) => ({
-    주문번호: o.orderNumber,
-    주문접수일: o.orderedAt,
-    배송요구일: o.deliveryAt,
-    주문자: o.ordererName,
-    주문자연락처: o.ordererPhone,
-    받는분: o.recipientName ?? '',
-    받는분연락처: o.recipientPhone ?? '',
-    상품명: o.productName,
-    수량: o.quantity,
-    발주금액: o.amount,
-    수주업체: o.vendorName,
-    배송지: `${o.placeName} ${o.address}`.trim(),
-    배송현황: o.status,
-    문자현황: o.messageStatus,
-    삭제여부: o.isDeleted ? '삭제' : '정상',
-  }))
-
-  const ws = XLSX.utils.json_to_sheet(rows)
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, '발주목록')
-
-  const today = new Date()
-  const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`
-  XLSX.writeFile(wb, `발주목록_${dateStr}.xlsx`)
-}
-
 const PAGE_SIZE = 20
 
 export default function OrdersPage() {
@@ -101,6 +72,8 @@ export default function OrdersPage() {
   const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [excelLoading, setExcelLoading] = useState(false)
 
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL')
   const [msgStatusFilter, setMsgStatusFilter] = useState('ALL')
@@ -149,6 +122,7 @@ export default function OrdersPage() {
     setApplied2Field(search2Field)
     setApplied2Value(SERVER_FIELD_MAP[search2Field] ? '' : search2Value)
     setPage(0)
+    setSelectedIds(new Set())
     loadOrders(buildServerParams(), 0)
   }
 
@@ -160,11 +134,13 @@ export default function OrdersPage() {
     setApplied1Field('주문번호'); setApplied1Value('')
     setApplied2Field('수주사명'); setApplied2Value('')
     setPage(0)
+    setSelectedIds(new Set())
     loadOrders({}, 0)
   }
 
   const handlePageChange = (p: number) => {
     setPage(p)
+    setSelectedIds(new Set())
     loadOrders(buildServerParams(), p)
   }
 
@@ -178,6 +154,27 @@ export default function OrdersPage() {
     const match2 = !SERVER_FIELD_MAP[applied2Field] ? matchField(o, applied2Field, applied2Value) : true
     return matchDeleted && match1 && match2
   })
+
+  const allSelected = filtered.length > 0 && filtered.every((o) => selectedIds.has(o.id))
+  const toggleAll = () => setSelectedIds((prev) => {
+    const next = new Set(prev)
+    if (allSelected) filtered.forEach((o) => next.delete(o.id))
+    else filtered.forEach((o) => next.add(o.id))
+    return next
+  })
+  const toggleOne = (id: string) => setSelectedIds((prev) => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    return next
+  })
+
+  const handleExcelDownload = async () => {
+    if (selectedIds.size === 0) return
+    setExcelLoading(true)
+    try { await downloadOrdersExcel(Array.from(selectedIds)) }
+    catch { alert('엑셀 다운로드에 실패했습니다. 잠시 후 다시 시도해 주세요.') }
+    finally { setExcelLoading(false) }
+  }
 
   return (
     <div className="space-y-4">
@@ -315,12 +312,12 @@ export default function OrdersPage() {
           <span className="text-gray-500">발주금액 <strong className="text-gray-900">{filtered.reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
         </div>
         <button
-          onClick={() => downloadExcel(filtered)}
-          disabled={filtered.length === 0}
+          onClick={handleExcelDownload}
+          disabled={selectedIds.size === 0 || excelLoading}
           className="inline-flex items-center gap-1.5 rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Download className="h-3.5 w-3.5" />
-          엑셀 다운로드
+          {selectedIds.size > 0 ? `엑셀 다운로드 (${selectedIds.size})` : '엑셀 다운로드'}
         </button>
       </div>
 
@@ -329,6 +326,15 @@ export default function OrdersPage() {
         <Table>
           <TableHeader>
             <TableRow className="[&>th]:h-auto [&>th]:py-3">
+              <TableHead className="w-8">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleAll}
+                  className="accent-green-700"
+                  title="전체 선택"
+                />
+              </TableHead>
               <TableHead>주문번호</TableHead>
               <TableHead><div>배송요구일</div><div className="font-normal text-gray-400">주문접수일</div></TableHead>
               <TableHead><div>주문자</div><div className="font-normal text-gray-400">받는분</div></TableHead>
@@ -345,13 +351,13 @@ export default function OrdersPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={11} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={12} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={12} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -361,6 +367,14 @@ export default function OrdersPage() {
                   key={order.id}
                   className={order.isDeleted ? 'bg-red-50 opacity-60' : `cursor-pointer ${getDeliveryDateRowBg(order.deliveryAt)} hover:brightness-95`}
                 >
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(order.id)}
+                      onChange={() => toggleOne(order.id)}
+                      className="accent-green-700"
+                    />
+                  </TableCell>
                   <TableCell>
                     <Link href={`/ordering/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
                       {order.orderNumber}
