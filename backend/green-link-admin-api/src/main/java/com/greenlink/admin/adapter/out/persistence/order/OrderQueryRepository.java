@@ -1,10 +1,14 @@
 package com.greenlink.admin.adapter.out.persistence.order;
 
+import com.greenlink.admin.adapter.out.persistence.receipt.QReceiptConfirmationJpaEntity;
+import com.greenlink.admin.adapter.out.persistence.sms.QSmsMessageJpaEntity;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.domain.order.model.OrderStatus;
+import com.greenlink.core.domain.sms.model.SmsStatus;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -83,6 +87,35 @@ public class OrderQueryRepository {
         }
         if (condition.orderingCompanyId() != null) {
             where.and(order.orderingCompanyId.eq(condition.orderingCompanyId()));
+        }
+        if (condition.receiverName() != null && !condition.receiverName().isBlank()) {
+            QReceiptConfirmationJpaEntity receipt = QReceiptConfirmationJpaEntity.receiptConfirmationJpaEntity;
+            where.and(JPAExpressions.selectOne()
+                    .from(receipt)
+                    .where(receipt.orderId.eq(order.id)
+                            .and(receipt.receiverName.containsIgnoreCase(condition.receiverName())))
+                    .exists());
+        }
+        if (condition.messageStatus() != null && !condition.messageStatus().isBlank()) {
+            QSmsMessageJpaEntity sms = QSmsMessageJpaEntity.smsMessageJpaEntity;
+            switch (condition.messageStatus()) {
+                case "NONE" -> where.and(JPAExpressions.selectOne()
+                        .from(sms).where(sms.orderId.eq(order.id)).notExists());
+                case "SENT" -> where.and(JPAExpressions.selectOne()
+                        .from(sms)
+                        .where(sms.orderId.eq(order.id)
+                                .and(sms.status.eq(SmsStatus.SUCCESS)))
+                        .exists());
+                case "FAIL" -> {
+                    where.and(JPAExpressions.selectOne()
+                            .from(sms).where(sms.orderId.eq(order.id)).exists());
+                    where.and(JPAExpressions.selectOne()
+                            .from(sms)
+                            .where(sms.orderId.eq(order.id)
+                                    .and(sms.status.eq(SmsStatus.SUCCESS)))
+                            .notExists());
+                }
+            }
         }
 
         return where;
