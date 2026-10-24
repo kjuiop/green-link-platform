@@ -48,6 +48,7 @@ type BackendOrder = {
   vendorMemo: string | null
   completedAt: string | null
   createdAt: string
+  messageStatus: string | null
 }
 
 export type CreateOrderPayload = {
@@ -134,7 +135,7 @@ function toFrontend(o: BackendOrder): Order {
     adminMemo: o.adminMemo ?? undefined,
     vendorMemo: o.vendorMemo ?? undefined,
     completedAt: o.completedAt ?? undefined,
-    messageStatus: '미발송',
+    messageStatus: o.messageStatus === 'SENT' ? '발송' : o.messageStatus === 'FAIL' ? '실패' : '미발송',
     isDeleted: false,
   }
 }
@@ -275,6 +276,8 @@ export type OrderHistoryItem = {
   orderId: number
   action: 'CREATED' | 'UPDATED' | 'STATUS_CHANGED'
   detail: string
+  actorCompany: string | null
+  actorName: string | null
   createdAt: string
 }
 

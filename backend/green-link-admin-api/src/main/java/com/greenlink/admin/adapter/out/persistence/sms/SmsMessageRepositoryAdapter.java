@@ -30,6 +30,13 @@ public class SmsMessageRepositoryAdapter implements SmsMessageRepository {
     }
 
     @Override
+    public List<SmsMessage> findAllByOrderIdIn(List<Long> orderIds) {
+        return jpaRepository.findByOrderIdIn(orderIds).stream()
+                .map(SmsMessageJpaEntity::toDomain)
+                .toList();
+    }
+
+    @Override
     public List<SmsMessage> findAll() {
         return jpaRepository.findAll().stream()
                 .map(SmsMessageJpaEntity::toDomain)

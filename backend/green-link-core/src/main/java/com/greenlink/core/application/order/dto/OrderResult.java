@@ -38,5 +38,6 @@ public record OrderResult(
         String adminMemo,
         String vendorMemo,
         String completedAt,
-        String createdAt
+        String createdAt,
+        String messageStatus
 ) {}
