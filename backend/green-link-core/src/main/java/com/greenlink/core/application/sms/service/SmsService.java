@@ -12,6 +12,8 @@ import com.greenlink.core.domain.sms.model.SmsMessage;
 import com.greenlink.core.domain.sms.model.SmsStatus;
 import com.greenlink.core.domain.sms.port.SmsClient;
 import com.greenlink.core.domain.sms.port.SmsMessageRepository;
+import com.greenlink.core.domain.smssettings.model.SmsSettings;
+import com.greenlink.core.domain.smssettings.port.SmsSettingsRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
 import org.springframework.data.domain.Pageable;
@@ -29,13 +31,16 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     private final OrderRepository orderRepository;
     private final SmsMessageRepository smsMessageRepository;
     private final SmsClient smsClient;
+    private final SmsSettingsRepository smsSettingsRepository;
 
     public SmsService(OrderRepository orderRepository,
                       SmsMessageRepository smsMessageRepository,
-                      SmsClient smsClient) {
+                      SmsClient smsClient,
+                      SmsSettingsRepository smsSettingsRepository) {
         this.orderRepository = orderRepository;
         this.smsMessageRepository = smsMessageRepository;
         this.smsClient = smsClient;
+        this.smsSettingsRepository = smsSettingsRepository;
     }
 
     @Override
@@ -44,12 +49,13 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
 
-        // 사진 없으면 null 1건으로 처리 (사진 없는 SMS 1건 발송)
         List<String> urls = (photoUrls != null && !photoUrls.isEmpty())
                 ? photoUrls
                 : Collections.singletonList(null);
 
-        String msg = buildMessage(order);
+        SmsSettings settings = smsSettingsRepository.get();
+        String msg = buildMessage(order, settings);
+        String sender = settings.getSenderNumber();
         String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
         boolean ordererValid = order.isSendPhotoToOrderer() && isValidPhone(order.getOrdererPhone());
@@ -59,10 +65,10 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
 
         for (String imageUrl : urls) {
             if (ordererValid) {
-                sendAndRecord(orderId, order.getOrdererPhone(), msg, imageUrl, now);
+                sendAndRecord(orderId, order.getOrdererPhone(), msg, imageUrl, sender, now);
             }
             if (recipientValid && !samePhone) {
-                sendAndRecord(orderId, order.getRecipientPhone(), msg, imageUrl, now);
+                sendAndRecord(orderId, order.getRecipientPhone(), msg, imageUrl, sender, now);
             }
         }
     }
@@ -77,11 +83,13 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
-        String msg = buildMessage(order);
+        SmsSettings settings = smsSettingsRepository.get();
+        String msg = buildMessage(order, settings);
+        String sender = settings.getSenderNumber();
         String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
         for (SmsMessage m : failed) {
-            sendAndRecord(orderId, m.getReceiver(), msg, m.getImageUrl(), now);
+            sendAndRecord(orderId, m.getReceiver(), msg, m.getImageUrl(), sender, now);
         }
     }
 
@@ -103,10 +111,10 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         return PageResult.of(smsMessageRepository.findAll(pageable).map(this::toResult));
     }
 
-    private void sendAndRecord(Long orderId, String receiver, String msg, String imageUrl, String sentAt) {
+    private void sendAndRecord(Long orderId, String receiver, String msg, String imageUrl, String sender, String sentAt) {
         SmsMessage smsMessage = SmsMessage.create(orderId, receiver, msg, imageUrl);
         try {
-            SmsResult result = smsClient.send(receiver, msg, imageUrl);
+            SmsResult result = smsClient.send(receiver, msg, imageUrl, sender);
             if (result.success()) {
                 smsMessage.markSuccess(result.msgId(), sentAt);
             } else {
@@ -118,8 +126,13 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         smsMessageRepository.save(smsMessage);
     }
 
-    private String buildMessage(Order order) {
-        return String.format("[다운플라워] %s 배송이 완료되었습니다. 배송 사진을 확인해 주세요.", order.getOrdererName());
+    private String buildMessage(Order order, SmsSettings settings) {
+        String template = settings.resolveTemplate(order.getEventType());
+        String placeName = order.getPlaceName() != null ? order.getPlaceName() : order.getAddress();
+        return template
+                .replace("{주문자명}", order.getOrdererName() != null ? order.getOrdererName() : "")
+                .replace("{장소}", placeName != null ? placeName : "")
+                .replace("{사진링크}", "");
     }
 
     private boolean isValidPhone(String phone) {
