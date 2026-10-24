@@ -23,12 +23,13 @@ public class AligoSmsClient implements SmsClient {
     }
 
     @Override
-    public SmsResult send(String receiver, String msg, String imageUrl) {
+    public SmsResult send(String receiver, String msg, String imageUrl, String sender) {
         try {
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
             body.add("key", props.key());
             body.add("userid", props.userid());
-            body.add("sender", props.sender());
+            // DB 설정 발신번호 우선, 없으면 application.yml 폴백
+            body.add("sender", (sender != null && !sender.isBlank()) ? sender.replaceAll("[^0-9]", "") : props.sender());
             body.add("receiver", receiver.replaceAll("[^0-9]", ""));
             body.add("msg", msg);
 

@@ -40,15 +40,14 @@ export default function NewOrderPage() {
   const [address, setAddress] = useState('')
   const [addressDetail, setAddressDetail] = useState('')
 
-  // 행사정보 — 장례식
+  // 행사정보
+  const [selectedEventType, setSelectedEventType] = useState<'' | '장례식' | '결혼식' | '기타'>('')
   const [funeralHall, setFuneralHall] = useState('')
   const [funeralRoom, setFuneralRoom] = useState('')
   const [funeralPerson, setFuneralPerson] = useState('')
-  // 행사정보 — 결혼식
   const [weddingHall, setWeddingHall] = useState('')
   const [weddingRoom, setWeddingRoom] = useState('')
   const [weddingPerson, setWeddingPerson] = useState('')
-  // 행사정보 — 기타
   const [eventHall, setEventHall] = useState('')
   const [eventRoom, setEventRoom] = useState('')
 
@@ -114,16 +113,16 @@ export default function NewOrderPage() {
     setErrors(next)
     if (Object.keys(next).length > 0) return
 
-    let eventType = ''
+    let eventType = selectedEventType
     let placeName = ''
     let roomName = ''
     let eventInfo = ''
-    if (funeralHall || funeralRoom || funeralPerson) {
-      eventType = '장례식'; placeName = funeralHall; roomName = funeralRoom; eventInfo = funeralPerson
-    } else if (weddingHall || weddingRoom || weddingPerson) {
-      eventType = '결혼식'; placeName = weddingHall; roomName = weddingRoom; eventInfo = weddingPerson
-    } else if (eventHall || eventRoom) {
-      eventType = '기타'; placeName = eventHall; roomName = eventRoom
+    if (selectedEventType === '장례식') {
+      placeName = funeralHall; roomName = funeralRoom; eventInfo = funeralPerson
+    } else if (selectedEventType === '결혼식') {
+      placeName = weddingHall; roomName = weddingRoom; eventInfo = weddingPerson
+    } else if (selectedEventType === '기타') {
+      placeName = eventHall; roomName = eventRoom
     }
 
     setSubmitting(true)
@@ -392,94 +391,115 @@ export default function NewOrderPage() {
               <CardTitle className="text-sm">행사정보</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* 장례식 */}
-              <div className="space-y-3">
-                <p className="text-xs font-semibold text-gray-400">장례식</p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>장례식장명</Label>
-                    <Input
-                      placeholder="예: 한독병원장례식장"
-                      value={funeralHall}
-                      onChange={(e) => setFuneralHall(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>빈소</Label>
-                    <Input
-                      placeholder="예: 무궁화실"
-                      value={funeralRoom}
-                      onChange={(e) => setFuneralRoom(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>고인명</Label>
-                  <Input
-                    placeholder="예: 고인 김순영"
-                    value={funeralPerson}
-                    onChange={(e) => setFuneralPerson(e.target.value)}
-                  />
-                </div>
+              {/* 유형 선택 */}
+              <div className="flex flex-wrap gap-1.5">
+                {(['없음', '장례식', '결혼식', '기타'] as const).map((type) => {
+                  const value = type === '없음' ? '' : type
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setSelectedEventType(value)}
+                      className={cn(
+                        'rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
+                        selectedEventType === value
+                          ? 'border-green-700 bg-green-700 text-white'
+                          : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50',
+                      )}
+                    >
+                      {type}
+                    </button>
+                  )
+                })}
               </div>
 
-              <hr />
+              {/* 장례식 */}
+              {selectedEventType === '장례식' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>장례식장명</Label>
+                      <Input
+                        placeholder="예: 한독병원장례식장"
+                        value={funeralHall}
+                        onChange={(e) => setFuneralHall(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>빈소</Label>
+                      <Input
+                        placeholder="예: 무궁화실"
+                        value={funeralRoom}
+                        onChange={(e) => setFuneralRoom(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>고인명</Label>
+                    <Input
+                      placeholder="예: 고인 김순영"
+                      value={funeralPerson}
+                      onChange={(e) => setFuneralPerson(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* 결혼식 */}
-              <div className="space-y-3">
-                <p className="text-xs font-semibold text-gray-400">결혼식</p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>예식장명</Label>
-                    <Input
-                      placeholder="예: 더파티움 강남"
-                      value={weddingHall}
-                      onChange={(e) => setWeddingHall(e.target.value)}
-                    />
+              {selectedEventType === '결혼식' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>예식장명</Label>
+                      <Input
+                        placeholder="예: 더파티움 강남"
+                        value={weddingHall}
+                        onChange={(e) => setWeddingHall(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>홀</Label>
+                      <Input
+                        placeholder="예: 그랜드볼룸 A홀"
+                        value={weddingRoom}
+                        onChange={(e) => setWeddingRoom(e.target.value)}
+                      />
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>홀</Label>
+                    <Label>신랑/신부명</Label>
                     <Input
-                      placeholder="예: 그랜드볼룸 A홀"
-                      value={weddingRoom}
-                      onChange={(e) => setWeddingRoom(e.target.value)}
+                      placeholder="예: 김철수 ♥ 이영희"
+                      value={weddingPerson}
+                      onChange={(e) => setWeddingPerson(e.target.value)}
                     />
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label>신랑/신부명</Label>
-                  <Input
-                    placeholder="예: 김철수 ♥ 이영희"
-                    value={weddingPerson}
-                    onChange={(e) => setWeddingPerson(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <hr />
+              )}
 
               {/* 기타 */}
-              <div className="space-y-3">
-                <p className="text-xs font-semibold text-gray-400">기타</p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>행사명</Label>
-                    <Input
-                      placeholder="예: 주식회사 효진토건 창립기념식"
-                      value={eventHall}
-                      onChange={(e) => setEventHall(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>장소</Label>
-                    <Input
-                      placeholder="예: 강남파이낸스센터 1층"
-                      value={eventRoom}
-                      onChange={(e) => setEventRoom(e.target.value)}
-                    />
+              {selectedEventType === '기타' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>행사명</Label>
+                      <Input
+                        placeholder="예: 주식회사 효진토건 창립기념식"
+                        value={eventHall}
+                        onChange={(e) => setEventHall(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>장소</Label>
+                      <Input
+                        placeholder="예: 강남파이낸스센터 1층"
+                        value={eventRoom}
+                        onChange={(e) => setEventRoom(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
