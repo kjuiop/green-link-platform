@@ -11,6 +11,8 @@ export interface Order {
   vendorId: string
   vendorName: string
   vendorPhone?: string
+  orderingCompanyId?: string
+  orderingCompanyName?: string
   productName: string
   quantity: number
   amount: number

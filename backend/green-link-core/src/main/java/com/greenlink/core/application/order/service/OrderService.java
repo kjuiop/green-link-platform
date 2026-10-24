@@ -128,10 +128,12 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     public List<OrderResult> getOrders(OrderSearchCondition condition) {
         List<Order> orders = orderRepository.search(condition);
         Map<Long, VendorInfo> infoMap = buildVendorInfoMap();
+        Map<Long, String> orderingNameMap = buildOrderingCompanyNameMap();
         return orders.stream()
                 .map(o -> {
                     VendorInfo v = infoMap.get(o.getVendorId());
-                    return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null);
+                    String orderingName = o.getOrderingCompanyId() != null ? orderingNameMap.get(o.getOrderingCompanyId()) : null;
+                    return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, orderingName);
                 })
                 .toList();
     }
@@ -140,9 +142,11 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     public PageResult<OrderResult> getOrdersPaged(OrderSearchCondition condition, Pageable pageable) {
         Page<Order> page = orderRepository.searchPaged(condition, pageable);
         Map<Long, VendorInfo> infoMap = buildVendorInfoMap();
+        Map<Long, String> orderingNameMap = buildOrderingCompanyNameMap();
         Page<OrderResult> resultPage = page.map(o -> {
             VendorInfo v = infoMap.get(o.getVendorId());
-            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null);
+            String orderingName = o.getOrderingCompanyId() != null ? orderingNameMap.get(o.getOrderingCompanyId()) : null;
+            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, orderingName);
         });
         return PageResult.of(resultPage);
     }
@@ -174,7 +178,17 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         return result;
     }
 
-    private OrderResult toResult(Order order, String vendorName, String vendorPhone) {
+    private Map<Long, String> buildOrderingCompanyNameMap() {
+        return companyRepository.findAllByType(com.greenlink.core.domain.company.model.CompanyType.ORDERING).stream()
+                .collect(Collectors.toMap(Company::getId, Company::getCompanyName));
+    }
+
+    private String resolveOrderingCompanyName(Long orderingCompanyId) {
+        if (orderingCompanyId == null) return null;
+        return companyRepository.findById(orderingCompanyId).map(Company::getCompanyName).orElse(null);
+    }
+
+    private OrderResult toResult(Order order, String vendorName, String vendorPhone, String orderingCompanyName) {
         return new OrderResult(
                 order.getId(),
                 order.getOrderNumber(),
@@ -182,6 +196,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 vendorName,
                 vendorPhone,
                 order.getOrderingCompanyId(),
+                orderingCompanyName,
                 order.getStatus() != null ? order.getStatus().name() : null,
                 order.getProductName(),
                 order.getQuantity(),
@@ -287,18 +302,20 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     private String resolveVendorName(Long vendorId) {
         if (vendorId == null) return null;
         return adminRepository.findById(vendorId)
-                .map(admin -> companyRepository.findById(admin.getCompanyId())
-                        .map(Company::getCompanyName)
-                        .orElse(null))
+                .map(admin -> admin.getCompanyId() == null ? null :
+                        companyRepository.findById(admin.getCompanyId())
+                                .map(Company::getCompanyName)
+                                .orElse(null))
                 .orElse(null);
     }
 
     private String resolveVendorPhone(Long vendorId) {
         if (vendorId == null) return null;
         return adminRepository.findById(vendorId)
-                .map(admin -> companyRepository.findById(admin.getCompanyId())
-                        .map(Company::getPhone)
-                        .orElse(null))
+                .map(admin -> admin.getCompanyId() == null ? null :
+                        companyRepository.findById(admin.getCompanyId())
+                                .map(Company::getPhone)
+                                .orElse(null))
                 .orElse(null);
     }
 
@@ -310,6 +327,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 resolveVendorName(order.getVendorId()),
                 resolveVendorPhone(order.getVendorId()),
                 order.getOrderingCompanyId(),
+                resolveOrderingCompanyName(order.getOrderingCompanyId()),
                 order.getStatus() != null ? order.getStatus().name() : null,
                 order.getProductName(),
                 order.getQuantity(),

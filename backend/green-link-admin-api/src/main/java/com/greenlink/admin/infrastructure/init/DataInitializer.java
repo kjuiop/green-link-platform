@@ -46,10 +46,9 @@ public class DataInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        Company downflower = initOrderingCompany();
-        initAdmin(downflower.getId());
+        initOrderingCompany();
+        initAdmin();
         initMenus();
-        fixMenuRoles();
     }
 
     private Company initOrderingCompany() {
@@ -59,37 +58,10 @@ public class DataInitializer implements ApplicationRunner {
                 ));
     }
 
-    private void initAdmin(Long downflowerCompanyId) {
+    private void initAdmin() {
         if (!adminRepository.existsByLoginId(initLoginId)) {
-            adminRepository.save(Admin.createOrdering(initLoginId, passwordEncoder.encode(initPassword), downflowerCompanyId));
-        } else {
-            // 기존 admin이 있고 companyId가 null이면 Downflower 회사 연결
-            adminRepository.findByLoginId(initLoginId).ifPresent(admin -> {
-                if (admin.getCompanyId() == null) {
-                    adminRepository.save(Admin.of(
-                            admin.getId(),
-                            admin.getLoginId(),
-                            admin.getPassword(),
-                            admin.getName(),
-                            admin.getPhone(),
-                            downflowerCompanyId,
-                            admin.getStatus(),
-                            admin.getCreatedAt()
-                    ));
-                }
-            });
+            adminRepository.save(Admin.create(initLoginId, passwordEncoder.encode(initPassword)));
         }
-    }
-
-    private void fixMenuRoles() {
-        menuRepository.findAll().stream()
-            .filter(m -> "/settings".equals(m.getUrl()))
-            .filter(m -> m.getRoles().contains(Role.VENDOR) || m.getRoles().contains(Role.ORDERING))
-            .findFirst()
-            .ifPresent(m -> {
-                m.updateInfo(m.getName(), m.getUrl(), m.getSortOrder(), List.of(Role.SUPER_ADMIN));
-                menuRepository.save(m);
-            });
     }
 
     private void initMenus() {
