@@ -65,11 +65,12 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '수주거절', value: '수주거절' },
 ]
 
-const PAGE_SIZE = 20
+const PAGE_SIZE_OPTIONS = [20, 50, 100, 200, 300, 500]
 
 export default function OrdersPage() {
   const [result, setResult] = useState<PageResult<Order> | null>(null)
   const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -104,10 +105,10 @@ export default function OrdersPage() {
     return params
   }
 
-  function loadOrders(params: OrderSearchParams = {}, p = 0) {
+  function loadOrders(params: OrderSearchParams = {}, p = 0, size = pageSize) {
     setLoading(true)
     setLoadError('')
-    fetchOrdersPaged(params, p, PAGE_SIZE)
+    fetchOrdersPaged(params, p, size)
       .then(setResult)
       .catch((err) => setLoadError(err instanceof Error ? err.message : '목록을 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
@@ -142,6 +143,13 @@ export default function OrdersPage() {
     setPage(p)
     setSelectedIds(new Set())
     loadOrders(buildServerParams(), p)
+  }
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setPage(0)
+    setSelectedIds(new Set())
+    loadOrders(buildServerParams(), 0, size)
   }
 
   const orders = result?.content ?? []
@@ -307,18 +315,39 @@ export default function OrdersPage() {
       {/* 검색 결과 요약 + 엑셀 다운로드 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 text-sm">
-          <span className="text-gray-500">건수 <strong className="text-gray-900">{result?.totalElements ?? 0}</strong>건</span>
-          <span className="text-gray-300">|</span>
-          <span className="text-gray-500">발주금액 <strong className="text-gray-900">{filtered.reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+          {selectedIds.size > 0 ? (
+            <>
+              <span className="text-gray-500">건수 <strong className="text-green-700">{selectedIds.size}</strong>건</span>
+              <span className="text-gray-300">|</span>
+              <span className="text-gray-500">발주금액 <strong className="text-green-700">{filtered.filter((o) => selectedIds.has(o.id)).reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+            </>
+          ) : (
+            <>
+              <span className="text-gray-500">건수 <strong className="text-gray-900">{result?.totalElements ?? 0}</strong>건</span>
+              <span className="text-gray-300">|</span>
+              <span className="text-gray-500">발주금액 <strong className="text-gray-900">{filtered.reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+            </>
+          )}
         </div>
-        <button
-          onClick={handleExcelDownload}
-          disabled={selectedIds.size === 0 || excelLoading}
-          className="inline-flex items-center gap-1.5 rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <Download className="h-3.5 w-3.5" />
-          {selectedIds.size > 0 ? `엑셀 다운로드 (${selectedIds.size})` : '엑셀 다운로드'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExcelDownload}
+            disabled={selectedIds.size === 0 || excelLoading}
+            className="inline-flex items-center gap-1.5 rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Download className="h-3.5 w-3.5" />
+            {selectedIds.size > 0 ? `엑셀 다운로드 (${selectedIds.size})` : '엑셀 다운로드'}
+          </button>
+          <select
+            value={pageSize}
+            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+            className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+          >
+            {PAGE_SIZE_OPTIONS.map((s) => (
+              <option key={s} value={s}>{s}개씩</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* 데스크톱 테이블 */}
