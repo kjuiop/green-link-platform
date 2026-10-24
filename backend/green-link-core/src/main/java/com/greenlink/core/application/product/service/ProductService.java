@@ -33,7 +33,7 @@ public class ProductService implements CreateProductUseCase, UpdateProductUseCas
     @Override
     @Transactional
     public ProductResult createProduct(CreateProductCommand cmd) {
-        Product product = Product.create(cmd.name(), cmd.price(), cmd.memo());
+        Product product = Product.create(cmd.name(), cmd.price(), cmd.memo(), cmd.orderingCompanyId());
         return toResult(productRepository.save(product));
     }
 
@@ -56,16 +56,16 @@ public class ProductService implements CreateProductUseCase, UpdateProductUseCas
     }
 
     @Override
-    public PageResult<ProductResult> getProducts(Pageable pageable) {
-        return PageResult.of(productRepository.findAll(pageable).map(this::toResult));
+    public PageResult<ProductResult> getProducts(Pageable pageable, Long orderingCompanyId) {
+        return PageResult.of(productRepository.findAll(pageable, orderingCompanyId).map(this::toResult));
     }
 
     @Override
-    public List<ProductResult> getAllProducts() {
-        return productRepository.findAll().stream().map(this::toResult).toList();
+    public List<ProductResult> getAllProducts(Long orderingCompanyId) {
+        return productRepository.findAll(orderingCompanyId).stream().map(this::toResult).toList();
     }
 
     private ProductResult toResult(Product p) {
-        return new ProductResult(p.getId(), p.getName(), p.getPrice(), p.getMemo(), p.getCreatedAt());
+        return new ProductResult(p.getId(), p.getName(), p.getPrice(), p.getMemo(), p.getCreatedAt(), p.getOrderingCompanyId());
     }
 }

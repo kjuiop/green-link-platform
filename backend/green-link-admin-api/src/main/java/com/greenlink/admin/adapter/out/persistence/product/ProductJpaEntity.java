@@ -21,6 +21,9 @@ public class ProductJpaEntity extends BaseJpaEntity {
     @Column(length = 500)
     private String memo;
 
+    @Column(name = "ordering_company_id")
+    private Long orderingCompanyId;
+
     protected ProductJpaEntity() {}
 
     public static ProductJpaEntity from(Product product) {
@@ -29,13 +32,15 @@ public class ProductJpaEntity extends BaseJpaEntity {
         e.name = product.getName();
         e.price = product.getPrice();
         e.memo = product.getMemo();
+        e.orderingCompanyId = product.getOrderingCompanyId();
         return e;
     }
 
     public Product toDomain() {
         return Product.of(
                 id, name, price, memo,
-                getCreatedAt() != null ? getCreatedAt().toString() : null
+                getCreatedAt() != null ? getCreatedAt().toString() : null,
+                orderingCompanyId
         );
     }
 }

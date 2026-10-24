@@ -7,24 +7,27 @@ public class Product {
     private long price;
     private String memo;
     private String createdAt;
+    private Long orderingCompanyId;
 
     private Product() {}
 
-    public static Product create(String name, long price, String memo) {
+    public static Product create(String name, long price, String memo, Long orderingCompanyId) {
         Product p = new Product();
         p.name = name;
         p.price = price;
         p.memo = memo;
+        p.orderingCompanyId = orderingCompanyId;
         return p;
     }
 
-    public static Product of(Long id, String name, long price, String memo, String createdAt) {
+    public static Product of(Long id, String name, long price, String memo, String createdAt, Long orderingCompanyId) {
         Product p = new Product();
         p.id = id;
         p.name = name;
         p.price = price;
         p.memo = memo;
         p.createdAt = createdAt;
+        p.orderingCompanyId = orderingCompanyId;
         return p;
     }
 
@@ -39,4 +42,5 @@ public class Product {
     public long getPrice() { return price; }
     public String getMemo() { return memo; }
     public String getCreatedAt() { return createdAt; }
+    public Long getOrderingCompanyId() { return orderingCompanyId; }
 }

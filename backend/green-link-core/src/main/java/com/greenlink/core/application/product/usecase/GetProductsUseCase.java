@@ -5,5 +5,5 @@ import com.greenlink.core.application.product.dto.ProductResult;
 import org.springframework.data.domain.Pageable;
 
 public interface GetProductsUseCase {
-    PageResult<ProductResult> getProducts(Pageable pageable);
+    PageResult<ProductResult> getProducts(Pageable pageable, Long orderingCompanyId);
 }

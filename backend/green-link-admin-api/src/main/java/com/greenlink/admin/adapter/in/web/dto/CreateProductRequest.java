@@ -7,9 +7,10 @@ import jakarta.validation.constraints.NotBlank;
 public record CreateProductRequest(
         @NotBlank String name,
         @Min(0) long price,
-        String memo
+        String memo,
+        Long orderingCompanyId
 ) {
-    public CreateProductCommand toCommand() {
-        return new CreateProductCommand(name, price, memo);
+    public CreateProductCommand toCommand(Long resolvedOrderingCompanyId) {
+        return new CreateProductCommand(name, price, memo, resolvedOrderingCompanyId);
     }
 }
