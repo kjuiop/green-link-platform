@@ -10,7 +10,10 @@ public enum AuthErrorCode implements ErrorCode {
     INVALID_ROLE(400, "AUTH_004", "유효하지 않은 역할입니다."),
     INVALID_CREDENTIALS(401, "AUTH_005", "아이디 또는 비밀번호가 올바르지 않습니다."),
     ACCOUNT_INACTIVE(403, "AUTH_006", "정지된 계정입니다."),
-    ACCOUNT_PENDING(403, "AUTH_007", "승인 대기 중인 계정입니다. 관리자 승인 후 로그인하실 수 있습니다.");
+    ACCOUNT_PENDING(403, "AUTH_007", "승인 대기 중인 계정입니다. 관리자 승인 후 로그인하실 수 있습니다."),
+    PHONE_CODE_INVALID(400, "AUTH_008", "인증번호가 올바르지 않거나 만료되었습니다."),
+    PHONE_NOT_VERIFIED(400, "AUTH_009", "휴대폰 인증을 먼저 완료해주세요."),
+    MEMBER_NOT_FOUND_BY_PHONE(404, "AUTH_010", "해당 연락처로 가입된 계정을 찾을 수 없습니다.");
 
     private final int status;
     private final String code;
