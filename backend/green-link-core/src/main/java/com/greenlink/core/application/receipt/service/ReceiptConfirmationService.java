@@ -39,19 +39,18 @@ public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCas
         List<String> storePhotoUrls = new ArrayList<>();
         List<String> uploadedKeys = new ArrayList<>();
 
-        for (SaveReceiptConfirmationCommand.PhotoFile pf : command.photoFiles()) {
-            PhotoStorage.UploadResult uploaded = photoStorage.store(
-                    command.orderId(), pf.originalFileName(), pf.content(), pf.contentType());
-            uploadedKeys.add(uploaded.s3Key());
-            if ("STORE".equals(pf.photoType())) {
-                storePhotoUrls.add(uploaded.url());
-            } else {
-                sitePhotoUrls.add(uploaded.url());
-            }
-        }
-
         ReceiptConfirmationResult result;
         try {
+            for (SaveReceiptConfirmationCommand.PhotoFile pf : command.photoFiles()) {
+                PhotoStorage.UploadResult uploaded = photoStorage.store(
+                        command.orderId(), pf.originalFileName(), pf.content(), pf.contentType());
+                uploadedKeys.add(uploaded.s3Key());
+                if ("STORE".equals(pf.photoType())) {
+                    storePhotoUrls.add(uploaded.url());
+                } else {
+                    sitePhotoUrls.add(uploaded.url());
+                }
+            }
             ReceiptConfirmation confirmation = ReceiptConfirmation.create(
                     command.orderId(), command.receiverName(), command.receiverRelation(),
                     command.delivered(), command.memo(), command.confirmedAt(), sitePhotoUrls, storePhotoUrls);
@@ -72,18 +71,17 @@ public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCas
         List<String> storePhotoUrls = new ArrayList<>();
         List<String> uploadedKeys = new ArrayList<>();
 
-        for (SaveReceiptConfirmationCommand.PhotoFile pf : photoFiles) {
-            PhotoStorage.UploadResult uploaded = photoStorage.store(
-                    orderId, pf.originalFileName(), pf.content(), pf.contentType());
-            uploadedKeys.add(uploaded.s3Key());
-            if ("STORE".equals(pf.photoType())) {
-                storePhotoUrls.add(uploaded.url());
-            } else {
-                sitePhotoUrls.add(uploaded.url());
-            }
-        }
-
         try {
+            for (SaveReceiptConfirmationCommand.PhotoFile pf : photoFiles) {
+                PhotoStorage.UploadResult uploaded = photoStorage.store(
+                        orderId, pf.originalFileName(), pf.content(), pf.contentType());
+                uploadedKeys.add(uploaded.s3Key());
+                if ("STORE".equals(pf.photoType())) {
+                    storePhotoUrls.add(uploaded.url());
+                } else {
+                    sitePhotoUrls.add(uploaded.url());
+                }
+            }
             ReceiptConfirmation result = null;
             if (!sitePhotoUrls.isEmpty()) {
                 result = repository.appendPhotos(orderId, sitePhotoUrls, "SITE");

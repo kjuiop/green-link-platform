@@ -79,6 +79,10 @@ public class ReceiptConfirmationController {
             @RequestParam("files") List<MultipartFile> files,
             @RequestParam(value = "photoType", defaultValue = "SITE") String photoType) throws IOException {
 
+        if (!"SITE".equals(photoType) && !"STORE".equals(photoType)) {
+            return ResponseEntity.badRequest().build();
+        }
+
         List<PhotoFile> photoFiles = new ArrayList<>();
         for (MultipartFile file : files) {
             if (!file.isEmpty()) {
