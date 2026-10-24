@@ -179,7 +179,7 @@ export default function NewOrderPage() {
     <div className="space-y-4">
       <h1 className="text-xl font-bold">신규 발주</h1>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         {/* 기본정보 */}
         <Card>
           <CardHeader>

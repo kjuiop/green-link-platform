@@ -366,6 +366,7 @@ export default function OrdersPage() {
                   <TableCell>
                     <ClickableMessageBadge
                       status={order.messageStatus}
+                      orderId={order.id}
                       photos={order.deliveryPhotos}
                       orderNumber={order.orderNumber}
                       ordererName={order.ordererName}
@@ -430,7 +431,7 @@ export default function OrdersPage() {
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <OrderStatusBadge status={order.status} />
-                  <ClickableMessageBadge status={order.messageStatus} photos={order.deliveryPhotos} orderNumber={order.orderNumber} />
+                  <ClickableMessageBadge status={order.messageStatus} orderId={order.id} photos={order.deliveryPhotos} orderNumber={order.orderNumber} />
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">

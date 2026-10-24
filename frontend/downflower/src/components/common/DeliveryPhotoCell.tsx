@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Send, Check } from 'lucide-react'
+import { X, Send, Check, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { MessageStatus } from '@/types/order'
+import { fetchSmsMessages, resendMms, SmsMessageResult } from '@/lib/api/orderApi'
 
 // ---- 공유 다이얼로그 ----
 
@@ -237,8 +238,142 @@ const messageStatusStyle: Record<MessageStatus, string> = {
   '실패': 'bg-red-100 text-red-800 border-red-200',
 }
 
+// ---- 발송 내역 다이얼로그 ----
+
+function SmsHistoryDialog({ open, onClose, orderId, orderNumber }: {
+  open: boolean; onClose: () => void; orderId: string; orderNumber?: string
+}) {
+  const [messages, setMessages] = useState<SmsMessageResult[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setLoading(true)
+    fetchSmsMessages(orderId)
+      .then(setMessages)
+      .finally(() => setLoading(false))
+  }, [open, orderId])
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose() }}>
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogTitle>
+          문자 발송 내역
+          {orderNumber && <span className="ml-2 text-xs font-normal text-gray-400">{orderNumber}</span>}
+        </DialogTitle>
+        {loading ? (
+          <p className="py-6 text-center text-sm text-gray-400">불러오는 중...</p>
+        ) : messages.length === 0 ? (
+          <p className="py-6 text-center text-sm text-gray-400">발송 내역이 없습니다.</p>
+        ) : (
+          <ul className="space-y-2">
+            {messages.map((m) => (
+              <li key={m.id} className="rounded-lg border p-3 text-sm space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{m.receiver}</span>
+                  <span className={cn(
+                    'rounded-full px-2 py-0.5 text-xs font-medium',
+                    m.status === 'SUCCESS' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  )}>
+                    {m.status === 'SUCCESS' ? '성공' : '실패'}
+                  </span>
+                </div>
+                {m.sentAt && <p className="text-xs text-gray-400">{m.sentAt}</p>}
+                {m.failReason && <p className="text-xs text-red-500">{m.failReason}</p>}
+                {m.imageUrl && (
+                  <img src={m.imageUrl} alt="발송 이미지" className="mt-1 h-20 w-20 rounded object-cover" />
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ---- 재발송 다이얼로그 ----
+
+function ResendDialog({ open, onClose, orderId, orderNumber, onResent }: {
+  open: boolean; onClose: () => void; orderId: string; orderNumber?: string; onResent?: () => void
+}) {
+  const [messages, setMessages] = useState<SmsMessageResult[]>([])
+  const [loading, setLoading] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    if (!open) { setDone(false); return }
+    setLoading(true)
+    fetchSmsMessages(orderId)
+      .then(setMessages)
+      .finally(() => setLoading(false))
+  }, [open, orderId])
+
+  async function handleResend() {
+    setSending(true)
+    try {
+      await resendMms(orderId)
+      setDone(true)
+      onResent?.()
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const failed = messages.filter((m) => m.status === 'FAIL')
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose() }}>
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogTitle>
+          문자 재발송
+          {orderNumber && <span className="ml-2 text-xs font-normal text-gray-400">{orderNumber}</span>}
+        </DialogTitle>
+        {loading ? (
+          <p className="py-6 text-center text-sm text-gray-400">불러오는 중...</p>
+        ) : done ? (
+          <div className="py-8 text-center space-y-2">
+            <Check className="mx-auto h-8 w-8 text-green-600" />
+            <p className="text-sm font-medium text-green-700">재발송 완료</p>
+          </div>
+        ) : (
+          <>
+            <ul className="space-y-2">
+              {failed.map((m) => (
+                <li key={m.id} className="rounded-lg border border-red-100 bg-red-50 p-3 text-sm space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{m.receiver}</span>
+                    <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">실패</span>
+                  </div>
+                  {m.failReason && <p className="text-xs text-red-500">{m.failReason}</p>}
+                  {m.sentAt && <p className="text-xs text-gray-400">{m.sentAt}</p>}
+                </li>
+              ))}
+            </ul>
+            <div className="flex justify-end pt-2">
+              <Button
+                size="sm"
+                disabled={sending || failed.length === 0}
+                onClick={handleResend}
+                className="gap-1.5 bg-green-700 hover:bg-green-800"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                {sending ? '발송 중…' : '재발송'}
+              </Button>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ---- 문자발송 상태 배지 ----
+
 interface ClickableMessageBadgeProps {
   status: MessageStatus
+  orderId?: string
   photos?: string[]
   orderNumber?: string
   ordererName?: string
@@ -248,33 +383,52 @@ interface ClickableMessageBadgeProps {
 }
 
 export function ClickableMessageBadge({
-  status, photos, orderNumber,
+  status, orderId, photos, orderNumber,
   ordererName, ordererPhone, recipientName, recipientPhone,
 }: ClickableMessageBadgeProps) {
   const [open, setOpen] = useState(false)
 
-  if (status !== '미발송') {
+  function handleClick(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation(); setOpen(true)
+  }
+
+  if (status === '발송') {
     return (
-      <Badge variant="outline" className={messageStatusStyle[status]}>
-        {status}
-      </Badge>
+      <>
+        <button type="button" onClick={handleClick}>
+          <Badge variant="outline" className={cn(messageStatusStyle[status], 'cursor-pointer hover:bg-green-200')}>
+            {status}
+          </Badge>
+        </button>
+        {orderId && (
+          <SmsHistoryDialog open={open} onClose={() => setOpen(false)} orderId={orderId} orderNumber={orderNumber} />
+        )}
+      </>
+    )
+  }
+
+  if (status === '실패') {
+    return (
+      <>
+        <button type="button" onClick={handleClick}>
+          <Badge variant="outline" className={cn(messageStatusStyle[status], 'cursor-pointer hover:bg-red-200')}>
+            {status}
+          </Badge>
+        </button>
+        {orderId && (
+          <ResendDialog open={open} onClose={() => setOpen(false)} orderId={orderId} orderNumber={orderNumber} />
+        )}
+      </>
     )
   }
 
   return (
     <>
-      <button
-        type="button"
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(true) }}
-      >
-        <Badge
-          variant="outline"
-          className={cn(messageStatusStyle[status], 'cursor-pointer hover:bg-gray-200')}
-        >
+      <button type="button" onClick={handleClick}>
+        <Badge variant="outline" className={cn(messageStatusStyle[status], 'cursor-pointer hover:bg-gray-200')}>
           {status}
         </Badge>
       </button>
-
       <PhotoSendDialog
         open={open} onClose={() => setOpen(false)}
         photos={photos ?? []} orderNumber={orderNumber}
