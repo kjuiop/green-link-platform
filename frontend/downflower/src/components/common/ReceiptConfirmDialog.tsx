@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { ClipboardCheck, Upload, X, Images, Download } from 'lucide-react'
+import { ClipboardCheck, Upload, X, Images, Download, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { fetchReceiptConfirmation, saveReceiptConfirmation, ReceiptConfirmationResult } from '@/lib/api/orderApi'
+import { fetchReceiptConfirmation, saveReceiptConfirmation, updateReceiptInfo, ReceiptConfirmationResult } from '@/lib/api/orderApi'
 
 interface Props {
   orderId: string
@@ -16,6 +16,7 @@ interface Props {
 
 export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipientName }: Props) {
   const [formOpen, setFormOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
   const [viewerOpen, setViewerOpen] = useState(false)
   // undefined = 아직 fetch 안함, null = fetch 완료 but 데이터 없음, object = 데이터 있음
   const [saved, setSaved] = useState<ReceiptConfirmationResult | null | undefined>(undefined)
@@ -41,10 +42,25 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
     setFormOpen(false)
   }
 
+  function handleUpdate(result: ReceiptConfirmationResult) {
+    setSaved(result)
+    setEditOpen(false)
+  }
+
   if (saved) {
     return (
       <div className="space-y-1">
-        <div className="text-sm font-medium">{saved.receiverName || '-'}</div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-medium">{saved.receiverName || '-'}</span>
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditOpen(true) }}
+            className="inline-flex items-center gap-0.5 rounded border border-gray-300 bg-white px-1.5 py-0.5 text-xs text-gray-500 hover:bg-gray-50"
+          >
+            <Pencil className="h-2.5 w-2.5" />
+            수정
+          </button>
+        </div>
         {(saved.sitePhotoUrls.length > 0 || saved.storePhotoUrls.length > 0) && (
           <>
             <button
@@ -64,6 +80,17 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
             />
           </>
         )}
+
+        <ReceiptEditDialog
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          onSave={handleUpdate}
+          orderId={orderId}
+          orderNumber={orderNumber}
+          senderName={senderName}
+          recipientName={recipientName}
+          current={saved}
+        />
       </div>
     )
   }
@@ -93,7 +120,7 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
   )
 }
 
-// ---- 인수확인 입력 폼 ----
+// ---- 인수확인 신규 입력 폼 ----
 
 interface FormDialogProps {
   open: boolean
@@ -170,7 +197,6 @@ function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, sender
           <span className="ml-2 text-xs font-normal text-gray-400">{orderNumber}</span>
         </DialogTitle>
 
-        {/* 보내는분 / 받는분 */}
         <div className="flex gap-6 rounded-lg border bg-gray-50 px-4 py-2.5 text-sm">
           <span>
             <span className="text-gray-500">보내는분</span>
@@ -182,7 +208,6 @@ function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, sender
           </span>
         </div>
 
-        {/* 폼 테이블 */}
         <table className="w-full divide-y rounded-lg border text-sm [border-spacing:0] overflow-hidden">
           <colgroup>
             <col className="w-20" />
@@ -191,7 +216,6 @@ function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, sender
             <col />
           </colgroup>
           <tbody className="divide-y">
-            {/* 배송사진 */}
             <tr>
               <td className="px-3 py-2.5 align-top text-gray-500">배송사진</td>
               <td colSpan={3} className="px-3 py-2.5">
@@ -223,7 +247,6 @@ function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, sender
               </td>
             </tr>
 
-            {/* 인수자 / 관계 */}
             <tr>
               <td className="px-3 py-2.5 text-gray-500">인수자</td>
               <td className="px-3 py-2.5">
@@ -247,7 +270,6 @@ function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, sender
               </td>
             </tr>
 
-            {/* 배달여부 / 인수시간 */}
             <tr>
               <td className="px-3 py-2.5 text-gray-500">배달여부</td>
               <td className="px-3 py-2.5">
@@ -265,7 +287,6 @@ function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, sender
               <td className="px-3 py-2.5 text-sm">{confirmTime}</td>
             </tr>
 
-            {/* 비고 */}
             <tr>
               <td className="px-3 py-2.5 align-top text-gray-500">비고</td>
               <td colSpan={3} className="px-3 py-2.5">
@@ -287,6 +308,162 @@ function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, sender
 
         <Button className="w-full bg-green-700 hover:bg-green-800" disabled={saving} onClick={handleSave}>
           {saving ? '저장 중…' : '저장하기'}
+        </Button>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ---- 인수자 정보 수정 폼 ----
+
+interface EditDialogProps {
+  open: boolean
+  onClose: () => void
+  onSave: (result: ReceiptConfirmationResult) => void
+  orderId: string
+  orderNumber: string
+  senderName?: string
+  recipientName?: string
+  current: ReceiptConfirmationResult
+}
+
+function ReceiptEditDialog({ open, onClose, onSave, orderId, orderNumber, senderName, recipientName, current }: EditDialogProps) {
+  const [receiverName, setReceiverName] = useState('')
+  const [receiverRelation, setReceiverRelation] = useState('')
+  const [delivered, setDelivered] = useState(false)
+  const [memo, setMemo] = useState('')
+  const [confirmTime, setConfirmTime] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open) {
+      setReceiverName(current.receiverName ?? '')
+      setReceiverRelation(current.receiverRelation ?? '')
+      setDelivered(current.delivered)
+      setMemo(current.memo ?? '')
+      setConfirmTime(current.confirmedAt
+        ? current.confirmedAt.replace('T', ' ').slice(0, 16)
+        : '')
+      setError(null)
+    }
+  }, [open, current])
+
+  async function handleSave() {
+    setSaving(true)
+    setError(null)
+    try {
+      const result = await updateReceiptInfo(orderId, {
+        receiverName,
+        receiverRelation,
+        delivered,
+        memo,
+        confirmedAt: confirmTime || undefined,
+      })
+      onSave(result)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '수정에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
+      <DialogContent className="sm:max-w-2xl" showCloseButton>
+        <DialogTitle>
+          인수확인 수정
+          <span className="ml-2 text-xs font-normal text-gray-400">{orderNumber}</span>
+        </DialogTitle>
+
+        <div className="flex gap-6 rounded-lg border bg-gray-50 px-4 py-2.5 text-sm">
+          <span>
+            <span className="text-gray-500">보내는분</span>
+            <span className="ml-2 font-medium">{senderName ?? '-'}</span>
+          </span>
+          <span>
+            <span className="text-gray-500">받는분</span>
+            <span className="ml-2 font-medium">{recipientName ?? '-'}</span>
+          </span>
+        </div>
+
+        <table className="w-full divide-y rounded-lg border text-sm [border-spacing:0] overflow-hidden">
+          <colgroup>
+            <col className="w-20" />
+            <col />
+            <col className="w-20" />
+            <col />
+          </colgroup>
+          <tbody className="divide-y">
+            <tr>
+              <td className="px-3 py-2.5 text-gray-500">인수자</td>
+              <td className="px-3 py-2.5">
+                <input
+                  type="text"
+                  placeholder="이름"
+                  value={receiverName}
+                  onChange={(e) => setReceiverName(e.target.value)}
+                  className="w-full rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                />
+              </td>
+              <td className="px-3 py-2.5 text-gray-500">관계</td>
+              <td className="px-3 py-2.5">
+                <input
+                  type="text"
+                  placeholder=""
+                  value={receiverRelation}
+                  onChange={(e) => setReceiverRelation(e.target.value)}
+                  className="w-full rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                />
+              </td>
+            </tr>
+
+            <tr>
+              <td className="px-3 py-2.5 text-gray-500">배달여부</td>
+              <td className="px-3 py-2.5">
+                <label className="flex cursor-pointer items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={delivered}
+                    onChange={(e) => setDelivered(e.target.checked)}
+                    className="accent-green-700"
+                  />
+                  <span className={cn('font-medium', delivered ? 'text-green-700' : 'text-gray-400')}>완료</span>
+                </label>
+              </td>
+              <td className="px-3 py-2.5 text-gray-500">인수시간</td>
+              <td className="px-3 py-2.5">
+                <input
+                  type="text"
+                  placeholder="YYYY-MM-DD HH:mm"
+                  value={confirmTime}
+                  onChange={(e) => setConfirmTime(e.target.value)}
+                  className="w-full rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                />
+              </td>
+            </tr>
+
+            <tr>
+              <td className="px-3 py-2.5 align-top text-gray-500">비고</td>
+              <td colSpan={3} className="px-3 py-2.5">
+                <textarea
+                  placeholder="특이사항을 입력하세요"
+                  rows={2}
+                  value={memo}
+                  onChange={(e) => setMemo(e.target.value)}
+                  className="w-full resize-none rounded-md border px-2 py-1.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-700"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        {error && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
+        )}
+
+        <Button className="w-full bg-green-700 hover:bg-green-800" disabled={saving} onClick={handleSave}>
+          {saving ? '수정 중…' : '수정하기'}
         </Button>
       </DialogContent>
     </Dialog>
@@ -357,7 +534,6 @@ function PhotoViewerDialog({ open, onClose, photos, orderNumber }: ViewerProps) 
         </div>
 
         <div className="flex gap-3" style={{ height: 'calc(80vh - 80px)' }}>
-          {/* 왼쪽 썸네일 목록 */}
           <div className="flex flex-col gap-2 overflow-y-auto">
             {photos.map((p, i) => (
               <button
@@ -375,7 +551,6 @@ function PhotoViewerDialog({ open, onClose, photos, orderNumber }: ViewerProps) 
             ))}
           </div>
 
-          {/* 오른쪽 크게 보기 */}
           <div className="flex flex-1 items-center justify-center overflow-hidden rounded-lg border bg-gray-50">
             {photos[activeIdx] && (
               <img

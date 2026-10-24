@@ -4,6 +4,7 @@ import com.greenlink.core.domain.receipt.model.ReceiptConfirmation;
 import com.greenlink.core.domain.receipt.port.ReceiptConfirmationRepository;
 import org.springframework.stereotype.Component;
 
+import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -55,6 +56,16 @@ public class ReceiptConfirmationRepositoryAdapter implements ReceiptConfirmation
         for (String url : photoUrls) {
             entity.addPhoto(url, "", photoType);
         }
+        return jpaRepository.save(entity).toDomain();
+    }
+
+    @Override
+    public ReceiptConfirmation updateReceiverInfo(Long orderId, String receiverName, String receiverRelation,
+                                                   boolean delivered, String memo, LocalDateTime confirmedAt) {
+        ReceiptConfirmationJpaEntity entity = jpaRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new EntityNotFoundException("인수확인 정보를 찾을 수 없습니다. orderId=" + orderId));
+        LocalDateTime effectiveConfirmedAt = confirmedAt != null ? confirmedAt : entity.getConfirmedAt();
+        entity.update(receiverName, receiverRelation, delivered, memo, effectiveConfirmedAt);
         return jpaRepository.save(entity).toDomain();
     }
 }

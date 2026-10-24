@@ -88,4 +88,5 @@ public class ReceiptConfirmationJpaEntity extends BaseJpaEntity {
     }
 
     public Long getId() { return id; }
+    public LocalDateTime getConfirmedAt() { return confirmedAt; }
 }

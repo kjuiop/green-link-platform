@@ -10,4 +10,6 @@ public interface ReceiptConfirmationRepository {
     Optional<ReceiptConfirmation> findByOrderId(Long orderId);
     boolean existsWithPhotosByOrderId(Long orderId);
     ReceiptConfirmation appendPhotos(Long orderId, List<String> photoUrls, String photoType);
+    ReceiptConfirmation updateReceiverInfo(Long orderId, String receiverName, String receiverRelation,
+                                           boolean delivered, String memo, java.time.LocalDateTime confirmedAt);
 }
