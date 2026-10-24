@@ -11,7 +11,9 @@ public interface ProductRepository {
     Product save(Product product);
     Optional<Product> findById(Long id);
     Page<Product> findAll(Pageable pageable);
+    Page<Product> findAll(Pageable pageable, Long orderingCompanyId);
     List<Product> findAll();
+    List<Product> findAll(Long orderingCompanyId);
     void delete(Long id);
     boolean existsById(Long id);
 }

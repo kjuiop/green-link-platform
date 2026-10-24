@@ -5,5 +5,5 @@ import com.greenlink.core.application.product.dto.ProductResult;
 import java.util.List;
 
 public interface GetAllProductsUseCase {
-    List<ProductResult> getAllProducts();
+    List<ProductResult> getAllProducts(Long orderingCompanyId);
 }
