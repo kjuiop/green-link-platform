@@ -11,6 +11,7 @@ import { Pagination } from '@/components/ui/Pagination'
 import { Product } from '@/types/product'
 import { PageResult } from '@/types/page'
 import { fetchProducts, createProduct, updateProduct, deleteProduct } from '@/lib/api/productApi'
+import { fetchOrderingCompanies, OrderingCompany } from '@/lib/api/orderApi'
 
 const PAGE_SIZE = 20
 
@@ -22,6 +23,10 @@ function formatPrice(value: string) {
 }
 
 export default function ProductsPage() {
+  const [role, setRole] = useState<string>('')
+  const [companies, setCompanies] = useState<OrderingCompany[]>([])
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null)
+
   const [result, setResult] = useState<PageResult<Product> | null>(null)
   const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -36,16 +41,30 @@ export default function ProductsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const load = useCallback((p: number) => {
+  useEffect(() => {
+    const r = localStorage.getItem('role') ?? ''
+    setRole(r)
+    if (r === 'SUPER_ADMIN') {
+      fetchOrderingCompanies().then((list) => {
+        setCompanies(list)
+        if (list.length > 0) setSelectedCompanyId(list[0].id)
+      })
+    }
+  }, [])
+
+  const load = useCallback((p: number, companyId: number | null) => {
     setLoading(true)
     setPageError('')
-    fetchProducts(p, PAGE_SIZE)
+    fetchProducts(p, PAGE_SIZE, companyId ?? undefined)
       .then(setResult)
       .catch((e) => setPageError(e.message))
       .finally(() => setLoading(false))
   }, [])
 
-  useEffect(() => { load(page) }, [page, load])
+  useEffect(() => {
+    if (role === 'SUPER_ADMIN' && selectedCompanyId == null) return
+    load(page, selectedCompanyId)
+  }, [page, load, role, selectedCompanyId])
 
   const openRegister = () => {
     setEditTarget(null)
@@ -84,10 +103,11 @@ export default function ProductsPage() {
           name: form.name.trim(),
           price: rawPrice,
           memo: form.memo.trim() || undefined,
+          orderingCompanyId: selectedCompanyId ?? undefined,
         })
         setPage(0)
       }
-      load(editTarget ? page : 0)
+      load(editTarget ? page : 0, selectedCompanyId)
       setModalOpen(false)
     } catch (e: unknown) {
       setModalError(e instanceof Error ? e.message : '저장에 실패했습니다.')
@@ -102,7 +122,7 @@ export default function ProductsPage() {
     try {
       await deleteProduct(deleteTarget.id)
       setDeleteTarget(null)
-      load(page)
+      load(page, selectedCompanyId)
     } catch (e: unknown) {
       setPageError(e instanceof Error ? e.message : '삭제에 실패했습니다.')
     } finally {
@@ -116,8 +136,33 @@ export default function ProductsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">상품관리</h1>
-        <Button className="bg-green-700 hover:bg-green-800" onClick={openRegister}>상품 등록</Button>
+        <Button
+          className="bg-green-700 hover:bg-green-800"
+          onClick={openRegister}
+          disabled={role === 'SUPER_ADMIN' && selectedCompanyId == null}
+        >
+          상품 등록
+        </Button>
       </div>
+
+      {role === 'SUPER_ADMIN' && (
+        <div className="flex items-center gap-3 rounded-lg border bg-white px-4 py-3">
+          <label className="text-sm font-medium text-gray-600 shrink-0">발주업체</label>
+          <select
+            className="rounded-md border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+            value={selectedCompanyId ?? ''}
+            onChange={(e) => {
+              setPage(0)
+              setSelectedCompanyId(e.target.value ? Number(e.target.value) : null)
+            }}
+          >
+            {companies.length === 0 && <option value="">등록된 발주업체가 없습니다</option>}
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>{c.companyName}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {pageError && (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{pageError}</p>

@@ -35,8 +35,27 @@ public class ProductRepositoryAdapter implements ProductRepository {
     }
 
     @Override
+    public Page<Product> findAll(Pageable pageable, Long orderingCompanyId) {
+        if (orderingCompanyId == null) {
+            return jpaRepository.findAll(pageable).map(ProductJpaEntity::toDomain);
+        }
+        return jpaRepository.findByOrderingCompanyId(orderingCompanyId, pageable)
+                .map(ProductJpaEntity::toDomain);
+    }
+
+    @Override
     public List<Product> findAll() {
         return jpaRepository.findAll(Sort.by("name").ascending())
+                .stream().map(ProductJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public List<Product> findAll(Long orderingCompanyId) {
+        if (orderingCompanyId == null) {
+            return jpaRepository.findAll(Sort.by("name").ascending())
+                    .stream().map(ProductJpaEntity::toDomain).toList();
+        }
+        return jpaRepository.findByOrderingCompanyIdOrderByNameAsc(orderingCompanyId)
                 .stream().map(ProductJpaEntity::toDomain).toList();
     }
 
