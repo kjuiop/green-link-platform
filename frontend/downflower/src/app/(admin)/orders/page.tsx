@@ -307,9 +307,19 @@ export default function OrdersPage() {
       {/* 검색 결과 요약 + 엑셀 다운로드 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 text-sm">
-          <span className="text-gray-500">건수 <strong className="text-gray-900">{result?.totalElements ?? 0}</strong>건</span>
-          <span className="text-gray-300">|</span>
-          <span className="text-gray-500">발주금액 <strong className="text-gray-900">{filtered.reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+          {selectedIds.size > 0 ? (
+            <>
+              <span className="text-gray-500">건수 <strong className="text-green-700">{selectedIds.size}</strong>건</span>
+              <span className="text-gray-300">|</span>
+              <span className="text-gray-500">발주금액 <strong className="text-green-700">{filtered.filter((o) => selectedIds.has(o.id)).reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+            </>
+          ) : (
+            <>
+              <span className="text-gray-500">건수 <strong className="text-gray-900">{result?.totalElements ?? 0}</strong>건</span>
+              <span className="text-gray-300">|</span>
+              <span className="text-gray-500">발주금액 <strong className="text-gray-900">{filtered.reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+            </>
+          )}
         </div>
         <button
           onClick={handleExcelDownload}
