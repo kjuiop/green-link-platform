@@ -292,7 +292,7 @@ export default function ReceivedOrdersPage() {
                   className={order.isDeleted ? 'bg-red-50 opacity-60' : 'cursor-pointer hover:bg-gray-50'}
                 >
                   <TableCell>
-                    <Link href={`/ordering/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
+                    <Link href={`/vendor/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
                       {order.orderNumber}
                     </Link>
                     {order.isDeleted && (
@@ -365,7 +365,7 @@ export default function ReceivedOrdersPage() {
           filtered.map((order) => (
             <Link
               key={order.id}
-              href={`/ordering/orders/${order.id}`}
+              href={`/vendor/orders/${order.id}`}
               className={`block rounded-lg border p-4 ${order.isDeleted ? 'bg-red-50 opacity-60' : 'bg-white hover:bg-gray-50'}`}
             >
               <div className="flex items-start justify-between gap-2">
