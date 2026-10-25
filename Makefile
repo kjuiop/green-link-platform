@@ -2,7 +2,8 @@ BACKEND_DIR  := backend
 FRONTEND_DIR := frontend/downflower
 BOOT_ARGS    := --spring.profiles.active=dev,local
 
-.PHONY: back front dev start stop db db-stop db-reset logs-back logs-front
+.PHONY: back front dev start stop db db-stop db-reset logs-back logs-front \
+        deploy-prod deploy-dev deploy-nginx stop-prod stop-dev stop-nginx
 
 # MySQL 도커 실행 + healthy 대기
 db:
@@ -56,3 +57,24 @@ logs-back:
 
 logs-front:
 	tail -f /tmp/glp/frontend.log
+
+# ── EC2 배포 (운영) ──────────────────────────────────────────────────────────
+deploy-prod:
+	docker compose -f docker-compose.prod.yml up -d --build
+
+stop-prod:
+	docker compose -f docker-compose.prod.yml down
+
+# ── EC2 배포 (개발) ──────────────────────────────────────────────────────────
+deploy-dev:
+	docker compose -f docker-compose.dev.yml up -d --build
+
+stop-dev:
+	docker compose -f docker-compose.dev.yml down
+
+# ── Nginx ────────────────────────────────────────────────────────────────────
+deploy-nginx:
+	docker compose -f scripts/docker-compose.nginx.yml up -d
+
+stop-nginx:
+	docker compose -f scripts/docker-compose.nginx.yml down

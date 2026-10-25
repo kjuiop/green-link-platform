@@ -1,0 +1,32 @@
+services:
+  backend-prod:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: green-link-backend:prod
+    container_name: green-link-backend-prod
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - .env.prod
+    restart: always
+    networks:
+      - prod-net
+
+  frontend-prod:
+    build:
+      context: ./frontend/downflower
+      dockerfile: Dockerfile
+    image: green-link-frontend:prod
+    container_name: green-link-frontend-prod
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - API_URL=http://backend-prod:8080
+    restart: always
+    networks:
+      - prod-net
+
+networks:
+  prod-net:
+    name: green-link-prod

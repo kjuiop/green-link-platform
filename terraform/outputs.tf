@@ -17,3 +17,13 @@ output "ssh_command" {
   description = "EC2 SSH 접속 명령어"
   value       = "ssh -i ~/.ssh/green-link-key ubuntu@${aws_eip.backend.public_ip}"
 }
+
+output "admin_url" {
+  description = "운영 관리자 URL"
+  value       = "https://admin.${var.domain_name}"
+}
+
+output "dev_admin_url" {
+  description = "개발 관리자 URL"
+  value       = "https://dev-admin.${var.domain_name}"
+}
