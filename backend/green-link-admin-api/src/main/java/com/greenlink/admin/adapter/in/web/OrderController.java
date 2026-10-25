@@ -109,8 +109,26 @@ public class OrderController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<OrderResult> update(@PathVariable Long id,
+    public ResponseEntity<OrderResult> update(Authentication auth,
+                                              @PathVariable Long id,
                                               @RequestBody @Valid UpdateOrderRequest req) {
+        if (auth != null && auth.isAuthenticated()) {
+            boolean isVendor = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
+            if (isVendor) {
+                return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
+            }
+            boolean isOrdering = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ORDERING"));
+            if (isOrdering) {
+                OrderResult existing = getOrderUseCase.getOrder(id);
+                Long callerCompanyId = (auth instanceof org.springframework.security.authentication.UsernamePasswordAuthenticationToken token
+                        && token.getDetails() instanceof Long cid) ? cid : null;
+                if (callerCompanyId == null || !callerCompanyId.equals(existing.orderingCompanyId())) {
+                    return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
+                }
+            }
+        }
         return ResponseEntity.ok(updateOrderUseCase.updateOrder(id, req.toCommand()));
     }
 

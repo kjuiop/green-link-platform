@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { VendorOrderStatusBadge } from '@/components/common/StatusBadge'
-import { fetchOrder, updateOrderStatus, fetchReceiptConfirmation, uploadReceiptPhotos, ReceiptConfirmationResult } from '@/lib/api/orderApi'
+import { fetchOrder, updateOrderStatus, fetchReceiptConfirmation, uploadReceiptPhotos, fetchOrderHistory, ReceiptConfirmationResult, OrderHistoryItem } from '@/lib/api/orderApi'
 import { PrintButton } from '@/components/common/PrintButton'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { ReferencePhotoSection } from '@/components/common/ReferencePhotoViewer'
@@ -22,15 +22,18 @@ export default function VendorOrderDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [acting, setActing] = useState(false)
   const [receiptConfirmation, setReceiptConfirmation] = useState<ReceiptConfirmationResult | null>(null)
+  const [history, setHistory] = useState<OrderHistoryItem[]>([])
 
   useEffect(() => {
     Promise.all([
       fetchOrder(id),
       fetchReceiptConfirmation(id).catch(() => null),
+      fetchOrderHistory(id).catch(() => []),
     ])
-      .then(([orderData, receipt]) => {
+      .then(([orderData, receipt, hist]) => {
         setOrder(orderData)
         setReceiptConfirmation(receipt)
+        setHistory(hist)
       })
       .catch(() => setLoadError('주문 정보를 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
@@ -268,11 +271,40 @@ export default function VendorOrderDetailPage() {
             </CardContent>
           </Card>
         )}
+        <Card className="lg:col-span-2">
+          <CardHeader><CardTitle className="text-sm">변경 이력</CardTitle></CardHeader>
+          <CardContent>
+            {history.length === 0 ? (
+              <p className="text-sm text-gray-400">이력이 없습니다.</p>
+            ) : (
+              <ol className="relative border-l border-gray-200">
+                {history.map((h) => (
+                  <li key={h.id} className="mb-4 ml-4">
+                    <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border border-white bg-green-600" />
+                    <p className="text-xs text-gray-400">{h.createdAt}</p>
+                    <p className="text-sm font-medium">{ACTION_LABEL[h.action] ?? h.action}</p>
+                    <p className="text-xs text-gray-500">{h.detail}</p>
+                    {(h.actorCompany || h.actorName) && (
+                      <p className="text-xs text-gray-400">
+                        {[h.actorCompany, h.actorName].filter(Boolean).join(' / ')}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
 }
 
+const ACTION_LABEL: Record<string, string> = {
+  CREATED: '발주 등록',
+  UPDATED: '발주 수정',
+  STATUS_CHANGED: '상태 변경',
+}
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
