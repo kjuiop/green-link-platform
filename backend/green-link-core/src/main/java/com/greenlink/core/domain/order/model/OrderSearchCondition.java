@@ -10,7 +10,8 @@ public record OrderSearchCondition(
         String deliveryDateTo,
         Long orderingCompanyId,
         String receiverName,
-        String messageStatus
+        String messageStatus,
+        String ribbonLeft
 ) {
     public static OrderSearchCondition of(
             String status,
@@ -21,7 +22,7 @@ public record OrderSearchCondition(
             String deliveryDateFrom,
             String deliveryDateTo
     ) {
-        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, null, null, null);
+        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, null, null, null, null);
     }
 
     public static OrderSearchCondition of(
@@ -34,7 +35,7 @@ public record OrderSearchCondition(
             String deliveryDateTo,
             Long orderingCompanyId
     ) {
-        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, orderingCompanyId, null, null);
+        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, orderingCompanyId, null, null, null);
     }
 
     public static OrderSearchCondition of(
@@ -47,8 +48,9 @@ public record OrderSearchCondition(
             String deliveryDateTo,
             Long orderingCompanyId,
             String receiverName,
-            String messageStatus
+            String messageStatus,
+            String ribbonLeft
     ) {
-        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, orderingCompanyId, receiverName, messageStatus);
+        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, orderingCompanyId, receiverName, messageStatus, ribbonLeft);
     }
 }
