@@ -213,7 +213,7 @@ export default function OrderingOrderDetailPage() {
   async function handleDelete() {
     try {
       await deleteOrder(id)
-      router.push('/ordering/orders')
+      router.push('/orders')
     } catch {
       setDeleteError('삭제에 실패했습니다. 다시 시도해 주세요.')
     }
@@ -235,13 +235,13 @@ export default function OrderingOrderDetailPage() {
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <PrintButton orderId={order.id} />
-          {order.status === '발주대기' && !isEditing && !confirmDelete && (
+          {order.status === '발주대기' && !isEditing && (
             <>
               <Button className="bg-green-700 hover:bg-green-800" onClick={handleAccept} disabled={saving}>수주승인</Button>
               <Button variant="outline" className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50" onClick={handleReject} disabled={saving}>수주거절</Button>
             </>
           )}
-          {order.status === '수주완료' && !isEditing && !confirmDelete && (
+          {order.status === '수주완료' && !isEditing && (
             <Button
               className={cn(
                 'gap-1.5',
@@ -265,12 +265,12 @@ export default function OrderingOrderDetailPage() {
               </Button>
             </>
           )}
-          {!isEditing && !confirmDelete && (
+          {!isEditing && (
             <Button variant="outline" className="gap-1.5" onClick={startEdit}>
               <Pencil className="h-3.5 w-3.5" />수정
             </Button>
           )}
-          {isSuperAdmin && !isEditing && !confirmDelete && (
+          {isSuperAdmin && !isEditing && (
             <Button
               variant="outline"
               className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50"
@@ -278,15 +278,6 @@ export default function OrderingOrderDetailPage() {
             >
               <Trash2 className="h-3.5 w-3.5" />삭제
             </Button>
-          )}
-          {isSuperAdmin && confirmDelete && (
-            <>
-              <span className="self-center text-sm text-red-600">정말 삭제하시겠습니까?</span>
-              <Button variant="outline" className="gap-1.5" onClick={() => { setConfirmDelete(false); setDeleteError(null) }}>취소</Button>
-              <Button className="gap-1.5 bg-red-600 hover:bg-red-700" onClick={handleDelete}>
-                <Trash2 className="h-3.5 w-3.5" />삭제 확인
-              </Button>
-            </>
           )}
         </div>
       </div>
@@ -296,9 +287,30 @@ export default function OrderingOrderDetailPage() {
           {saveError}
         </div>
       )}
-      {deleteError && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
-          {deleteError}
+      {/* 삭제 확인 팝업 */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-lg bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b px-5 py-4">
+              <h2 className="font-semibold">주문서 삭제</h2>
+              <button onClick={() => { setConfirmDelete(false); setDeleteError(null) }} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-5">
+              <p className="text-sm text-gray-700">정말 삭제하시겠습니까?</p>
+              <p className="mt-1 text-xs text-gray-400">삭제된 주문서는 목록에 표시되지 않습니다.</p>
+              {deleteError && (
+                <p className="mt-2 text-sm text-red-600">{deleteError}</p>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 border-t px-5 py-4">
+              <Button variant="outline" onClick={() => { setConfirmDelete(false); setDeleteError(null) }}>취소</Button>
+              <Button className="gap-1.5 bg-red-600 hover:bg-red-700" onClick={handleDelete}>
+                <Trash2 className="h-3.5 w-3.5" />삭제
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
