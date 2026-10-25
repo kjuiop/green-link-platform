@@ -681,6 +681,19 @@ export default function OrderingOrderDetailPage() {
               orderNumber={order.orderNumber}
               senderName={order.ribbonLeft}
               recipientName={order.recipientName}
+              onDeliveryComplete={async () => {
+                try {
+                  const [updated, receipt, sms] = await Promise.all([
+                    fetchOrder(id),
+                    fetchReceiptConfirmation(id).catch(() => null),
+                    fetchSmsMessages(id).catch(() => []),
+                  ])
+                  setOrder(updated)
+                  setDraft(updated)
+                  setReceiptConfirmation(receipt)
+                  setSmsMessages(sms)
+                } catch {}
+              }}
             />
           </CardContent>
         </Card>
