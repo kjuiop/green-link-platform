@@ -64,6 +64,7 @@ public class OrderController {
             @RequestParam(required = false) String deliveryDateTo,
             @RequestParam(required = false) String receiverName,
             @RequestParam(required = false) String messageStatus,
+            @RequestParam(required = false) String ribbonLeft,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Long resolvedVendorId = vendorId;
@@ -86,7 +87,7 @@ public class OrderController {
         OrderSearchCondition condition = OrderSearchCondition.of(
                 status, resolvedVendorId, orderNumber, productName, ordererName,
                 deliveryDateFrom, deliveryDateTo, resolvedOrderingCompanyId,
-                receiverName, messageStatus);
+                receiverName, messageStatus, ribbonLeft);
         return ResponseEntity.ok(getOrdersUseCase.getOrdersPaged(condition, PageRequest.of(page, size)));
     }
 
