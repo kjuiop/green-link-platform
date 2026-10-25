@@ -8,6 +8,7 @@ import com.greenlink.core.application.order.dto.OrderResult;
 import com.greenlink.core.application.orderhistory.dto.OrderHistoryResult;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.application.order.usecase.CreateOrderUseCase;
+import com.greenlink.core.application.order.usecase.DeleteOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
@@ -32,6 +33,7 @@ public class OrderController {
     private final CreateOrderUseCase createOrderUseCase;
     private final UpdateOrderUseCase updateOrderUseCase;
     private final UpdateOrderStatusUseCase updateOrderStatusUseCase;
+    private final DeleteOrderUseCase deleteOrderUseCase;
     private final GetOrderHistoryUseCase getOrderHistoryUseCase;
     private final SendDeliveryMmsUseCase sendDeliveryMmsUseCase;
 
@@ -40,6 +42,7 @@ public class OrderController {
                            CreateOrderUseCase createOrderUseCase,
                            UpdateOrderUseCase updateOrderUseCase,
                            UpdateOrderStatusUseCase updateOrderStatusUseCase,
+                           DeleteOrderUseCase deleteOrderUseCase,
                            GetOrderHistoryUseCase getOrderHistoryUseCase,
                            SendDeliveryMmsUseCase sendDeliveryMmsUseCase) {
         this.getOrdersUseCase = getOrdersUseCase;
@@ -47,6 +50,7 @@ public class OrderController {
         this.createOrderUseCase = createOrderUseCase;
         this.updateOrderUseCase = updateOrderUseCase;
         this.updateOrderStatusUseCase = updateOrderStatusUseCase;
+        this.deleteOrderUseCase = deleteOrderUseCase;
         this.getOrderHistoryUseCase = getOrderHistoryUseCase;
         this.sendDeliveryMmsUseCase = sendDeliveryMmsUseCase;
     }
@@ -65,16 +69,20 @@ public class OrderController {
             @RequestParam(required = false) String receiverName,
             @RequestParam(required = false) String messageStatus,
             @RequestParam(required = false) String ribbonLeft,
+            @RequestParam(required = false) Boolean deleted,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Long resolvedVendorId = vendorId;
         Long resolvedOrderingCompanyId = orderingCompanyId;
+        Boolean resolvedDeleted = null;
 
         if (auth != null && auth.isAuthenticated()) {
             boolean isVendor = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
             boolean isOrdering = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_ORDERING"));
+            boolean isSuperAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
             if (isVendor) {
                 resolvedVendorId = Long.parseLong(String.valueOf(auth.getPrincipal()));
             } else if (isOrdering) {
@@ -83,11 +91,14 @@ public class OrderController {
                     resolvedOrderingCompanyId = cid;
                 }
             }
+            if (isSuperAdmin) {
+                resolvedDeleted = deleted;
+            }
         }
         OrderSearchCondition condition = OrderSearchCondition.of(
                 status, resolvedVendorId, orderNumber, productName, ordererName,
                 deliveryDateFrom, deliveryDateTo, resolvedOrderingCompanyId,
-                receiverName, messageStatus, ribbonLeft);
+                receiverName, messageStatus, ribbonLeft, resolvedDeleted);
         return ResponseEntity.ok(getOrdersUseCase.getOrdersPaged(condition, PageRequest.of(page, size)));
     }
 
@@ -150,5 +161,16 @@ public class OrderController {
     @GetMapping("/{id}/history")
     public ResponseEntity<List<OrderHistoryResult>> getHistory(@PathVariable Long id) {
         return ResponseEntity.ok(getOrderHistoryUseCase.getHistory(id));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id, Authentication auth) {
+        boolean isSuperAdmin = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+        if (!isSuperAdmin) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        deleteOrderUseCase.deleteOrder(id);
+        return ResponseEntity.noContent().build();
     }
 }

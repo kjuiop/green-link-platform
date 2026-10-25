@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { OrderStatusBadge, DeliveryTimeTypeBadge } from '@/components/common/StatusBadge'
 import {
-  fetchOrder, updateOrder, updateOrderStatus,
+  fetchOrder, updateOrder, updateOrderStatus, deleteOrder,
   fetchOrderHistory, fetchReceiptConfirmation,
   fetchSmsMessages, resendMms,
   OrderHistoryItem, ReceiptConfirmationResult, SmsMessageResult,
@@ -41,7 +41,9 @@ export default function OrderingOrderDetailPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState<Order | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
   const [saveError, setSaveError] = useState<string | null>(null)
   const [receiptConfirmation, setReceiptConfirmation] = useState<ReceiptConfirmationResult | null>(null)
   const [history, setHistory] = useState<OrderHistoryItem[]>([])
@@ -208,8 +210,13 @@ export default function OrderingOrderDetailPage() {
     }
   }
 
-  function handleDelete() {
-    router.push('/orders')
+  async function handleDelete() {
+    try {
+      await deleteOrder(id)
+      router.push('/ordering/orders')
+    } catch {
+      setDeleteError('삭제에 실패했습니다. 다시 시도해 주세요.')
+    }
   }
 
   function set<K extends keyof Order>(key: K, value: Order[K]) {
@@ -263,19 +270,19 @@ export default function OrderingOrderDetailPage() {
               <Pencil className="h-3.5 w-3.5" />수정
             </Button>
           )}
-          {!isEditing && !confirmDelete && (
+          {isSuperAdmin && !isEditing && !confirmDelete && (
             <Button
               variant="outline"
               className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50"
-              onClick={() => setConfirmDelete(true)}
+              onClick={() => { setConfirmDelete(true); setDeleteError(null) }}
             >
               <Trash2 className="h-3.5 w-3.5" />삭제
             </Button>
           )}
-          {confirmDelete && (
+          {isSuperAdmin && confirmDelete && (
             <>
               <span className="self-center text-sm text-red-600">정말 삭제하시겠습니까?</span>
-              <Button variant="outline" className="gap-1.5" onClick={() => setConfirmDelete(false)}>취소</Button>
+              <Button variant="outline" className="gap-1.5" onClick={() => { setConfirmDelete(false); setDeleteError(null) }}>취소</Button>
               <Button className="gap-1.5 bg-red-600 hover:bg-red-700" onClick={handleDelete}>
                 <Trash2 className="h-3.5 w-3.5" />삭제 확인
               </Button>
@@ -287,6 +294,11 @@ export default function OrderingOrderDetailPage() {
       {saveError && (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
           {saveError}
+        </div>
+      )}
+      {deleteError && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+          {deleteError}
         </div>
       )}
 

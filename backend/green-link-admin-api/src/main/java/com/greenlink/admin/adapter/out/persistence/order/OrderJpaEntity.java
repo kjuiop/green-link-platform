@@ -117,6 +117,9 @@ public class OrderJpaEntity extends BaseJpaEntity {
     @Column(length = 30)
     private String completedAt;
 
+    @Column(nullable = false)
+    private boolean isDeleted;
+
     protected OrderJpaEntity() {}
 
     public static OrderJpaEntity from(Order order) {
@@ -156,6 +159,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
         e.adminMemo = order.getAdminMemo();
         e.vendorMemo = order.getVendorMemo();
         e.completedAt = order.getCompletedAt();
+        e.isDeleted = order.isDeleted();
         return e;
     }
 
@@ -196,7 +200,8 @@ public class OrderJpaEntity extends BaseJpaEntity {
                 adminMemo,
                 vendorMemo,
                 completedAt,
-                getCreatedAt() != null ? getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null
+                getCreatedAt() != null ? getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null,
+                isDeleted
         );
     }
 }

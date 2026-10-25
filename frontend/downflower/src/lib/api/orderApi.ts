@@ -55,6 +55,7 @@ type BackendOrder = {
   hasReceipt: boolean
   receiptReceiverName: string | null
   receiptReceiverRelation: string | null
+  isDeleted: boolean
 }
 
 export type CreateOrderPayload = {
@@ -145,7 +146,7 @@ function toFrontend(o: BackendOrder): Order {
     vendorMemo: o.vendorMemo ?? undefined,
     completedAt: o.completedAt ?? undefined,
     messageStatus: o.messageStatus === 'SENT' ? '발송' : o.messageStatus === 'FAIL' ? '실패' : '미발송',
-    isDeleted: false,
+    isDeleted: o.isDeleted ?? false,
     referencePhotoCount: o.referencePhotoCount ?? 0,
     hasReceipt: o.hasReceipt,
     receiptReceiverName: o.receiptReceiverName ?? undefined,
@@ -177,6 +178,7 @@ export type OrderSearchParams = {
   receiverName?: string
   messageStatus?: string
   ribbonLeft?: string
+  deleted?: boolean
 }
 
 function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: number): string {
@@ -192,6 +194,7 @@ function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: numbe
   if (params?.receiverName) query.set('receiverName', params.receiverName)
   if (params?.messageStatus) query.set('messageStatus', params.messageStatus)
   if (params?.ribbonLeft) query.set('ribbonLeft', params.ribbonLeft)
+  if (params?.deleted !== undefined) query.set('deleted', String(params.deleted))
   if (page !== undefined) query.set('page', String(page))
   if (size !== undefined) query.set('size', String(size))
   return query.toString()
@@ -448,6 +451,14 @@ export async function downloadOrdersExcel(orderIds: string[]): Promise<void> {
   a.download = `orders_${today}.xlsx`
   a.click()
   URL.revokeObjectURL(url)
+}
+
+export async function deleteOrder(id: string): Promise<void> {
+  const res = await fetch(`/api/orders/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error('주문서 삭제에 실패했습니다.')
 }
 
 export async function updateOrderStatus(id: string, action: string, photoUrls?: string[]): Promise<Order> {
