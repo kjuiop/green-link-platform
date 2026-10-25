@@ -458,7 +458,11 @@ export default function OrdersPage() {
                     />
                   </TableCell>
                   <TableCell>
-                    <ReceiptInfoCell orderId={order.id} />
+                    <ReceiptInfoCell
+                      hasReceipt={order.hasReceipt}
+                      receiverName={order.receiptReceiverName}
+                      receiverRelation={order.receiptReceiverRelation}
+                    />
                   </TableCell>
                   <TableCell>
                     <ReceiptConfirmButton
@@ -466,6 +470,7 @@ export default function OrdersPage() {
                       orderNumber={order.orderNumber}
                       senderName={order.ribbonLeft}
                       recipientName={order.recipientName}
+                      initialHasReceipt={order.hasReceipt}
                     />
                   </TableCell>
                 </TableRow>

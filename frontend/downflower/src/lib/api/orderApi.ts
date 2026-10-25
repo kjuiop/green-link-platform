@@ -51,6 +51,9 @@ type BackendOrder = {
   completedAt: string | null
   createdAt: string
   messageStatus: string | null
+  hasReceipt: boolean
+  receiptReceiverName: string | null
+  receiptReceiverRelation: string | null
 }
 
 export type CreateOrderPayload = {
@@ -142,6 +145,9 @@ function toFrontend(o: BackendOrder): Order {
     messageStatus: o.messageStatus === 'SENT' ? '발송' : o.messageStatus === 'FAIL' ? '실패' : '미발송',
     isDeleted: false,
     referencePhotoCount: o.referencePhotoCount ?? 0,
+    hasReceipt: o.hasReceipt,
+    receiptReceiverName: o.receiptReceiverName ?? undefined,
+    receiptReceiverRelation: o.receiptReceiverRelation ?? undefined,
   }
 }
 
