@@ -11,6 +11,7 @@ type BackendVendor = {
   loginId: string
   status: string
   createdAt?: string
+  companyType?: string
 }
 
 type CreateVendorPayload = {
@@ -21,6 +22,7 @@ type CreateVendorPayload = {
   phone: string
   loginId: string
   password: string
+  companyType?: string
 }
 
 type UpdateVendorPayload = {
@@ -29,6 +31,7 @@ type UpdateVendorPayload = {
   address: string
   managerName: string
   phone: string
+  companyType?: string
 }
 
 function authHeaders(): HeadersInit {
@@ -50,6 +53,7 @@ function toFrontend(v: BackendVendor): Vendor {
     loginId: v.loginId,
     status: v.status as Vendor['status'],
     createdAt: v.createdAt ?? undefined,
+    companyType: (v.companyType as Vendor['companyType']) ?? undefined,
   }
 }
 

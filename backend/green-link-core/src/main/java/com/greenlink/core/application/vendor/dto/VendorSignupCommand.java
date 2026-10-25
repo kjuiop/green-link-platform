@@ -1,5 +1,7 @@
 package com.greenlink.core.application.vendor.dto;
 
+import java.util.List;
+
 public record VendorSignupCommand(
     String loginId,
     String password,
@@ -10,5 +12,6 @@ public record VendorSignupCommand(
     String ceoName,
     String companyPhone,
     String address,
-    String detailAddress
+    String detailAddress,
+    List<String> roles
 ) {}

@@ -9,9 +9,10 @@ public record UpdateVendorRequest(
     String address,
     String detailAddress,
     @NotBlank String managerName,
-    @NotBlank String phone
+    @NotBlank String phone,
+    String companyType
 ) {
     public UpdateVendorCommand toCommand() {
-        return new UpdateVendorCommand(companyName, businessNo, address, detailAddress, managerName, phone);
+        return new UpdateVendorCommand(companyName, businessNo, address, detailAddress, managerName, phone, companyType);
     }
 }

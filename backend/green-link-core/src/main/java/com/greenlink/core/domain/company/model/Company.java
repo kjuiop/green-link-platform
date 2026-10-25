@@ -50,6 +50,10 @@ public class Company {
         this.type = CompanyType.BOTH;
     }
 
+    public void updateType(CompanyType newType) {
+        this.type = newType;
+    }
+
     public void updateInfo(String companyName, String businessNo, String address, String detailAddress) {
         this.companyName = companyName;
         this.businessNo = businessNo;
