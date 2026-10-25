@@ -28,7 +28,7 @@ resource "aws_security_group" "ec2" {
   }
 
   ingress {
-    description = "Spring Boot API (Nginx 셋업 완료 후 제거 가능)"
+    description = "Spring Boot API (remove after Nginx setup)"
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
