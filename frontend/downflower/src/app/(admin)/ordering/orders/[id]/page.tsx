@@ -98,6 +98,7 @@ export default function OrderingOrderDetailPage() {
     try {
       const updated = await updateOrder(id, {
         vendorId: Number(draft.vendorId),
+        ...(selectedProductId && selectedProductId !== '__direct__' ? { productId: Number(selectedProductId) } : {}),
         productName: draft.productName,
         quantity: draft.quantity,
         amount: draft.amount,

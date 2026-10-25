@@ -55,6 +55,7 @@ type BackendOrder = {
 export type CreateOrderPayload = {
   vendorId: number
   orderingCompanyId?: number
+  productId?: number
   productName: string
   quantity: number
   amount: number
