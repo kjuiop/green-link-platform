@@ -116,7 +116,7 @@ public class OrderController {
             boolean isVendor = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
             if (isVendor) {
-                return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
             boolean isOrdering = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_ORDERING"));
@@ -125,7 +125,7 @@ public class OrderController {
                 Long callerCompanyId = (auth instanceof org.springframework.security.authentication.UsernamePasswordAuthenticationToken token
                         && token.getDetails() instanceof Long cid) ? cid : null;
                 if (callerCompanyId == null || !callerCompanyId.equals(existing.orderingCompanyId())) {
-                    return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
                 }
             }
         }
