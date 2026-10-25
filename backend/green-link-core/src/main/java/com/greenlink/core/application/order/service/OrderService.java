@@ -38,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
@@ -305,6 +306,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
 
+        String changeDetail = buildChangeDetail(order, cmd);
+
         order.updateInfo(
                 cmd.vendorId(),
                 cmd.productId(),
@@ -339,8 +342,54 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         );
 
         Order saved = orderRepository.save(order);
-        recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.UPDATED, "발주 정보 수정");
+        recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.UPDATED, changeDetail);
         return toResult(saved);
+    }
+
+    private String buildChangeDetail(Order before, UpdateOrderCommand after) {
+        List<String> lines = new ArrayList<>();
+        diff(lines, "수주업체", str(before.getVendorId()), str(after.vendorId()));
+        diff(lines, "상품명", before.getProductName(), after.productName());
+        diff(lines, "수량", str(before.getQuantity()), str(after.quantity()));
+        diff(lines, "금액", str(before.getAmount()), str(after.amount()));
+        diff(lines, "추가비용", str(before.getExtraCost()), str(after.extraCost()));
+        diff(lines, "배송예정일", before.getDeliveryDate(), after.deliveryDate());
+        diff(lines, "배송시간유형", before.getDeliveryTimeType(), after.deliveryTimeType());
+        diff(lines, "배송시간", deliveryTime(before.getDeliveryTimeHour(), before.getDeliveryTimeMinute(), before.getDeliveryTimeCustom()),
+                deliveryTime(after.deliveryTimeHour(), after.deliveryTimeMinute(), after.deliveryTimeCustom()));
+        diff(lines, "주소", addr(before.getAddress(), before.getAddressDetail()), addr(after.address(), after.addressDetail()));
+        diff(lines, "행사유형", before.getEventType(), after.eventType());
+        diff(lines, "장소명", before.getPlaceName(), after.placeName());
+        diff(lines, "호실", before.getRoomName(), after.roomName());
+        diff(lines, "행사정보", before.getEventInfo(), after.eventInfo());
+        diff(lines, "리본왼쪽", before.getRibbonLeft(), after.ribbonLeft());
+        diff(lines, "리본오른쪽", before.getRibbonRight(), after.ribbonRight());
+        diff(lines, "주문자명", before.getOrdererName(), after.ordererName());
+        diff(lines, "주문자연락처", before.getOrdererPhone(), after.ordererPhone());
+        diff(lines, "수령인명", before.getRecipientName(), after.recipientName());
+        diff(lines, "수령인연락처", before.getRecipientPhone(), after.recipientPhone());
+        diff(lines, "전달사항", before.getVendorMemo(), after.vendorMemo());
+        diff(lines, "관리자메모", before.getAdminMemo(), after.adminMemo());
+        return lines.isEmpty() ? "변경 사항 없음" : String.join("\n", lines);
+    }
+
+    private static void diff(List<String> lines, String label, String before, String after) {
+        String b = before == null ? "" : before;
+        String a = after == null ? "" : after;
+        if (!b.equals(a)) lines.add(label + ": " + b + " → " + a);
+    }
+
+    private static String str(Object v) { return v == null ? "" : String.valueOf(v); }
+
+    private static String deliveryTime(String hour, String minute, String custom) {
+        if (custom != null && !custom.isBlank()) return custom;
+        if (hour != null && !hour.isBlank()) return hour + ":" + (minute != null ? minute : "00");
+        return "";
+    }
+
+    private static String addr(String address, String detail) {
+        if (address == null) return "";
+        return detail != null && !detail.isBlank() ? address + " " + detail : address;
     }
 
     @Override
