@@ -3,15 +3,15 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { OrderStatusBadge } from '@/components/common/StatusBadge'
+import { AcceptOrderBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { ReceiptConfirmButton, ReceiptInfoCell } from '@/components/common/ReceiptConfirmDialog'
-import { fetchOrdersPaged, fetchOrders, downloadOrdersExcel, OrderSearchParams } from '@/lib/api/orderApi'
+import { fetchOrdersPaged, fetchOrders, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
 import { getDeliveryDateRowBg } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
-import { Plus, Download } from 'lucide-react'
+import { Plus, Download, Printer } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
@@ -377,18 +377,19 @@ export default function OrdersPage() {
               <TableHead>문자현황</TableHead>
               <TableHead>인수정보</TableHead>
               <TableHead>인수확인</TableHead>
+              <TableHead>인쇄</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={13} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={14} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={13} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={14} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -445,8 +446,15 @@ export default function OrdersPage() {
                   </TableCell>
                   <TableCell className="text-sm">{order.quantity}</TableCell>
                   <TableCell className="text-sm">{order.amount.toLocaleString()}원</TableCell>
-                  <TableCell>
-                    <OrderStatusBadge status={order.status} />
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <AcceptOrderBadge
+                      status={order.status}
+                      variant="admin"
+                      onAccept={async () => {
+                        await updateOrderStatus(order.id, 'accept')
+                        loadOrders(buildServerParams(), page)
+                      }}
+                    />
                   </TableCell>
                   <TableCell>
                     <ClickableMessageBadge
@@ -467,7 +475,7 @@ export default function OrdersPage() {
                       receiverRelation={order.receiptReceiverRelation}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <ReceiptConfirmButton
                       orderId={order.id}
                       orderNumber={order.orderNumber}
@@ -475,6 +483,16 @@ export default function OrdersPage() {
                       recipientName={order.recipientName}
                       initialHasReceipt={order.hasReceipt}
                     />
+                  </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      title="주문서 인쇄"
+                      onClick={() => window.open(`/orders/${order.id}/print`, '_blank')}
+                      className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                    >
+                      <Printer className="h-4 w-4" />
+                    </button>
                   </TableCell>
                 </TableRow>
               ))
@@ -523,7 +541,16 @@ export default function OrdersPage() {
                   <div className="mt-0.5 text-xs text-gray-500">{order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}</div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <OrderStatusBadge status={order.status} />
+                  <div onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                    <AcceptOrderBadge
+                      status={order.status}
+                      variant="admin"
+                      onAccept={async () => {
+                        await updateOrderStatus(order.id, 'accept')
+                        loadOrders(buildServerParams(), page)
+                      }}
+                    />
+                  </div>
                   <ClickableMessageBadge status={order.messageStatus} orderId={order.id} photos={order.deliveryPhotos} orderNumber={order.orderNumber} />
                 </div>
               </div>
@@ -536,6 +563,16 @@ export default function OrdersPage() {
                 </span>
                 <span>{order.placeName}</span>
                 <span>{order.amount.toLocaleString()}원 · {order.quantity}개</span>
+              </div>
+              <div className="mt-2 flex justify-end" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                <button
+                  type="button"
+                  onClick={() => window.open(`/orders/${order.id}/print`, '_blank')}
+                  className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  인쇄
+                </button>
               </div>
             </Link>
           ))

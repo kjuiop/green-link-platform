@@ -60,14 +60,14 @@ export default function PrintOrderPage() {
             <tr>
               <td colSpan={2}><h2 style={{ margin: 0, marginLeft: 20 }}>주문서</h2></td>
               <td className="left" style={{ fontWeight: 'normal', fontSize: 16 }}>
-                본부전화: 다운플라워<br />
+                본부전화: {order.orderingCompanyName || '—'}<br />
                 http://downflower.co.kr
               </td>
             </tr>
             <tr>
               <td>발주화원</td>
-              <td>다운플라워</td>
-              <td>TEL: 1855-4400</td>
+              <td>{order.orderingCompanyName || '—'}</td>
+              <td>TEL: {order.orderingCompanyPhone || '—'}</td>
             </tr>
             <tr>
               <td>수주화원</td>
@@ -125,14 +125,14 @@ export default function PrintOrderPage() {
             <tr>
               <td colSpan={2}><h2 style={{ margin: 0, marginLeft: 20 }}>인수증</h2></td>
               <td className="left" style={{ fontWeight: 'normal', fontSize: 16 }}>
-                본부전화: 다운플라워<br />
+                본부전화: {order.orderingCompanyName || '—'}<br />
                 http://downflower.co.kr
               </td>
             </tr>
             <tr>
               <td>발주화원</td>
-              <td>다운플라워</td>
-              <td>TEL: 1855-4400</td>
+              <td>{order.orderingCompanyName || '—'}</td>
+              <td>TEL: {order.orderingCompanyPhone || '—'}</td>
             </tr>
             <tr>
               <td>수주화원</td>
