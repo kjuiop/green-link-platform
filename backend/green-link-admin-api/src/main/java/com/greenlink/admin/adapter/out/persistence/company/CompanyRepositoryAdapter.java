@@ -4,6 +4,8 @@ import com.greenlink.core.domain.company.model.Company;
 import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -56,7 +58,7 @@ public class CompanyRepositoryAdapter implements CompanyRepository {
 
     @Override
     public List<Company> findAllByType(CompanyType type) {
-        return jpaRepository.findByType(type).stream()
+        return jpaRepository.findByTypeAndDisplayYnTrue(type).stream()
             .map(CompanyJpaEntity::toDomain)
             .toList();
     }
@@ -64,5 +66,11 @@ public class CompanyRepositoryAdapter implements CompanyRepository {
     @Override
     public Optional<Company> findByCompanyName(String companyName) {
         return jpaRepository.findByCompanyName(companyName).map(CompanyJpaEntity::toDomain);
+    }
+
+    @Override
+    public Page<Company> findAllDisplayed(Pageable pageable) {
+        return jpaRepository.findAllByDisplayYnTrue(pageable)
+            .map(CompanyJpaEntity::toDomain);
     }
 }

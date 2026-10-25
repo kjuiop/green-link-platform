@@ -40,6 +40,9 @@ public class CompanyJpaEntity extends BaseJpaEntity {
     @Column(nullable = false, length = 20)
     private CompanyStatus status;
 
+    @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
+    private boolean displayYn = true;
+
     protected CompanyJpaEntity() {}
 
     public static CompanyJpaEntity from(Company company) {
@@ -54,10 +57,11 @@ public class CompanyJpaEntity extends BaseJpaEntity {
         e.detailAddress = company.getDetailAddress();
         e.type = company.getType();
         e.status = company.getStatus();
+        e.displayYn = company.isDisplayYn();
         return e;
     }
 
     public Company toDomain() {
-        return Company.of(id, businessNo, companyName, ceoName, phone, address, detailAddress, type, status);
+        return Company.of(id, businessNo, companyName, ceoName, phone, address, detailAddress, type, status, displayYn);
     }
 }

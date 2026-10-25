@@ -47,7 +47,7 @@ class AdminLoginServiceTest {
     }
 
     private Company vendorCompany() {
-        return Company.of(1L, null, "테스트업체", null, null, null, null, CompanyType.VENDOR, CompanyStatus.ACTIVE);
+        return Company.of(1L, null, "테스트업체", null, null, null, null, CompanyType.VENDOR, CompanyStatus.ACTIVE, true);
     }
 
     @Test
