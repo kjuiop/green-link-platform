@@ -27,7 +27,8 @@ const STATUS_TO_API: Partial<Record<OrderStatus, string>> = {
   '주문취소': 'CANCELLED',
 }
 
-const SERVER_FIELD_MAP: Partial<Record<SearchField, keyof OrderSearchParams>> = {
+type StringOrderSearchKey = { [K in keyof OrderSearchParams]: OrderSearchParams[K] extends string | undefined ? K : never }[keyof OrderSearchParams]
+const SERVER_FIELD_MAP: Partial<Record<SearchField, StringOrderSearchKey>> = {
   '주문번호': 'orderNumber',
   '주문자': 'ordererName',
   '보내는분': 'ribbonLeft',
@@ -93,6 +94,8 @@ export default function OrdersPage() {
   const [applied2Field, setApplied2Field] = useState<SearchField>('수주사명')
   const [applied2Value, setApplied2Value] = useState('')
 
+  const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
+
   function buildServerParams(): OrderSearchParams {
     const params: OrderSearchParams = {}
     if (statusFilter !== 'ALL') params.status = STATUS_TO_API[statusFilter]
@@ -103,6 +106,7 @@ export default function OrdersPage() {
     if (key1 && search1Value) params[key1] = search1Value
     const key2 = SERVER_FIELD_MAP[search2Field]
     if (key2 && search2Value) params[key2] = search2Value
+    if (isSuperAdmin && deletedFilter === '삭제') params.deleted = true
     return params
   }
 
@@ -251,15 +255,16 @@ export default function OrdersPage() {
             onChange={(e) => setDateTo(e.target.value)}
             className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
           />
-          <select
-            value={deletedFilter}
-            onChange={(e) => setDeletedFilter(e.target.value as DeletedFilter)}
-            className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-          >
-            <option value="정상">정상</option>
-            <option value="삭제">삭제</option>
-            <option value="전체">전체</option>
-          </select>
+          {isSuperAdmin && (
+            <select
+              value={deletedFilter}
+              onChange={(e) => setDeletedFilter(e.target.value as DeletedFilter)}
+              className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+            >
+              <option value="정상">정상</option>
+              <option value="삭제">삭제</option>
+            </select>
+          )}
         </div>
 
         {/* 검색 조건 2쌍 */}

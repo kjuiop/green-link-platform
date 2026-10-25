@@ -6,6 +6,7 @@ import com.greenlink.core.application.order.dto.OrderResult;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.application.order.dto.UpdateOrderCommand;
 import com.greenlink.core.application.order.usecase.CreateOrderUseCase;
+import com.greenlink.core.application.order.usecase.DeleteOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
@@ -48,7 +49,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
-        GetOrdersUseCase, UpdateOrderUseCase, UpdateOrderStatusUseCase {
+        GetOrdersUseCase, UpdateOrderUseCase, UpdateOrderStatusUseCase, DeleteOrderUseCase {
 
     private static final Map<OrderStatus, String> STATUS_LABEL = Map.of(
             OrderStatus.PENDING,   "발주대기",
@@ -277,7 +278,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 referencePhotoCount,
                 receipt != null,
                 receipt != null ? receipt.getReceiverName() : null,
-                receipt != null ? receipt.getReceiverRelation() : null
+                receipt != null ? receipt.getReceiverRelation() : null,
+                order.isDeleted()
         );
     }
 
@@ -431,6 +433,16 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                                 .map(Company::getCompanyName)
                                 .orElse(null))
                 .orElse(null);
+    }
+
+    @Override
+    @Transactional
+    public void deleteOrder(Long id) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+        order.softDelete();
+        orderRepository.save(order);
+        recordOrderHistoryUseCase.record(id, OrderHistoryAction.STATUS_CHANGED, "주문서 삭제");
     }
 
     private String resolveVendorPhone(Long vendorId) {

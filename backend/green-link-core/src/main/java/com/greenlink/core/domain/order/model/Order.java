@@ -38,6 +38,7 @@ public class Order {
     private String vendorMemo;
     private String completedAt;
     private String createdAt;
+    private boolean isDeleted;
 
     private Order() {}
 
@@ -148,7 +149,8 @@ public class Order {
             String adminMemo,
             String vendorMemo,
             String completedAt,
-            String createdAt
+            String createdAt,
+            boolean isDeleted
     ) {
         Order o = new Order();
         o.id = id;
@@ -187,6 +189,7 @@ public class Order {
         o.vendorMemo = vendorMemo;
         o.completedAt = completedAt;
         o.createdAt = createdAt;
+        o.isDeleted = isDeleted;
         return o;
     }
 
@@ -217,6 +220,10 @@ public class Order {
         }
         this.status = OrderStatus.DELIVERED;
         this.completedAt = completedAt;
+    }
+
+    public void softDelete() {
+        this.isDeleted = true;
     }
 
     public void updateInfo(
@@ -319,4 +326,5 @@ public class Order {
     public String getVendorMemo() { return vendorMemo; }
     public String getCompletedAt() { return completedAt; }
     public String getCreatedAt() { return createdAt; }
+    public boolean isDeleted() { return isDeleted; }
 }
