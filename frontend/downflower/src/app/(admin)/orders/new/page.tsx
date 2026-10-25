@@ -138,6 +138,7 @@ export default function NewOrderPage() {
       const created = await createOrder({
         vendorId: Number(vendorId),
         ...(isSuperAdmin && orderingCompanyId ? { orderingCompanyId: Number(orderingCompanyId) } : {}),
+        ...(selectedProductId && selectedProductId !== '__direct__' ? { productId: Number(selectedProductId) } : {}),
         productName,
         quantity,
         amount: Number(amount),

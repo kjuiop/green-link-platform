@@ -2,6 +2,7 @@ package com.greenlink.core.application.order.dto;
 
 public record UpdateOrderCommand(
         Long vendorId,
+        Long productId,
         String productName,
         int quantity,
         long amount,

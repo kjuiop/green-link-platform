@@ -19,6 +19,7 @@ type BackendOrder = {
   orderingCompanyId: number | null
   orderingCompanyName: string | null
   status: string
+  productId: number | null
   productName: string
   quantity: number
   amount: number
@@ -55,6 +56,7 @@ type BackendOrder = {
 export type CreateOrderPayload = {
   vendorId: number
   orderingCompanyId?: number
+  productId?: number
   productName: string
   quantity: number
   amount: number
@@ -106,6 +108,7 @@ function toFrontend(o: BackendOrder): Order {
     orderingCompanyId: o.orderingCompanyId != null ? String(o.orderingCompanyId) : undefined,
     orderingCompanyName: o.orderingCompanyName ?? undefined,
     status: STATUS_MAP[o.status] ?? '발주대기',
+    productId: o.productId ?? undefined,
     productName: o.productName,
     quantity: o.quantity,
     amount: o.amount,

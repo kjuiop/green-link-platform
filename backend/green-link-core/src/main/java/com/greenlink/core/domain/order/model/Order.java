@@ -7,6 +7,7 @@ public class Order {
     private Long vendorId;
     private Long orderingCompanyId;
     private OrderStatus status;
+    private Long productId;
     private String productName;
     private int quantity;
     private long amount;
@@ -44,6 +45,7 @@ public class Order {
             Long vendorId,
             Long orderingCompanyId,
             String orderNumber,
+            Long productId,
             String productName,
             int quantity,
             long amount,
@@ -78,6 +80,7 @@ public class Order {
         o.orderingCompanyId = orderingCompanyId;
         o.orderNumber = orderNumber;
         o.status = OrderStatus.PENDING;
+        o.productId = productId;
         o.productName = productName;
         o.quantity = quantity;
         o.amount = amount;
@@ -115,6 +118,7 @@ public class Order {
             Long vendorId,
             Long orderingCompanyId,
             OrderStatus status,
+            Long productId,
             String productName,
             int quantity,
             long amount,
@@ -152,6 +156,7 @@ public class Order {
         o.vendorId = vendorId;
         o.orderingCompanyId = orderingCompanyId;
         o.status = status;
+        o.productId = productId;
         o.productName = productName;
         o.quantity = quantity;
         o.amount = amount;
@@ -216,6 +221,7 @@ public class Order {
 
     public void updateInfo(
             Long vendorId,
+            Long productId,
             String productName,
             int quantity,
             long amount,
@@ -249,6 +255,7 @@ public class Order {
             throw new IllegalStateException("발주대기 상태에서만 주문 수정이 가능합니다. 현재 상태: " + this.status);
         }
         this.vendorId = vendorId;
+        this.productId = productId;
         this.productName = productName;
         this.quantity = quantity;
         this.amount = amount;
@@ -284,6 +291,7 @@ public class Order {
     public Long getVendorId() { return vendorId; }
     public Long getOrderingCompanyId() { return orderingCompanyId; }
     public OrderStatus getStatus() { return status; }
+    public Long getProductId() { return productId; }
     public String getProductName() { return productName; }
     public int getQuantity() { return quantity; }
     public long getAmount() { return amount; }

@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 public record CreateOrderRequest(
         @NotNull Long vendorId,
         Long orderingCompanyId,
+        Long productId,
         @NotBlank String productName,
         @NotNull Integer quantity,
         @NotNull Long amount,
@@ -40,6 +41,7 @@ public record CreateOrderRequest(
         return new CreateOrderCommand(
                 vendorId,
                 orderingCompanyId,
+                productId,
                 productName,
                 quantity,
                 amount,
