@@ -45,5 +45,6 @@ public record OrderResult(
         int referencePhotoCount,
         boolean hasReceipt,
         String receiptReceiverName,
-        String receiptReceiverRelation
+        String receiptReceiverRelation,
+        boolean isDeleted
 ) {}

@@ -99,6 +99,11 @@ public class OrderQueryRepository {
         if (condition.ribbonLeft() != null && !condition.ribbonLeft().isBlank()) {
             where.and(order.ribbonLeft.containsIgnoreCase(condition.ribbonLeft()));
         }
+        if (Boolean.TRUE.equals(condition.deleted())) {
+            where.and(order.isDeleted.isTrue());
+        } else {
+            where.and(order.isDeleted.isFalse());
+        }
         if (condition.messageStatus() != null && !condition.messageStatus().isBlank()) {
             QSmsMessageJpaEntity sms = QSmsMessageJpaEntity.smsMessageJpaEntity;
             switch (condition.messageStatus()) {
