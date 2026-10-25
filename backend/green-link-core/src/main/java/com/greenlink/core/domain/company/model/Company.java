@@ -11,6 +11,7 @@ public class Company {
     private String detailAddress;
     private CompanyType type;
     private CompanyStatus status;
+    private boolean displayYn;
 
     private Company() {}
 
@@ -26,12 +27,13 @@ public class Company {
         c.detailAddress = detailAddress;
         c.type = type;
         c.status = CompanyStatus.ACTIVE;
+        c.displayYn = true;
         return c;
     }
 
     public static Company of(Long id, String businessNo, String companyName,
                               String ceoName, String phone, String address, String detailAddress,
-                              CompanyType type, CompanyStatus status) {
+                              CompanyType type, CompanyStatus status, boolean displayYn) {
         Company c = new Company();
         c.id = id;
         c.businessNo = businessNo;
@@ -42,6 +44,7 @@ public class Company {
         c.detailAddress = detailAddress;
         c.type = type;
         c.status = status;
+        c.displayYn = displayYn;
         return c;
     }
 
@@ -70,4 +73,5 @@ public class Company {
     public String getDetailAddress() { return detailAddress; }
     public CompanyType getType() { return type; }
     public CompanyStatus getStatus() { return status; }
+    public boolean isDisplayYn() { return displayYn; }
 }

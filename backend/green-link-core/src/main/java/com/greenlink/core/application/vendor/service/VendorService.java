@@ -201,8 +201,9 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
         if (businessNo != null && companyRepository.existsByBusinessNo(businessNo)) {
             Company existing = companyRepository.findByBusinessNo(businessNo)
                 .orElseThrow(() -> new BusinessException(VendorErrorCode.VENDOR_NOT_FOUND));
+            CompanyType prevType = existing.getType();
             existing.expandType(requestedType);
-            savedCompany = companyRepository.save(existing);
+            savedCompany = existing.getType() != prevType ? companyRepository.save(existing) : existing;
         } else {
             Company company = Company.create(
                 businessNo,
