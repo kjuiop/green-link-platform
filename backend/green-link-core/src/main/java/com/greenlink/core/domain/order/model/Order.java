@@ -251,9 +251,6 @@ public class Order {
             String adminMemo,
             String vendorMemo
     ) {
-        if (this.status != OrderStatus.PENDING) {
-            throw new IllegalStateException("발주대기 상태에서만 주문 수정이 가능합니다. 현재 상태: " + this.status);
-        }
         this.vendorId = vendorId;
         this.productId = productId;
         this.productName = productName;
