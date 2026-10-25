@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { VendorOrderStatusBadge, MessageStatusBadge, DeliveryTimeTypeBadge, AcceptOrderBadge } from '@/components/common/StatusBadge'
+import { MessageStatusBadge, DeliveryTimeTypeBadge, AcceptOrderBadge } from '@/components/common/StatusBadge'
 import { fetchOrders, updateOrderStatus } from '@/lib/api/orderApi'
 import { getDeliveryDateRowBg } from '@/lib/utils'
 import { Order, OrderStatus } from '@/types/order'

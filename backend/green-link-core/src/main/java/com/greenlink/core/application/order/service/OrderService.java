@@ -154,8 +154,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     public List<OrderResult> getOrders(OrderSearchCondition condition) {
         List<Order> orders = orderRepository.search(condition);
         Map<Long, VendorInfo> infoMap = buildVendorInfoMap();
-        Map<Long, String> orderingNameMap = buildOrderingCompanyNameMap();
-        Map<Long, String> orderingPhoneMap = buildOrderingCompanyPhoneMap();
+        Map<Long, OrderingInfo> orderingInfoMap = buildOrderingCompanyInfoMap();
         List<Long> orderIds = orders.stream().map(Order::getId).toList();
         Map<Long, String> msgStatusMap = buildMessageStatusMap(orderIds);
         Map<Long, Long> refCountMap = orderIds.isEmpty() ? Map.of() : referencePhotoRepository.countByOrderIds(orderIds);
@@ -163,10 +162,9 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         return orders.stream()
                 .map(o -> {
                     VendorInfo v = infoMap.get(o.getVendorId());
-                    String orderingName = o.getOrderingCompanyId() != null ? orderingNameMap.get(o.getOrderingCompanyId()) : null;
-                    String orderingPhone = o.getOrderingCompanyId() != null ? orderingPhoneMap.get(o.getOrderingCompanyId()) : null;
+                    OrderingInfo oi = o.getOrderingCompanyId() != null ? orderingInfoMap.get(o.getOrderingCompanyId()) : null;
                     int refCount = refCountMap.getOrDefault(o.getId(), 0L).intValue();
-                    return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, orderingName, orderingPhone, msgStatusMap.get(o.getId()), refCount, receiptMap.get(o.getId()));
+                    return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, msgStatusMap.get(o.getId()), refCount, receiptMap.get(o.getId()));
                 })
                 .toList();
     }
@@ -175,23 +173,23 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     public PageResult<OrderResult> getOrdersPaged(OrderSearchCondition condition, Pageable pageable) {
         Page<Order> page = orderRepository.searchPaged(condition, pageable);
         Map<Long, VendorInfo> infoMap = buildVendorInfoMap();
-        Map<Long, String> orderingNameMap = buildOrderingCompanyNameMap();
-        Map<Long, String> orderingPhoneMap = buildOrderingCompanyPhoneMap();
+        Map<Long, OrderingInfo> orderingInfoMap = buildOrderingCompanyInfoMap();
         List<Long> orderIds = page.getContent().stream().map(Order::getId).toList();
         Map<Long, String> msgStatusMap = buildMessageStatusMap(orderIds);
         Map<Long, Long> refCountMap = orderIds.isEmpty() ? Map.of() : referencePhotoRepository.countByOrderIds(orderIds);
         Map<Long, ReceiptConfirmation> receiptMap = buildReceiptMap(orderIds);
         Page<OrderResult> resultPage = page.map(o -> {
             VendorInfo v = infoMap.get(o.getVendorId());
-            String orderingName = o.getOrderingCompanyId() != null ? orderingNameMap.get(o.getOrderingCompanyId()) : null;
-            String orderingPhone = o.getOrderingCompanyId() != null ? orderingPhoneMap.get(o.getOrderingCompanyId()) : null;
+            OrderingInfo oi = o.getOrderingCompanyId() != null ? orderingInfoMap.get(o.getOrderingCompanyId()) : null;
             int refCount = refCountMap.getOrDefault(o.getId(), 0L).intValue();
-            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, orderingName, orderingPhone, msgStatusMap.get(o.getId()), refCount, receiptMap.get(o.getId()));
+            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, msgStatusMap.get(o.getId()), refCount, receiptMap.get(o.getId()));
         });
         return PageResult.of(resultPage);
     }
 
     private record VendorInfo(String name, String phone) {}
+
+    private record OrderingInfo(String name, String phone) {}
 
     private Map<Long, VendorInfo> buildVendorInfoMap() {
         List<Admin> adminsWithCompany = adminRepository.findAllVendors();
@@ -218,14 +216,9 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         return result;
     }
 
-    private Map<Long, String> buildOrderingCompanyNameMap() {
+    private Map<Long, OrderingInfo> buildOrderingCompanyInfoMap() {
         return companyRepository.findAllByType(com.greenlink.core.domain.company.model.CompanyType.ORDERING).stream()
-                .collect(Collectors.toMap(Company::getId, Company::getCompanyName));
-    }
-
-    private Map<Long, String> buildOrderingCompanyPhoneMap() {
-        return companyRepository.findAllByType(com.greenlink.core.domain.company.model.CompanyType.ORDERING).stream()
-                .collect(Collectors.toMap(Company::getId, c -> c.getPhone() != null ? c.getPhone() : ""));
+                .collect(Collectors.toMap(Company::getId, c -> new OrderingInfo(c.getCompanyName(), c.getPhone())));
     }
 
     private String resolveOrderingCompanyName(Long orderingCompanyId) {

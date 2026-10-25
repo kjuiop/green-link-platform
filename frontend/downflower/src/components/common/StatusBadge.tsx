@@ -72,6 +72,7 @@ export function AcceptOrderBadge({
 }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const badge = variant === 'vendor'
     ? <VendorOrderStatusBadge status={status} />
@@ -83,26 +84,32 @@ export function AcceptOrderBadge({
     <>
       <button
         type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen(true) }}
+        onClick={(e) => { e.stopPropagation(); setError(null); setOpen(true) }}
         className="cursor-pointer focus:outline-none"
       >
         {badge}
       </button>
-      <AlertDialog open={open} onOpenChange={(v) => { if (!loading) setOpen(v) }}>
+      <AlertDialog open={open} onOpenChange={(v) => { if (!loading) { setOpen(v); if (!v) setError(null) } }}>
         <AlertDialogContent size="sm">
           <AlertDialogHeader>
             <AlertDialogTitle>수주 승인</AlertDialogTitle>
             <AlertDialogDescription>수주를 승인하시겠습니까?</AlertDialogDescription>
           </AlertDialogHeader>
+          {error && (
+            <p className="px-1 text-sm text-red-500">{error}</p>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={loading}>취소</AlertDialogCancel>
             <AlertDialogAction
               onClick={async (e) => {
                 e.preventDefault()
                 setLoading(true)
+                setError(null)
                 try {
                   await onAccept()
                   setOpen(false)
+                } catch {
+                  setError('수주 승인에 실패했습니다. 다시 시도해 주세요.')
                 } finally {
                   setLoading(false)
                 }
