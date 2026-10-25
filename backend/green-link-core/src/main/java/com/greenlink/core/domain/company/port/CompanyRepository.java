@@ -15,6 +15,7 @@ public interface CompanyRepository {
     boolean existsByBusinessNo(String businessNo);
     List<Company> findAllByIdIn(List<Long> ids);
     List<Company> findAllByType(CompanyType type);
+    List<Company> findAllByTypeIn(List<CompanyType> types);
     Optional<Company> findByCompanyName(String companyName);
     Page<Company> findAllDisplayed(Pageable pageable);
 }

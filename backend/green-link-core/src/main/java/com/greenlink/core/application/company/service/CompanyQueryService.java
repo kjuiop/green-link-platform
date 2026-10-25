@@ -38,6 +38,20 @@ public class CompanyQueryService implements CompanyQueryUseCase {
     }
 
     @Override
+    public List<CompanyInfo> findAllOrderingCapable() {
+        return companyRepository.findAllByTypeIn(List.of(CompanyType.ORDERING, CompanyType.BOTH)).stream()
+            .map(CompanyInfo::from)
+            .toList();
+    }
+
+    @Override
+    public List<CompanyInfo> findAllVendorCapable() {
+        return companyRepository.findAllByTypeIn(List.of(CompanyType.VENDOR, CompanyType.BOTH)).stream()
+            .map(CompanyInfo::from)
+            .toList();
+    }
+
+    @Override
     public PageResult<CompanyInfo> findAllPaged(int page, int size) {
         return PageResult.of(
             companyRepository.findAllDisplayed(PageRequest.of(page, size))
