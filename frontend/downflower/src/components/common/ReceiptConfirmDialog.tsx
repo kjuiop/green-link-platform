@@ -12,27 +12,47 @@ interface Props {
   orderNumber: string
   senderName?: string
   recipientName?: string
+  // 목록 페이지에서 사전 로딩된 값. undefined이면 마운트 시 자동 fetch
+  initialHasReceipt?: boolean
 }
 
-export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipientName }: Props) {
+export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipientName, initialHasReceipt }: Props) {
   const [formOpen, setFormOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [viewerOpen, setViewerOpen] = useState(false)
   // undefined = 아직 fetch 안함, null = fetch 완료 but 데이터 없음, object = 데이터 있음
-  const [saved, setSaved] = useState<ReceiptConfirmationResult | null | undefined>(undefined)
-  const [fetching, setFetching] = useState(true)
+  const [saved, setSaved] = useState<ReceiptConfirmationResult | null | undefined>(
+    initialHasReceipt !== undefined ? null : undefined
+  )
+  const [fetching, setFetching] = useState(initialHasReceipt === undefined)
 
   useEffect(() => {
+    if (initialHasReceipt !== undefined) return
     fetchReceiptConfirmation(orderId)
       .then(data => setSaved(data))
       .catch(() => setSaved(null))
       .finally(() => setFetching(false))
-  }, [orderId])
+  }, [orderId, initialHasReceipt])
 
   async function handleOpen(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
     if (fetching) return
+    // initialHasReceipt=true이지만 아직 full data를 fetch하지 않은 경우 lazy-load
+    if (initialHasReceipt && saved === null) {
+      setFetching(true)
+      try {
+        const data = await fetchReceiptConfirmation(orderId)
+        setSaved(data)
+        if (data) setViewerOpen(true)
+        else setFormOpen(true)
+      } catch {
+        setFormOpen(true)
+      } finally {
+        setFetching(false)
+      }
+      return
+    }
     if (saved) setViewerOpen(true)
     else setFormOpen(true)
   }
@@ -511,23 +531,20 @@ function ReceiptEditDialog({ open, onClose, onSave, orderId, orderNumber, sender
 
 // ---- 인수정보 표시 셀 (이름·관계만 표시, 버튼 없음) ----
 
-export function ReceiptInfoCell({ orderId }: { orderId: string }) {
-  const [saved, setSaved] = useState<ReceiptConfirmationResult | null | undefined>(undefined)
+interface ReceiptInfoCellProps {
+  hasReceipt?: boolean
+  receiverName?: string | null
+  receiverRelation?: string | null
+}
 
-  useEffect(() => {
-    fetchReceiptConfirmation(orderId)
-      .then(setSaved)
-      .catch(() => setSaved(null))
-  }, [orderId])
-
-  if (saved === undefined) return <span className="text-xs text-gray-300">…</span>
-  if (!saved) return <span className="text-xs text-gray-400">-</span>
+export function ReceiptInfoCell({ hasReceipt, receiverName, receiverRelation }: ReceiptInfoCellProps) {
+  if (!hasReceipt) return <span className="text-xs text-gray-400">-</span>
 
   return (
     <div className="text-xs">
-      <span className="font-medium text-gray-800">{saved.receiverName || '-'}</span>
-      {saved.receiverRelation && (
-        <span className="ml-1 text-gray-400">({saved.receiverRelation})</span>
+      <span className="font-medium text-gray-800">{receiverName || '-'}</span>
+      {receiverRelation && (
+        <span className="ml-1 text-gray-400">({receiverRelation})</span>
       )}
     </div>
   )

@@ -50,4 +50,7 @@ export interface Order {
   completedAt?: string
   isDeleted?: boolean
   referencePhotoCount?: number
+  hasReceipt?: boolean
+  receiptReceiverName?: string
+  receiptReceiverRelation?: string
 }
