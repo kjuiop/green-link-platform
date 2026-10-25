@@ -1,8 +1,13 @@
 BACKEND_DIR  := backend
 FRONTEND_DIR := frontend/downflower
 BOOT_ARGS    := --spring.profiles.active=dev,local
+SERVER_HOST  := 3.35.44.85
+SERVER_USER  := ubuntu
+SERVER_KEY   := ~/.ssh/green-link-key
+SERVER_DIR   := /home/ubuntu/green-link
 
-.PHONY: back front dev start stop db db-stop db-reset logs-back logs-front
+.PHONY: back front dev start stop db db-stop db-reset logs-back logs-front \
+        deploy-prod deploy-dev deploy-nginx stop-prod stop-dev stop-nginx sync-env
 
 # MySQL 도커 실행 + healthy 대기
 db:
@@ -56,3 +61,31 @@ logs-back:
 
 logs-front:
 	tail -f /tmp/glp/frontend.log
+
+# ── EC2 환경변수 동기화 ──────────────────────────────────────────────────────
+sync-env:
+	ssh -i $(SERVER_KEY) $(SERVER_USER)@$(SERVER_HOST) "mkdir -p $(SERVER_DIR)/logs/dev $(SERVER_DIR)/logs/prod"
+	scp -i $(SERVER_KEY) .env.dev  $(SERVER_USER)@$(SERVER_HOST):$(SERVER_DIR)/.env.dev
+	scp -i $(SERVER_KEY) .env.prod $(SERVER_USER)@$(SERVER_HOST):$(SERVER_DIR)/.env.prod
+	@echo "env files synced to $(SERVER_HOST):$(SERVER_DIR)"
+
+# ── EC2 배포 (운영) ──────────────────────────────────────────────────────────
+deploy-prod:
+	docker compose -f docker-compose.prod.yml up -d --build
+
+stop-prod:
+	docker compose -f docker-compose.prod.yml down
+
+# ── EC2 배포 (개발) ──────────────────────────────────────────────────────────
+deploy-dev:
+	docker compose -f docker-compose.dev.yml up -d --build
+
+stop-dev:
+	docker compose -f docker-compose.dev.yml down
+
+# ── Nginx ────────────────────────────────────────────────────────────────────
+deploy-nginx:
+	docker compose -f scripts/docker-compose.nginx.yml up -d
+
+stop-nginx:
+	docker compose -f scripts/docker-compose.nginx.yml down

@@ -42,3 +42,14 @@ variable "ec2_public_key_path" {
   type        = string
   default     = "~/.ssh/green-link-key.pub"
 }
+
+variable "hosted_zone_id" {
+  description = "Route 53 Hosted Zone ID"
+  type        = string
+}
+
+variable "domain_name" {
+  description = "메인 도메인"
+  type        = string
+  default     = "onurim.com"
+}
