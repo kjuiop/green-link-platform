@@ -80,8 +80,8 @@ export default function OrderingOrderDetailPage() {
 
   function startEdit() {
     setDraft({ ...order! })
-    const match = products.find((p) => p.name === order!.productName)
-    setSelectedProductId(match ? match.id : order!.productName ? '__direct__' : '')
+    const pid = order!.productId
+    setSelectedProductId(pid ? String(pid) : order!.productName ? '__direct__' : '')
     setIsEditing(true)
     setSaveError(null)
   }
@@ -98,6 +98,7 @@ export default function OrderingOrderDetailPage() {
     try {
       const updated = await updateOrder(id, {
         vendorId: Number(draft.vendorId),
+        ...(selectedProductId && selectedProductId !== '__direct__' ? { productId: Number(selectedProductId) } : {}),
         productName: draft.productName,
         quantity: draft.quantity,
         amount: draft.amount,

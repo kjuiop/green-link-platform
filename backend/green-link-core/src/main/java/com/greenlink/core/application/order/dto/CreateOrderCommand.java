@@ -3,6 +3,7 @@ package com.greenlink.core.application.order.dto;
 public record CreateOrderCommand(
         Long vendorId,
         Long orderingCompanyId,
+        Long productId,
         String productName,
         int quantity,
         long amount,

@@ -27,6 +27,9 @@ public class OrderJpaEntity extends BaseJpaEntity {
     @Column(nullable = false, length = 20)
     private OrderStatus status;
 
+    @Column(name = "product_id")
+    private Long productId;
+
     @Column(nullable = false, length = 100)
     private String productName;
 
@@ -123,6 +126,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
         e.vendorId = order.getVendorId();
         e.orderingCompanyId = order.getOrderingCompanyId();
         e.status = order.getStatus();
+        e.productId = order.getProductId();
         e.productName = order.getProductName();
         e.quantity = order.getQuantity();
         e.amount = order.getAmount();
@@ -162,6 +166,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
                 vendorId,
                 orderingCompanyId,
                 status,
+                productId,
                 productName,
                 quantity,
                 amount,
