@@ -22,6 +22,7 @@ type CreateVendorPayload = {
   phone: string
   loginId: string
   password: string
+  companyType?: string
 }
 
 type UpdateVendorPayload = {

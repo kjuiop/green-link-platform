@@ -114,7 +114,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             cmd.phone(),
             cmd.address() != null ? cmd.address() : "",
             cmd.detailAddress() != null ? cmd.detailAddress() : "",
-            CompanyType.VENDOR
+            parseCompanyType(cmd.companyType())
         );
         Company savedCompany = companyRepository.save(company);
 
@@ -153,9 +153,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
                 cmd.detailAddress() != null ? cmd.detailAddress() : ""
             );
             if (cmd.companyType() != null && !cmd.companyType().isBlank()) {
-                try {
-                    company.updateType(CompanyType.valueOf(cmd.companyType().toUpperCase()));
-                } catch (IllegalArgumentException ignored) {}
+                company.updateType(parseCompanyType(cmd.companyType()));
             }
             Company savedCompany = companyRepository.save(company);
             return toResult(savedAdmin, savedCompany);
@@ -230,13 +228,22 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
         return toResult(savedAdmin, savedCompany);
     }
 
-    private CompanyType resolveCompanyType(java.util.List<String> roles) {
+    private CompanyType resolveCompanyType(List<String> roles) {
         if (roles == null || roles.isEmpty()) return CompanyType.VENDOR;
         boolean hasOrdering = roles.contains("ORDERING");
         boolean hasVendor = roles.contains("VENDOR");
         if (hasOrdering && hasVendor) return CompanyType.BOTH;
         if (hasOrdering) return CompanyType.ORDERING;
         return CompanyType.VENDOR;
+    }
+
+    private CompanyType parseCompanyType(String companyType) {
+        if (companyType == null || companyType.isBlank()) return CompanyType.VENDOR;
+        try {
+            return CompanyType.valueOf(companyType.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return CompanyType.VENDOR;
+        }
     }
 
     private VendorResult toResult(Admin admin, Company company) {

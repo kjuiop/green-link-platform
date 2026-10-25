@@ -8,5 +8,6 @@ public record CreateVendorCommand(
     String managerName,
     String phone,
     String loginId,
-    String password
+    String password,
+    String companyType
 ) {}

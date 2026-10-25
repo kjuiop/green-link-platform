@@ -11,7 +11,8 @@ public record CreateVendorRequest(
     @NotBlank String managerName,
     @NotBlank String phone,
     @NotBlank String loginId,
-    @NotBlank String password
+    @NotBlank String password,
+    String companyType
 ) {
     public CreateVendorCommand toCommand() {
         return new CreateVendorCommand(
@@ -22,7 +23,8 @@ public record CreateVendorRequest(
             managerName,
             phone,
             loginId,
-            password
+            password,
+            companyType
         );
     }
 }

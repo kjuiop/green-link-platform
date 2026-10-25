@@ -202,6 +202,7 @@ export default function VendorsPage() {
           phone: form.phone,
           loginId: form.loginId,
           password: form.password,
+          companyType: form.companyType,
         })
       }
       load(appliedStatus, editTarget ? page : 0)
