@@ -41,5 +41,8 @@ public record OrderResult(
         String completedAt,
         String createdAt,
         String messageStatus,
-        int referencePhotoCount
+        int referencePhotoCount,
+        boolean hasReceipt,
+        String receiptReceiverName,
+        String receiptReceiverRelation
 ) {}

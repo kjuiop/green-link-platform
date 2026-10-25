@@ -12,6 +12,8 @@ import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
 import com.greenlink.core.domain.receipt.port.ReceiptConfirmationRepository;
+import com.greenlink.core.domain.referencephoto.port.ReferencePhotoRepository;
+import com.greenlink.core.domain.sms.port.SmsMessageRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,8 +21,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,6 +44,9 @@ class OrderServiceTest {
     @Mock RecordOrderHistoryUseCase recordOrderHistoryUseCase;
     @Mock AdminRepository adminRepository;
     @Mock CompanyRepository companyRepository;
+    @Mock SmsMessageRepository smsMessageRepository;
+    @Mock ReferencePhotoRepository referencePhotoRepository;
+    @Mock ApplicationEventPublisher eventPublisher;
 
     private OrderService service;
 
@@ -47,12 +54,13 @@ class OrderServiceTest {
     void setUp() {
         service = new OrderService(orderRepository, photoRepository,
                 receiptConfirmationRepository, recordOrderHistoryUseCase,
-                adminRepository, companyRepository);
+                adminRepository, companyRepository,
+                smsMessageRepository, referencePhotoRepository, eventPublisher);
     }
 
     private CreateOrderCommand sampleCommand() {
         return new CreateOrderCommand(
-                1L, null, "장미꽃다발", 1, 50000L, null,
+                1L, null, null, "장미꽃다발", 1, 50000L, null,
                 "2026-10-23", "FIXED", "14", "00", null,
                 "서울시 강남구", "101호", "생일", "그랜드볼룸", "A홀", null,
                 "축하합니다", "홍길동", "홍길동", "010-1234-5678",
@@ -63,7 +71,7 @@ class OrderServiceTest {
 
     private Order savedOrder(Long id, OrderStatus status) {
         return Order.of(
-                id, "DF-20261022-0001", 1L, null, status,
+                id, "DF-20261022-0001", 1L, null, status, null,
                 "장미꽃다발", 1, 50000L, null,
                 "2026-10-23", "FIXED", "14", "00", null,
                 "서울시 강남구", "101호", "생일", "그랜드볼룸", "A홀", null,
@@ -78,6 +86,9 @@ class OrderServiceTest {
         Order saved = savedOrder(1L, OrderStatus.PENDING);
         given(orderRepository.save(any(Order.class))).willReturn(saved);
         given(adminRepository.findById(1L)).willReturn(Optional.empty());
+        given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
+        given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
+        given(receiptConfirmationRepository.findByOrderId(any())).willReturn(Optional.empty());
 
         OrderResult result = service.createOrder(sampleCommand());
 
@@ -102,6 +113,9 @@ class OrderServiceTest {
         given(orderRepository.findById(1L)).willReturn(Optional.of(pending));
         given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
         given(adminRepository.findById(anyLong())).willReturn(Optional.empty());
+        given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
+        given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
+        given(receiptConfirmationRepository.findByOrderId(any())).willReturn(Optional.empty());
 
         OrderResult result = service.updateOrderStatus(1L, "accept");
 
@@ -115,6 +129,9 @@ class OrderServiceTest {
         given(orderRepository.findById(1L)).willReturn(Optional.of(pending));
         given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
         given(adminRepository.findById(anyLong())).willReturn(Optional.empty());
+        given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
+        given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
+        given(receiptConfirmationRepository.findByOrderId(any())).willReturn(Optional.empty());
 
         OrderResult result = service.updateOrderStatus(1L, "reject");
 
@@ -127,6 +144,9 @@ class OrderServiceTest {
         given(orderRepository.findById(1L)).willReturn(Optional.of(accepted));
         given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
         given(adminRepository.findById(anyLong())).willReturn(Optional.empty());
+        given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
+        given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
+        given(receiptConfirmationRepository.findByOrderId(any())).willReturn(Optional.empty());
 
         OrderResult result = service.updateOrderStatus(1L, "cancel");
 
@@ -152,6 +172,9 @@ class OrderServiceTest {
         given(receiptConfirmationRepository.existsWithPhotosByOrderId(1L)).willReturn(true);
         given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
         given(adminRepository.findById(anyLong())).willReturn(Optional.empty());
+        given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
+        given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
+        given(receiptConfirmationRepository.findByOrderId(any())).willReturn(Optional.empty());
 
         OrderResult result = service.updateOrderStatus(1L, "complete");
 
@@ -175,6 +198,9 @@ class OrderServiceTest {
         Order o = savedOrder(1L, OrderStatus.PENDING);
         given(orderRepository.search(any(OrderSearchCondition.class))).willReturn(List.of(o));
         given(adminRepository.findAllVendors()).willReturn(List.of());
+        given(smsMessageRepository.findAllByOrderIdIn(any())).willReturn(List.of());
+        given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
+        given(receiptConfirmationRepository.findAllByOrderIds(any())).willReturn(List.of());
 
         List<OrderResult> results = service.getOrders(OrderSearchCondition.of(null, null, null, null, null, null, null));
 

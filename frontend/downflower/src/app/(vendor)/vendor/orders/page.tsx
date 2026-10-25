@@ -260,6 +260,7 @@ export default function VendorOrdersPage() {
                   orderNumber={order.orderNumber}
                   senderName={order.ribbonLeft}
                   recipientName={order.recipientName}
+                  initialHasReceipt={order.hasReceipt}
                 />
               </div>
             </Link>
