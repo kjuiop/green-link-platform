@@ -13,6 +13,7 @@ export interface Order {
   vendorPhone?: string
   orderingCompanyId?: string
   orderingCompanyName?: string
+  orderingCompanyPhone?: string
   productId?: number
   productName: string
   quantity: number
