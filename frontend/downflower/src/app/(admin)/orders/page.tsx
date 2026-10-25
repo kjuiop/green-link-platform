@@ -520,7 +520,12 @@ export default function OrdersPage() {
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
-                <span>{order.deliveryAt}</span>
+                <span>
+                  {order.deliveryAt.split(' ')[0]}
+                  {order.deliveryTimeHour && ` ${String(order.deliveryTimeHour).padStart(2, '0')}:${order.deliveryTimeMinute ?? '00'}`}
+                  {order.deliveryTimeType && order.deliveryTimeType !== '직접입력' && ` ${order.deliveryTimeType}`}
+                  {order.deliveryTimeType === '직접입력' && order.deliveryTimeCustom && ` ${order.deliveryTimeCustom}`}
+                </span>
                 <span>{order.placeName}</span>
                 <span>{order.amount.toLocaleString()}원 · {order.quantity}개</span>
               </div>

@@ -2,6 +2,7 @@ package com.greenlink.admin.adapter.out.persistence.sms;
 
 import com.greenlink.admin.adapter.out.persistence.BaseJpaEntity;
 import com.greenlink.core.domain.sms.model.SmsMessage;
+import com.greenlink.core.domain.sms.model.SmsMessageType;
 import com.greenlink.core.domain.sms.model.SmsStatus;
 import jakarta.persistence.*;
 
@@ -38,6 +39,10 @@ public class SmsMessageJpaEntity extends BaseJpaEntity {
     @Column(columnDefinition = "TEXT")
     private String imageUrl;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private SmsMessageType type;
+
     protected SmsMessageJpaEntity() {}
 
     public static SmsMessageJpaEntity from(SmsMessage sms) {
@@ -51,10 +56,11 @@ public class SmsMessageJpaEntity extends BaseJpaEntity {
         e.aligoMsgId = sms.getAligoMsgId();
         e.sentAt = sms.getSentAt();
         e.imageUrl = sms.getImageUrl();
+        e.type = sms.getType() != null ? sms.getType() : SmsMessageType.DELIVERY;
         return e;
     }
 
     public SmsMessage toDomain() {
-        return SmsMessage.of(id, orderId, receiver, message, status, failReason, aligoMsgId, sentAt, imageUrl);
+        return SmsMessage.of(id, orderId, receiver, message, status, failReason, aligoMsgId, sentAt, imageUrl, type);
     }
 }

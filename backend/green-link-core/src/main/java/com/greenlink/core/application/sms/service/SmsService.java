@@ -6,8 +6,10 @@ import com.greenlink.core.application.sms.dto.SmsResult;
 import com.greenlink.core.application.sms.usecase.GetSmsMessagesUseCase;
 import com.greenlink.core.application.sms.usecase.ResendMmsUseCase;
 import com.greenlink.core.application.sms.usecase.SendDeliveryMmsUseCase;
+import com.greenlink.core.application.sms.usecase.SendOrderNotificationUseCase;
 import com.greenlink.core.domain.order.model.Order;
 import com.greenlink.core.domain.order.port.OrderRepository;
+import org.springframework.beans.factory.annotation.Value;
 import com.greenlink.core.domain.sms.model.SmsMessage;
 import com.greenlink.core.domain.sms.model.SmsStatus;
 import com.greenlink.core.domain.sms.port.SmsClient;
@@ -26,12 +28,15 @@ import java.util.Collections;
 import java.util.List;
 
 @Service
-public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, GetSmsMessagesUseCase {
+public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, GetSmsMessagesUseCase, SendOrderNotificationUseCase {
 
     private final OrderRepository orderRepository;
     private final SmsMessageRepository smsMessageRepository;
     private final SmsClient smsClient;
     private final SmsSettingsRepository smsSettingsRepository;
+
+    @Value("${app.portal-base-url:}")
+    private String portalBaseUrl;
 
     public SmsService(OrderRepository orderRepository,
                       SmsMessageRepository smsMessageRepository,
@@ -111,6 +116,70 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         return PageResult.of(smsMessageRepository.findAll(pageable).map(this::toResult));
     }
 
+    @Override
+    @Transactional
+    public void notify(Long orderId, String vendorPhone, String vendorName, String orderingCompanyName) {
+        if (vendorPhone == null || vendorPhone.isBlank()) return;
+        try {
+            Order order = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+
+            SmsSettings settings = smsSettingsRepository.get();
+            String sender = settings.getSenderNumber();
+            String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            String msg = buildNotificationMessage(order, vendorName, orderingCompanyName);
+
+            SmsMessage smsMessage = SmsMessage.createNotification(orderId, vendorPhone, msg);
+            try {
+                SmsResult result = smsClient.send(vendorPhone, msg, null, sender);
+                if (result.success()) {
+                    smsMessage.markSuccess(result.msgId(), now);
+                } else {
+                    smsMessage.markFail(result.failReason(), now);
+                }
+            } catch (Exception e) {
+                smsMessage.markFail(e.getMessage(), now);
+            }
+            smsMessageRepository.save(smsMessage);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(SmsService.class)
+                    .error("[발주 알림 SMS 실패] orderId={}, error={}", orderId, e.getMessage(), e);
+        }
+    }
+
+    private String buildNotificationMessage(Order order, String vendorName, String orderingCompanyName) {
+        String deliveryInfo = order.getDeliveryDate() != null ? order.getDeliveryDate() : "-";
+        if (order.getDeliveryTimeCustom() != null && !order.getDeliveryTimeCustom().isBlank()) {
+            deliveryInfo += " " + order.getDeliveryTimeCustom();
+        } else if (order.getDeliveryTimeHour() != null && order.getDeliveryTimeMinute() != null) {
+            deliveryInfo += " " + order.getDeliveryTimeHour() + ":" + order.getDeliveryTimeMinute();
+        }
+        String address = order.getAddress() != null ? order.getAddress() : "-";
+        if (order.getAddressDetail() != null && !order.getAddressDetail().isBlank()) {
+            address += " " + order.getAddressDetail();
+        }
+        String link = (portalBaseUrl != null && !portalBaseUrl.isBlank())
+                ? portalBaseUrl + "/vendor/orders/" + order.getId()
+                : "/vendor/orders/" + order.getId();
+
+        String orderingLine = (orderingCompanyName != null && !orderingCompanyName.isBlank())
+                ? "발주사: " + orderingCompanyName + "\n" : "";
+        String vendorLine = (vendorName != null && !vendorName.isBlank())
+                ? "수주업체: " + vendorName + "\n" : "";
+
+        return "[온우림] 새 발주가 접수되었습니다.\n\n"
+                + "주문번호: " + order.getOrderNumber() + "\n"
+                + orderingLine
+                + vendorLine
+                + "주문자: " + order.getOrdererName() + " / " + order.getOrdererPhone() + "\n"
+                + "배송지: " + address + "\n"
+                + "배송요구일: " + deliveryInfo + "\n"
+                + "상품명: " + order.getProductName() + " / " + order.getQuantity() + "개\n"
+                + "발주금액: " + String.format("%,d", order.getAmount()) + "원\n\n"
+                + "수주 확인 및 승인/거절:\n"
+                + link;
+    }
+
     private void sendAndRecord(Long orderId, String receiver, String msg, String imageUrl, String sender, String sentAt) {
         SmsMessage smsMessage = SmsMessage.create(orderId, receiver, msg, imageUrl);
         try {
@@ -144,7 +213,8 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     private SmsMessageResult toResult(SmsMessage m) {
         return new SmsMessageResult(
                 m.getId(), m.getOrderId(), m.getReceiver(),
-                m.getMessage(), m.getStatus().name(), m.getFailReason(), m.getAligoMsgId(), m.getSentAt(), m.getImageUrl()
+                m.getMessage(), m.getStatus().name(), m.getFailReason(), m.getAligoMsgId(), m.getSentAt(), m.getImageUrl(),
+                m.getType() != null ? m.getType().name() : "DELIVERY"
         );
     }
 }

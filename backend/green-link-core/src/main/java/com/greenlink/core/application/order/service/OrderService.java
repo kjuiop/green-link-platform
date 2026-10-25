@@ -27,6 +27,8 @@ import com.greenlink.core.domain.sms.model.SmsStatus;
 import com.greenlink.core.domain.sms.port.SmsMessageRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
+import com.greenlink.core.application.order.event.OrderCreatedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -62,13 +64,15 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     private final CompanyRepository companyRepository;
     private final SmsMessageRepository smsMessageRepository;
     private final ReferencePhotoRepository referencePhotoRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public OrderService(OrderRepository orderRepository, PhotoRepository photoRepository,
                         ReceiptConfirmationRepository receiptConfirmationRepository,
                         RecordOrderHistoryUseCase recordOrderHistoryUseCase,
                         AdminRepository adminRepository, CompanyRepository companyRepository,
                         SmsMessageRepository smsMessageRepository,
-                        ReferencePhotoRepository referencePhotoRepository) {
+                        ReferencePhotoRepository referencePhotoRepository,
+                        ApplicationEventPublisher eventPublisher) {
         this.orderRepository = orderRepository;
         this.photoRepository = photoRepository;
         this.receiptConfirmationRepository = receiptConfirmationRepository;
@@ -77,6 +81,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         this.companyRepository = companyRepository;
         this.smsMessageRepository = smsMessageRepository;
         this.referencePhotoRepository = referencePhotoRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -124,6 +129,14 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Order saved = orderRepository.save(order);
         recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.CREATED,
                 "발주 등록: " + saved.getOrderNumber());
+
+        String vendorPhone = resolveVendorPhone(saved.getVendorId());
+        if (vendorPhone != null && !vendorPhone.isBlank()) {
+            String vendorName = resolveVendorName(saved.getVendorId());
+            String orderingCompanyName = resolveOrderingCompanyName(saved.getOrderingCompanyId());
+            eventPublisher.publishEvent(new OrderCreatedEvent(saved.getId(), vendorPhone, vendorName, orderingCompanyName));
+        }
+
         return toResult(saved);
     }
 

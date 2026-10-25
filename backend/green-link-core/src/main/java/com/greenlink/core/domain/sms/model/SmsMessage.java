@@ -11,6 +11,7 @@ public class SmsMessage {
     private String aligoMsgId;
     private String sentAt;
     private String imageUrl;
+    private SmsMessageType type;
 
     private SmsMessage() {}
 
@@ -21,12 +22,24 @@ public class SmsMessage {
         m.message = message;
         m.status = SmsStatus.FAIL;
         m.imageUrl = imageUrl;
+        m.type = SmsMessageType.DELIVERY;
+        return m;
+    }
+
+    public static SmsMessage createNotification(Long orderId, String receiver, String message) {
+        SmsMessage m = new SmsMessage();
+        m.orderId = orderId;
+        m.receiver = receiver;
+        m.message = message;
+        m.status = SmsStatus.FAIL;
+        m.type = SmsMessageType.ORDER_NOTIFY;
         return m;
     }
 
     public static SmsMessage of(Long id, Long orderId, String receiver,
                                  String message, SmsStatus status, String failReason,
-                                 String aligoMsgId, String sentAt, String imageUrl) {
+                                 String aligoMsgId, String sentAt, String imageUrl,
+                                 SmsMessageType type) {
         SmsMessage m = new SmsMessage();
         m.id = id;
         m.orderId = orderId;
@@ -37,6 +50,7 @@ public class SmsMessage {
         m.aligoMsgId = aligoMsgId;
         m.sentAt = sentAt;
         m.imageUrl = imageUrl;
+        m.type = type != null ? type : SmsMessageType.DELIVERY;
         return m;
     }
 
@@ -61,4 +75,5 @@ public class SmsMessage {
     public String getAligoMsgId() { return aligoMsgId; }
     public String getSentAt() { return sentAt; }
     public String getImageUrl() { return imageUrl; }
+    public SmsMessageType getType() { return type; }
 }

@@ -48,7 +48,8 @@ public class AligoSmsClient implements SmsClient {
                     body.add("msg_type", "SMS");
                 }
             } else {
-                body.add("msg_type", "SMS");
+                boolean isLong = msg.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 90;
+                body.add("msg_type", isLong ? "LMS" : "SMS");
             }
 
             HttpHeaders headers = new HttpHeaders();
