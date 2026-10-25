@@ -223,7 +223,7 @@ export default function VendorOrdersPage() {
                     <button
                       type="button"
                       title="주문서 인쇄"
-                      onClick={() => window.open(`/orders/${order.id}/print`, '_blank')}
+                      onClick={() => window.open(`/orders/${order.id}/print`, '_blank', 'width=900,height=1050,resizable=yes,scrollbars=yes')}
                       className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
                     >
                       <Printer className="h-4 w-4" />
@@ -293,7 +293,7 @@ export default function VendorOrdersPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => window.open(`/orders/${order.id}/print`, '_blank')}
+                  onClick={() => window.open(`/orders/${order.id}/print`, '_blank', 'width=900,height=1050,resizable=yes,scrollbars=yes')}
                   className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
                 >
                   <Printer className="h-3.5 w-3.5" />
