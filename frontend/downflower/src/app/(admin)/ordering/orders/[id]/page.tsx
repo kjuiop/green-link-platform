@@ -102,7 +102,7 @@ export default function OrderingOrderDetailPage() {
         quantity: draft.quantity,
         amount: draft.amount,
         extraCost: draft.extraCost,
-        deliveryDate: draft.deliveryAt,
+        deliveryDate: draft.deliveryAt.slice(0, 10),
         deliveryTimeType: draft.deliveryTimeType ?? '',
         deliveryTimeHour: draft.deliveryTimeHour ?? '',
         deliveryTimeMinute: draft.deliveryTimeMinute ?? '',
@@ -434,7 +434,7 @@ export default function OrderingOrderDetailPage() {
             {isEditing ? (
               <>
                 <Field label="배송예정">
-                  <Input value={draft.deliveryAt} onChange={(e) => set('deliveryAt', e.target.value)} />
+                  <Input value={draft.deliveryAt.slice(0, 10)} onChange={(e) => set('deliveryAt', e.target.value)} />
                 </Field>
                 <Field label="주소">
                   <Input value={draft.address} onChange={(e) => set('address', e.target.value)} />
