@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Pagination } from '@/components/ui/Pagination'
-import { Vendor, VendorStatus } from '@/types/vendor'
+import { Vendor, VendorStatus, CompanyType } from '@/types/vendor'
 import { PageResult } from '@/types/page'
 import { fetchVendorsPaged, createVendor, updateVendor, updateVendorStatus } from '@/lib/api/vendorApi'
 import { Search } from 'lucide-react'
@@ -30,9 +30,21 @@ const STATUS_LABELS: Record<VendorStatus, string> = {
   PENDING: '대기',
 }
 
+const COMPANY_TYPE_OPTIONS: { value: CompanyType; label: string }[] = [
+  { value: 'VENDOR', label: '수주사' },
+  { value: 'ORDERING', label: '발주사' },
+  { value: 'BOTH', label: '둘 다' },
+]
+
+const COMPANY_TYPE_LABELS: Record<CompanyType, string> = {
+  VENDOR: '수주사',
+  ORDERING: '발주사',
+  BOTH: '발주+수주',
+}
+
 const emptyForm = {
   name: '', businessNumber: '', managerName: '', phone: '',
-  address: '', loginId: '', password: '',
+  address: '', loginId: '', password: '', companyType: 'VENDOR' as CompanyType,
 }
 
 function formatPhone(value: string) {
@@ -159,6 +171,7 @@ export default function VendorsPage() {
       address: vendor.address,
       loginId: vendor.loginId,
       password: '',
+      companyType: (vendor.companyType as CompanyType) ?? 'VENDOR',
     })
     setModalError('')
     setModalOpen(true)
@@ -178,6 +191,7 @@ export default function VendorsPage() {
           address: form.address,
           managerName: form.managerName,
           phone: form.phone,
+          companyType: form.companyType,
         })
       } else {
         await createVendor({
@@ -273,6 +287,7 @@ export default function VendorsPage() {
                 />
               </TableHead>
               <TableHead>업체명</TableHead>
+              <TableHead>업체유형</TableHead>
               <TableHead>담당자명</TableHead>
               <TableHead>연락처</TableHead>
               <TableHead>주소</TableHead>
@@ -283,13 +298,13 @@ export default function VendorsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -308,6 +323,15 @@ export default function VendorsPage() {
                     <button onClick={() => openEdit(vendor)} className="font-medium text-blue-700 hover:underline">
                       {vendor.name}
                     </button>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      vendor.companyType === 'ORDERING' ? 'bg-blue-100 text-blue-700' :
+                      vendor.companyType === 'BOTH' ? 'bg-purple-100 text-purple-700' :
+                      'bg-green-100 text-green-700'
+                    }`}>
+                      {vendor.companyType ? COMPANY_TYPE_LABELS[vendor.companyType as CompanyType] : '수주사'}
+                    </span>
                   </TableCell>
                   <TableCell className="text-sm">{vendor.managerName}</TableCell>
                   <TableCell className="text-sm">{vendor.phone}</TableCell>
@@ -381,6 +405,15 @@ export default function VendorsPage() {
                 </select>
               </div>
               <div className="mt-1.5 space-y-0.5 text-xs text-gray-500">
+                <div className="flex items-center gap-1.5">
+                  <span className={`rounded-full px-1.5 py-0.5 text-xs font-medium ${
+                    vendor.companyType === 'ORDERING' ? 'bg-blue-100 text-blue-700' :
+                    vendor.companyType === 'BOTH' ? 'bg-purple-100 text-purple-700' :
+                    'bg-green-100 text-green-700'
+                  }`}>
+                    {vendor.companyType ? COMPANY_TYPE_LABELS[vendor.companyType as CompanyType] : '수주사'}
+                  </span>
+                </div>
                 <div>{vendor.managerName} · {vendor.phone}</div>
                 {vendor.address && <div className="truncate">{vendor.address}</div>}
                 <div className="font-mono text-gray-400">{vendor.loginId}</div>
@@ -409,6 +442,28 @@ export default function VendorsPage() {
             <DialogTitle>{editTarget ? `${editTarget.name} 수정` : '업체 등록'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>업체유형 *</Label>
+              <div className="flex gap-2">
+                {COMPANY_TYPE_OPTIONS.map((opt) => (
+                  <label key={opt.value} className={`flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border-2 px-3 py-2 text-sm font-medium transition-colors ${
+                    form.companyType === opt.value
+                      ? 'border-green-600 bg-green-50 text-green-800'
+                      : 'border-gray-200 text-gray-600 hover:border-green-300'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="companyType"
+                      value={opt.value}
+                      checked={form.companyType === opt.value}
+                      onChange={() => setForm((f) => ({ ...f, companyType: opt.value }))}
+                      className="sr-only"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
             <div className="space-y-1.5">
               <Label>업체명 *</Label>
               <Input placeholder="업체명" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />

@@ -6,5 +6,6 @@ public record UpdateVendorCommand(
     String address,
     String detailAddress,
     String managerName,
-    String phone
+    String phone,
+    String companyType
 ) {}
