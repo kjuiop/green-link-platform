@@ -98,7 +98,7 @@ export default function NewOrderPage() {
   const [submitError, setSubmitError] = useState('')
 
   useEffect(() => {
-    fetchVendors('ACTIVE').then(setVendors).catch(() => {})
+    fetchVendors('ACTIVE').then((list) => setVendors(list.filter((v) => v.companyType !== 'ORDERING'))).catch(() => {})
     fetchAllProducts().then(setProducts).catch(() => {})
     const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null
     if (role === 'SUPER_ADMIN') {
