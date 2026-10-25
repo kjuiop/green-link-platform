@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ClipboardCheck, Upload, X, Images, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { fetchReceiptConfirmation, saveReceiptConfirmation, updateReceiptInfo, ReceiptConfirmationResult } from '@/lib/api/orderApi'
+import { fetchReceiptConfirmation, saveReceiptConfirmation, updateReceiptInfo, updateOrderStatus, ReceiptConfirmationResult } from '@/lib/api/orderApi'
 
 interface Props {
   orderId: string
@@ -14,9 +14,10 @@ interface Props {
   recipientName?: string
   // 목록 페이지에서 사전 로딩된 값. undefined이면 마운트 시 자동 fetch
   initialHasReceipt?: boolean
+  onDeliveryComplete?: () => void
 }
 
-export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipientName, initialHasReceipt }: Props) {
+export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipientName, initialHasReceipt, onDeliveryComplete }: Props) {
   const [formOpen, setFormOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [viewerOpen, setViewerOpen] = useState(false)
@@ -119,6 +120,7 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
           open={formOpen}
           onClose={() => setFormOpen(false)}
           onSave={handleSave}
+          onDeliveryComplete={onDeliveryComplete}
           orderId={orderId}
           orderNumber={orderNumber}
           senderName={senderName}
@@ -144,6 +146,7 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSave={handleSave}
+        onDeliveryComplete={onDeliveryComplete}
         orderId={orderId}
         orderNumber={orderNumber}
         senderName={senderName}
@@ -159,13 +162,14 @@ interface FormDialogProps {
   open: boolean
   onClose: () => void
   onSave: (result: ReceiptConfirmationResult) => void
+  onDeliveryComplete?: () => void
   orderId: string
   orderNumber: string
   senderName?: string
   recipientName?: string
 }
 
-function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, senderName, recipientName }: FormDialogProps) {
+function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId, orderNumber, senderName, recipientName }: FormDialogProps) {
   const [sitePhotoFiles, setSitePhotoFiles] = useState<{ id: string; file: File; url: string }[]>([])
   const [storePhotoFiles, setStorePhotoFiles] = useState<{ id: string; file: File; url: string }[]>([])
   const [receiverName, setReceiverName] = useState('')
@@ -219,6 +223,14 @@ function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, sender
   }
 
   async function handleSave() {
+    if (!receiverName.trim()) {
+      setError('인수자 이름을 입력해주세요.')
+      return
+    }
+    if (!receiverRelation.trim()) {
+      setError('관계를 입력해주세요.')
+      return
+    }
     if (sitePhotoFiles.length === 0) {
       setError('현장사진을 1장 이상 업로드해주세요.')
       return
@@ -234,7 +246,13 @@ function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, sender
       )
       sitePhotoFiles.forEach((p) => URL.revokeObjectURL(p.url))
       storePhotoFiles.forEach((p) => URL.revokeObjectURL(p.url))
+      try {
+        await updateOrderStatus(orderId, 'complete', result.sitePhotoUrls)
+      } catch {
+        // 이미 배송완료 상태인 경우 무시
+      }
       onSave(result)
+      onDeliveryComplete?.()
     } catch (e) {
       setError(e instanceof Error ? e.message : '저장에 실패했습니다.')
     } finally {
@@ -382,7 +400,7 @@ function ReceiptFormDialog({ open, onClose, onSave, orderId, orderNumber, sender
         )}
 
         <Button className="w-full bg-green-700 hover:bg-green-800" disabled={saving} onClick={handleSave}>
-          {saving ? '저장 중…' : '저장하기'}
+          {saving ? '처리 중…' : '배송완료'}
         </Button>
       </DialogContent>
     </Dialog>
@@ -470,6 +488,34 @@ function ReceiptEditDialog({ open, onClose, onSave, orderId, orderNumber, sender
             <col />
           </colgroup>
           <tbody className="divide-y">
+            {current.sitePhotoUrls.length > 0 && (
+              <tr>
+                <td className="px-3 py-2.5 align-top text-gray-500">현장사진</td>
+                <td colSpan={3} className="px-3 py-2.5">
+                  <div className="flex flex-wrap gap-2">
+                    {current.sitePhotoUrls.map((url, idx) => (
+                      <div key={idx} className="h-16 w-16 overflow-hidden rounded border">
+                        <img src={url} alt="현장사진" className="h-full w-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                </td>
+              </tr>
+            )}
+            {current.storePhotoUrls.length > 0 && (
+              <tr>
+                <td className="px-3 py-2.5 align-top text-gray-500">매장사진</td>
+                <td colSpan={3} className="px-3 py-2.5">
+                  <div className="flex flex-wrap gap-2">
+                    {current.storePhotoUrls.map((url, idx) => (
+                      <div key={idx} className="h-16 w-16 overflow-hidden rounded border">
+                        <img src={url} alt="매장사진" className="h-full w-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                </td>
+              </tr>
+            )}
             <tr>
               <td className="px-3 py-2.5 text-gray-500">인수자</td>
               <td className="px-3 py-2.5">

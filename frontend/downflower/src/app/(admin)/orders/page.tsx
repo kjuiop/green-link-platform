@@ -30,6 +30,7 @@ const STATUS_TO_API: Partial<Record<OrderStatus, string>> = {
 const SERVER_FIELD_MAP: Partial<Record<SearchField, keyof OrderSearchParams>> = {
   '주문번호': 'orderNumber',
   '주문자': 'ordererName',
+  '보내는분': 'ribbonLeft',
   '인수자': 'receiverName',
 }
 
@@ -367,6 +368,7 @@ export default function OrdersPage() {
               <TableHead>주문번호</TableHead>
               <TableHead><div>배송요구일</div><div className="font-normal text-gray-400">주문접수일</div></TableHead>
               <TableHead><div>주문자</div><div className="font-normal text-gray-400">받는분</div></TableHead>
+              <TableHead>보내는이</TableHead>
               <TableHead>수주업체</TableHead>
               <TableHead><div>상품명</div><div className="font-normal text-gray-400">배송지</div></TableHead>
               <TableHead>수량</TableHead>
@@ -380,13 +382,13 @@ export default function OrdersPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={12} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={13} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={12} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={13} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -432,6 +434,7 @@ export default function OrdersPage() {
                     <div className="text-sm">{order.ordererName}</div>
                     {order.recipientName && <div className="text-sm text-gray-400">{order.recipientName}</div>}
                   </TableCell>
+                  <TableCell className="text-sm">{order.ribbonLeft || '—'}</TableCell>
                   <TableCell className="text-sm text-gray-700">{order.vendorName || '—'}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm">

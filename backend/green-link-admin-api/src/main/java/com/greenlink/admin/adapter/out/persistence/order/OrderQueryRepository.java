@@ -96,6 +96,9 @@ public class OrderQueryRepository {
                             .and(receipt.receiverName.containsIgnoreCase(condition.receiverName())))
                     .exists());
         }
+        if (condition.ribbonLeft() != null && !condition.ribbonLeft().isBlank()) {
+            where.and(order.ribbonLeft.containsIgnoreCase(condition.ribbonLeft()));
+        }
         if (condition.messageStatus() != null && !condition.messageStatus().isBlank()) {
             QSmsMessageJpaEntity sms = QSmsMessageJpaEntity.smsMessageJpaEntity;
             switch (condition.messageStatus()) {

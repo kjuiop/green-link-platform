@@ -675,12 +675,42 @@ export default function OrderingOrderDetailPage() {
         {/* 인수확인 */}
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle className="text-sm">인수확인</CardTitle></CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3 text-sm">
+            {receiptConfirmation?.receiverName ? (
+              <div className="space-y-2">
+                <Row label="인수자" value={receiptConfirmation.receiverName} />
+                {receiptConfirmation.receiverRelation && (
+                  <Row label="관계" value={receiptConfirmation.receiverRelation} />
+                )}
+                <Row label="배송완료" value={receiptConfirmation.delivered ? '확인' : '미확인'} />
+                {receiptConfirmation.confirmedAt && (
+                  <Row label="확인일시" value={receiptConfirmation.confirmedAt} />
+                )}
+                {receiptConfirmation.memo && (
+                  <Row label="메모" value={receiptConfirmation.memo} />
+                )}
+              </div>
+            ) : (
+              <p className="text-gray-400">인수확인 정보가 없습니다.</p>
+            )}
             <ReceiptConfirmButton
               orderId={order.id}
               orderNumber={order.orderNumber}
               senderName={order.ribbonLeft}
               recipientName={order.recipientName}
+              onDeliveryComplete={async () => {
+                try {
+                  const [updated, receipt, sms] = await Promise.all([
+                    fetchOrder(id),
+                    fetchReceiptConfirmation(id).catch(() => null),
+                    fetchSmsMessages(id).catch(() => []),
+                  ])
+                  setOrder(updated)
+                  setDraft(updated)
+                  setReceiptConfirmation(receipt)
+                  setSmsMessages(sms)
+                } catch {}
+              }}
             />
           </CardContent>
         </Card>
