@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { VendorOrderStatusBadge, MessageStatusBadge, DeliveryTimeTypeBadge } from '@/components/common/StatusBadge'
-import { fetchOrders } from '@/lib/api/orderApi'
+import { VendorOrderStatusBadge, MessageStatusBadge, DeliveryTimeTypeBadge, AcceptOrderBadge } from '@/components/common/StatusBadge'
+import { fetchOrders, updateOrderStatus } from '@/lib/api/orderApi'
 import { getDeliveryDateRowBg } from '@/lib/utils'
 import { Order, OrderStatus } from '@/types/order'
 import Link from 'next/link'
-import { Search } from 'lucide-react'
+import { Search, Printer } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 
@@ -166,18 +166,19 @@ export default function VendorOrdersPage() {
               <TableHead>주문상태</TableHead>
               <TableHead>문자발송</TableHead>
               <TableHead>발주일시</TableHead>
+              <TableHead>인쇄</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={10} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={10} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -206,9 +207,28 @@ export default function VendorOrdersPage() {
                   </TableCell>
                   <TableCell><DeliveryTimeTypeBadge type={order.deliveryTimeType} custom={order.deliveryTimeCustom} /></TableCell>
                   <TableCell className="text-sm">{order.completedAt ?? '-'}</TableCell>
-                  <TableCell><VendorOrderStatusBadge status={order.status} /></TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <AcceptOrderBadge
+                      status={order.status}
+                      variant="vendor"
+                      onAccept={async () => {
+                        const updated = await updateOrderStatus(order.id, 'accept')
+                        setOrders(prev => prev.map(o => o.id === updated.id ? updated : o))
+                      }}
+                    />
+                  </TableCell>
                   <TableCell><MessageStatusBadge status={order.messageStatus} /></TableCell>
                   <TableCell className="text-sm text-gray-400">{order.orderedAt}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      title="주문서 인쇄"
+                      onClick={() => window.open(`/orders/${order.id}/print`, '_blank')}
+                      className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                    >
+                      <Printer className="h-4 w-4" />
+                    </button>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -243,7 +263,16 @@ export default function VendorOrdersPage() {
                   <div className="mt-0.5 text-xs text-gray-500">{order.placeName} {order.roomName}</div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <VendorOrderStatusBadge status={order.status} />
+                  <div onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                    <AcceptOrderBadge
+                      status={order.status}
+                      variant="vendor"
+                      onAccept={async () => {
+                        const updated = await updateOrderStatus(order.id, 'accept')
+                        setOrders(prev => prev.map(o => o.id === updated.id ? updated : o))
+                      }}
+                    />
+                  </div>
                   <DeliveryTimeTypeBadge type={order.deliveryTimeType} custom={order.deliveryTimeCustom} />
                 </div>
               </div>
@@ -254,7 +283,7 @@ export default function VendorOrdersPage() {
               <div className="mt-1.5">
                 <MessageStatusBadge status={order.messageStatus} />
               </div>
-              <div className="mt-2" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+              <div className="mt-2 flex items-center justify-between" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
                 <ReceiptConfirmButton
                   orderId={order.id}
                   orderNumber={order.orderNumber}
@@ -262,6 +291,14 @@ export default function VendorOrdersPage() {
                   recipientName={order.recipientName}
                   initialHasReceipt={order.hasReceipt}
                 />
+                <button
+                  type="button"
+                  onClick={() => window.open(`/orders/${order.id}/print`, '_blank')}
+                  className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  인쇄
+                </button>
               </div>
             </Link>
           ))

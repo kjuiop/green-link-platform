@@ -1,5 +1,18 @@
+'use client'
+
+import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { OrderStatus, MessageStatus, DeliveryType, DeliveryTimeType } from '@/types/order'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 const orderStatusConfig: Record<OrderStatus, { label: string; className: string }> = {
   '발주대기': { label: '발주대기', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
@@ -45,6 +58,63 @@ export function MessageStatusBadge({ status }: { status: MessageStatus }) {
     <Badge variant="outline" className={config.className}>
       {config.label}
     </Badge>
+  )
+}
+
+export function AcceptOrderBadge({
+  status,
+  variant = 'admin',
+  onAccept,
+}: {
+  status: OrderStatus
+  variant?: 'admin' | 'vendor'
+  onAccept: () => Promise<void>
+}) {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const badge = variant === 'vendor'
+    ? <VendorOrderStatusBadge status={status} />
+    : <OrderStatusBadge status={status} />
+
+  if (status !== '발주대기') return badge
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen(true) }}
+        className="cursor-pointer focus:outline-none"
+      >
+        {badge}
+      </button>
+      <AlertDialog open={open} onOpenChange={(v) => { if (!loading) setOpen(v) }}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>수주 승인</AlertDialogTitle>
+            <AlertDialogDescription>수주를 승인하시겠습니까?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async (e) => {
+                e.preventDefault()
+                setLoading(true)
+                try {
+                  await onAccept()
+                  setOpen(false)
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              disabled={loading}
+            >
+              {loading ? '처리 중…' : '승인'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 
