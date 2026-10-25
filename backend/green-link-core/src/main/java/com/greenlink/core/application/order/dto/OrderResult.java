@@ -9,6 +9,7 @@ public record OrderResult(
         Long orderingCompanyId,
         String orderingCompanyName,
         String status,
+        Long productId,
         String productName,
         int quantity,
         long amount,

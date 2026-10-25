@@ -80,8 +80,8 @@ export default function OrderingOrderDetailPage() {
 
   function startEdit() {
     setDraft({ ...order! })
-    const match = products.find((p) => p.name === order!.productName)
-    setSelectedProductId(match ? match.id : order!.productName ? '__direct__' : '')
+    const pid = order!.productId
+    setSelectedProductId(pid ? String(pid) : order!.productName ? '__direct__' : '')
     setIsEditing(true)
     setSaveError(null)
   }
