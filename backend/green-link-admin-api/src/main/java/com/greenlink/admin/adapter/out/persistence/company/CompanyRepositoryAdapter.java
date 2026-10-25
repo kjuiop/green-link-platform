@@ -64,6 +64,13 @@ public class CompanyRepositoryAdapter implements CompanyRepository {
     }
 
     @Override
+    public List<Company> findAllByTypeIn(List<CompanyType> types) {
+        return jpaRepository.findByTypeInAndDisplayYnTrue(types).stream()
+            .map(CompanyJpaEntity::toDomain)
+            .toList();
+    }
+
+    @Override
     public Optional<Company> findByCompanyName(String companyName) {
         return jpaRepository.findByCompanyName(companyName).map(CompanyJpaEntity::toDomain);
     }

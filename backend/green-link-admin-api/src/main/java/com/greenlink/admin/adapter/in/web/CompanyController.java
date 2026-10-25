@@ -30,15 +30,13 @@ public class CompanyController {
 
     @GetMapping
     public ResponseEntity<List<CompanyInfo>> list(@RequestParam(required = false) String type) {
-        if (type != null && !type.isBlank()) {
-            try {
-                CompanyType companyType = CompanyType.valueOf(type.toUpperCase());
-                return ResponseEntity.ok(companyQueryUseCase.findAllByType(companyType));
-            } catch (IllegalArgumentException e) {
-                return ResponseEntity.badRequest().build();
-            }
+        if ("ORDERING".equalsIgnoreCase(type)) {
+            return ResponseEntity.ok(companyQueryUseCase.findAllOrderingCapable());
         }
-        return ResponseEntity.ok(companyQueryUseCase.findAllByType(CompanyType.ORDERING));
+        if ("VENDOR".equalsIgnoreCase(type)) {
+            return ResponseEntity.ok(companyQueryUseCase.findAllVendorCapable());
+        }
+        return ResponseEntity.ok(companyQueryUseCase.findAllOrderingCapable());
     }
 
     @GetMapping("/paged")

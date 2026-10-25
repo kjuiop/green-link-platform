@@ -10,6 +10,8 @@ import java.util.Optional;
 public interface CompanyQueryUseCase {
     Optional<CompanyInfo> findByBusinessNo(String businessNo);
     List<CompanyInfo> findAllByType(CompanyType type);
+    List<CompanyInfo> findAllOrderingCapable();
+    List<CompanyInfo> findAllVendorCapable();
     PageResult<CompanyInfo> findAllPaged(int page, int size);
     void updateCompanyType(Long id, String type);
 }

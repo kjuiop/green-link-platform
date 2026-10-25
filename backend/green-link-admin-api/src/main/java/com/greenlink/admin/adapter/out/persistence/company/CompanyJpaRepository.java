@@ -13,6 +13,7 @@ public interface CompanyJpaRepository extends JpaRepository<CompanyJpaEntity, Lo
     boolean existsByBusinessNo(String businessNo);
     List<CompanyJpaEntity> findByIdIn(List<Long> ids);
     List<CompanyJpaEntity> findByTypeAndDisplayYnTrue(CompanyType type);
+    List<CompanyJpaEntity> findByTypeInAndDisplayYnTrue(List<CompanyType> types);
     Optional<CompanyJpaEntity> findByCompanyName(String companyName);
     Page<CompanyJpaEntity> findAllByDisplayYnTrue(Pageable pageable);
 }
