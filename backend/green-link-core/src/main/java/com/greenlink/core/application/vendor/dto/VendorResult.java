@@ -10,5 +10,6 @@ public record VendorResult(
     String detailAddress,
     String loginId,
     String status,
-    String createdAt
+    String createdAt,
+    String companyType
 ) {}

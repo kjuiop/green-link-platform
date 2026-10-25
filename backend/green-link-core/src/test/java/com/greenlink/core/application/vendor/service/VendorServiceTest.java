@@ -19,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,7 +47,7 @@ class VendorServiceTest {
 
     private Company savedCompany(Long id) {
         return Company.of(id, "123-45-67890", "테스트꽃집", "홍대표", "02-1234-5678",
-                "서울시 강남구", "101호", CompanyType.VENDOR, CompanyStatus.ACTIVE);
+                "서울시 강남구", "101호", CompanyType.VENDOR, CompanyStatus.ACTIVE, true);
     }
 
     private Admin savedAdmin(Long id, Long companyId, AdminStatus status) {
@@ -61,7 +62,7 @@ class VendorServiceTest {
         given(adminRepository.existsByLoginId("vendor01")).willReturn(true);
 
         assertThatThrownBy(() -> service.createVendor(
-                new CreateVendorCommand("테스트꽃집", "123-45-67890", "서울", "", "홍길동", "010-0000-0000", "vendor01", "pw")))
+                new CreateVendorCommand("테스트꽃집", "123-45-67890", "서울", "", "홍길동", "010-0000-0000", "vendor01", "pw", "VENDOR")))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(VendorErrorCode.DUPLICATE_LOGIN_ID));
@@ -75,7 +76,7 @@ class VendorServiceTest {
         given(companyRepository.existsByBusinessNo("123-45-67890")).willReturn(true);
 
         assertThatThrownBy(() -> service.createVendor(
-                new CreateVendorCommand("테스트꽃집", "123-45-67890", "서울", "", "홍길동", "010-0000-0000", "vendor01", "pw")))
+                new CreateVendorCommand("테스트꽃집", "123-45-67890", "서울", "", "홍길동", "010-0000-0000", "vendor01", "pw", "VENDOR")))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(VendorErrorCode.DUPLICATE_BUSINESS_NO));
@@ -90,7 +91,7 @@ class VendorServiceTest {
         given(adminRepository.save(any(Admin.class))).willReturn(savedAdmin(2L, 1L, AdminStatus.ACTIVE));
 
         VendorResult result = service.createVendor(
-                new CreateVendorCommand("테스트꽃집", "123-45-67890", "서울", "", "홍길동", "010-0000-0000", "vendor01", "pw"));
+                new CreateVendorCommand("테스트꽃집", "123-45-67890", "서울", "", "홍길동", "010-0000-0000", "vendor01", "pw", "VENDOR"));
 
         assertThat(result.id()).isEqualTo(2L);
         assertThat(result.companyName()).isEqualTo("테스트꽃집");
@@ -105,7 +106,7 @@ class VendorServiceTest {
 
         assertThatThrownBy(() -> service.signup(
                 new VendorSignupCommand("vendor01", "pw", "홍길동", "010-0000-0000",
-                        "123-45-67890", "테스트꽃집", "홍대표", "02-1234-5678", "서울", "")))
+                        "123-45-67890", "테스트꽃집", "홍대표", "02-1234-5678", "서울", "", List.of("VENDOR"))))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(VendorErrorCode.DUPLICATE_LOGIN_ID));
@@ -122,7 +123,7 @@ class VendorServiceTest {
 
         VendorResult result = service.signup(
                 new VendorSignupCommand("vendor01", "pw", "홍길동", "010-0000-0000",
-                        "123-45-67890", "테스트꽃집", "홍대표", "02-1234-5678", "서울", ""));
+                        "123-45-67890", "테스트꽃집", "홍대표", "02-1234-5678", "서울", "", List.of("VENDOR")));
 
         // 기존 company 연결 — 신규 company 저장 없음
         verify(companyRepository, never()).save(any());
@@ -139,7 +140,7 @@ class VendorServiceTest {
 
         VendorResult result = service.signup(
                 new VendorSignupCommand("vendor01", "pw", "홍길동", "010-0000-0000",
-                        "999-88-77777", "새꽃집", "김대표", "02-0000-0000", "부산", ""));
+                        "999-88-77777", "새꽃집", "김대표", "02-0000-0000", "부산", "", List.of("VENDOR")));
 
         verify(companyRepository).save(any(Company.class));
         assertThat(result.status()).isEqualTo("PENDING");

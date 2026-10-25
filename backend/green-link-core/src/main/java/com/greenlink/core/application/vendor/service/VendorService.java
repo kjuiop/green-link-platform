@@ -114,7 +114,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             cmd.phone(),
             cmd.address() != null ? cmd.address() : "",
             cmd.detailAddress() != null ? cmd.detailAddress() : "",
-            CompanyType.VENDOR
+            parseCompanyType(cmd.companyType())
         );
         Company savedCompany = companyRepository.save(company);
 
@@ -152,6 +152,9 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
                 cmd.address() != null ? cmd.address() : "",
                 cmd.detailAddress() != null ? cmd.detailAddress() : ""
             );
+            if (cmd.companyType() != null && !cmd.companyType().isBlank()) {
+                company.updateType(parseCompanyType(cmd.companyType()));
+            }
             Company savedCompany = companyRepository.save(company);
             return toResult(savedAdmin, savedCompany);
         }
@@ -192,10 +195,15 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
         String businessNo = (cmd.businessNo() != null && !cmd.businessNo().isBlank())
             ? cmd.businessNo() : null;
 
+        CompanyType requestedType = resolveCompanyType(cmd.roles());
+
         Company savedCompany;
         if (businessNo != null && companyRepository.existsByBusinessNo(businessNo)) {
-            savedCompany = companyRepository.findByBusinessNo(businessNo)
+            Company existing = companyRepository.findByBusinessNo(businessNo)
                 .orElseThrow(() -> new BusinessException(VendorErrorCode.VENDOR_NOT_FOUND));
+            CompanyType prevType = existing.getType();
+            existing.expandType(requestedType);
+            savedCompany = existing.getType() != prevType ? companyRepository.save(existing) : existing;
         } else {
             Company company = Company.create(
                 businessNo,
@@ -204,7 +212,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
                 cmd.companyPhone() != null ? cmd.companyPhone() : cmd.phone(),
                 cmd.address() != null ? cmd.address() : "",
                 cmd.detailAddress() != null ? cmd.detailAddress() : "",
-                CompanyType.VENDOR
+                requestedType
             );
             savedCompany = companyRepository.save(company);
         }
@@ -221,6 +229,24 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
         return toResult(savedAdmin, savedCompany);
     }
 
+    private CompanyType resolveCompanyType(List<String> roles) {
+        if (roles == null || roles.isEmpty()) return CompanyType.VENDOR;
+        boolean hasOrdering = roles.contains("ORDERING");
+        boolean hasVendor = roles.contains("VENDOR");
+        if (hasOrdering && hasVendor) return CompanyType.BOTH;
+        if (hasOrdering) return CompanyType.ORDERING;
+        return CompanyType.VENDOR;
+    }
+
+    private CompanyType parseCompanyType(String companyType) {
+        if (companyType == null || companyType.isBlank()) return CompanyType.VENDOR;
+        try {
+            return CompanyType.valueOf(companyType.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return CompanyType.VENDOR;
+        }
+    }
+
     private VendorResult toResult(Admin admin, Company company) {
         return new VendorResult(
             admin.getId(),
@@ -232,7 +258,8 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             company != null ? company.getDetailAddress() : null,
             admin.getLoginId(),
             admin.getStatus().name(),
-            admin.getCreatedAt()
+            admin.getCreatedAt(),
+            company != null && company.getType() != null ? company.getType().name() : null
         );
     }
 }
