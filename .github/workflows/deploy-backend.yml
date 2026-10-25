@@ -1,4 +1,4 @@
-name: Deploy Backend
+name: Deploy Backend (dev)
 
 on:
   push:
@@ -34,7 +34,7 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Set image tag
-        run: echo "IMAGE_TAG=1.0.${{ github.run_number }}" >> $GITHUB_ENV
+        run: echo "IMAGE_TAG=dev-${{ github.run_number }}" >> $GITHUB_ENV
 
       - name: Grant execute permission for gradlew
         run: chmod +x backend/gradlew
@@ -68,7 +68,7 @@ jobs:
         run: |
           TAG=${{ env.IMAGE_TAG }}
           DOCKER_IMAGE="${{ secrets.DOCKER_HUB_USERNAME }}/green-link-admin-api:$TAG"
-          CONTAINER_NAME="green-link-admin-api"
+          CONTAINER_NAME="green-link-backend-dev"
 
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
@@ -77,14 +77,13 @@ jobs:
               'TAG=$TAG',
               'DOCKER_IMAGE=$DOCKER_IMAGE',
               'CONTAINER_NAME=$CONTAINER_NAME',
-              'echo \">>> 배포 시작: \$DOCKER_IMAGE\"',
-              'PREV_TAG=\$(docker inspect --format=\"{{.Config.Image}}\" \$CONTAINER_NAME 2>/dev/null | cut -d: -f2 || echo \"\")',
+              'echo \">>> 배포 시작 (dev): \$DOCKER_IMAGE\"',
               'if ! docker pull \$DOCKER_IMAGE; then echo \">>> pull 실패\"; exit 1; fi',
               'docker stop \$CONTAINER_NAME 2>/dev/null || true',
               'docker rm \$CONTAINER_NAME 2>/dev/null || true',
-              'if ! docker run -d --name \$CONTAINER_NAME --env-file /home/ubuntu/green-link/.env.server -e SPRING_PROFILES_ACTIVE=dev -v /home/ubuntu/green-link/logs:/app/logs -p 8080:8080 --restart always \$DOCKER_IMAGE; then echo \">>> 컨테이너 시작 실패\"; exit 1; fi',
-              'echo \">>> 배포 완료: \$DOCKER_IMAGE\"',
-              'docker images ${{ secrets.DOCKER_HUB_USERNAME }}/green-link-admin-api --format \"{{.Tag}}\" | grep -v \"^\$TAG\$\" | xargs -r -I{} docker rmi ${{ secrets.DOCKER_HUB_USERNAME }}/green-link-admin-api:{} 2>/dev/null || true',
+              'if ! docker run -d --name \$CONTAINER_NAME --env-file /home/ubuntu/green-link/.env.dev -e SPRING_PROFILES_ACTIVE=dev -v /home/ubuntu/green-link/logs/dev:/app/logs -p 127.0.0.1:8081:8080 --restart always \$DOCKER_IMAGE; then echo \">>> 컨테이너 시작 실패\"; exit 1; fi',
+              'echo \">>> 배포 완료 (dev): \$DOCKER_IMAGE\"',
+              'docker images ${{ secrets.DOCKER_HUB_USERNAME }}/green-link-admin-api --format \"{{.Tag}}\" | grep -v \"^\$TAG\$\" | grep \"^dev-\" | xargs -r -I{} docker rmi ${{ secrets.DOCKER_HUB_USERNAME }}/green-link-admin-api:{} 2>/dev/null || true',
               'echo \">>> 이미지 정리 완료\"'
             ]" \
             --query "Command.CommandId" \

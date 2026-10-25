@@ -3,8 +3,8 @@
 # EC2 에서 1회 실행: bash scripts/certbot-init.sh
 set -e
 
-DOMAIN_PROD="www.onurim.com"
-DOMAIN_DEV="dev.onurim.com"
+DOMAIN_PROD="api.onurim.com"
+DOMAIN_DEV="dev-api.onurim.com"
 EMAIL="arneg0shua@gmail.com"
 
 # certbot 설치 (없는 경우)
