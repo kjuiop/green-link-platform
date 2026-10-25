@@ -12,7 +12,6 @@ public interface CompanyJpaRepository extends JpaRepository<CompanyJpaEntity, Lo
     Optional<CompanyJpaEntity> findByBusinessNo(String businessNo);
     boolean existsByBusinessNo(String businessNo);
     List<CompanyJpaEntity> findByIdIn(List<Long> ids);
-    List<CompanyJpaEntity> findByType(CompanyType type);
     List<CompanyJpaEntity> findByTypeAndDisplayYnTrue(CompanyType type);
     Optional<CompanyJpaEntity> findByCompanyName(String companyName);
     Page<CompanyJpaEntity> findAllByDisplayYnTrue(Pageable pageable);

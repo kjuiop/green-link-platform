@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @Service
@@ -48,7 +49,7 @@ public class CompanyQueryService implements CompanyQueryUseCase {
     @Transactional
     public void updateCompanyType(Long id, String type) {
         Company company = companyRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("업체를 찾을 수 없습니다: " + id));
+            .orElseThrow(() -> new NoSuchElementException("업체를 찾을 수 없습니다: " + id));
         company.updateType(CompanyType.valueOf(type.toUpperCase()));
         companyRepository.save(company);
     }
