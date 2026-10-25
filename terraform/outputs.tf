@@ -17,3 +17,23 @@ output "ssh_command" {
   description = "EC2 SSH 접속 명령어"
   value       = "ssh -i ~/.ssh/green-link-key ubuntu@${aws_eip.backend.public_ip}"
 }
+
+output "frontend_prod_url" {
+  description = "운영 프론트엔드 URL (Vercel)"
+  value       = "https://www.${var.domain_name}"
+}
+
+output "frontend_dev_url" {
+  description = "개발 프론트엔드 URL (Vercel)"
+  value       = "https://dev.${var.domain_name}"
+}
+
+output "backend_prod_url" {
+  description = "운영 백엔드 API URL (EC2)"
+  value       = "https://api.${var.domain_name}"
+}
+
+output "backend_dev_url" {
+  description = "개발 백엔드 API URL (EC2)"
+  value       = "https://dev-api.${var.domain_name}"
+}

@@ -1,0 +1,11 @@
+services:
+  backend-prod:
+    image: ${DOCKER_IMAGE:-kjuiop/green-link-admin-api:latest}
+    container_name: green-link-backend-prod
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - .env.prod
+    volumes:
+      - ./logs/prod:/app/logs
+    restart: always

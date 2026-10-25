@@ -1,0 +1,11 @@
+services:
+  backend-dev:
+    image: ${DOCKER_IMAGE:-kjuiop/green-link-admin-api:latest}
+    container_name: green-link-backend-dev
+    ports:
+      - "127.0.0.1:8081:8080"
+    env_file:
+      - .env.dev
+    volumes:
+      - ./logs/dev:/app/logs
+    restart: always
