@@ -16,7 +16,7 @@ public record UpdateOrderRequest(
         String deliveryTimeHour,
         String deliveryTimeMinute,
         String deliveryTimeCustom,
-        @NotBlank String address,
+        String address,
         String addressDetail,
         String eventType,
         String placeName,

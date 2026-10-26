@@ -486,22 +486,41 @@ export default function OrderingOrderDetailPage() {
                     ))}
                   </div>
                 </Field>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label={draft.eventType === '장례식' ? '장례식장명' : draft.eventType === '결혼식' ? '예식장명' : '행사명'}>
-                    <Input
-                      placeholder={draft.eventType === '장례식' ? '예: 한독병원장례식장' : draft.eventType === '결혼식' ? '예: 더파티움 강남' : '예: 창립기념식'}
-                      value={draft.placeName ?? ''}
-                      onChange={(e) => set('placeName', e.target.value)}
-                    />
-                  </Field>
-                  <Field label={draft.eventType === '장례식' ? '빈소' : draft.eventType === '결혼식' ? '홀' : '장소'}>
-                    <Input
-                      placeholder={draft.eventType === '장례식' ? '예: 무궁화실' : draft.eventType === '결혼식' ? '예: 그랜드볼룸 A홀' : '예: 강남파이낸스센터 1층'}
-                      value={draft.roomName ?? ''}
-                      onChange={(e) => set('roomName', e.target.value)}
-                    />
-                  </Field>
-                </div>
+                {draft.eventType === '기타' ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="장소">
+                      <Input
+                        placeholder="예: 강남파이낸스센터 1층"
+                        value={draft.roomName ?? ''}
+                        onChange={(e) => set('roomName', e.target.value)}
+                      />
+                    </Field>
+                    <Field label="행사명">
+                      <Input
+                        placeholder="예: 창립기념식"
+                        value={draft.placeName ?? ''}
+                        onChange={(e) => set('placeName', e.target.value)}
+                      />
+                    </Field>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label={draft.eventType === '장례식' ? '장례식장명' : '예식장명'}>
+                      <Input
+                        placeholder={draft.eventType === '장례식' ? '예: 한독병원장례식장' : '예: 더파티움 강남'}
+                        value={draft.placeName ?? ''}
+                        onChange={(e) => set('placeName', e.target.value)}
+                      />
+                    </Field>
+                    <Field label={draft.eventType === '장례식' ? '빈소' : '홀'}>
+                      <Input
+                        placeholder={draft.eventType === '장례식' ? '예: 무궁화실' : '예: 그랜드볼룸 A홀'}
+                        value={draft.roomName ?? ''}
+                        onChange={(e) => set('roomName', e.target.value)}
+                      />
+                    </Field>
+                  </div>
+                )}
                 {draft.eventType !== '기타' && (
                   <Field label={draft.eventType === '장례식' ? '고인명' : '신랑/신부명'}>
                     <Input
