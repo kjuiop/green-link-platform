@@ -112,8 +112,7 @@ export default function NewOrderPage() {
     if (!vendorId) next.vendorId = '수주업체를 선택해주세요.'
     if (!productName.trim()) next.productName = '상품명을 입력해주세요.'
     if (!deliveryDate) next.deliveryDate = '배송날짜를 입력해주세요.'
-    if (!deliveryHour) next.deliveryHour = '배송시간을 선택해주세요.'
-    if (!address.trim()) next.address = '주소를 입력해주세요.'
+    if (!deliveryHour && deliveryTimeType !== '3시간내' && deliveryTimeType !== '직접입력') next.deliveryHour = '배송시간을 선택해주세요.'
     if (!amount) next.amount = '발주금액을 입력해주세요.'
     if (!recipientName.trim()) next.recipientName = '받는 분 성함을 입력해주세요.'
     if (!ordererPhone.trim()) next.ordererPhone = '주문자 휴대폰을 입력해주세요.'
@@ -406,19 +405,19 @@ export default function NewOrderPage() {
                 <div className="space-y-3">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label>행사명</Label>
-                      <Input
-                        placeholder="예: 주식회사 효진토건 창립기념식"
-                        value={eventHall}
-                        onChange={(e) => setEventHall(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
                       <Label>장소</Label>
                       <Input
                         placeholder="예: 강남파이낸스센터 1층"
                         value={eventRoom}
                         onChange={(e) => setEventRoom(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>행사명</Label>
+                      <Input
+                        placeholder="예: 주식회사 효진토건 창립기념식"
+                        value={eventHall}
+                        onChange={(e) => setEventHall(e.target.value)}
                       />
                     </div>
                   </div>
@@ -540,17 +539,12 @@ export default function NewOrderPage() {
             </div>
 
             <div className="space-y-1">
-              <Label>주소 *</Label>
+              <Label>주소</Label>
               <Input
                 placeholder="도로명 주소 검색"
                 value={address}
-                onChange={(e) => {
-                  setAddress(e.target.value)
-                  if (e.target.value.trim()) setErrors((prev) => ({ ...prev, address: undefined }))
-                }}
-                className={cn(errors.address && 'border-red-500 focus-visible:ring-red-500')}
+                onChange={(e) => setAddress(e.target.value)}
               />
-              {errors.address && <p className="text-xs text-red-500">{errors.address}</p>}
             </div>
             <div className="space-y-1">
               <Label>상세주소</Label>
