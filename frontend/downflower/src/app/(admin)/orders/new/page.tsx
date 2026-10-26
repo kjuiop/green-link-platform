@@ -89,7 +89,6 @@ export default function NewOrderPage() {
     productName?: string
     deliveryDate?: string
     deliveryHour?: string
-    address?: string
     amount?: string
     recipientName?: string
     ordererPhone?: string
