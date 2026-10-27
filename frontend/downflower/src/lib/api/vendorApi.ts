@@ -1,5 +1,6 @@
 import { Vendor } from '@/types/vendor'
 import { PageResult } from '@/types/page'
+import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
 type BackendVendor = {
   id: number
@@ -33,8 +34,6 @@ type UpdateVendorPayload = {
   phone: string
   companyType?: string
 }
-
-import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
 function toFrontend(v: BackendVendor): Vendor {
   return {

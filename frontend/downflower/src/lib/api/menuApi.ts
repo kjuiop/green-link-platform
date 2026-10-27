@@ -1,4 +1,5 @@
 import { MenuItem, UserRole } from '@/types/menu'
+import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
 type CreateMenuPayload = {
   name: string
@@ -14,8 +15,6 @@ type UpdateMenuPayload = {
   sortOrder: number
   roles: UserRole[]
 }
-
-import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
 export async function fetchAllMenus(): Promise<MenuItem[]> {
   const res = await fetchWithAuth('/api/menus', { headers: authHeaders() })

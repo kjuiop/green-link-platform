@@ -1,4 +1,5 @@
 import { PageResult } from '@/types/page'
+import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
 export type SmsMessage = {
   id: number
@@ -9,8 +10,6 @@ export type SmsMessage = {
   aligoMsgId: string | null
   sentAt: string
 }
-
-import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
 export async function fetchSmsMessages(): Promise<SmsMessage[]> {
   const res = await fetchWithAuth('/api/messages?page=0&size=10000', { headers: authHeaders() })

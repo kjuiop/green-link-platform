@@ -1,11 +1,11 @@
+import { authHeaders, fetchWithAuth } from './fetchWithAuth'
+
 export type AdminProfile = {
   id: number
   loginId: string
   name: string | null
   phone: string | null
 }
-
-import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
 export async function fetchAdminProfile(): Promise<AdminProfile> {
   const res = await fetchWithAuth('/api/admin/me', { headers: authHeaders() })

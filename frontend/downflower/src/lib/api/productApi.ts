@@ -1,5 +1,6 @@
 import { Product, CreateProductRequest, UpdateProductRequest } from '@/types/product'
 import { PageResult } from '@/types/page'
+import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
 type BackendProduct = {
   id: number
@@ -9,8 +10,6 @@ type BackendProduct = {
   createdAt: string
   orderingCompanyId: number | null
 }
-
-import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
 function toFrontend(p: BackendProduct): Product {
   return {

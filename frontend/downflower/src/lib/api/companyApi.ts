@@ -1,4 +1,5 @@
 import { PageResult } from '@/types/page'
+import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
 export type CompanyType = 'ORDERING' | 'VENDOR' | 'BOTH'
 export type CompanyStatus = 'ACTIVE' | 'INACTIVE'
@@ -14,8 +15,6 @@ export type CompanyInfo = {
   type: CompanyType
   status: CompanyStatus
 }
-
-import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
 export async function fetchCompaniesPaged(page = 0, size = 20): Promise<PageResult<CompanyInfo>> {
   const query = new URLSearchParams({ page: String(page), size: String(size) })
