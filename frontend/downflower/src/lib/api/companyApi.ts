@@ -15,23 +15,17 @@ export type CompanyInfo = {
   status: CompanyStatus
 }
 
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }
-}
+import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
 export async function fetchCompaniesPaged(page = 0, size = 20): Promise<PageResult<CompanyInfo>> {
   const query = new URLSearchParams({ page: String(page), size: String(size) })
-  const res = await fetch(`/api/companies/paged?${query}`, { headers: authHeaders() })
+  const res = await fetchWithAuth(`/api/companies/paged?${query}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('업체 목록을 불러오지 못했습니다.')
   return res.json()
 }
 
 export async function updateCompanyType(id: number, type: CompanyType): Promise<void> {
-  const res = await fetch(`/api/companies/${id}/type`, {
+  const res = await fetchWithAuth(`/api/companies/${id}/type`, {
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify({ type }),
