@@ -67,12 +67,12 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '수주거절', value: '수주거절' },
 ]
 
-const PAGE_SIZE_OPTIONS = [50, 100, 200, 300, 500]
+const PAGE_SIZE_OPTIONS = [10, 50, 100, 200, 300, 500]
 
 export default function OrdersPage() {
   const [result, setResult] = useState<PageResult<Order> | null>(null)
   const [page, setPage] = useState(0)
-  const [pageSize, setPageSize] = useState(100)
+  const [pageSize, setPageSize] = useState(10)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -372,10 +372,9 @@ export default function OrdersPage() {
               </TableHead>
               <TableHead>주문번호</TableHead>
               <TableHead><div>배송요구일</div><div className="font-normal text-gray-400">주문접수일</div></TableHead>
-              <TableHead><div>주문자</div><div className="font-normal text-gray-400">받는분</div></TableHead>
-              <TableHead>보내는이</TableHead>
-              <TableHead>수주업체</TableHead>
-              <TableHead><div>상품명</div><div className="font-normal text-gray-400">배송지</div></TableHead>
+              <TableHead><div>발주업체</div><div className="font-normal text-gray-400">수주업체</div></TableHead>
+              <TableHead><div>상품명</div><div className="font-normal text-gray-400">받는분</div></TableHead>
+              <TableHead><div>보내는이</div><div className="font-normal text-gray-400">배송지</div></TableHead>
               <TableHead>수량</TableHead>
               <TableHead>발주금액</TableHead>
               <TableHead>배송현황</TableHead>
@@ -437,16 +436,18 @@ export default function OrdersPage() {
                     <div className="text-sm text-gray-400">{order.orderedAt}</div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">{order.ordererName}</div>
-                    {order.recipientName && <div className="text-sm text-gray-400">{order.recipientName}</div>}
+                    <div className="text-sm">{order.orderingCompanyName || '—'}</div>
+                    <div className="text-sm text-gray-400">{order.vendorName || '—'}</div>
                   </TableCell>
-                  <TableCell className="text-sm">{order.ribbonLeft || '—'}</TableCell>
-                  <TableCell className="text-sm text-gray-700">{order.vendorName || '—'}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm">
                       <span>{order.productName}</span>
                       <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
                     </div>
+                    {order.recipientName && <div className="text-sm text-gray-400">{order.recipientName}</div>}
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">{order.ribbonLeft || '—'}</div>
                     <div className="text-sm text-gray-400">{formatDeliveryShort(order.placeName, order.address)}</div>
                   </TableCell>
                   <TableCell className="text-sm">{order.quantity}</TableCell>
@@ -507,7 +508,7 @@ export default function OrdersPage() {
             )}
           </TableBody>
         </Table>
-        {result && result.totalPages > 1 && (
+        {result && (
           <div className="border-t px-4 py-3">
             <Pagination
               page={result.page}
@@ -585,7 +586,7 @@ export default function OrdersPage() {
             </Link>
           ))
         )}
-        {result && result.totalPages > 1 && (
+        {result && (
           <Pagination
             page={result.page}
             totalPages={result.totalPages}
