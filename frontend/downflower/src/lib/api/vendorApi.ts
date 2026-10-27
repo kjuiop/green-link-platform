@@ -1,5 +1,6 @@
 import { Vendor } from '@/types/vendor'
 import { PageResult } from '@/types/page'
+import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
 type BackendVendor = {
   id: number
@@ -34,14 +35,6 @@ type UpdateVendorPayload = {
   companyType?: string
 }
 
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }
-}
-
 function toFrontend(v: BackendVendor): Vendor {
   return {
     id: String(v.id),
@@ -60,7 +53,7 @@ function toFrontend(v: BackendVendor): Vendor {
 export async function fetchVendors(status?: string): Promise<Vendor[]> {
   const query = new URLSearchParams({ page: '0', size: '1000' })
   if (status && status !== 'ALL') query.set('status', status)
-  const res = await fetch(`/api/vendors?${query}`, { headers: authHeaders() })
+  const res = await fetchWithAuth(`/api/vendors?${query}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('업체 목록을 불러오지 못했습니다.')
   const data: PageResult<BackendVendor> = await res.json()
   return data.content.map(toFrontend)
@@ -69,20 +62,20 @@ export async function fetchVendors(status?: string): Promise<Vendor[]> {
 export async function fetchVendorsPaged(status?: string, page = 0, size = 20): Promise<PageResult<Vendor>> {
   const query = new URLSearchParams({ page: String(page), size: String(size) })
   if (status && status !== 'ALL') query.set('status', status)
-  const res = await fetch(`/api/vendors?${query}`, { headers: authHeaders() })
+  const res = await fetchWithAuth(`/api/vendors?${query}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('업체 목록을 불러오지 못했습니다.')
   const data: PageResult<BackendVendor> = await res.json()
   return { ...data, content: data.content.map(toFrontend) }
 }
 
 export async function fetchVendor(id: string): Promise<Vendor> {
-  const res = await fetch(`/api/vendors/${id}`, { headers: authHeaders() })
+  const res = await fetchWithAuth(`/api/vendors/${id}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('업체 정보를 불러오지 못했습니다.')
   return toFrontend(await res.json())
 }
 
 export async function createVendor(payload: CreateVendorPayload): Promise<Vendor> {
-  const res = await fetch('/api/vendors', {
+  const res = await fetchWithAuth('/api/vendors', {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -95,7 +88,7 @@ export async function createVendor(payload: CreateVendorPayload): Promise<Vendor
 }
 
 export async function updateVendor(id: string, payload: UpdateVendorPayload): Promise<Vendor> {
-  const res = await fetch(`/api/vendors/${id}`, {
+  const res = await fetchWithAuth(`/api/vendors/${id}`, {
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -108,7 +101,7 @@ export async function updateVendor(id: string, payload: UpdateVendorPayload): Pr
 }
 
 export async function updateVendorStatus(id: string, action: 'activate' | 'suspend'): Promise<Vendor> {
-  const res = await fetch(`/api/vendors/${id}/status`, {
+  const res = await fetchWithAuth(`/api/vendors/${id}/status`, {
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify({ action }),
