@@ -196,7 +196,7 @@ export default function VendorOrdersPage() {
                       <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{formatDeliveryShort(order.placeName, order.address)}</TableCell>
+                  <TableCell className="text-sm">{[formatDeliveryShort(order.placeName, order.address), order.roomName].filter(Boolean).join(' ')}</TableCell>
                   <TableCell className="text-sm">
                     <span>{order.deliveryAt.split(' ')[0]}</span>
                     {order.deliveryTimeHour && (
@@ -260,7 +260,7 @@ export default function VendorOrdersPage() {
                     <span className="truncate">{order.productName}</span>
                     <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
                   </div>
-                  <div className="mt-0.5 text-xs text-gray-500">{formatDeliveryShort(order.placeName, order.address)}</div>
+                  <div className="mt-0.5 text-xs text-gray-500">{[formatDeliveryShort(order.placeName, order.address), order.roomName].filter(Boolean).join(' ')}</div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <div onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
