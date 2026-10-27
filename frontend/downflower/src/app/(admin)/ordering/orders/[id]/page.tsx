@@ -22,14 +22,6 @@ import { Order } from '@/types/order'
 import { fetchAllProducts } from '@/lib/api/productApi'
 import { Product } from '@/types/product'
 
-const AMOUNT_PRESETS = [
-  { label: '기본32', value: 32000 },
-  { label: '대품42', value: 42000 },
-  { label: '특품52', value: 52000 },
-  { label: '4단62', value: 62000 },
-  { label: '쌀10키로62', value: 62000 },
-  { label: '오브제1단42', value: 42000 },
-]
 
 export default function OrderingOrderDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -412,23 +404,6 @@ export default function OrderingOrderDetailPage() {
                 </div>
                 <Field label="발주금액">
                   <Input type="number" value={draft.amount} onChange={(e) => set('amount', Number(e.target.value))} />
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {AMOUNT_PRESETS.map(({ label, value }) => (
-                      <button
-                        key={label}
-                        type="button"
-                        onClick={() => set('amount', value)}
-                        className={cn(
-                          'rounded-md border px-2.5 py-1 text-xs transition-colors',
-                          draft.amount === value
-                            ? 'border-green-700 bg-green-700 text-white'
-                            : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50',
-                        )}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
                 </Field>
                 <Field label="추가비용">
                   <Input
@@ -533,7 +508,11 @@ export default function OrderingOrderDetailPage() {
               </>
             ) : (
               <>
-                <Row label="배송예정" value={order.deliveryAt} />
+                <Row label="배송예정" value={
+                  order.deliveryAt && order.deliveryTimeHour && order.deliveryTimeMinute
+                    ? `${order.deliveryAt} ${order.deliveryTimeHour.padStart(2, '0')}:${order.deliveryTimeMinute}`
+                    : order.deliveryAt
+                } />
                 <Row label="주소" value={`${order.address} ${order.addressDetail ?? ''}`.trim()} />
                 <Row label="행사유형" value={order.eventType} />
                 <Row label={order.eventType === '장례식' ? '장례식장명' : order.eventType === '결혼식' ? '예식장명' : '행사명'} value={order.placeName || '-'} />
