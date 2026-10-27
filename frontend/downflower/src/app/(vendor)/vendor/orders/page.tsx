@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { MessageStatusBadge, DeliveryTimeTypeBadge, AcceptOrderBadge } from '@/components/common/StatusBadge'
 import { fetchOrders, updateOrderStatus } from '@/lib/api/orderApi'
-import { getDeliveryDateRowBg } from '@/lib/utils'
+import { getDeliveryDateRowBg, formatDeliveryShort } from '@/lib/utils'
 import { Order, OrderStatus } from '@/types/order'
 import Link from 'next/link'
 import { Search, Printer } from 'lucide-react'
@@ -156,7 +156,7 @@ export default function VendorOrdersPage() {
       <div className="hidden rounded-lg border bg-white md:block">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="[&>th]:h-auto [&>th]:py-1.5 [&>th]:text-xs">
               <TableHead>주문번호</TableHead>
               <TableHead>상품명</TableHead>
               <TableHead>배송장소</TableHead>
@@ -184,7 +184,7 @@ export default function VendorOrdersPage() {
               </TableRow>
             ) : (
               filtered.map((order) => (
-                <TableRow key={order.id} className={`cursor-pointer ${getDeliveryDateRowBg(order.deliveryAt)} hover:brightness-95`}>
+                <TableRow key={order.id} className={`[&>td]:py-1 cursor-pointer ${getDeliveryDateRowBg(order.deliveryAt)} hover:brightness-95`}>
                   <TableCell>
                     <Link href={`/vendor/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
                       {order.orderNumber}
@@ -196,7 +196,7 @@ export default function VendorOrdersPage() {
                       <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{order.placeName} {order.roomName}</TableCell>
+                  <TableCell className="text-sm">{formatDeliveryShort(order.placeName, order.address)}</TableCell>
                   <TableCell className="text-sm">
                     <span>{order.deliveryAt.split(' ')[0]}</span>
                     {order.deliveryTimeHour && (
@@ -260,7 +260,7 @@ export default function VendorOrdersPage() {
                     <span className="truncate">{order.productName}</span>
                     <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
                   </div>
-                  <div className="mt-0.5 text-xs text-gray-500">{order.placeName} {order.roomName}</div>
+                  <div className="mt-0.5 text-xs text-gray-500">{formatDeliveryShort(order.placeName, order.address)}</div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <div onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
