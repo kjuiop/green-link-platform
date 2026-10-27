@@ -1,0 +1,1 @@
+ALTER TABLE orders ADD COLUMN accepted_at VARCHAR(30) NULL AFTER status;
