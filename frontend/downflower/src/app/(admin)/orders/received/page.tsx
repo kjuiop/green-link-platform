@@ -372,13 +372,13 @@ export default function ReceivedOrdersPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={14} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={13} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={14} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={13} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
