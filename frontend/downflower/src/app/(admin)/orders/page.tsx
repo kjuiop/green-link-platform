@@ -7,7 +7,7 @@ import { AcceptOrderBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { ReceiptConfirmButton, ReceiptInfoCell } from '@/components/common/ReceiptConfirmDialog'
 import { fetchOrdersPaged, fetchOrders, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
-import { getDeliveryDateRowBg } from '@/lib/utils'
+import { getDeliveryDateRowBg, formatDeliveryShort } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
@@ -67,12 +67,12 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '수주거절', value: '수주거절' },
 ]
 
-const PAGE_SIZE_OPTIONS = [20, 50, 100, 200, 300, 500]
+const PAGE_SIZE_OPTIONS = [50, 100, 200, 300, 500]
 
 export default function OrdersPage() {
   const [result, setResult] = useState<PageResult<Order> | null>(null)
   const [page, setPage] = useState(0)
-  const [pageSize, setPageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(100)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -360,7 +360,7 @@ export default function OrdersPage() {
       <div className="hidden rounded-lg border bg-white md:block">
         <Table>
           <TableHeader>
-            <TableRow className="[&>th]:h-auto [&>th]:py-3">
+            <TableRow className="[&>th]:h-auto [&>th]:py-1.5 [&>th]:text-xs">
               <TableHead className="w-8">
                 <input
                   type="checkbox"
@@ -402,7 +402,7 @@ export default function OrdersPage() {
               filtered.map((order) => (
                 <TableRow
                   key={order.id}
-                  className={order.isDeleted ? 'bg-red-50 opacity-60' : `cursor-pointer ${getDeliveryDateRowBg(order.deliveryAt)} hover:brightness-95`}
+                  className={`[&>td]:py-1 ${order.isDeleted ? 'bg-red-50 opacity-60' : `cursor-pointer ${getDeliveryDateRowBg(order.deliveryAt)} hover:brightness-95`}`}
                 >
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <input
@@ -447,7 +447,7 @@ export default function OrdersPage() {
                       <span>{order.productName}</span>
                       <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
                     </div>
-                    <div className="text-sm text-gray-400">{[order.placeName, order.address].filter(Boolean).join(' ')}</div>
+                    <div className="text-sm text-gray-400">{formatDeliveryShort(order.placeName, order.address)}</div>
                   </TableCell>
                   <TableCell className="text-sm">{order.quantity}</TableCell>
                   <TableCell className="text-sm">{order.amount.toLocaleString()}원</TableCell>

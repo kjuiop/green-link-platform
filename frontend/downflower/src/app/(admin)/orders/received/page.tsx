@@ -7,7 +7,7 @@ import { AcceptOrderBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { ReceiptConfirmButton, ReceiptInfoCell } from '@/components/common/ReceiptConfirmDialog'
 import { fetchOrders, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
-import { getDeliveryDateRowBg } from '@/lib/utils'
+import { getDeliveryDateRowBg, formatDeliveryShort } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { Download, Printer } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
@@ -312,7 +312,7 @@ export default function ReceivedOrdersPage() {
       <div className="hidden rounded-lg border bg-white md:block">
         <Table>
           <TableHeader>
-            <TableRow className="[&>th]:h-auto [&>th]:py-3">
+            <TableRow className="[&>th]:h-auto [&>th]:py-1.5 [&>th]:text-xs">
               <TableHead className="w-8">
                 <input
                   type="checkbox"
@@ -354,7 +354,7 @@ export default function ReceivedOrdersPage() {
               filtered.map((order) => (
                 <TableRow
                   key={order.id}
-                  className={order.isDeleted ? 'bg-red-50 opacity-60' : `cursor-pointer ${getDeliveryDateRowBg(order.deliveryAt)} hover:brightness-95`}
+                  className={`[&>td]:py-1 ${order.isDeleted ? 'bg-red-50 opacity-60' : `cursor-pointer ${getDeliveryDateRowBg(order.deliveryAt)} hover:brightness-95`}`}
                 >
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <input
@@ -399,7 +399,7 @@ export default function ReceivedOrdersPage() {
                       <span>{order.productName}</span>
                       <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
                     </div>
-                    <div className="text-sm text-gray-400">{[order.placeName, order.address].filter(Boolean).join(' ')}</div>
+                    <div className="text-sm text-gray-400">{formatDeliveryShort(order.placeName, order.address)}</div>
                   </TableCell>
                   <TableCell className="text-sm">{order.quantity}</TableCell>
                   <TableCell className="text-sm">{order.amount.toLocaleString()}원</TableCell>
