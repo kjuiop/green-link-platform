@@ -115,6 +115,9 @@ public class OrderJpaEntity extends BaseJpaEntity {
     private String vendorMemo;
 
     @Column(length = 30)
+    private String acceptedAt;
+
+    @Column(length = 30)
     private String completedAt;
 
     @Column(nullable = false)
@@ -158,6 +161,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
         e.scheduledMessageMinute = order.getScheduledMessageMinute();
         e.adminMemo = order.getAdminMemo();
         e.vendorMemo = order.getVendorMemo();
+        e.acceptedAt = order.getAcceptedAt();
         e.completedAt = order.getCompletedAt();
         e.isDeleted = order.isDeleted();
         return e;
@@ -199,6 +203,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
                 scheduledMessageMinute,
                 adminMemo,
                 vendorMemo,
+                acceptedAt,
                 completedAt,
                 getCreatedAt() != null ? getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null,
                 isDeleted

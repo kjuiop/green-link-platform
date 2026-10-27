@@ -460,6 +460,9 @@ export default function OrdersPage() {
                         loadOrders(buildServerParams(), page)
                       }}
                     />
+                    {order.acceptedAt && (
+                      <div className="mt-0.5 text-[10px] text-gray-400">{order.acceptedAt.slice(0, 10)}</div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <ClickableMessageBadge

@@ -272,6 +272,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 order.getScheduledMessageMinute(),
                 order.getAdminMemo(),
                 order.getVendorMemo(),
+                order.getAcceptedAt(),
                 order.getCompletedAt(),
                 order.getCreatedAt(),
                 messageStatus,
@@ -407,7 +408,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
 
         switch (action.toLowerCase()) {
-            case "accept" -> order.accept();
+            case "accept" -> order.accept(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
             case "reject" -> order.reject();
             case "cancel" -> order.cancel();
             case "complete" -> {
