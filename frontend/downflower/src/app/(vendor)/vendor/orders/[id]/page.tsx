@@ -158,7 +158,7 @@ export default function VendorOrderDetailPage() {
             <Row label="상품명" value={order.productName} />
             <Row label="배송예정" value={
               order.deliveryAt && order.deliveryTimeHour && order.deliveryTimeMinute
-                ? `${order.deliveryAt} ${order.deliveryTimeHour}:${order.deliveryTimeMinute}`
+                ? `${order.deliveryAt} ${order.deliveryTimeHour.padStart(2, '0')}:${order.deliveryTimeMinute}`
                 : order.deliveryAt
             } />
             <Row label="주소" value={`${order.address} ${order.addressDetail}`} />
