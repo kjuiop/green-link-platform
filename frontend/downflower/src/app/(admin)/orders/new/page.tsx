@@ -493,30 +493,34 @@ export default function NewOrderPage() {
               {errors.deliveryDate && <p className="text-xs text-red-500">{errors.deliveryDate}</p>}
             </div>
             <div className="space-y-1">
-              <Label>배송시간 *</Label>
+              <Label>{['3시간내', '직접입력'].includes(deliveryTimeType) ? '배송시간' : '배송시간 *'}</Label>
               <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={deliveryHour}
-                  onChange={(e) => {
-                    setDeliveryHour(e.target.value)
-                    if (e.target.value) setErrors((prev) => ({ ...prev, deliveryHour: undefined }))
-                  }}
-                  className={cn('rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700', errors.deliveryHour && 'border-red-500')}
-                >
-                  <option value="">시</option>
-                  {Array.from({ length: 24 }, (_, i) => (
-                    <option key={i} value={String(i)}>{i}시</option>
-                  ))}
-                </select>
-                <select
-                  value={deliveryMinute}
-                  onChange={(e) => setDeliveryMinute(e.target.value)}
-                  className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-                >
-                  {['00', '10', '20', '30', '40', '50'].map((m) => (
-                    <option key={m} value={m}>{m}분</option>
-                  ))}
-                </select>
+                {!['3시간내', '직접입력'].includes(deliveryTimeType) && (
+                  <>
+                    <select
+                      value={deliveryHour}
+                      onChange={(e) => {
+                        setDeliveryHour(e.target.value)
+                        if (e.target.value) setErrors((prev) => ({ ...prev, deliveryHour: undefined }))
+                      }}
+                      className={cn('rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700', errors.deliveryHour && 'border-red-500')}
+                    >
+                      <option value="">시</option>
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={String(i)}>{i}시</option>
+                      ))}
+                    </select>
+                    <select
+                      value={deliveryMinute}
+                      onChange={(e) => setDeliveryMinute(e.target.value)}
+                      className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                    >
+                      {['00', '10', '20', '30', '40', '50'].map((m) => (
+                        <option key={m} value={m}>{m}분</option>
+                      ))}
+                    </select>
+                  </>
+                )}
                 <select
                   value={deliveryTimeType}
                   onChange={(e) => setDeliveryTimeType(e.target.value)}
