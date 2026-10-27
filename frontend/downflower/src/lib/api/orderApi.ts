@@ -49,6 +49,7 @@ type BackendOrder = {
   scheduledMessageMinute: string | null
   adminMemo: string | null
   vendorMemo: string | null
+  acceptedAt: string | null
   completedAt: string | null
   createdAt: string
   messageStatus: string | null
@@ -144,6 +145,7 @@ function toFrontend(o: BackendOrder): Order {
     scheduledMessageMinute: o.scheduledMessageMinute ?? undefined,
     adminMemo: o.adminMemo ?? undefined,
     vendorMemo: o.vendorMemo ?? undefined,
+    acceptedAt: o.acceptedAt ?? null,
     completedAt: o.completedAt ?? undefined,
     messageStatus: o.messageStatus === 'SENT' ? '발송' : o.messageStatus === 'FAIL' ? '실패' : '미발송',
     isDeleted: o.isDeleted ?? false,

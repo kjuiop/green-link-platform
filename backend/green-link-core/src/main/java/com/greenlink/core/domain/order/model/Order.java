@@ -36,6 +36,7 @@ public class Order {
     private String scheduledMessageMinute;
     private String adminMemo;
     private String vendorMemo;
+    private String acceptedAt;
     private String completedAt;
     private String createdAt;
     private boolean isDeleted;
@@ -148,6 +149,7 @@ public class Order {
             String scheduledMessageMinute,
             String adminMemo,
             String vendorMemo,
+            String acceptedAt,
             String completedAt,
             String createdAt,
             boolean isDeleted
@@ -187,17 +189,19 @@ public class Order {
         o.scheduledMessageMinute = scheduledMessageMinute;
         o.adminMemo = adminMemo;
         o.vendorMemo = vendorMemo;
+        o.acceptedAt = acceptedAt;
         o.completedAt = completedAt;
         o.createdAt = createdAt;
         o.isDeleted = isDeleted;
         return o;
     }
 
-    public void accept() {
+    public void accept(String acceptedAt) {
         if (this.status != OrderStatus.PENDING) {
             throw new IllegalStateException("발주대기 상태에서만 수주승인이 가능합니다. 현재 상태: " + this.status);
         }
         this.status = OrderStatus.ACCEPTED;
+        this.acceptedAt = acceptedAt;
     }
 
     public void reject() {
@@ -324,6 +328,7 @@ public class Order {
     public String getScheduledMessageMinute() { return scheduledMessageMinute; }
     public String getAdminMemo() { return adminMemo; }
     public String getVendorMemo() { return vendorMemo; }
+    public String getAcceptedAt() { return acceptedAt; }
     public String getCompletedAt() { return completedAt; }
     public String getCreatedAt() { return createdAt; }
     public boolean isDeleted() { return isDeleted; }

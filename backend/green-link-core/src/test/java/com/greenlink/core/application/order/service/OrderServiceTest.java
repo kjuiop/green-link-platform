@@ -77,7 +77,7 @@ class OrderServiceTest {
                 "서울시 강남구", "101호", "생일", "그랜드볼룸", "A홀", null,
                 "축하합니다", "홍길동", "홍길동", "010-1234-5678",
                 "김영희", "010-9876-5432", true, true,
-                "SCHEDULED", "13", "00", null, null, null, "2026-10-22T10:00:00"
+                "SCHEDULED", "13", "00", null, null, null, null, "2026-10-22T10:00:00", false
         );
     }
 

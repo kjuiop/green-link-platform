@@ -39,6 +39,7 @@ public record OrderResult(
         String scheduledMessageMinute,
         String adminMemo,
         String vendorMemo,
+        String acceptedAt,
         String completedAt,
         String createdAt,
         String messageStatus,

@@ -216,6 +216,9 @@ export default function VendorOrdersPage() {
                         setOrders(prev => prev.map(o => o.id === updated.id ? updated : o))
                       }}
                     />
+                    {order.acceptedAt && (
+                      <div className="mt-0.5 text-[10px] text-gray-400">{order.acceptedAt.slice(0, 10)}</div>
+                    )}
                   </TableCell>
                   <TableCell><MessageStatusBadge status={order.messageStatus} /></TableCell>
                   <TableCell className="text-sm text-gray-400">{order.orderedAt}</TableCell>
