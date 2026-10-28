@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AcceptOrderBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { ReceiptConfirmButton, ReceiptInfoCell } from '@/components/common/ReceiptConfirmDialog'
-import { fetchOrdersPaged, fetchOrders, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
+import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
 import { getDeliveryDateRowBg, formatDeliveryShort } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { PageResult } from '@/types/page'
