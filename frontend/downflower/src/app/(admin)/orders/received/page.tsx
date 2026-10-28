@@ -436,7 +436,7 @@ export default function ReceivedOrdersPage() {
                     <div className="text-sm text-gray-400">{formatDeliveryShort(order.placeName, order.address)}</div>
                   </TableCell>
                   <TableCell className="text-sm">{order.quantity}</TableCell>
-                  <TableCell className="text-sm">{order.amount.toLocaleString()}원</TableCell>
+                  <TableCell className="text-sm">{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원</TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <AcceptOrderBadge
                       status={order.status}
@@ -565,7 +565,7 @@ export default function ReceivedOrdersPage() {
                   {order.deliveryTimeType === '직접입력' && order.deliveryTimeCustom && ` ${order.deliveryTimeCustom}`}
                 </span>
                 <span>{order.placeName}</span>
-                <span>{order.amount.toLocaleString()}원 · {order.quantity}개</span>
+                <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
               </div>
               <div className="mt-2 flex items-center justify-between" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
                 <ReceiptConfirmButton

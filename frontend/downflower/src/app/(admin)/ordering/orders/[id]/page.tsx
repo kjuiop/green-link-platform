@@ -412,14 +412,26 @@ export default function OrderingOrderDetailPage() {
                     value={draft.extraCost ?? ''}
                     onChange={(e) => set('extraCost', e.target.value ? Number(e.target.value) : undefined)}
                   />
+                  {draft.extraCost ? (
+                    <p className="mt-1 text-xs text-gray-500">
+                      최종 발주금액: {(draft.amount + draft.extraCost).toLocaleString()}원
+                      <span className="ml-1 text-gray-400">({draft.amount.toLocaleString()} + {draft.extraCost.toLocaleString()})</span>
+                    </p>
+                  ) : null}
                 </Field>
               </>
             ) : (
               <>
                 <Row label="상품명" value={order.productName} />
                 <Row label="수량" value={`${order.quantity}개`} />
-                <Row label="발주금액" value={`${order.amount.toLocaleString()}원`} />
-                {order.extraCost ? <Row label="추가비용" value={`${order.extraCost.toLocaleString()}원`} /> : null}
+                <Row
+                  label="발주금액"
+                  value={
+                    order.extraCost
+                      ? `${(order.amount + order.extraCost).toLocaleString()}원 (기본 ${order.amount.toLocaleString()} + 추가 ${order.extraCost.toLocaleString()})`
+                      : `${order.amount.toLocaleString()}원`
+                  }
+                />
                 <Row label="수주업체" value={order.vendorName} />
                 <Row label="발주일시" value={order.orderedAt} />
               </>

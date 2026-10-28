@@ -126,7 +126,7 @@ export default function PrintOrderPage() {
             <tr>
               <td>상품명</td>
               <td>{order.productName} × {order.quantity}</td>
-              <td>발주금액: {order.amount.toLocaleString()}원</td>
+              <td>발주금액: {(order.amount + (order.extraCost ?? 0)).toLocaleString()}원</td>
             </tr>
             <tr>
               <td>배달정보</td>
