@@ -23,7 +23,7 @@ public class AligoSmsClient implements SmsClient {
     }
 
     @Override
-    public SmsResult send(String receiver, String msg, String imageUrl, String sender) {
+    public SmsResult send(String receiver, String msg, String imageUrl, String sender, String rdate, String rtime) {
         try {
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
             body.add("key", props.key());
@@ -32,6 +32,10 @@ public class AligoSmsClient implements SmsClient {
             body.add("sender", (sender != null && !sender.isBlank()) ? sender.replaceAll("[^0-9]", "") : props.sender());
             body.add("receiver", receiver.replaceAll("[^0-9]", ""));
             body.add("msg", msg);
+            if (rdate != null && !rdate.isBlank()) {
+                body.add("rdate", rdate);
+                body.add("rtime", (rtime != null && !rtime.isBlank()) ? rtime : "0000");
+            }
 
             if (imageUrl != null && !imageUrl.isBlank()) {
                 byte[] imageBytes = restTemplate.getForObject(imageUrl, byte[].class);
