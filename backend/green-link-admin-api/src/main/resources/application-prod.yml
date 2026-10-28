@@ -3,9 +3,6 @@ spring:
     hibernate:
       ddl-auto: none
     show-sql: false
-  flyway:
-    enabled: true
-
 logging:
   level:
     root: INFO
