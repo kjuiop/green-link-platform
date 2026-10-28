@@ -23,6 +23,7 @@ dependencies {
 
     runtimeOnly 'com.mysql:mysql-connector-j'
     implementation 'org.flywaydb:flyway-mysql'
+    implementation 'org.springframework.boot:spring-boot-flyway'
 
     // Apache POI (Excel)
     implementation 'org.apache.poi:poi-ooxml:5.3.0'
