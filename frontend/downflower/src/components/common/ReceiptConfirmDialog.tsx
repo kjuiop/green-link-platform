@@ -311,7 +311,7 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                   <button
                     type="button"
                     onClick={() => sitePhotoInputRef.current?.click()}
-                    className="flex h-16 w-16 flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
+                    className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
                   >
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
@@ -340,7 +340,7 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                   <button
                     type="button"
                     onClick={() => storePhotoInputRef.current?.click()}
-                    className="flex h-16 w-16 flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
+                    className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
                   >
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
