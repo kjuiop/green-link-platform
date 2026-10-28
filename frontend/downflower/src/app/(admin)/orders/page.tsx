@@ -61,7 +61,7 @@ function matchField(o: Order, field: SearchField, value: string): boolean {
 
 const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '전체', value: 'ALL' },
-  { label: '발주대기', value: '발주대기' },
+  { label: '미확인', value: '발주대기' },
   { label: '수주완료', value: '수주완료' },
   { label: '배송완료', value: '배송완료' },
   { label: '수주거절', value: '수주거절' },
