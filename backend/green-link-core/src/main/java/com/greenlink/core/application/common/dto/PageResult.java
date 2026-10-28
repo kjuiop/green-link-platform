@@ -8,7 +8,8 @@ public record PageResult<T>(
         int page,
         int size,
         long totalElements,
-        int totalPages
+        int totalPages,
+        long totalAmount
 ) {
     public static <T> PageResult<T> of(Page<T> page) {
         return new PageResult<>(
@@ -16,7 +17,19 @@ public record PageResult<T>(
                 page.getNumber(),
                 page.getSize(),
                 page.getTotalElements(),
-                page.getTotalPages()
+                page.getTotalPages(),
+                0L
+        );
+    }
+
+    public static <T> PageResult<T> of(Page<T> page, long totalAmount) {
+        return new PageResult<>(
+                page.getContent(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                totalAmount
         );
     }
 }

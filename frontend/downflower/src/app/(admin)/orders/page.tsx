@@ -331,7 +331,7 @@ export default function OrdersPage() {
             <>
               <span className="text-gray-500">건수 <strong className="text-gray-900">{result?.totalElements ?? 0}</strong>건</span>
               <span className="text-gray-300">|</span>
-              <span className="text-gray-500">발주금액 <strong className="text-gray-900">{filtered.reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+              <span className="text-gray-500">발주금액 <strong className="text-gray-900">{(result?.totalAmount ?? 0).toLocaleString()}</strong>원</span>
             </>
           )}
         </div>
