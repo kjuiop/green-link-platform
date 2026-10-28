@@ -319,7 +319,7 @@ export default function OrdersPage() {
       </div>
 
       {/* 검색 결과 요약 + 엑셀 다운로드 */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4 text-sm">
           {selectedIds.size > 0 ? (
             <>
