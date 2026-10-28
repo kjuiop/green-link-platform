@@ -24,3 +24,16 @@ export function getDeliveryDateRowBg(deliveryAt: string): string {
   if (diff === 1) return 'bg-blue-50'
   return ''
 }
+
+export function getDeliveryDateTextStyle(deliveryAt: string): { color?: string; fontWeight?: number } {
+  const datePart = deliveryAt.split(' ')[0]
+  if (!datePart) return {}
+  const todaySeoul = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+  const diff = Math.round(
+    (new Date(datePart).getTime() - new Date(todaySeoul).getTime()) / 86400000,
+  )
+  if (diff < 0) return { color: '#D32F2F', fontWeight: 600 }
+  if (diff === 0) return { color: '#EF6C00', fontWeight: 600 }
+  if (diff === 1) return { color: '#1565C0', fontWeight: 600 }
+  return {}
+}
