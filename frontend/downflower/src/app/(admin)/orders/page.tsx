@@ -6,8 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AcceptOrderBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { ReceiptConfirmButton, ReceiptInfoCell } from '@/components/common/ReceiptConfirmDialog'
-import { fetchOrdersPaged, fetchOrders, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
-import { getDeliveryDateRowBg } from '@/lib/utils'
+import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
+import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
@@ -61,18 +61,18 @@ function matchField(o: Order, field: SearchField, value: string): boolean {
 
 const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '전체', value: 'ALL' },
-  { label: '발주대기', value: '발주대기' },
+  { label: '미확인', value: '발주대기' },
   { label: '수주완료', value: '수주완료' },
   { label: '배송완료', value: '배송완료' },
   { label: '수주거절', value: '수주거절' },
 ]
 
-const PAGE_SIZE_OPTIONS = [20, 50, 100, 200, 300, 500]
+const PAGE_SIZE_OPTIONS = [10, 50, 100, 200, 300, 500]
 
 export default function OrdersPage() {
   const [result, setResult] = useState<PageResult<Order> | null>(null)
   const [page, setPage] = useState(0)
-  const [pageSize, setPageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(10)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -331,7 +331,7 @@ export default function OrdersPage() {
             <>
               <span className="text-gray-500">건수 <strong className="text-gray-900">{result?.totalElements ?? 0}</strong>건</span>
               <span className="text-gray-300">|</span>
-              <span className="text-gray-500">발주금액 <strong className="text-gray-900">{filtered.reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+              <span className="text-gray-500">발주금액 <strong className="text-gray-900">{(result?.totalAmount ?? 0).toLocaleString()}</strong>원</span>
             </>
           )}
         </div>
@@ -360,7 +360,7 @@ export default function OrdersPage() {
       <div className="hidden rounded-lg border bg-white md:block">
         <Table>
           <TableHeader>
-            <TableRow className="[&>th]:h-auto [&>th]:py-3">
+            <TableRow className="[&>th]:h-auto [&>th]:py-1.5 [&>th]:text-xs">
               <TableHead className="w-8">
                 <input
                   type="checkbox"
@@ -372,12 +372,11 @@ export default function OrdersPage() {
               </TableHead>
               <TableHead>주문번호</TableHead>
               <TableHead><div>배송요구일</div><div className="font-normal text-gray-400">주문접수일</div></TableHead>
-              <TableHead><div>주문자</div><div className="font-normal text-gray-400">받는분</div></TableHead>
-              <TableHead>보내는이</TableHead>
-              <TableHead>수주업체</TableHead>
-              <TableHead><div>상품명</div><div className="font-normal text-gray-400">배송지</div></TableHead>
+              <TableHead><div>발주업체 / 주문자</div><div className="font-normal text-gray-400">수주업체</div></TableHead>
+              <TableHead><div>상품명</div><div className="font-normal text-gray-400">받는분</div></TableHead>
+              <TableHead><div>보내는이</div><div className="font-normal text-gray-400">배송지</div></TableHead>
               <TableHead>수량</TableHead>
-              <TableHead>발주금액</TableHead>
+              <TableHead><div>상품명</div><div className="font-normal text-gray-400">발주금액</div></TableHead>
               <TableHead>배송현황</TableHead>
               <TableHead>문자현황</TableHead>
               <TableHead>인수정보</TableHead>
@@ -388,13 +387,13 @@ export default function OrdersPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={14} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={13} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={14} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={13} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -402,7 +401,7 @@ export default function OrdersPage() {
               filtered.map((order) => (
                 <TableRow
                   key={order.id}
-                  className={order.isDeleted ? 'bg-red-50 opacity-60' : `cursor-pointer ${getDeliveryDateRowBg(order.deliveryAt)} hover:brightness-95`}
+                  className={`[&>td]:py-1 ${order.isDeleted ? 'bg-red-50 opacity-60' : `cursor-pointer ${getDeliveryDateRowBg(order.deliveryAt)} hover:brightness-95`}`}
                 >
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <input
@@ -422,7 +421,7 @@ export default function OrdersPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-sm">{order.deliveryAt.split(' ')[0]}</span>
+                      <span className="text-sm" style={getDeliveryDateTextStyle(order.deliveryAt)}>{order.deliveryAt.split(' ')[0]}</span>
                       {order.deliveryTimeHour && (
                         <span className="text-sm font-medium text-red-500">
                           {String(order.deliveryTimeHour).padStart(2, '0')}:{order.deliveryTimeMinute ?? '00'}
@@ -437,20 +436,27 @@ export default function OrdersPage() {
                     <div className="text-sm text-gray-400">{order.orderedAt}</div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">{order.ordererName}</div>
-                    {order.recipientName && <div className="text-sm text-gray-400">{order.recipientName}</div>}
+                    <div className="text-sm">{order.orderingCompanyName || '—'}</div>
+                    <div className="text-xs text-gray-500">{order.ordererName || '—'}</div>
+                    <div className="text-sm text-gray-400">{order.vendorName || '—'}</div>
                   </TableCell>
-                  <TableCell className="text-sm">{order.ribbonLeft || '—'}</TableCell>
-                  <TableCell className="text-sm text-gray-700">{order.vendorName || '—'}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm">
                       <span>{order.productName}</span>
                       <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
                     </div>
-                    <div className="text-sm text-gray-400">{[order.placeName, order.address].filter(Boolean).join(' ')}</div>
+                    {order.recipientName && <div className="text-sm text-gray-400">{order.recipientName}</div>}
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">{order.ribbonLeft || '—'}</div>
+                    <div className="text-sm text-gray-400">{formatDeliveryShort(order.placeName, order.address)}</div>
                   </TableCell>
                   <TableCell className="text-sm">{order.quantity}</TableCell>
-                  <TableCell className="text-sm">{order.amount.toLocaleString()}원</TableCell>
+                  <TableCell>
+                    <div className="text-xs text-gray-600">{order.productName}</div>
+                    <div className="text-xs text-gray-400">{order.amount.toLocaleString()}원</div>
+                    <div className="text-sm font-medium text-blue-600">{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원</div>
+                  </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <AcceptOrderBadge
                       status={order.status}
@@ -460,6 +466,9 @@ export default function OrdersPage() {
                         loadOrders(buildServerParams(), page)
                       }}
                     />
+                    {order.acceptedAt && (
+                      <div className="mt-0.5 text-[10px] text-gray-400">{order.acceptedAt.slice(0, 10)} {order.acceptedAt.slice(11, 16)}</div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <ClickableMessageBadge
@@ -504,7 +513,7 @@ export default function OrdersPage() {
             )}
           </TableBody>
         </Table>
-        {result && result.totalPages > 1 && (
+        {result && (
           <div className="border-t px-4 py-3">
             <Pagination
               page={result.page}
@@ -543,7 +552,12 @@ export default function OrdersPage() {
                     )}
                   </div>
                   <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
-                  <div className="mt-0.5 text-xs text-gray-500">{order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}</div>
+                  <div className="mt-0.5 text-xs text-gray-500">
+                    {order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}
+                  </div>
+                  {order.vendorName && (
+                    <div className="mt-0.5 text-xs text-gray-400">수주사 {order.vendorName}</div>
+                  )}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <div onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
@@ -567,7 +581,7 @@ export default function OrdersPage() {
                   {order.deliveryTimeType === '직접입력' && order.deliveryTimeCustom && ` ${order.deliveryTimeCustom}`}
                 </span>
                 <span>{order.placeName}</span>
-                <span>{order.amount.toLocaleString()}원 · {order.quantity}개</span>
+                <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
               </div>
               <div className="mt-2 flex justify-end" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
                 <button
@@ -582,7 +596,7 @@ export default function OrdersPage() {
             </Link>
           ))
         )}
-        {result && result.totalPages > 1 && (
+        {result && (
           <Pagination
             page={result.page}
             totalPages={result.totalPages}

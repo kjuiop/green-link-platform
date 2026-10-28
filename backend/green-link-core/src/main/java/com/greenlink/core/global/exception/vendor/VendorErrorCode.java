@@ -6,7 +6,8 @@ public enum VendorErrorCode implements ErrorCode {
 
     VENDOR_NOT_FOUND(404, "VENDOR_001", "수주업체를 찾을 수 없습니다."),
     DUPLICATE_LOGIN_ID(400, "VENDOR_002", "이미 사용 중인 아이디입니다."),
-    DUPLICATE_BUSINESS_NO(400, "VENDOR_003", "이미 등록된 사업자번호입니다.");
+    DUPLICATE_BUSINESS_NO(400, "VENDOR_003", "이미 등록된 사업자번호입니다."),
+    VENDOR_ALREADY_DELETED(400, "VENDOR_004", "이미 삭제된 업체입니다.");
 
     private final int status;
     private final String code;

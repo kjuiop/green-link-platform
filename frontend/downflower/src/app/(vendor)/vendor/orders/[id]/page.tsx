@@ -156,10 +156,17 @@ export default function VendorOrderDetailPage() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <Row label="상품명" value={order.productName} />
-            <Row label="배송예정" value={order.deliveryAt} />
+            <Row label="배송예정" value={
+              order.deliveryAt && order.deliveryTimeHour && order.deliveryTimeMinute !== undefined && order.deliveryTimeMinute !== ''
+                ? `${order.deliveryAt} ${order.deliveryTimeHour.padStart(2, '0')}:${order.deliveryTimeMinute.padStart(2, '0')}`
+                : order.deliveryTimeType
+                  ? `${order.deliveryAt} ${order.deliveryTimeType === '직접입력' ? (order.deliveryTimeCustom ?? order.deliveryTimeType) : order.deliveryTimeType}`
+                  : order.deliveryAt
+            } />
             <Row label="주소" value={`${order.address} ${order.addressDetail}`} />
             <Row label="장소명" value={order.placeName} />
             {order.roomName && <Row label="빈소·호실" value={order.roomName} />}
+            {order.recipientName && <Row label="받는 분" value={order.recipientName} />}
             {order.eventInfo && <Row label="행사정보" value={order.eventInfo} />}
           </CardContent>
         </Card>

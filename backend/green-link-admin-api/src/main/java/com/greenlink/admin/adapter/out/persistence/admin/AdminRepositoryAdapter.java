@@ -60,7 +60,8 @@ public class AdminRepositoryAdapter implements AdminRepository {
     public List<Admin> findAllVendors() {
         return queryFactory
             .selectFrom(adminJpaEntity)
-            .where(adminJpaEntity.companyId.isNotNull())
+            .where(adminJpaEntity.companyId.isNotNull()
+                .and(adminJpaEntity.deletedAt.isNull()))
             .orderBy(adminJpaEntity.createdAt.desc())
             .fetch()
             .stream()
@@ -79,6 +80,7 @@ public class AdminRepositoryAdapter implements AdminRepository {
     public Page<Admin> findVendorsPaged(String status, Pageable pageable) {
         BooleanBuilder where = new BooleanBuilder();
         where.and(adminJpaEntity.companyId.isNotNull());
+        where.and(adminJpaEntity.deletedAt.isNull());
         if (status != null && !status.isBlank()) {
             try {
                 AdminStatus adminStatus = AdminStatus.valueOf(status.toUpperCase());

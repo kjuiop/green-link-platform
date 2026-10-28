@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { cn, RIBBON_PHRASES } from '@/lib/utils'
 import { fetchVendors } from '@/lib/api/vendorApi'
 import { createOrder, fetchOrderingCompanies, uploadReferencePhotos, OrderingCompany } from '@/lib/api/orderApi'
 import { fetchAllProducts } from '@/lib/api/productApi'
@@ -42,14 +42,7 @@ export default function NewOrderPage() {
 
   // 행사정보
   const [selectedEventType, setSelectedEventType] = useState<'장례식' | '결혼식' | '기타'>('장례식')
-  const [funeralHall, setFuneralHall] = useState('')
-  const [funeralRoom, setFuneralRoom] = useState('')
-  const [funeralPerson, setFuneralPerson] = useState('')
-  const [weddingHall, setWeddingHall] = useState('')
-  const [weddingRoom, setWeddingRoom] = useState('')
-  const [weddingPerson, setWeddingPerson] = useState('')
-  const [eventHall, setEventHall] = useState('')
-  const [eventRoom, setEventRoom] = useState('')
+  const [venueName, setVenueName] = useState('')
 
   // 주문자 / 받는 분
   const [ordererName, setOrdererName] = useState('')
@@ -89,7 +82,6 @@ export default function NewOrderPage() {
     productName?: string
     deliveryDate?: string
     deliveryHour?: string
-    address?: string
     amount?: string
     recipientName?: string
     ordererPhone?: string
@@ -112,8 +104,7 @@ export default function NewOrderPage() {
     if (!vendorId) next.vendorId = '수주업체를 선택해주세요.'
     if (!productName.trim()) next.productName = '상품명을 입력해주세요.'
     if (!deliveryDate) next.deliveryDate = '배송날짜를 입력해주세요.'
-    if (!deliveryHour) next.deliveryHour = '배송시간을 선택해주세요.'
-    if (!address.trim()) next.address = '주소를 입력해주세요.'
+    if (!deliveryHour && deliveryTimeType !== '3시간내' && deliveryTimeType !== '직접입력') next.deliveryHour = '배송시간을 선택해주세요.'
     if (!amount) next.amount = '발주금액을 입력해주세요.'
     if (!recipientName.trim()) next.recipientName = '받는 분 성함을 입력해주세요.'
     if (!ordererPhone.trim()) next.ordererPhone = '주문자 휴대폰을 입력해주세요.'
@@ -121,16 +112,9 @@ export default function NewOrderPage() {
     if (Object.keys(next).length > 0) return
 
     let eventType = selectedEventType
-    let placeName = ''
+    let placeName = venueName
     let roomName = ''
     let eventInfo = ''
-    if (selectedEventType === '장례식') {
-      placeName = funeralHall; roomName = funeralRoom; eventInfo = funeralPerson
-    } else if (selectedEventType === '결혼식') {
-      placeName = weddingHall; roomName = weddingRoom; eventInfo = weddingPerson
-    } else if (selectedEventType === '기타') {
-      placeName = eventHall; roomName = eventRoom
-    }
 
     setSubmitting(true)
     setSubmitError('')
@@ -145,8 +129,8 @@ export default function NewOrderPage() {
         extraCost: extraCost ? Number(extraCost) : undefined,
         deliveryDate,
         deliveryTimeType,
-        deliveryTimeHour: deliveryHour,
-        deliveryTimeMinute: deliveryMinute,
+        deliveryTimeHour: ['3시간내', '직접입력'].includes(deliveryTimeType) ? '' : deliveryHour,
+        deliveryTimeMinute: ['3시간내', '직접입력'].includes(deliveryTimeType) ? '' : deliveryMinute,
         deliveryTimeCustom,
         address,
         addressDetail,
@@ -307,7 +291,14 @@ export default function NewOrderPage() {
                 value={extraCost}
                 onChange={(e) => setExtraCost(e.target.value)}
               />
-              <p className="text-xs text-gray-400">기본 발주금액 외 추가로 발생한 비용</p>
+              {extraCost && amount ? (
+                <p className="text-xs text-gray-500">
+                  최종 발주금액: {(Number(amount) + Number(extraCost)).toLocaleString()}원
+                  <span className="ml-1 text-gray-400">({Number(amount).toLocaleString()} + {Number(extraCost).toLocaleString()})</span>
+                </p>
+              ) : (
+                <p className="text-xs text-gray-400">기본 발주금액 외 추가로 발생한 비용</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -324,7 +315,7 @@ export default function NewOrderPage() {
                   <button
                     key={type}
                     type="button"
-                    onClick={() => setSelectedEventType(type)}
+                    onClick={() => { setSelectedEventType(type); setVenueName('') }}
                     className={cn(
                       'rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
                       selectedEventType === type
@@ -337,93 +328,40 @@ export default function NewOrderPage() {
                 ))}
               </div>
 
-              {/* 장례식 */}
-              {selectedEventType === '장례식' && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label>장례식장명</Label>
-                      <Input
-                        placeholder="예: 한독병원장례식장"
-                        value={funeralHall}
-                        onChange={(e) => setFuneralHall(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>빈소</Label>
-                      <Input
-                        placeholder="예: 무궁화실"
-                        value={funeralRoom}
-                        onChange={(e) => setFuneralRoom(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>고인명</Label>
-                    <Input
-                      placeholder="예: 고인 홍길동"
-                      value={funeralPerson}
-                      onChange={(e) => setFuneralPerson(e.target.value)}
-                    />
-                  </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>
+                    {selectedEventType === '장례식' ? '장례식장' : selectedEventType === '결혼식' ? '예식장' : '장소'}
+                  </Label>
+                  <Input
+                    placeholder={
+                      selectedEventType === '장례식' ? '예: 한독병원장례식장' :
+                      selectedEventType === '결혼식' ? '예: 더파티움 강남' :
+                      '예: 강남파이낸스센터 1층'
+                    }
+                    value={venueName}
+                    onChange={(e) => setVenueName(e.target.value)}
+                  />
                 </div>
-              )}
-
-              {/* 결혼식 */}
-              {selectedEventType === '결혼식' && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label>예식장명</Label>
-                      <Input
-                        placeholder="예: 더파티움 강남"
-                        value={weddingHall}
-                        onChange={(e) => setWeddingHall(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>홀</Label>
-                      <Input
-                        placeholder="예: 그랜드볼룸 A홀"
-                        value={weddingRoom}
-                        onChange={(e) => setWeddingRoom(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>신랑/신부명</Label>
-                    <Input
-                      placeholder="예: 홍길동 ♥ 홍길순"
-                      value={weddingPerson}
-                      onChange={(e) => setWeddingPerson(e.target.value)}
-                    />
-                  </div>
+                <div className="space-y-1.5">
+                  <Label>
+                    {selectedEventType === '장례식' ? '받는 분 (예: 상주 홍길동)' :
+                     selectedEventType === '결혼식' ? '받는 분 (예: 신랑 홍길동)' :
+                     '받는 분'}
+                  </Label>
+                  <Input
+                    placeholder={
+                      selectedEventType === '장례식' ? '예: 상주 홍길동' :
+                      selectedEventType === '결혼식' ? '예: 신랑 홍길동' :
+                      '예: 홍길동'
+                    }
+                    value={recipientName}
+                    onChange={(e) => { setRecipientName(e.target.value); setErrors((prev) => ({ ...prev, recipientName: undefined })) }}
+                    className={cn(errors.recipientName && 'border-red-500 focus-visible:ring-red-500')}
+                  />
+                  {errors.recipientName && <p className="text-xs text-red-500">{errors.recipientName}</p>}
                 </div>
-              )}
-
-              {/* 기타 */}
-              {selectedEventType === '기타' && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label>행사명</Label>
-                      <Input
-                        placeholder="예: 주식회사 효진토건 창립기념식"
-                        value={eventHall}
-                        onChange={(e) => setEventHall(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>장소</Label>
-                      <Input
-                        placeholder="예: 강남파이낸스센터 1층"
-                        value={eventRoom}
-                        onChange={(e) => setEventRoom(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
+              </div>
             </CardContent>
           </Card>
 
@@ -451,14 +389,7 @@ export default function NewOrderPage() {
               <div className="space-y-1.5">
                 <p className="text-xs text-gray-400">경조문구 선택 (클릭하면 위 입력란에 자동 입력)</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {[
-                    '祝結婚', '축결혼', '祝華婚', '축화혼', '謹弔', '근조',
-                    '祝發展', '축발전', '祝開業', '축개업', '祝榮轉', '축영전',
-                    '祝昇進', '축승진', '祝生日', '축생일', '祝古稀', '축고희',
-                    '祝開院', '축개원', '祝就任', '축취임', '祝移轉', '축이전',
-                    '結婚을 祝賀드립니다', '삼가 故人의 冥福을 빕니다', '대박나세요',
-                    '無窮한 發展을 祈願합니다', '삼가 고인의 명복을 빕니다', '생신을 축하드립니다',
-                  ].map((phrase) => (
+                  {RIBBON_PHRASES.map((phrase) => (
                     <button
                       key={phrase}
                       type="button"
@@ -495,30 +426,34 @@ export default function NewOrderPage() {
               {errors.deliveryDate && <p className="text-xs text-red-500">{errors.deliveryDate}</p>}
             </div>
             <div className="space-y-1">
-              <Label>배송시간 *</Label>
+              <Label>{['3시간내', '직접입력'].includes(deliveryTimeType) ? '배송시간' : '배송시간 *'}</Label>
               <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={deliveryHour}
-                  onChange={(e) => {
-                    setDeliveryHour(e.target.value)
-                    if (e.target.value) setErrors((prev) => ({ ...prev, deliveryHour: undefined }))
-                  }}
-                  className={cn('rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700', errors.deliveryHour && 'border-red-500')}
-                >
-                  <option value="">시</option>
-                  {Array.from({ length: 24 }, (_, i) => (
-                    <option key={i} value={String(i)}>{i}시</option>
-                  ))}
-                </select>
-                <select
-                  value={deliveryMinute}
-                  onChange={(e) => setDeliveryMinute(e.target.value)}
-                  className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-                >
-                  {['00', '10', '20', '30', '40', '50'].map((m) => (
-                    <option key={m} value={m}>{m}분</option>
-                  ))}
-                </select>
+                {!['3시간내', '직접입력'].includes(deliveryTimeType) && (
+                  <>
+                    <select
+                      value={deliveryHour}
+                      onChange={(e) => {
+                        setDeliveryHour(e.target.value)
+                        if (e.target.value) setErrors((prev) => ({ ...prev, deliveryHour: undefined }))
+                      }}
+                      className={cn('rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700', errors.deliveryHour && 'border-red-500')}
+                    >
+                      <option value="">시</option>
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={String(i)}>{i}시</option>
+                      ))}
+                    </select>
+                    <select
+                      value={deliveryMinute}
+                      onChange={(e) => setDeliveryMinute(e.target.value)}
+                      className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                    >
+                      {['00', '10', '20', '30', '40', '50'].map((m) => (
+                        <option key={m} value={m}>{m}분</option>
+                      ))}
+                    </select>
+                  </>
+                )}
                 <select
                   value={deliveryTimeType}
                   onChange={(e) => setDeliveryTimeType(e.target.value)}
@@ -540,17 +475,12 @@ export default function NewOrderPage() {
             </div>
 
             <div className="space-y-1">
-              <Label>주소 *</Label>
+              <Label>주소</Label>
               <Input
                 placeholder="도로명 주소 검색"
                 value={address}
-                onChange={(e) => {
-                  setAddress(e.target.value)
-                  if (e.target.value.trim()) setErrors((prev) => ({ ...prev, address: undefined }))
-                }}
-                className={cn(errors.address && 'border-red-500 focus-visible:ring-red-500')}
+                onChange={(e) => setAddress(e.target.value)}
               />
-              {errors.address && <p className="text-xs text-red-500">{errors.address}</p>}
             </div>
             <div className="space-y-1">
               <Label>상세주소</Label>
@@ -591,14 +521,12 @@ export default function NewOrderPage() {
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>받는 분 성함 *</Label>
+                  <Label>받는 분 성함</Label>
                   <Input
                     placeholder="받는 분 성함"
                     value={recipientName}
-                    onChange={(e) => { setRecipientName(e.target.value); setErrors((prev) => ({ ...prev, recipientName: undefined })) }}
-                    className={cn(errors.recipientName && 'border-red-500 focus-visible:ring-red-500')}
+                    onChange={(e) => setRecipientName(e.target.value)}
                   />
-                  {errors.recipientName && <p className="text-xs text-red-500">{errors.recipientName}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label>받는 분 휴대폰</Label>

@@ -6,6 +6,7 @@ import com.greenlink.admin.adapter.in.web.dto.UpdateVendorStatusRequest;
 import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.vendor.dto.VendorResult;
 import com.greenlink.core.application.vendor.usecase.CreateVendorUseCase;
+import com.greenlink.core.application.vendor.usecase.DeleteVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.GetVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.GetVendorsUseCase;
 import com.greenlink.core.application.vendor.usecase.UpdateVendorStatusUseCase;
@@ -27,17 +28,20 @@ public class VendorController {
     private final CreateVendorUseCase createVendorUseCase;
     private final UpdateVendorUseCase updateVendorUseCase;
     private final UpdateVendorStatusUseCase updateVendorStatusUseCase;
+    private final DeleteVendorUseCase deleteVendorUseCase;
 
     public VendorController(GetVendorsUseCase getVendorsUseCase,
                             GetVendorUseCase getVendorUseCase,
                             CreateVendorUseCase createVendorUseCase,
                             UpdateVendorUseCase updateVendorUseCase,
-                            UpdateVendorStatusUseCase updateVendorStatusUseCase) {
+                            UpdateVendorStatusUseCase updateVendorStatusUseCase,
+                            DeleteVendorUseCase deleteVendorUseCase) {
         this.getVendorsUseCase = getVendorsUseCase;
         this.getVendorUseCase = getVendorUseCase;
         this.createVendorUseCase = createVendorUseCase;
         this.updateVendorUseCase = updateVendorUseCase;
         this.updateVendorStatusUseCase = updateVendorStatusUseCase;
+        this.deleteVendorUseCase = deleteVendorUseCase;
     }
 
     @GetMapping
@@ -69,5 +73,11 @@ public class VendorController {
     public ResponseEntity<VendorResult> updateStatus(@PathVariable Long id,
                                                      @RequestBody @Valid UpdateVendorStatusRequest req) {
         return ResponseEntity.ok(updateVendorStatusUseCase.updateVendorStatus(id, req.action()));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        deleteVendorUseCase.deleteVendor(id);
+        return ResponseEntity.noContent().build();
     }
 }

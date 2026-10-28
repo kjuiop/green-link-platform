@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/alert-dialog'
 
 const orderStatusConfig: Record<OrderStatus, { label: string; className: string }> = {
-  '발주대기': { label: '발주대기', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+  '발주대기': { label: '미확인', className: 'bg-red-100 text-red-700 border-red-300 font-bold animate-blink' },
   '수주완료': { label: '수주완료', className: 'bg-blue-100 text-blue-800 border-blue-200' },
   '배송완료': { label: '배송완료', className: 'bg-green-100 text-green-800 border-green-200' },
   '수주거절': { label: '수주거절', className: 'bg-red-100 text-red-800 border-red-200' },
@@ -37,11 +37,7 @@ export function OrderStatusBadge({ status }: { status: OrderStatus }) {
   )
 }
 
-// 수주사 화면용 — 발주대기를 "미확인"으로 표시
-const vendorStatusConfig: Record<OrderStatus, { label: string; className: string }> = {
-  ...orderStatusConfig,
-  '발주대기': { label: '미확인', className: 'bg-orange-100 text-orange-700 border-orange-200' },
-}
+const vendorStatusConfig = orderStatusConfig
 
 export function VendorOrderStatusBadge({ status }: { status: OrderStatus }) {
   const config = vendorStatusConfig[status]

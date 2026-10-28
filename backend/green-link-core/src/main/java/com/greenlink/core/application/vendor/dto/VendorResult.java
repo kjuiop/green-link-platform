@@ -4,6 +4,7 @@ public record VendorResult(
     Long id,
     String companyName,
     String businessNo,
+    String faxNumber,
     String managerName,
     String phone,
     String address,

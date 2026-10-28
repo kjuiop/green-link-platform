@@ -33,6 +33,9 @@ public class AdminJpaEntity extends BaseJpaEntity {
     @Column(nullable = false, length = 20)
     private AdminStatus status = AdminStatus.ACTIVE;
 
+    @Column(length = 30)
+    private String deletedAt;
+
     protected AdminJpaEntity() {}
 
     public static AdminJpaEntity from(Admin admin) {
@@ -44,12 +47,13 @@ public class AdminJpaEntity extends BaseJpaEntity {
         e.phone = admin.getPhone();
         e.companyId = admin.getCompanyId();
         e.status = admin.getStatus() != null ? admin.getStatus() : AdminStatus.ACTIVE;
+        e.deletedAt = admin.getDeletedAt();
         return e;
     }
 
     public Admin toDomain() {
         String createdAtStr = getCreatedAt() != null
                 ? getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null;
-        return Admin.of(id, loginId, password, name, phone, companyId, status, createdAtStr);
+        return Admin.of(id, loginId, password, name, phone, companyId, status, createdAtStr, deletedAt);
     }
 }

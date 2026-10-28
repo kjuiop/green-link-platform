@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 public record UpdateVendorRequest(
     @NotBlank String companyName,
     String businessNo,
+    String faxNumber,
     String address,
     String detailAddress,
     @NotBlank String managerName,
@@ -13,6 +14,6 @@ public record UpdateVendorRequest(
     String companyType
 ) {
     public UpdateVendorCommand toCommand() {
-        return new UpdateVendorCommand(companyName, businessNo, address, detailAddress, managerName, phone, companyType);
+        return new UpdateVendorCommand(companyName, businessNo, faxNumber, address, detailAddress, managerName, phone, companyType);
     }
 }

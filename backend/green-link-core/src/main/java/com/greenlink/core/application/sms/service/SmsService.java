@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.List;
 
@@ -63,6 +64,10 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         String sender = settings.getSenderNumber();
         String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
+        String[] schedule = resolveSchedule(order);
+        String rdate = schedule[0];
+        String rtime = schedule[1];
+
         boolean ordererValid = order.isSendPhotoToOrderer() && isValidPhone(order.getOrdererPhone());
         boolean recipientValid = order.isSendPhotoToRecipient() && isValidPhone(order.getRecipientPhone());
         boolean samePhone = ordererValid && recipientValid
@@ -70,10 +75,10 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
 
         for (String imageUrl : urls) {
             if (ordererValid) {
-                sendAndRecord(orderId, order.getOrdererPhone(), msg, imageUrl, sender, now);
+                sendAndRecord(orderId, order.getOrdererPhone(), msg, imageUrl, sender, now, rdate, rtime);
             }
             if (recipientValid && !samePhone) {
-                sendAndRecord(orderId, order.getRecipientPhone(), msg, imageUrl, sender, now);
+                sendAndRecord(orderId, order.getRecipientPhone(), msg, imageUrl, sender, now, rdate, rtime);
             }
         }
     }
@@ -94,7 +99,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
         for (SmsMessage m : failed) {
-            sendAndRecord(orderId, m.getReceiver(), msg, m.getImageUrl(), sender, now);
+            sendAndRecord(orderId, m.getReceiver(), msg, m.getImageUrl(), sender, now, null, null);
         }
     }
 
@@ -131,7 +136,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
 
             SmsMessage smsMessage = SmsMessage.createNotification(orderId, vendorPhone, msg);
             try {
-                SmsResult result = smsClient.send(vendorPhone, msg, null, sender);
+                SmsResult result = smsClient.send(vendorPhone, msg, null, sender, null, null);
                 if (result.success()) {
                     smsMessage.markSuccess(result.msgId(), now);
                 } else {
@@ -180,10 +185,34 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
                 + link;
     }
 
-    private void sendAndRecord(Long orderId, String receiver, String msg, String imageUrl, String sender, String sentAt) {
+    private String[] resolveSchedule(Order order) {
+        if (!"SCHEDULED".equalsIgnoreCase(order.getMessageSchedule())) {
+            return new String[]{null, null};
+        }
+        String deliveryDate = order.getDeliveryDate();
+        String hour = order.getScheduledMessageHour();
+        String minute = order.getScheduledMessageMinute();
+        if (deliveryDate == null || hour == null || minute == null) {
+            return new String[]{null, null};
+        }
+        try {
+            String dateOnly = deliveryDate.length() >= 10 ? deliveryDate.substring(0, 10) : deliveryDate;
+            String rdate = dateOnly.replace("-", "");
+            String rtime = String.format("%02d%02d", Integer.parseInt(hour), Integer.parseInt(minute));
+            LocalDateTime scheduledAt = LocalDateTime.parse(dateOnly + "T" + String.format("%02d:%02d:00", Integer.parseInt(hour), Integer.parseInt(minute)));
+            if (scheduledAt.isBefore(LocalDateTime.now())) {
+                return new String[]{null, null};
+            }
+            return new String[]{rdate, rtime};
+        } catch (DateTimeParseException | NumberFormatException e) {
+            return new String[]{null, null};
+        }
+    }
+
+    private void sendAndRecord(Long orderId, String receiver, String msg, String imageUrl, String sender, String sentAt, String rdate, String rtime) {
         SmsMessage smsMessage = SmsMessage.create(orderId, receiver, msg, imageUrl);
         try {
-            SmsResult result = smsClient.send(receiver, msg, imageUrl, sender);
+            SmsResult result = smsClient.send(receiver, msg, imageUrl, sender, rdate, rtime);
             if (result.success()) {
                 smsMessage.markSuccess(result.msgId(), sentAt);
             } else {

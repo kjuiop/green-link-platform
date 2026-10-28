@@ -5,6 +5,7 @@ export interface Vendor {
   id: string
   name: string
   businessNumber?: string
+  faxNumber?: string
   managerName: string
   phone: string
   address: string

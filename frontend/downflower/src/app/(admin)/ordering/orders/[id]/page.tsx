@@ -17,19 +17,11 @@ import { PrintButton } from '@/components/common/PrintButton'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { ReferencePhotoSection } from '@/components/common/ReferencePhotoViewer'
 import { Pencil, X, Check, Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, RIBBON_PHRASES } from '@/lib/utils'
 import { Order } from '@/types/order'
 import { fetchAllProducts } from '@/lib/api/productApi'
 import { Product } from '@/types/product'
 
-const AMOUNT_PRESETS = [
-  { label: '기본32', value: 32000 },
-  { label: '대품42', value: 42000 },
-  { label: '특품52', value: 52000 },
-  { label: '4단62', value: 62000 },
-  { label: '쌀10키로62', value: 62000 },
-  { label: '오브제1단42', value: 42000 },
-]
 
 export default function OrderingOrderDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -412,23 +404,6 @@ export default function OrderingOrderDetailPage() {
                 </div>
                 <Field label="발주금액">
                   <Input type="number" value={draft.amount} onChange={(e) => set('amount', Number(e.target.value))} />
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {AMOUNT_PRESETS.map(({ label, value }) => (
-                      <button
-                        key={label}
-                        type="button"
-                        onClick={() => set('amount', value)}
-                        className={cn(
-                          'rounded-md border px-2.5 py-1 text-xs transition-colors',
-                          draft.amount === value
-                            ? 'border-green-700 bg-green-700 text-white'
-                            : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50',
-                        )}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
                 </Field>
                 <Field label="추가비용">
                   <Input
@@ -437,14 +412,26 @@ export default function OrderingOrderDetailPage() {
                     value={draft.extraCost ?? ''}
                     onChange={(e) => set('extraCost', e.target.value ? Number(e.target.value) : undefined)}
                   />
+                  {draft.extraCost ? (
+                    <p className="mt-1 text-xs text-gray-500">
+                      최종 발주금액: {(draft.amount + draft.extraCost).toLocaleString()}원
+                      <span className="ml-1 text-gray-400">({draft.amount.toLocaleString()} + {draft.extraCost.toLocaleString()})</span>
+                    </p>
+                  ) : null}
                 </Field>
               </>
             ) : (
               <>
                 <Row label="상품명" value={order.productName} />
                 <Row label="수량" value={`${order.quantity}개`} />
-                <Row label="발주금액" value={`${order.amount.toLocaleString()}원`} />
-                {order.extraCost ? <Row label="추가비용" value={`${order.extraCost.toLocaleString()}원`} /> : null}
+                <Row
+                  label="발주금액"
+                  value={
+                    order.extraCost
+                      ? `${(order.amount + order.extraCost).toLocaleString()}원 (기본 ${order.amount.toLocaleString()} + 추가 ${order.extraCost.toLocaleString()})`
+                      : `${order.amount.toLocaleString()}원`
+                  }
+                />
                 <Row label="수주업체" value={order.vendorName} />
                 <Row label="발주일시" value={order.orderedAt} />
               </>
@@ -486,41 +473,51 @@ export default function OrderingOrderDetailPage() {
                     ))}
                   </div>
                 </Field>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label={draft.eventType === '장례식' ? '장례식장명' : draft.eventType === '결혼식' ? '예식장명' : '행사명'}>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label={draft.eventType === '장례식' ? '장례식장' : draft.eventType === '결혼식' ? '예식장' : '장소'}>
                     <Input
-                      placeholder={draft.eventType === '장례식' ? '예: 한독병원장례식장' : draft.eventType === '결혼식' ? '예: 더파티움 강남' : '예: 창립기념식'}
+                      placeholder={
+                        draft.eventType === '장례식' ? '예: 한독병원장례식장' :
+                        draft.eventType === '결혼식' ? '예: 더파티움 강남' :
+                        '예: 강남파이낸스센터 1층'
+                      }
                       value={draft.placeName ?? ''}
                       onChange={(e) => set('placeName', e.target.value)}
                     />
                   </Field>
-                  <Field label={draft.eventType === '장례식' ? '빈소' : draft.eventType === '결혼식' ? '홀' : '장소'}>
+                  <Field label={draft.eventType === '장례식' ? '받는 분 (예: 상주 홍길동)' : draft.eventType === '결혼식' ? '받는 분 (예: 신랑 홍길동)' : '받는 분'}>
                     <Input
-                      placeholder={draft.eventType === '장례식' ? '예: 무궁화실' : draft.eventType === '결혼식' ? '예: 그랜드볼룸 A홀' : '예: 강남파이낸스센터 1층'}
-                      value={draft.roomName ?? ''}
-                      onChange={(e) => set('roomName', e.target.value)}
+                      placeholder={
+                        draft.eventType === '장례식' ? '예: 상주 홍길동' :
+                        draft.eventType === '결혼식' ? '예: 신랑 홍길동' :
+                        '예: 홍길동'
+                      }
+                      value={draft.recipientName ?? ''}
+                      onChange={(e) => set('recipientName', e.target.value || undefined)}
                     />
                   </Field>
                 </div>
-                {draft.eventType !== '기타' && (
-                  <Field label={draft.eventType === '장례식' ? '고인명' : '신랑/신부명'}>
-                    <Input
-                      placeholder={draft.eventType === '장례식' ? '예: 고인 홍길동' : '예: 홍길동 ♥ 홍길순'}
-                      value={draft.eventInfo ?? ''}
-                      onChange={(e) => set('eventInfo', e.target.value || undefined)}
-                    />
-                  </Field>
-                )}
               </>
             ) : (
               <>
-                <Row label="배송예정" value={order.deliveryAt} />
+                <Row label="배송예정" value={
+                  order.deliveryAt && order.deliveryTimeHour && order.deliveryTimeMinute !== undefined && order.deliveryTimeMinute !== ''
+                    ? `${order.deliveryAt} ${order.deliveryTimeHour.padStart(2, '0')}:${order.deliveryTimeMinute.padStart(2, '0')}`
+                    : order.deliveryTimeType
+                      ? `${order.deliveryAt} ${order.deliveryTimeType === '직접입력' ? (order.deliveryTimeCustom ?? order.deliveryTimeType) : order.deliveryTimeType}`
+                      : order.deliveryAt
+                } />
                 <Row label="주소" value={`${order.address} ${order.addressDetail ?? ''}`.trim()} />
                 <Row label="행사유형" value={order.eventType} />
-                <Row label={order.eventType === '장례식' ? '장례식장명' : order.eventType === '결혼식' ? '예식장명' : '행사명'} value={order.placeName || '-'} />
-                <Row label={order.eventType === '장례식' ? '빈소' : order.eventType === '결혼식' ? '홀' : '장소'} value={order.roomName || '-'} />
-                {order.eventType !== '기타' && (
-                  <Row label={order.eventType === '장례식' ? '고인명' : '신랑/신부명'} value={order.eventInfo || '-'} />
+                <Row
+                  label={order.eventType === '장례식' ? '장례식장' : order.eventType === '결혼식' ? '예식장' : '장소'}
+                  value={[order.placeName, order.roomName].filter(Boolean).join(' · ') || '-'}
+                />
+                {order.recipientName && (
+                  <Row label="받는 분" value={order.recipientName} />
+                )}
+                {order.eventInfo && (
+                  <Row label="행사정보" value={order.eventInfo} />
                 )}
               </>
             )}
@@ -539,6 +536,21 @@ export default function OrderingOrderDetailPage() {
                 <Field label="리본 오른쪽">
                   <Input value={draft.ribbonRight} onChange={(e) => set('ribbonRight', e.target.value)} />
                 </Field>
+                <div className="space-y-1.5">
+                  <p className="text-xs text-gray-400">경조문구 선택 (클릭하면 위 입력란에 자동 입력)</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {RIBBON_PHRASES.map((phrase) => (
+                      <button
+                        key={phrase}
+                        type="button"
+                        onClick={() => set('ribbonRight', phrase)}
+                        className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:border-green-600 hover:bg-green-50 hover:text-green-700"
+                      >
+                        {phrase}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </>
             ) : (
               <>

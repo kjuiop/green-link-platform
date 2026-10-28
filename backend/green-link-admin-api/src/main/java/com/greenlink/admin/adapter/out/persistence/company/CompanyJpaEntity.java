@@ -26,6 +26,9 @@ public class CompanyJpaEntity extends BaseJpaEntity {
     @Column(length = 20)
     private String phone;
 
+    @Column(length = 20)
+    private String faxNumber;
+
     @Column(length = 200)
     private String address;
 
@@ -53,6 +56,7 @@ public class CompanyJpaEntity extends BaseJpaEntity {
         e.companyName = company.getCompanyName();
         e.ceoName = company.getCeoName();
         e.phone = company.getPhone();
+        e.faxNumber = company.getFaxNumber();
         e.address = company.getAddress();
         e.detailAddress = company.getDetailAddress();
         e.type = company.getType();
@@ -62,6 +66,6 @@ public class CompanyJpaEntity extends BaseJpaEntity {
     }
 
     public Company toDomain() {
-        return Company.of(id, businessNo, companyName, ceoName, phone, address, detailAddress, type, status, displayYn);
+        return Company.of(id, businessNo, companyName, ceoName, phone, faxNumber, address, detailAddress, type, status, displayYn);
     }
 }

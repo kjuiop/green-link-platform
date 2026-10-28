@@ -1,5 +1,6 @@
 import { Order, OrderStatus } from '@/types/order'
 import { PageResult } from '@/types/page'
+import { authHeaders, authBearerHeader, fetchWithAuth } from './fetchWithAuth'
 
 const STATUS_MAP: Record<string, OrderStatus> = {
   PENDING: '발주대기',
@@ -49,6 +50,7 @@ type BackendOrder = {
   scheduledMessageMinute: string | null
   adminMemo: string | null
   vendorMemo: string | null
+  acceptedAt: string | null
   completedAt: string | null
   createdAt: string
   messageStatus: string | null
@@ -94,14 +96,6 @@ export type CreateOrderPayload = {
 
 export type UpdateOrderPayload = CreateOrderPayload
 
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }
-}
-
 function toFrontend(o: BackendOrder): Order {
   return {
     id: String(o.id),
@@ -144,6 +138,7 @@ function toFrontend(o: BackendOrder): Order {
     scheduledMessageMinute: o.scheduledMessageMinute ?? undefined,
     adminMemo: o.adminMemo ?? undefined,
     vendorMemo: o.vendorMemo ?? undefined,
+    acceptedAt: o.acceptedAt ?? null,
     completedAt: o.completedAt ?? undefined,
     messageStatus: o.messageStatus === 'SENT' ? '발송' : o.messageStatus === 'FAIL' ? '실패' : '미발송',
     isDeleted: o.isDeleted ?? false,
@@ -160,7 +155,7 @@ export type OrderingCompany = {
 }
 
 export async function fetchOrderingCompanies(): Promise<OrderingCompany[]> {
-  const res = await fetch('/api/companies?type=ORDERING', { headers: authHeaders() })
+  const res = await fetchWithAuth('/api/companies?type=ORDERING', { headers: authHeaders() })
   if (!res.ok) return []
   const data: Array<{ id: number; companyName: string }> = await res.json()
   return data
@@ -202,7 +197,7 @@ function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: numbe
 
 export async function fetchOrders(params?: OrderSearchParams): Promise<Order[]> {
   const qs = buildOrderQuery(params, 0, 10000)
-  const res = await fetch(`/api/orders${qs ? `?${qs}` : ''}`, { headers: authHeaders() })
+  const res = await fetchWithAuth(`/api/orders${qs ? `?${qs}` : ''}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('발주 목록을 불러오지 못했습니다.')
   const data: PageResult<BackendOrder> = await res.json()
   return data.content.map(toFrontend)
@@ -210,20 +205,20 @@ export async function fetchOrders(params?: OrderSearchParams): Promise<Order[]> 
 
 export async function fetchOrdersPaged(params?: OrderSearchParams, page = 0, size = 20): Promise<PageResult<Order>> {
   const qs = buildOrderQuery(params, page, size)
-  const res = await fetch(`/api/orders${qs ? `?${qs}` : ''}`, { headers: authHeaders() })
+  const res = await fetchWithAuth(`/api/orders${qs ? `?${qs}` : ''}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('발주 목록을 불러오지 못했습니다.')
   const data: PageResult<BackendOrder> = await res.json()
   return { ...data, content: data.content.map(toFrontend) }
 }
 
 export async function fetchOrder(id: string): Promise<Order> {
-  const res = await fetch(`/api/orders/${id}`, { headers: authHeaders() })
+  const res = await fetchWithAuth(`/api/orders/${id}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('발주 정보를 불러오지 못했습니다.')
   return toFrontend(await res.json())
 }
 
 export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
-  const res = await fetch('/api/orders', {
+  const res = await fetchWithAuth('/api/orders', {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -236,7 +231,7 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
 }
 
 export async function updateOrder(id: string, payload: UpdateOrderPayload): Promise<Order> {
-  const res = await fetch(`/api/orders/${id}`, {
+  const res = await fetchWithAuth(`/api/orders/${id}`, {
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -258,13 +253,13 @@ export type PhotoResult = {
 }
 
 export async function fetchAllPhotos(): Promise<PhotoResult[]> {
-  const res = await fetch('/api/photos', { headers: authHeaders() })
+  const res = await fetchWithAuth('/api/photos', { headers: authHeaders() })
   if (!res.ok) throw new Error('사진 목록을 불러오지 못했습니다.')
   return res.json()
 }
 
 export async function fetchPhotos(orderId: string): Promise<PhotoResult[]> {
-  const res = await fetch(`/api/orders/${orderId}/photos`, { headers: authHeaders() })
+  const res = await fetchWithAuth(`/api/orders/${orderId}/photos`, { headers: authHeaders() })
   if (!res.ok) throw new Error('사진 목록을 불러오지 못했습니다.')
   return res.json()
 }
@@ -273,10 +268,9 @@ export async function uploadPhotos(orderId: string, files: File[], photoType: 'S
   const formData = new FormData()
   files.forEach((f) => formData.append('files', f))
   formData.append('photoType', photoType)
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
-  const res = await fetch(`/api/orders/${orderId}/photos`, {
+  const res = await fetchWithAuth(`/api/orders/${orderId}/photos`, {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: authBearerHeader(),
     body: formData,
   })
   if (!res.ok) throw new Error('사진 업로드에 실패했습니다.')
@@ -284,7 +278,7 @@ export async function uploadPhotos(orderId: string, files: File[], photoType: 'S
 }
 
 export async function selectPhoto(orderId: string, photoId: number, selected: boolean): Promise<PhotoResult> {
-  const res = await fetch(`/api/orders/${orderId}/photos/${photoId}/select`, {
+  const res = await fetchWithAuth(`/api/orders/${orderId}/photos/${photoId}/select`, {
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify({ selected }),
@@ -304,7 +298,7 @@ export type OrderHistoryItem = {
 }
 
 export async function fetchOrderHistory(orderId: string): Promise<OrderHistoryItem[]> {
-  const res = await fetch(`/api/orders/${orderId}/history`, { headers: authHeaders() })
+  const res = await fetchWithAuth(`/api/orders/${orderId}/history`, { headers: authHeaders() })
   if (!res.ok) throw new Error('이력을 불러오지 못했습니다.')
   return res.json()
 }
@@ -322,7 +316,7 @@ export type ReceiptConfirmationResult = {
 }
 
 export async function fetchReceiptConfirmation(orderId: string): Promise<ReceiptConfirmationResult | null> {
-  const res = await fetch(`/api/orders/${orderId}/receipt`, { headers: authHeaders() })
+  const res = await fetchWithAuth(`/api/orders/${orderId}/receipt`, { headers: authHeaders() })
   if (res.status === 204) return null
   if (!res.ok) throw new Error('인수확인 정보를 불러오지 못했습니다.')
   return res.json()
@@ -334,7 +328,6 @@ export async function saveReceiptConfirmation(
   siteFiles: File[],
   storeFiles: File[]
 ): Promise<ReceiptConfirmationResult> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
   const formData = new FormData()
   if (data.receiverName) formData.append('receiverName', data.receiverName)
   if (data.receiverRelation) formData.append('receiverRelation', data.receiverRelation)
@@ -343,9 +336,9 @@ export async function saveReceiptConfirmation(
   if (data.confirmedAt) formData.append('confirmedAt', data.confirmedAt)
   siteFiles.forEach((f) => formData.append('siteFiles', f))
   storeFiles.forEach((f) => formData.append('storeFiles', f))
-  const res = await fetch(`/api/orders/${orderId}/receipt`, {
+  const res = await fetchWithAuth(`/api/orders/${orderId}/receipt`, {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: authBearerHeader(),
     body: formData,
   })
   if (!res.ok) throw new Error('인수확인 저장에 실패했습니다.')
@@ -362,7 +355,7 @@ export async function updateReceiptInfo(
   params.append('delivered', String(data.delivered))
   if (data.memo) params.append('memo', data.memo)
   if (data.confirmedAt) params.append('confirmedAt', data.confirmedAt)
-  const res = await fetch(`/api/orders/${orderId}/receipt/info?${params.toString()}`, {
+  const res = await fetchWithAuth(`/api/orders/${orderId}/receipt/info?${params.toString()}`, {
     method: 'PATCH',
     headers: authHeaders(),
   })
@@ -371,13 +364,12 @@ export async function updateReceiptInfo(
 }
 
 export async function uploadReceiptPhotos(orderId: string, files: File[], photoType: 'SITE' | 'STORE' = 'SITE'): Promise<ReceiptConfirmationResult> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
   const formData = new FormData()
   files.forEach((f) => formData.append('files', f))
   formData.append('photoType', photoType)
-  const res = await fetch(`/api/orders/${orderId}/receipt/photos`, {
+  const res = await fetchWithAuth(`/api/orders/${orderId}/receipt/photos`, {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: authBearerHeader(),
     body: formData,
   })
   if (!res.ok) throw new Error('배송사진 업로드에 실패했습니다.')
@@ -397,7 +389,7 @@ export type SmsMessageResult = {
 }
 
 export async function fetchSmsMessages(orderId: string): Promise<SmsMessageResult[]> {
-  const res = await fetch(`/api/messages/order/${orderId}`, { headers: authHeaders() })
+  const res = await fetchWithAuth(`/api/messages/order/${orderId}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('발송 내역을 불러오지 못했습니다.')
   return res.json()
 }
@@ -410,7 +402,7 @@ export type ReferencePhotoResult = {
 }
 
 export async function fetchReferencePhotos(orderId: string): Promise<ReferencePhotoResult[]> {
-  const res = await fetch(`/api/orders/${orderId}/reference-photos`, { headers: authHeaders() })
+  const res = await fetchWithAuth(`/api/orders/${orderId}/reference-photos`, { headers: authHeaders() })
   if (!res.ok) throw new Error('참고 이미지를 불러오지 못했습니다.')
   return res.json()
 }
@@ -418,10 +410,9 @@ export async function fetchReferencePhotos(orderId: string): Promise<ReferencePh
 export async function uploadReferencePhotos(orderId: string, files: File[]): Promise<ReferencePhotoResult[]> {
   const formData = new FormData()
   files.forEach((f) => formData.append('files', f))
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
-  const res = await fetch(`/api/orders/${orderId}/reference-photos`, {
+  const res = await fetchWithAuth(`/api/orders/${orderId}/reference-photos`, {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: authBearerHeader(),
     body: formData,
   })
   if (!res.ok) throw new Error('참고 이미지 업로드에 실패했습니다.')
@@ -429,7 +420,7 @@ export async function uploadReferencePhotos(orderId: string, files: File[]): Pro
 }
 
 export async function resendMms(orderId: string): Promise<void> {
-  const res = await fetch(`/api/orders/${orderId}/resend`, {
+  const res = await fetchWithAuth(`/api/orders/${orderId}/resend`, {
     method: 'POST',
     headers: authHeaders(),
   })
@@ -437,7 +428,7 @@ export async function resendMms(orderId: string): Promise<void> {
 }
 
 export async function downloadOrdersExcel(orderIds: string[]): Promise<void> {
-  const res = await fetch('/api/orders/export/excel', {
+  const res = await fetchWithAuth('/api/orders/export/excel', {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ orderIds: orderIds.map(Number) }),
@@ -454,7 +445,7 @@ export async function downloadOrdersExcel(orderIds: string[]): Promise<void> {
 }
 
 export async function deleteOrder(id: string): Promise<void> {
-  const res = await fetch(`/api/orders/${id}`, {
+  const res = await fetchWithAuth(`/api/orders/${id}`, {
     method: 'DELETE',
     headers: authHeaders(),
   })
@@ -462,7 +453,7 @@ export async function deleteOrder(id: string): Promise<void> {
 }
 
 export async function updateOrderStatus(id: string, action: string, photoUrls?: string[]): Promise<Order> {
-  const res = await fetch(`/api/orders/${id}/status`, {
+  const res = await fetchWithAuth(`/api/orders/${id}/status`, {
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify({ action, photoUrls: photoUrls ?? [] }),

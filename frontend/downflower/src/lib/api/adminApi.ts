@@ -1,3 +1,5 @@
+import { authHeaders, fetchWithAuth } from './fetchWithAuth'
+
 export type AdminProfile = {
   id: number
   loginId: string
@@ -5,22 +7,14 @@ export type AdminProfile = {
   phone: string | null
 }
 
-function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }
-}
-
 export async function fetchAdminProfile(): Promise<AdminProfile> {
-  const res = await fetch('/api/admin/me', { headers: authHeaders() })
+  const res = await fetchWithAuth('/api/admin/me', { headers: authHeaders() })
   if (!res.ok) throw new Error('계정 정보를 불러오지 못했습니다.')
   return res.json()
 }
 
 export async function updateAdminProfile(name: string, phone: string): Promise<void> {
-  const res = await fetch('/api/admin/me', {
+  const res = await fetchWithAuth('/api/admin/me', {
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify({ name, phone }),
