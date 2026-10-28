@@ -48,7 +48,7 @@ public class PhoneVerificationService implements
         verificationRepository.save(verification);
 
         String msg = "[온우림] 인증번호: " + verification.getCode() + " (3분 이내 입력)";
-        SmsResult result = smsClient.send(phone, msg, null, null, null, null);
+        SmsResult result = smsClient.send(phone, msg, null, null, null, null, null);
         if (!result.success()) {
             throw new BusinessException(AuthErrorCode.SMS_SEND_FAILED);
         }

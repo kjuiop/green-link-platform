@@ -23,7 +23,7 @@ public class AligoSmsClient implements SmsClient {
     }
 
     @Override
-    public SmsResult send(String receiver, String msg, String imageUrl, String sender, String rdate, String rtime) {
+    public SmsResult send(String receiver, String msg, String imageUrl, String sender, String rdate, String rtime, String title) {
         try {
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
             body.add("key", props.key());
@@ -37,10 +37,12 @@ public class AligoSmsClient implements SmsClient {
                 body.add("rtime", (rtime != null && !rtime.isBlank()) ? rtime : "0000");
             }
 
+            String msgType;
             if (imageUrl != null && !imageUrl.isBlank()) {
                 byte[] imageBytes = restTemplate.getForObject(imageUrl, byte[].class);
                 if (imageBytes != null) {
-                    body.add("msg_type", "MMS");
+                    msgType = "MMS";
+                    body.add("msg_type", msgType);
                     ByteArrayResource imageResource = new ByteArrayResource(imageBytes) {
                         @Override
                         public String getFilename() {
@@ -49,11 +51,16 @@ public class AligoSmsClient implements SmsClient {
                     };
                     body.add("image", imageResource);
                 } else {
-                    body.add("msg_type", "SMS");
+                    msgType = "SMS";
+                    body.add("msg_type", msgType);
                 }
             } else {
                 boolean isLong = msg.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 90;
-                body.add("msg_type", isLong ? "LMS" : "SMS");
+                msgType = isLong ? "LMS" : "SMS";
+                body.add("msg_type", msgType);
+            }
+            if (title != null && !title.isBlank() && (msgType.equals("LMS") || msgType.equals("MMS"))) {
+                body.add("title", title);
             }
 
             HttpHeaders headers = new HttpHeaders();
