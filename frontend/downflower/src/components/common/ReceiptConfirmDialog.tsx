@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ClipboardCheck, Upload, X, Images, Download } from 'lucide-react'
@@ -172,6 +172,8 @@ interface FormDialogProps {
 function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId, orderNumber, senderName, recipientName }: FormDialogProps) {
   const [sitePhotoFiles, setSitePhotoFiles] = useState<{ id: string; file: File; url: string }[]>([])
   const [storePhotoFiles, setStorePhotoFiles] = useState<{ id: string; file: File; url: string }[]>([])
+  const sitePhotoInputRef = useRef<HTMLInputElement>(null)
+  const storePhotoInputRef = useRef<HTMLInputElement>(null)
   const [receiverName, setReceiverName] = useState('')
   const [receiverRelation, setReceiverRelation] = useState('')
   const [delivered, setDelivered] = useState(false)
@@ -306,11 +308,15 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                       </button>
                     </div>
                   ))}
-                  <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400">
+                  <button
+                    type="button"
+                    onClick={() => sitePhotoInputRef.current?.click()}
+                    className="flex h-16 w-16 flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
+                  >
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
-                    <input type="file" accept="image/*" multiple className="hidden" onChange={makeFileChangeHandler(setSitePhotoFiles)} />
-                  </label>
+                  </button>
+                  <input ref={sitePhotoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={makeFileChangeHandler(setSitePhotoFiles)} />
                 </div>
               </td>
             </tr>
@@ -331,11 +337,15 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                       </button>
                     </div>
                   ))}
-                  <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400">
+                  <button
+                    type="button"
+                    onClick={() => storePhotoInputRef.current?.click()}
+                    className="flex h-16 w-16 flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
+                  >
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
-                    <input type="file" accept="image/*" multiple className="hidden" onChange={makeFileChangeHandler(setStorePhotoFiles)} />
-                  </label>
+                  </button>
+                  <input ref={storePhotoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={makeFileChangeHandler(setStorePhotoFiles)} />
                 </div>
               </td>
             </tr>
