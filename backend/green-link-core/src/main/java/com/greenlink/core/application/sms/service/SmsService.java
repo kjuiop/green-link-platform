@@ -31,6 +31,8 @@ import java.util.List;
 @Service
 public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, GetSmsMessagesUseCase, SendOrderNotificationUseCase {
 
+    private static final String NOTIFICATION_TITLE = "[온우림] 새 발주가 접수되었습니다.";
+
     private final OrderRepository orderRepository;
     private final SmsMessageRepository smsMessageRepository;
     private final SmsClient smsClient;
@@ -136,7 +138,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
 
             SmsMessage smsMessage = SmsMessage.createNotification(orderId, vendorPhone, msg);
             try {
-                SmsResult result = smsClient.send(vendorPhone, msg, null, sender, null, null, "[온우림] 새 발주가 접수되었습니다.");
+                SmsResult result = smsClient.send(vendorPhone, msg, null, sender, null, null, NOTIFICATION_TITLE);
                 if (result.success()) {
                     smsMessage.markSuccess(result.msgId(), now);
                 } else {
