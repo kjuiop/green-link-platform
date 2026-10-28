@@ -473,50 +473,17 @@ export default function OrderingOrderDetailPage() {
                     ))}
                   </div>
                 </Field>
-                {draft.eventType === '기타' ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label="장소">
-                      <Input
-                        placeholder="예: 강남파이낸스센터 1층"
-                        value={draft.roomName ?? ''}
-                        onChange={(e) => set('roomName', e.target.value)}
-                      />
-                    </Field>
-                    <Field label="행사명">
-                      <Input
-                        placeholder="예: 창립기념식"
-                        value={draft.placeName ?? ''}
-                        onChange={(e) => set('placeName', e.target.value)}
-                      />
-                    </Field>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label={draft.eventType === '장례식' ? '장례식장명' : '예식장명'}>
-                      <Input
-                        placeholder={draft.eventType === '장례식' ? '예: 한독병원장례식장' : '예: 더파티움 강남'}
-                        value={draft.placeName ?? ''}
-                        onChange={(e) => set('placeName', e.target.value)}
-                      />
-                    </Field>
-                    <Field label={draft.eventType === '장례식' ? '빈소' : '홀'}>
-                      <Input
-                        placeholder={draft.eventType === '장례식' ? '예: 무궁화실' : '예: 그랜드볼룸 A홀'}
-                        value={draft.roomName ?? ''}
-                        onChange={(e) => set('roomName', e.target.value)}
-                      />
-                    </Field>
-                  </div>
-                )}
-                {draft.eventType !== '기타' && (
-                  <Field label={draft.eventType === '장례식' ? '고인명' : '신랑/신부명'}>
-                    <Input
-                      placeholder={draft.eventType === '장례식' ? '예: 고인 홍길동' : '예: 홍길동 ♥ 홍길순'}
-                      value={draft.eventInfo ?? ''}
-                      onChange={(e) => set('eventInfo', e.target.value || undefined)}
-                    />
-                  </Field>
-                )}
+                <Field label={draft.eventType === '장례식' ? '장례식장' : draft.eventType === '결혼식' ? '예식장' : '장소'}>
+                  <Input
+                    placeholder={
+                      draft.eventType === '장례식' ? '예: 한독병원장례식장' :
+                      draft.eventType === '결혼식' ? '예: 더파티움 강남' :
+                      '예: 강남파이낸스센터 1층'
+                    }
+                    value={draft.placeName ?? ''}
+                    onChange={(e) => set('placeName', e.target.value)}
+                  />
+                </Field>
               </>
             ) : (
               <>
@@ -527,10 +494,12 @@ export default function OrderingOrderDetailPage() {
                 } />
                 <Row label="주소" value={`${order.address} ${order.addressDetail ?? ''}`.trim()} />
                 <Row label="행사유형" value={order.eventType} />
-                <Row label={order.eventType === '장례식' ? '장례식장명' : order.eventType === '결혼식' ? '예식장명' : '행사명'} value={order.placeName || '-'} />
-                <Row label={order.eventType === '장례식' ? '빈소' : order.eventType === '결혼식' ? '홀' : '장소'} value={order.roomName || '-'} />
-                {order.eventType !== '기타' && (
-                  <Row label={order.eventType === '장례식' ? '고인명' : '신랑/신부명'} value={order.eventInfo || '-'} />
+                <Row
+                  label={order.eventType === '장례식' ? '장례식장' : order.eventType === '결혼식' ? '예식장' : '장소'}
+                  value={[order.placeName, order.roomName].filter(Boolean).join(' · ') || '-'}
+                />
+                {order.eventInfo && (
+                  <Row label="행사정보" value={order.eventInfo} />
                 )}
               </>
             )}

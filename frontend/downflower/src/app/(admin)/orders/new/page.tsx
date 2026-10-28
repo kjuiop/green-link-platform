@@ -42,14 +42,7 @@ export default function NewOrderPage() {
 
   // 행사정보
   const [selectedEventType, setSelectedEventType] = useState<'장례식' | '결혼식' | '기타'>('장례식')
-  const [funeralHall, setFuneralHall] = useState('')
-  const [funeralRoom, setFuneralRoom] = useState('')
-  const [funeralPerson, setFuneralPerson] = useState('')
-  const [weddingHall, setWeddingHall] = useState('')
-  const [weddingRoom, setWeddingRoom] = useState('')
-  const [weddingPerson, setWeddingPerson] = useState('')
-  const [eventHall, setEventHall] = useState('')
-  const [eventRoom, setEventRoom] = useState('')
+  const [venueName, setVenueName] = useState('')
 
   // 주문자 / 받는 분
   const [ordererName, setOrdererName] = useState('')
@@ -119,16 +112,9 @@ export default function NewOrderPage() {
     if (Object.keys(next).length > 0) return
 
     let eventType = selectedEventType
-    let placeName = ''
+    let placeName = venueName
     let roomName = ''
     let eventInfo = ''
-    if (selectedEventType === '장례식') {
-      placeName = funeralHall; roomName = funeralRoom; eventInfo = funeralPerson
-    } else if (selectedEventType === '결혼식') {
-      placeName = weddingHall; roomName = weddingRoom; eventInfo = weddingPerson
-    } else if (selectedEventType === '기타') {
-      placeName = eventHall; roomName = eventRoom
-    }
 
     setSubmitting(true)
     setSubmitError('')
@@ -329,7 +315,7 @@ export default function NewOrderPage() {
                   <button
                     key={type}
                     type="button"
-                    onClick={() => setSelectedEventType(type)}
+                    onClick={() => { setSelectedEventType(type); setVenueName('') }}
                     className={cn(
                       'rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
                       selectedEventType === type
@@ -342,93 +328,20 @@ export default function NewOrderPage() {
                 ))}
               </div>
 
-              {/* 장례식 */}
-              {selectedEventType === '장례식' && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label>장례식장명</Label>
-                      <Input
-                        placeholder="예: 한독병원장례식장"
-                        value={funeralHall}
-                        onChange={(e) => setFuneralHall(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>빈소</Label>
-                      <Input
-                        placeholder="예: 무궁화실"
-                        value={funeralRoom}
-                        onChange={(e) => setFuneralRoom(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>고인명</Label>
-                    <Input
-                      placeholder="예: 고인 홍길동"
-                      value={funeralPerson}
-                      onChange={(e) => setFuneralPerson(e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* 결혼식 */}
-              {selectedEventType === '결혼식' && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label>예식장명</Label>
-                      <Input
-                        placeholder="예: 더파티움 강남"
-                        value={weddingHall}
-                        onChange={(e) => setWeddingHall(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>홀</Label>
-                      <Input
-                        placeholder="예: 그랜드볼룸 A홀"
-                        value={weddingRoom}
-                        onChange={(e) => setWeddingRoom(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>신랑/신부명</Label>
-                    <Input
-                      placeholder="예: 홍길동 ♥ 홍길순"
-                      value={weddingPerson}
-                      onChange={(e) => setWeddingPerson(e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* 기타 */}
-              {selectedEventType === '기타' && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label>장소</Label>
-                      <Input
-                        placeholder="예: 강남파이낸스센터 1층"
-                        value={eventRoom}
-                        onChange={(e) => setEventRoom(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>행사명</Label>
-                      <Input
-                        placeholder="예: 주식회사 효진토건 창립기념식"
-                        value={eventHall}
-                        onChange={(e) => setEventHall(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
+              <div className="space-y-1.5">
+                <Label>
+                  {selectedEventType === '장례식' ? '장례식장' : selectedEventType === '결혼식' ? '예식장' : '장소'}
+                </Label>
+                <Input
+                  placeholder={
+                    selectedEventType === '장례식' ? '예: 한독병원장례식장' :
+                    selectedEventType === '결혼식' ? '예: 더파티움 강남' :
+                    '예: 강남파이낸스센터 1층'
+                  }
+                  value={venueName}
+                  onChange={(e) => setVenueName(e.target.value)}
+                />
+              </div>
             </CardContent>
           </Card>
 
