@@ -117,7 +117,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             cmd.companyName(),
             "",
             cmd.phone(),
-            cmd.faxNumber() != null ? cmd.faxNumber() : "",
+            (cmd.faxNumber() != null && !cmd.faxNumber().isBlank()) ? cmd.faxNumber() : null,
             cmd.address() != null ? cmd.address() : "",
             cmd.detailAddress() != null ? cmd.detailAddress() : "",
             parseCompanyType(cmd.companyType())
@@ -155,7 +155,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             company.updateInfo(
                 cmd.companyName(),
                 businessNo,
-                cmd.faxNumber() != null ? cmd.faxNumber() : "",
+                (cmd.faxNumber() != null && !cmd.faxNumber().isBlank()) ? cmd.faxNumber() : null,
                 cmd.address() != null ? cmd.address() : "",
                 cmd.detailAddress() != null ? cmd.detailAddress() : ""
             );
@@ -232,7 +232,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
                 cmd.companyName(),
                 cmd.ceoName() != null ? cmd.ceoName() : "",
                 cmd.companyPhone() != null ? cmd.companyPhone() : cmd.phone(),
-                "",
+                null,
                 cmd.address() != null ? cmd.address() : "",
                 cmd.detailAddress() != null ? cmd.detailAddress() : "",
                 requestedType
