@@ -317,7 +317,7 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
                   </button>
-                  <input ref={siteInputRef} type="file" accept="image/*" multiple className="sr-only" onChange={makeFileChangeHandler(setSitePhotoFiles)} />
+                  <input ref={siteInputRef} type="file" accept="image/*" multiple tabIndex={-1} className="sr-only" onChange={makeFileChangeHandler(setSitePhotoFiles)} />
                 </div>
               </td>
             </tr>
@@ -346,7 +346,7 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
                   </button>
-                  <input ref={storeInputRef} type="file" accept="image/*" multiple className="sr-only" onChange={makeFileChangeHandler(setStorePhotoFiles)} />
+                  <input ref={storeInputRef} type="file" accept="image/*" multiple tabIndex={-1} className="sr-only" onChange={makeFileChangeHandler(setStorePhotoFiles)} />
                 </div>
               </td>
             </tr>
