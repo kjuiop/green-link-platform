@@ -31,6 +31,8 @@ import java.util.List;
 @Service
 public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, GetSmsMessagesUseCase, SendOrderNotificationUseCase {
 
+    private static final String NOTIFICATION_TITLE = "[온우림] 새 발주가 접수되었습니다.";
+
     private final OrderRepository orderRepository;
     private final SmsMessageRepository smsMessageRepository;
     private final SmsClient smsClient;
@@ -136,7 +138,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
 
             SmsMessage smsMessage = SmsMessage.createNotification(orderId, vendorPhone, msg);
             try {
-                SmsResult result = smsClient.send(vendorPhone, msg, null, sender, null, null);
+                SmsResult result = smsClient.send(vendorPhone, msg, null, sender, null, null, NOTIFICATION_TITLE);
                 if (result.success()) {
                     smsMessage.markSuccess(result.msgId(), now);
                 } else {
@@ -172,8 +174,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         String vendorLine = (vendorName != null && !vendorName.isBlank())
                 ? "수주업체: " + vendorName + "\n" : "";
 
-        return "[온우림] 새 발주가 접수되었습니다.\n\n"
-                + "주문번호: " + order.getOrderNumber() + "\n"
+        return "주문번호: " + order.getOrderNumber() + "\n"
                 + orderingLine
                 + vendorLine
                 + "주문자: " + order.getOrdererName() + " / " + order.getOrdererPhone() + "\n"
@@ -212,7 +213,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     private void sendAndRecord(Long orderId, String receiver, String msg, String imageUrl, String sender, String sentAt, String rdate, String rtime) {
         SmsMessage smsMessage = SmsMessage.create(orderId, receiver, msg, imageUrl);
         try {
-            SmsResult result = smsClient.send(receiver, msg, imageUrl, sender, rdate, rtime);
+            SmsResult result = smsClient.send(receiver, msg, imageUrl, sender, rdate, rtime, null);
             if (result.success()) {
                 smsMessage.markSuccess(result.msgId(), sentAt);
             } else {
