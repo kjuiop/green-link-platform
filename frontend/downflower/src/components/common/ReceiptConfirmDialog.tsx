@@ -262,7 +262,7 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
+      <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }} modal="trap-focus">
         <DialogContent className="sm:max-w-2xl" showCloseButton>
           <DialogTitle>
             인수확인
