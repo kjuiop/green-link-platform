@@ -519,13 +519,23 @@ export default function NewOrderPage() {
                   {errors.ordererPhone && <p className="text-xs text-red-500">{errors.ordererPhone}</p>}
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <Label>받는 분 휴대폰</Label>
-                <Input
-                  placeholder="010-0000-0000"
-                  value={recipientPhone}
-                  onChange={(e) => setRecipientPhone(formatPhone(e.target.value))}
-                />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>받는 분 성함</Label>
+                  <Input
+                    placeholder="받는 분 성함"
+                    value={recipientName}
+                    onChange={(e) => setRecipientName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>받는 분 휴대폰</Label>
+                  <Input
+                    placeholder="010-0000-0000"
+                    value={recipientPhone}
+                    onChange={(e) => setRecipientPhone(formatPhone(e.target.value))}
+                  />
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label>문자 발송 대상</Label>

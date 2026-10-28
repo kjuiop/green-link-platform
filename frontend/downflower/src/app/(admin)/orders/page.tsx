@@ -376,7 +376,7 @@ export default function OrdersPage() {
               <TableHead><div>상품명</div><div className="font-normal text-gray-400">받는분</div></TableHead>
               <TableHead><div>보내는이</div><div className="font-normal text-gray-400">배송지</div></TableHead>
               <TableHead>수량</TableHead>
-              <TableHead>발주금액</TableHead>
+              <TableHead><div>상품명</div><div className="font-normal text-gray-400">발주금액</div></TableHead>
               <TableHead>배송현황</TableHead>
               <TableHead>문자현황</TableHead>
               <TableHead>인수정보</TableHead>
@@ -452,7 +452,11 @@ export default function OrdersPage() {
                     <div className="text-sm text-gray-400">{formatDeliveryShort(order.placeName, order.address)}</div>
                   </TableCell>
                   <TableCell className="text-sm">{order.quantity}</TableCell>
-                  <TableCell className="text-sm">{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원</TableCell>
+                  <TableCell>
+                    <div className="text-xs text-gray-600">{order.productName}</div>
+                    <div className="text-xs text-gray-400">{order.amount.toLocaleString()}원</div>
+                    <div className="text-sm font-medium text-blue-600">{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원</div>
+                  </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <AcceptOrderBadge
                       status={order.status}
