@@ -473,17 +473,30 @@ export default function OrderingOrderDetailPage() {
                     ))}
                   </div>
                 </Field>
-                <Field label={draft.eventType === '장례식' ? '장례식장' : draft.eventType === '결혼식' ? '예식장' : '장소'}>
-                  <Input
-                    placeholder={
-                      draft.eventType === '장례식' ? '예: 한독병원장례식장' :
-                      draft.eventType === '결혼식' ? '예: 더파티움 강남' :
-                      '예: 강남파이낸스센터 1층'
-                    }
-                    value={draft.placeName ?? ''}
-                    onChange={(e) => set('placeName', e.target.value)}
-                  />
-                </Field>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label={draft.eventType === '장례식' ? '장례식장' : draft.eventType === '결혼식' ? '예식장' : '장소'}>
+                    <Input
+                      placeholder={
+                        draft.eventType === '장례식' ? '예: 한독병원장례식장' :
+                        draft.eventType === '결혼식' ? '예: 더파티움 강남' :
+                        '예: 강남파이낸스센터 1층'
+                      }
+                      value={draft.placeName ?? ''}
+                      onChange={(e) => set('placeName', e.target.value)}
+                    />
+                  </Field>
+                  <Field label={draft.eventType === '장례식' ? '받는 분 (예: 상주 홍길동)' : draft.eventType === '결혼식' ? '받는 분 (예: 신랑 홍길동)' : '받는 분'}>
+                    <Input
+                      placeholder={
+                        draft.eventType === '장례식' ? '예: 상주 홍길동' :
+                        draft.eventType === '결혼식' ? '예: 신랑 홍길동' :
+                        '예: 홍길동'
+                      }
+                      value={draft.recipientName ?? ''}
+                      onChange={(e) => set('recipientName', e.target.value || undefined)}
+                    />
+                  </Field>
+                </div>
               </>
             ) : (
               <>
@@ -498,6 +511,9 @@ export default function OrderingOrderDetailPage() {
                   label={order.eventType === '장례식' ? '장례식장' : order.eventType === '결혼식' ? '예식장' : '장소'}
                   value={[order.placeName, order.roomName].filter(Boolean).join(' · ') || '-'}
                 />
+                {order.recipientName && (
+                  <Row label="받는 분" value={order.recipientName} />
+                )}
                 {order.eventInfo && (
                   <Row label="행사정보" value={order.eventInfo} />
                 )}
@@ -558,13 +574,6 @@ export default function OrderingOrderDetailPage() {
                   </Field>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="받는 분 성함">
-                    <Input
-                      placeholder="없음"
-                      value={draft.recipientName ?? ''}
-                      onChange={(e) => set('recipientName', e.target.value || undefined)}
-                    />
-                  </Field>
                   <Field label="받는 분 연락처">
                     <Input
                       placeholder="없음"

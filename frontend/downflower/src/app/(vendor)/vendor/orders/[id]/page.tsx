@@ -164,6 +164,7 @@ export default function VendorOrderDetailPage() {
             <Row label="주소" value={`${order.address} ${order.addressDetail}`} />
             <Row label="장소명" value={order.placeName} />
             {order.roomName && <Row label="빈소·호실" value={order.roomName} />}
+            {order.recipientName && <Row label="받는 분" value={order.recipientName} />}
             {order.eventInfo && <Row label="행사정보" value={order.eventInfo} />}
           </CardContent>
         </Card>
