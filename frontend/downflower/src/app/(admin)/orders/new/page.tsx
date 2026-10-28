@@ -315,7 +315,7 @@ export default function NewOrderPage() {
                   <button
                     key={type}
                     type="button"
-                    onClick={() => setSelectedEventType(type)}
+                    onClick={() => { setSelectedEventType(type); setVenueName('') }}
                     className={cn(
                       'rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
                       selectedEventType === type
