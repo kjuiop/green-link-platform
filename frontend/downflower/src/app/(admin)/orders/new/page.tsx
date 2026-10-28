@@ -305,7 +305,14 @@ export default function NewOrderPage() {
                 value={extraCost}
                 onChange={(e) => setExtraCost(e.target.value)}
               />
-              <p className="text-xs text-gray-400">기본 발주금액 외 추가로 발생한 비용</p>
+              {extraCost && amount ? (
+                <p className="text-xs text-gray-500">
+                  최종 발주금액: {(Number(amount) + Number(extraCost)).toLocaleString()}원
+                  <span className="ml-1 text-gray-400">({Number(amount).toLocaleString()} + {Number(extraCost).toLocaleString()})</span>
+                </p>
+              ) : (
+                <p className="text-xs text-gray-400">기본 발주금액 외 추가로 발생한 비용</p>
+              )}
             </div>
           </CardContent>
         </Card>
