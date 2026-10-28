@@ -576,6 +576,13 @@ export default function OrderingOrderDetailPage() {
                   </Field>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
+                  <Field label="받는 분 성함">
+                    <Input
+                      placeholder="없음"
+                      value={draft.recipientName ?? ''}
+                      onChange={(e) => set('recipientName', e.target.value || undefined)}
+                    />
+                  </Field>
                   <Field label="받는 분 연락처">
                     <Input
                       placeholder="없음"
