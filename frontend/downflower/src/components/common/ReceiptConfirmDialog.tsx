@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ClipboardCheck, Upload, X, Images, Download } from 'lucide-react'
@@ -172,6 +173,9 @@ interface FormDialogProps {
 function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId, orderNumber, senderName, recipientName }: FormDialogProps) {
   const [sitePhotoFiles, setSitePhotoFiles] = useState<{ id: string; file: File; url: string }[]>([])
   const [storePhotoFiles, setStorePhotoFiles] = useState<{ id: string; file: File; url: string }[]>([])
+  const sitePhotoInputRef = useRef<HTMLInputElement>(null)
+  const storePhotoInputRef = useRef<HTMLInputElement>(null)
+  const [mounted, setMounted] = useState(false)
   const [receiverName, setReceiverName] = useState('')
   const [receiverRelation, setReceiverRelation] = useState('')
   const [delivered, setDelivered] = useState(false)
@@ -199,6 +203,8 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  useEffect(() => { setMounted(true) }, [])
 
   function makeFileChangeHandler(setter: React.Dispatch<React.SetStateAction<{ id: string; file: File; url: string }[]>>) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -261,14 +267,22 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="sm:max-w-2xl" showCloseButton>
-        <DialogTitle>
-          인수확인
-          <span className="ml-2 text-xs font-normal text-gray-400">{orderNumber}</span>
-        </DialogTitle>
+    <>
+      {mounted && createPortal(
+        <>
+          <input ref={sitePhotoInputRef} type="file" accept="image/*" multiple className="absolute opacity-0 pointer-events-none" onChange={makeFileChangeHandler(setSitePhotoFiles)} />
+          <input ref={storePhotoInputRef} type="file" accept="image/*" multiple className="absolute opacity-0 pointer-events-none" onChange={makeFileChangeHandler(setStorePhotoFiles)} />
+        </>,
+        document.body
+      )}
+      <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
+        <DialogContent className="sm:max-w-2xl" showCloseButton>
+          <DialogTitle>
+            인수확인
+            <span className="ml-2 text-xs font-normal text-gray-400">{orderNumber}</span>
+          </DialogTitle>
 
-        <div className="flex gap-6 rounded-lg border bg-gray-50 px-4 py-2.5 text-sm">
+          <div className="flex gap-6 rounded-lg border bg-gray-50 px-4 py-2.5 text-sm">
           <span>
             <span className="text-gray-500">보내는분</span>
             <span className="ml-2 font-medium">{senderName ?? '-'}</span>
@@ -306,13 +320,14 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                       </button>
                     </div>
                   ))}
-                  <div className="relative h-16 w-16">
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400">
-                      <Upload className="h-4 w-4" />
-                      <span className="text-[10px]">업로드</span>
-                    </div>
-                    <input type="file" accept="image/*" multiple className="absolute inset-0 cursor-pointer opacity-0" onChange={makeFileChangeHandler(setSitePhotoFiles)} />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => sitePhotoInputRef.current?.click()}
+                    className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
+                  >
+                    <Upload className="h-4 w-4" />
+                    <span className="text-[10px]">업로드</span>
+                  </button>
                 </div>
               </td>
             </tr>
@@ -333,13 +348,14 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                       </button>
                     </div>
                   ))}
-                  <div className="relative h-16 w-16">
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400">
-                      <Upload className="h-4 w-4" />
-                      <span className="text-[10px]">업로드</span>
-                    </div>
-                    <input type="file" accept="image/*" multiple className="absolute inset-0 cursor-pointer opacity-0" onChange={makeFileChangeHandler(setStorePhotoFiles)} />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => storePhotoInputRef.current?.click()}
+                    className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
+                  >
+                    <Upload className="h-4 w-4" />
+                    <span className="text-[10px]">업로드</span>
+                  </button>
                 </div>
               </td>
             </tr>
@@ -406,8 +422,9 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
         <Button className="w-full bg-green-700 hover:bg-green-800" disabled={saving} onClick={handleSave}>
           {saving ? '처리 중…' : '배송완료'}
         </Button>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
