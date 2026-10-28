@@ -38,6 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -408,14 +410,14 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
 
         switch (action.toLowerCase()) {
-            case "accept" -> order.accept(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            case "accept" -> order.accept(kstNow());
             case "reject" -> order.reject();
             case "cancel" -> order.cancel();
             case "complete" -> {
                 if (!receiptConfirmationRepository.existsWithPhotosByOrderId(id)) {
                     throw new BusinessException(OrderErrorCode.SITE_PHOTO_REQUIRED);
                 }
-                order.complete(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                order.complete(kstNow());
             }
             default -> throw new BusinessException(OrderErrorCode.INVALID_ORDER_ACTION);
         }
@@ -424,6 +426,12 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.STATUS_CHANGED,
                 "상태 변경: " + STATUS_LABEL.getOrDefault(saved.getStatus(), saved.getStatus().name()));
         return toResult(saved);
+    }
+
+    private static String kstNow() {
+        return ZonedDateTime.now(ZoneId.of("Asia/Seoul"))
+                .toLocalDateTime()
+                .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
     }
 
     private String resolveVendorName(Long vendorId) {
