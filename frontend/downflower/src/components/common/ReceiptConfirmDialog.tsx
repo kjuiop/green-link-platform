@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ClipboardCheck, Upload, X, Images, Download } from 'lucide-react'
@@ -173,9 +172,6 @@ interface FormDialogProps {
 function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId, orderNumber, senderName, recipientName }: FormDialogProps) {
   const [sitePhotoFiles, setSitePhotoFiles] = useState<{ id: string; file: File; url: string }[]>([])
   const [storePhotoFiles, setStorePhotoFiles] = useState<{ id: string; file: File; url: string }[]>([])
-  const siteInputId = `receipt-site-photo-${orderId}`
-  const storeInputId = `receipt-store-photo-${orderId}`
-  const [mounted, setMounted] = useState(false)
   const [receiverName, setReceiverName] = useState('')
   const [receiverRelation, setReceiverRelation] = useState('')
   const [delivered, setDelivered] = useState(false)
@@ -203,8 +199,6 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
-
-  useEffect(() => { setMounted(true) }, [])
 
   function makeFileChangeHandler(setter: React.Dispatch<React.SetStateAction<{ id: string; file: File; url: string }[]>>) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -268,13 +262,6 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
 
   return (
     <>
-      {mounted && createPortal(
-        <>
-          <input id={siteInputId} type="file" accept="image/*" multiple className="absolute w-0 h-0 overflow-hidden opacity-0" onChange={makeFileChangeHandler(setSitePhotoFiles)} />
-          <input id={storeInputId} type="file" accept="image/*" multiple className="absolute w-0 h-0 overflow-hidden opacity-0" onChange={makeFileChangeHandler(setStorePhotoFiles)} />
-        </>,
-        document.body
-      )}
       <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
         <DialogContent className="sm:max-w-2xl" showCloseButton>
           <DialogTitle>
@@ -320,12 +307,10 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                       </button>
                     </div>
                   ))}
-                  <label
-                    htmlFor={siteInputId}
-                    className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
-                  >
+                  <label className="relative flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400">
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
+                    <input type="file" accept="image/*" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={makeFileChangeHandler(setSitePhotoFiles)} />
                   </label>
                 </div>
               </td>
@@ -347,12 +332,10 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                       </button>
                     </div>
                   ))}
-                  <label
-                    htmlFor={storeInputId}
-                    className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
-                  >
+                  <label className="relative flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400">
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
+                    <input type="file" accept="image/*" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={makeFileChangeHandler(setStorePhotoFiles)} />
                   </label>
                 </div>
               </td>
