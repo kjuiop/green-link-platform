@@ -7,6 +7,7 @@ public class Company {
     private String companyName;
     private String ceoName;
     private String phone;
+    private String faxNumber;
     private String address;
     private String detailAddress;
     private CompanyType type;
@@ -16,13 +17,14 @@ public class Company {
     private Company() {}
 
     public static Company create(String businessNo, String companyName,
-                                  String ceoName, String phone,
+                                  String ceoName, String phone, String faxNumber,
                                   String address, String detailAddress, CompanyType type) {
         Company c = new Company();
         c.businessNo = businessNo;
         c.companyName = companyName;
         c.ceoName = ceoName;
         c.phone = phone;
+        c.faxNumber = faxNumber;
         c.address = address;
         c.detailAddress = detailAddress;
         c.type = type;
@@ -32,7 +34,8 @@ public class Company {
     }
 
     public static Company of(Long id, String businessNo, String companyName,
-                              String ceoName, String phone, String address, String detailAddress,
+                              String ceoName, String phone, String faxNumber,
+                              String address, String detailAddress,
                               CompanyType type, CompanyStatus status, boolean displayYn) {
         Company c = new Company();
         c.id = id;
@@ -40,6 +43,7 @@ public class Company {
         c.companyName = companyName;
         c.ceoName = ceoName;
         c.phone = phone;
+        c.faxNumber = faxNumber;
         c.address = address;
         c.detailAddress = detailAddress;
         c.type = type;
@@ -57,9 +61,10 @@ public class Company {
         this.type = newType;
     }
 
-    public void updateInfo(String companyName, String businessNo, String address, String detailAddress) {
+    public void updateInfo(String companyName, String businessNo, String faxNumber, String address, String detailAddress) {
         this.companyName = companyName;
         this.businessNo = businessNo;
+        this.faxNumber = faxNumber;
         this.address = address;
         this.detailAddress = detailAddress;
     }
@@ -69,6 +74,7 @@ public class Company {
     public String getCompanyName() { return companyName; }
     public String getCeoName() { return ceoName; }
     public String getPhone() { return phone; }
+    public String getFaxNumber() { return faxNumber; }
     public String getAddress() { return address; }
     public String getDetailAddress() { return detailAddress; }
     public CompanyType getType() { return type; }

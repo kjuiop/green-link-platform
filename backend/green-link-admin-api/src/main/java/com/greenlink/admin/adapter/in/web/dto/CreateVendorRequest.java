@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 public record CreateVendorRequest(
     @NotBlank String companyName,
     String businessNo,
+    String faxNumber,
     String address,
     String detailAddress,
     @NotBlank String managerName,
@@ -18,6 +19,7 @@ public record CreateVendorRequest(
         return new CreateVendorCommand(
             companyName,
             businessNo,
+            faxNumber,
             address,
             detailAddress,
             managerName,

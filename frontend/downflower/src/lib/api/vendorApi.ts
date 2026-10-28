@@ -6,6 +6,7 @@ type BackendVendor = {
   id: number
   companyName: string
   businessNo?: string
+  faxNumber?: string
   managerName: string
   phone: string
   address: string
@@ -18,6 +19,7 @@ type BackendVendor = {
 type CreateVendorPayload = {
   companyName: string
   businessNo?: string
+  faxNumber?: string
   address: string
   managerName: string
   phone: string
@@ -29,6 +31,7 @@ type CreateVendorPayload = {
 type UpdateVendorPayload = {
   companyName: string
   businessNo?: string
+  faxNumber?: string
   address: string
   managerName: string
   phone: string
@@ -40,6 +43,7 @@ function toFrontend(v: BackendVendor): Vendor {
     id: String(v.id),
     name: v.companyName,
     businessNumber: v.businessNo ?? undefined,
+    faxNumber: v.faxNumber ?? undefined,
     managerName: v.managerName,
     phone: v.phone,
     address: v.address,
@@ -111,4 +115,15 @@ export async function updateVendorStatus(id: string, action: 'activate' | 'suspe
     throw new Error(data.message ?? '상태 변경에 실패했습니다.')
   }
   return toFrontend(await res.json())
+}
+
+export async function deleteVendor(id: string): Promise<void> {
+  const res = await fetchWithAuth(`/api/vendors/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message ?? '업체 삭제에 실패했습니다.')
+  }
 }

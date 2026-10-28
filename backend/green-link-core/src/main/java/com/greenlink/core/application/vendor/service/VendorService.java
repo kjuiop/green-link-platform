@@ -6,6 +6,7 @@ import com.greenlink.core.application.vendor.dto.UpdateVendorCommand;
 import com.greenlink.core.application.vendor.dto.VendorResult;
 import com.greenlink.core.application.vendor.dto.VendorSignupCommand;
 import com.greenlink.core.application.vendor.usecase.CreateVendorUseCase;
+import com.greenlink.core.application.vendor.usecase.DeleteVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.GetVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.GetVendorsUseCase;
 import com.greenlink.core.application.vendor.usecase.UpdateVendorStatusUseCase;
@@ -24,6 +25,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -32,7 +36,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
-        CreateVendorUseCase, UpdateVendorUseCase, UpdateVendorStatusUseCase, VendorSignupUseCase {
+        CreateVendorUseCase, UpdateVendorUseCase, UpdateVendorStatusUseCase,
+        DeleteVendorUseCase, VendorSignupUseCase {
 
     private final AdminRepository adminRepository;
     private final CompanyRepository companyRepository;
@@ -112,6 +117,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             cmd.companyName(),
             "",
             cmd.phone(),
+            cmd.faxNumber() != null ? cmd.faxNumber() : "",
             cmd.address() != null ? cmd.address() : "",
             cmd.detailAddress() != null ? cmd.detailAddress() : "",
             parseCompanyType(cmd.companyType())
@@ -149,6 +155,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             company.updateInfo(
                 cmd.companyName(),
                 businessNo,
+                cmd.faxNumber() != null ? cmd.faxNumber() : "",
                 cmd.address() != null ? cmd.address() : "",
                 cmd.detailAddress() != null ? cmd.detailAddress() : ""
             );
@@ -160,6 +167,21 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
         }
 
         return toResult(savedAdmin, null);
+    }
+
+    @Override
+    @Transactional
+    public void deleteVendor(Long id) {
+        Admin admin = adminRepository.findById(id)
+            .filter(Admin::isVendor)
+            .orElseThrow(() -> new BusinessException(VendorErrorCode.VENDOR_NOT_FOUND));
+        if (admin.isDeleted()) {
+            throw new BusinessException(VendorErrorCode.VENDOR_ALREADY_DELETED);
+        }
+        String nowKst = ZonedDateTime.now(ZoneId.of("Asia/Seoul"))
+            .toLocalDateTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        admin.softDelete(nowKst);
+        adminRepository.save(admin);
     }
 
     @Override
@@ -210,6 +232,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
                 cmd.companyName(),
                 cmd.ceoName() != null ? cmd.ceoName() : "",
                 cmd.companyPhone() != null ? cmd.companyPhone() : cmd.phone(),
+                "",
                 cmd.address() != null ? cmd.address() : "",
                 cmd.detailAddress() != null ? cmd.detailAddress() : "",
                 requestedType
@@ -252,6 +275,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             admin.getId(),
             company != null ? company.getCompanyName() : null,
             company != null ? company.getBusinessNo() : null,
+            company != null ? company.getFaxNumber() : null,
             admin.getName(),
             admin.getPhone(),
             company != null ? company.getAddress() : null,
