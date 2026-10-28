@@ -3,6 +3,7 @@ package com.greenlink.core.application.vendor.dto;
 public record CreateVendorCommand(
     String companyName,
     String businessNo,
+    String faxNumber,
     String address,
     String detailAddress,
     String managerName,

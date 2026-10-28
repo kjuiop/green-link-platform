@@ -10,6 +10,7 @@ public class Admin {
     private Long companyId;
     private AdminStatus status;
     private String createdAt;
+    private String deletedAt;
 
     private Admin() {}
 
@@ -55,7 +56,7 @@ public class Admin {
     }
 
     public static Admin of(Long id, String loginId, String password, String name, String phone,
-                           Long companyId, AdminStatus status, String createdAt) {
+                           Long companyId, AdminStatus status, String createdAt, String deletedAt) {
         Admin a = new Admin();
         a.id = id;
         a.loginId = loginId;
@@ -65,13 +66,19 @@ public class Admin {
         a.companyId = companyId;
         a.status = status;
         a.createdAt = createdAt;
+        a.deletedAt = deletedAt;
         return a;
     }
 
     public boolean isVendor() { return companyId != null; }
+    public boolean isDeleted() { return deletedAt != null; }
 
     public void activate() { this.status = AdminStatus.ACTIVE; }
     public void suspend() { this.status = AdminStatus.INACTIVE; }
+    public void softDelete(String nowKst) {
+        this.status = AdminStatus.INACTIVE;
+        this.deletedAt = nowKst;
+    }
 
     public void changePassword(String encodedPassword) {
         this.password = encodedPassword;
@@ -90,4 +97,5 @@ public class Admin {
     public Long getCompanyId() { return companyId; }
     public AdminStatus getStatus() { return status; }
     public String getCreatedAt() { return createdAt; }
+    public String getDeletedAt() { return deletedAt; }
 }

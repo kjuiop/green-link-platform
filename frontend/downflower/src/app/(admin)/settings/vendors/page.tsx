@@ -6,11 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
 import { Pagination } from '@/components/ui/Pagination'
-import { Vendor, VendorStatus } from '@/types/vendor'
+import { Vendor, VendorStatus, CompanyType } from '@/types/vendor'
 import { PageResult } from '@/types/page'
-import { fetchVendorsPaged, createVendor, updateVendor, updateVendorStatus } from '@/lib/api/vendorApi'
+import { fetchVendorsPaged, createVendor, updateVendor, updateVendorStatus, deleteVendor } from '@/lib/api/vendorApi'
 import { Search } from 'lucide-react'
 
 const PAGE_SIZE = 20
@@ -30,9 +29,15 @@ const STATUS_LABELS: Record<VendorStatus, string> = {
   PENDING: '대기',
 }
 
+const COMPANY_TYPE_LABELS: Record<CompanyType, string> = {
+  ORDERING: '발주',
+  VENDOR: '수주',
+  BOTH: '발주+수주',
+}
+
 const emptyForm = {
-  name: '', businessNumber: '', managerName: '', phone: '',
-  address: '', loginId: '', password: '',
+  name: '', businessNumber: '', faxNumber: '', managerName: '', phone: '',
+  address: '', detailAddress: '', loginId: '', password: '', companyType: 'VENDOR' as CompanyType,
 }
 
 function formatPhone(value: string) {
@@ -60,6 +65,9 @@ export default function VendorsPage() {
   const [form, setForm] = useState(emptyForm)
   const [modalError, setModalError] = useState('')
   const [modalSaving, setModalSaving] = useState(false)
+
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const load = useCallback((status: FilterStatus, p: number) => {
     setLoading(true)
@@ -154,11 +162,14 @@ export default function VendorsPage() {
     setForm({
       name: vendor.name,
       businessNumber: vendor.businessNumber ?? '',
+      faxNumber: vendor.faxNumber ?? '',
       managerName: vendor.managerName,
       phone: vendor.phone,
       address: vendor.address,
+      detailAddress: '',
       loginId: vendor.loginId,
       password: '',
+      companyType: vendor.companyType ?? 'VENDOR',
     })
     setModalError('')
     setModalOpen(true)
@@ -175,19 +186,23 @@ export default function VendorsPage() {
         await updateVendor(editTarget.id, {
           companyName: form.name,
           businessNo: form.businessNumber || undefined,
+          faxNumber: form.faxNumber || undefined,
           address: form.address,
           managerName: form.managerName,
           phone: form.phone,
+          companyType: form.companyType,
         })
       } else {
         await createVendor({
           companyName: form.name,
           businessNo: form.businessNumber || undefined,
+          faxNumber: form.faxNumber || undefined,
           address: form.address,
           managerName: form.managerName,
           phone: form.phone,
           loginId: form.loginId,
           password: form.password,
+          companyType: form.companyType,
         })
       }
       load(appliedStatus, editTarget ? page : 0)
@@ -197,6 +212,22 @@ export default function VendorsPage() {
       setModalError(e instanceof Error ? e.message : '저장에 실패했습니다.')
     } finally {
       setModalSaving(false)
+    }
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!editTarget) return
+    setDeleting(true)
+    try {
+      await deleteVendor(editTarget.id)
+      setDeleteConfirmOpen(false)
+      setModalOpen(false)
+      load(appliedStatus, page)
+    } catch (e: unknown) {
+      setModalError(e instanceof Error ? e.message : '삭제에 실패했습니다.')
+      setDeleteConfirmOpen(false)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -273,6 +304,7 @@ export default function VendorsPage() {
                 />
               </TableHead>
               <TableHead>업체명</TableHead>
+              <TableHead>거래유형</TableHead>
               <TableHead>담당자명</TableHead>
               <TableHead>연락처</TableHead>
               <TableHead>주소</TableHead>
@@ -283,13 +315,13 @@ export default function VendorsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -308,6 +340,9 @@ export default function VendorsPage() {
                     <button onClick={() => openEdit(vendor)} className="font-medium text-blue-700 hover:underline">
                       {vendor.name}
                     </button>
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {vendor.companyType ? COMPANY_TYPE_LABELS[vendor.companyType] : '—'}
                   </TableCell>
                   <TableCell className="text-sm">{vendor.managerName}</TableCell>
                   <TableCell className="text-sm">{vendor.phone}</TableCell>
@@ -382,6 +417,9 @@ export default function VendorsPage() {
               </div>
               <div className="mt-1.5 space-y-0.5 text-xs text-gray-500">
                 <div>{vendor.managerName} · {vendor.phone}</div>
+                {vendor.companyType && (
+                  <div className="text-gray-400">거래유형: {COMPANY_TYPE_LABELS[vendor.companyType]}</div>
+                )}
                 {vendor.address && <div className="truncate">{vendor.address}</div>}
                 <div className="font-mono text-gray-400">{vendor.loginId}</div>
                 <div className={`font-medium ${vendor.status === 'ACTIVE' ? 'text-green-600' : vendor.status === 'PENDING' ? 'text-yellow-600' : 'text-red-500'}`}>
@@ -414,8 +452,24 @@ export default function VendorsPage() {
               <Input placeholder="업체명" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
+              <Label>거래유형</Label>
+              <select
+                value={form.companyType}
+                onChange={(e) => setForm((f) => ({ ...f, companyType: e.target.value as CompanyType }))}
+                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+              >
+                <option value="VENDOR">수주</option>
+                <option value="ORDERING">발주</option>
+                <option value="BOTH">발주+수주</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
               <Label>사업자번호</Label>
               <Input placeholder="000-00-00000" value={form.businessNumber} onChange={(e) => setForm((f) => ({ ...f, businessNumber: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>팩스번호</Label>
+              <Input placeholder="02-0000-0000" value={form.faxNumber} onChange={(e) => setForm((f) => ({ ...f, faxNumber: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
               <Label>담당자명 *</Label>
@@ -444,6 +498,15 @@ export default function VendorsPage() {
             )}
           </div>
           <DialogFooter className="gap-2">
+            {editTarget && (
+              <Button
+                variant="outline"
+                className="mr-auto border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={() => setDeleteConfirmOpen(true)}
+              >
+                삭제
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setModalOpen(false)}>취소</Button>
             <Button
               className="bg-green-700 hover:bg-green-800"
@@ -451,6 +514,30 @@ export default function VendorsPage() {
               onClick={handleSave}
             >
               {modalSaving ? '저장 중...' : editTarget ? '저장' : '등록'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 삭제 확인 모달 */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>업체 삭제</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">{editTarget?.name}</span> 업체를 삭제하시겠습니까?
+            <br />
+            삭제된 업체는 복구할 수 없습니다.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>취소</Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleting}
+              onClick={handleDeleteConfirm}
+            >
+              {deleting ? '삭제 중...' : '삭제'}
             </Button>
           </DialogFooter>
         </DialogContent>

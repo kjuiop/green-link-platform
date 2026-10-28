@@ -1,0 +1,2 @@
+ALTER TABLE companies ADD COLUMN fax_number VARCHAR(20) NULL AFTER phone;
+ALTER TABLE admins ADD COLUMN deleted_at VARCHAR(30) NULL AFTER status;
