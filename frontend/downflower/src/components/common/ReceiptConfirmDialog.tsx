@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -173,8 +173,8 @@ interface FormDialogProps {
 function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId, orderNumber, senderName, recipientName }: FormDialogProps) {
   const [sitePhotoFiles, setSitePhotoFiles] = useState<{ id: string; file: File; url: string }[]>([])
   const [storePhotoFiles, setStorePhotoFiles] = useState<{ id: string; file: File; url: string }[]>([])
-  const sitePhotoInputRef = useRef<HTMLInputElement>(null)
-  const storePhotoInputRef = useRef<HTMLInputElement>(null)
+  const siteInputId = `receipt-site-photo-${orderId}`
+  const storeInputId = `receipt-store-photo-${orderId}`
   const [mounted, setMounted] = useState(false)
   const [receiverName, setReceiverName] = useState('')
   const [receiverRelation, setReceiverRelation] = useState('')
@@ -270,8 +270,8 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
     <>
       {mounted && createPortal(
         <>
-          <input ref={sitePhotoInputRef} type="file" accept="image/*" multiple className="absolute opacity-0 pointer-events-none" onChange={makeFileChangeHandler(setSitePhotoFiles)} />
-          <input ref={storePhotoInputRef} type="file" accept="image/*" multiple className="absolute opacity-0 pointer-events-none" onChange={makeFileChangeHandler(setStorePhotoFiles)} />
+          <input id={siteInputId} type="file" accept="image/*" multiple className="absolute w-0 h-0 overflow-hidden opacity-0" onChange={makeFileChangeHandler(setSitePhotoFiles)} />
+          <input id={storeInputId} type="file" accept="image/*" multiple className="absolute w-0 h-0 overflow-hidden opacity-0" onChange={makeFileChangeHandler(setStorePhotoFiles)} />
         </>,
         document.body
       )}
@@ -320,14 +320,13 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                       </button>
                     </div>
                   ))}
-                  <button
-                    type="button"
-                    onClick={() => sitePhotoInputRef.current?.click()}
+                  <label
+                    htmlFor={siteInputId}
                     className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
                   >
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
-                  </button>
+                  </label>
                 </div>
               </td>
             </tr>
@@ -348,14 +347,13 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                       </button>
                     </div>
                   ))}
-                  <button
-                    type="button"
-                    onClick={() => storePhotoInputRef.current?.click()}
+                  <label
+                    htmlFor={storeInputId}
                     className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
                   >
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
-                  </button>
+                  </label>
                 </div>
               </td>
             </tr>
