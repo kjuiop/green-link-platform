@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { fetchOrder } from '@/lib/api/orderApi'
+import { fetchOrder, updateOrderStatus } from '@/lib/api/orderApi'
 import { Order } from '@/types/order'
 
 export default function PrintOrderPage() {
   const { id } = useParams<{ id: string }>()
   const [order, setOrder] = useState<Order | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [accepting, setAccepting] = useState(false)
+  const [acceptError, setAcceptError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchOrder(id)
@@ -19,6 +21,19 @@ export default function PrintOrderPage() {
       })
       .catch(() => setError('주문 정보를 불러오지 못했습니다.'))
   }, [id])
+
+  async function handleAccept() {
+    setAccepting(true)
+    setAcceptError(null)
+    try {
+      const updated = await updateOrderStatus(id, 'accept')
+      setOrder(updated)
+    } catch {
+      setAcceptError('수주 승인에 실패했습니다. 다시 시도해 주세요.')
+    } finally {
+      setAccepting(false)
+    }
+  }
 
   if (error) return <div style={{ padding: 40, color: 'red' }}>{error}</div>
   if (!order) return <div style={{ padding: 40, color: '#999' }}>불러오는 중...</div>
@@ -51,6 +66,40 @@ export default function PrintOrderPage() {
           인쇄
         </button>
       </div>
+
+      <div className="no-print fixed bottom-4 left-1/2 z-10 flex -translate-x-1/2 gap-2">
+        <button
+          onClick={() => window.print()}
+          className="rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
+        >
+          인수증 출력
+        </button>
+        <button
+          onClick={() => window.close()}
+          className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          창 닫기
+        </button>
+        {order?.status === '발주대기' && (
+          <button
+            onClick={handleAccept}
+            disabled={accepting}
+            className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            {accepting ? '처리 중…' : '미확인'}
+          </button>
+        )}
+        {order?.status === '수주완료' && order.acceptedAt && (
+          <span className="flex items-center rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-700">
+            수주완료 · {order.acceptedAt.slice(0, 16).replace('T', ' ')}
+          </span>
+        )}
+      </div>
+      {acceptError && (
+        <div className="no-print fixed bottom-16 left-1/2 -translate-x-1/2 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+          {acceptError}
+        </div>
+      )}
 
       <div className="print-page" style={{ paddingTop: 40 }}>
         {/* 주문서 */}
