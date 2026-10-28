@@ -488,9 +488,11 @@ export default function OrderingOrderDetailPage() {
             ) : (
               <>
                 <Row label="배송예정" value={
-                  order.deliveryAt && order.deliveryTimeHour && order.deliveryTimeMinute
-                    ? `${order.deliveryAt} ${order.deliveryTimeHour.padStart(2, '0')}:${order.deliveryTimeMinute}`
-                    : order.deliveryAt
+                  order.deliveryAt && order.deliveryTimeHour && order.deliveryTimeMinute !== undefined && order.deliveryTimeMinute !== ''
+                    ? `${order.deliveryAt} ${order.deliveryTimeHour.padStart(2, '0')}:${order.deliveryTimeMinute.padStart(2, '0')}`
+                    : order.deliveryTimeType
+                      ? `${order.deliveryAt} ${order.deliveryTimeType === '직접입력' ? (order.deliveryTimeCustom ?? order.deliveryTimeType) : order.deliveryTimeType}`
+                      : order.deliveryAt
                 } />
                 <Row label="주소" value={`${order.address} ${order.addressDetail ?? ''}`.trim()} />
                 <Row label="행사유형" value={order.eventType} />

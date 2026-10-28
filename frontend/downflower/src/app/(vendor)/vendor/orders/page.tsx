@@ -217,7 +217,7 @@ export default function VendorOrdersPage() {
                       }}
                     />
                     {order.acceptedAt && (
-                      <div className="mt-0.5 text-[10px] text-gray-400">{order.acceptedAt.slice(0, 10)}</div>
+                      <div className="mt-0.5 text-[10px] text-gray-400">{order.acceptedAt.slice(0, 10)} {order.acceptedAt.slice(11, 16)}</div>
                     )}
                   </TableCell>
                   <TableCell><MessageStatusBadge status={order.messageStatus} /></TableCell>
