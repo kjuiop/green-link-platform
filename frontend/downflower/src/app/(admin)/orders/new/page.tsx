@@ -328,19 +328,39 @@ export default function NewOrderPage() {
                 ))}
               </div>
 
-              <div className="space-y-1.5">
-                <Label>
-                  {selectedEventType === '장례식' ? '장례식장' : selectedEventType === '결혼식' ? '예식장' : '장소'}
-                </Label>
-                <Input
-                  placeholder={
-                    selectedEventType === '장례식' ? '예: 한독병원장례식장' :
-                    selectedEventType === '결혼식' ? '예: 더파티움 강남' :
-                    '예: 강남파이낸스센터 1층'
-                  }
-                  value={venueName}
-                  onChange={(e) => setVenueName(e.target.value)}
-                />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>
+                    {selectedEventType === '장례식' ? '장례식장' : selectedEventType === '결혼식' ? '예식장' : '장소'}
+                  </Label>
+                  <Input
+                    placeholder={
+                      selectedEventType === '장례식' ? '예: 한독병원장례식장' :
+                      selectedEventType === '결혼식' ? '예: 더파티움 강남' :
+                      '예: 강남파이낸스센터 1층'
+                    }
+                    value={venueName}
+                    onChange={(e) => setVenueName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>
+                    {selectedEventType === '장례식' ? '받는 분 (예: 상주 홍길동)' :
+                     selectedEventType === '결혼식' ? '받는 분 (예: 신랑 홍길동)' :
+                     '받는 분'}
+                  </Label>
+                  <Input
+                    placeholder={
+                      selectedEventType === '장례식' ? '예: 상주 홍길동' :
+                      selectedEventType === '결혼식' ? '예: 신랑 홍길동' :
+                      '예: 홍길동'
+                    }
+                    value={recipientName}
+                    onChange={(e) => { setRecipientName(e.target.value); setErrors((prev) => ({ ...prev, recipientName: undefined })) }}
+                    className={cn(errors.recipientName && 'border-red-500 focus-visible:ring-red-500')}
+                  />
+                  {errors.recipientName && <p className="text-xs text-red-500">{errors.recipientName}</p>}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -499,25 +519,13 @@ export default function NewOrderPage() {
                   {errors.ordererPhone && <p className="text-xs text-red-500">{errors.ordererPhone}</p>}
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>받는 분 성함 *</Label>
-                  <Input
-                    placeholder="받는 분 성함"
-                    value={recipientName}
-                    onChange={(e) => { setRecipientName(e.target.value); setErrors((prev) => ({ ...prev, recipientName: undefined })) }}
-                    className={cn(errors.recipientName && 'border-red-500 focus-visible:ring-red-500')}
-                  />
-                  {errors.recipientName && <p className="text-xs text-red-500">{errors.recipientName}</p>}
-                </div>
-                <div className="space-y-1.5">
-                  <Label>받는 분 휴대폰</Label>
-                  <Input
-                    placeholder="010-0000-0000"
-                    value={recipientPhone}
-                    onChange={(e) => setRecipientPhone(formatPhone(e.target.value))}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <Label>받는 분 휴대폰</Label>
+                <Input
+                  placeholder="010-0000-0000"
+                  value={recipientPhone}
+                  onChange={(e) => setRecipientPhone(formatPhone(e.target.value))}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>문자 발송 대상</Label>
