@@ -17,7 +17,7 @@ import { PrintButton } from '@/components/common/PrintButton'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { ReferencePhotoSection } from '@/components/common/ReferencePhotoViewer'
 import { Pencil, X, Check, Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, RIBBON_PHRASES } from '@/lib/utils'
 import { Order } from '@/types/order'
 import { fetchAllProducts } from '@/lib/api/productApi'
 import { Product } from '@/types/product'
@@ -521,14 +521,7 @@ export default function OrderingOrderDetailPage() {
                 <div className="space-y-1.5">
                   <p className="text-xs text-gray-400">경조문구 선택 (클릭하면 위 입력란에 자동 입력)</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {[
-                      '祝結婚', '축결혼', '祝華婚', '축화혼', '謹弔', '근조',
-                      '祝發展', '축발전', '祝開業', '축개업', '祝榮轉', '축영전',
-                      '祝昇進', '축승진', '祝生日', '축생일', '祝古稀', '축고희',
-                      '祝開院', '축개원', '祝就任', '축취임', '祝移轉', '축이전',
-                      '結婚을 祝賀드립니다', '삼가 故人의 冥福을 빕니다', '대박나세요',
-                      '無窮한 發展을 祈願합니다', '삼가 고인의 명복을 빕니다', '생신을 축하드립니다',
-                    ].map((phrase) => (
+                    {RIBBON_PHRASES.map((phrase) => (
                       <button
                         key={phrase}
                         type="button"

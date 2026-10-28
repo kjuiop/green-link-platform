@@ -372,7 +372,7 @@ export default function OrdersPage() {
               </TableHead>
               <TableHead>주문번호</TableHead>
               <TableHead><div>배송요구일</div><div className="font-normal text-gray-400">주문접수일</div></TableHead>
-              <TableHead><div>발주업체</div><div className="font-normal text-gray-400">수주업체</div></TableHead>
+              <TableHead><div>발주업체 / 주문자</div><div className="font-normal text-gray-400">수주업체</div></TableHead>
               <TableHead><div>상품명</div><div className="font-normal text-gray-400">받는분</div></TableHead>
               <TableHead><div>보내는이</div><div className="font-normal text-gray-400">배송지</div></TableHead>
               <TableHead>수량</TableHead>

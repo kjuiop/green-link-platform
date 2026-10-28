@@ -1,5 +1,14 @@
 export { cn } from "cn"
 
+export const RIBBON_PHRASES = [
+  '祝結婚', '축결혼', '祝華婚', '축화혼', '謹弔', '근조',
+  '祝發展', '축발전', '祝開業', '축개업', '祝榮轉', '축영전',
+  '祝昇進', '축승진', '祝生日', '축생일', '祝古稀', '축고희',
+  '祝開院', '축개원', '祝就任', '축취임', '祝移轉', '축이전',
+  '結婚을 祝賀드립니다', '삼가 故人의 冥福을 빕니다', '대박나세요',
+  '無窮한 發展을 祈願합니다', '삼가 고인의 명복을 빕니다', '생신을 축하드립니다',
+] as const
+
 export function formatDeliveryShort(placeName?: string | null, address?: string | null): string {
   const regionPart = (() => {
     if (!address) return ''
