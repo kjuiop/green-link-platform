@@ -9,7 +9,7 @@ import { ReceiptConfirmButton, ReceiptInfoCell } from '@/components/common/Recei
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
 import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
-import { getDeliveryDateRowBg, formatDeliveryShort } from '@/lib/utils'
+import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { Download, Printer } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
@@ -357,7 +357,7 @@ export default function ReceivedOrdersPage() {
               </TableHead>
               <TableHead>주문번호</TableHead>
               <TableHead><div>배송요구일</div><div className="font-normal text-gray-400">주문접수일</div></TableHead>
-              <TableHead><div>발주업체</div><div className="font-normal text-gray-400">수주업체</div></TableHead>
+              <TableHead><div>발주업체 / 주문자</div><div className="font-normal text-gray-400">수주업체</div></TableHead>
               <TableHead><div>상품명</div><div className="font-normal text-gray-400">받는분</div></TableHead>
               <TableHead><div>보내는이</div><div className="font-normal text-gray-400">배송지</div></TableHead>
               <TableHead>수량</TableHead>
@@ -406,7 +406,7 @@ export default function ReceivedOrdersPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-sm">{order.deliveryAt.split(' ')[0]}</span>
+                      <span className="text-sm" style={getDeliveryDateTextStyle(order.deliveryAt)}>{order.deliveryAt.split(' ')[0]}</span>
                       {order.deliveryTimeHour && (
                         <span className="text-sm font-medium text-red-500">
                           {String(order.deliveryTimeHour).padStart(2, '0')}:{order.deliveryTimeMinute ?? '00'}
@@ -422,6 +422,7 @@ export default function ReceivedOrdersPage() {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">{order.orderingCompanyName || '—'}</div>
+                    <div className="text-xs text-gray-500">{order.ordererName || '—'}</div>
                     <div className="text-sm text-gray-400">{order.vendorName || '—'}</div>
                   </TableCell>
                   <TableCell>
@@ -532,7 +533,12 @@ export default function ReceivedOrdersPage() {
                     )}
                   </div>
                   <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
-                  <div className="mt-0.5 text-xs text-gray-500">{order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}</div>
+                  <div className="mt-0.5 text-xs text-gray-500">
+                    {order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}
+                  </div>
+                  {order.vendorName && (
+                    <div className="mt-0.5 text-xs text-gray-400">수주사 {order.vendorName}</div>
+                  )}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <div onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>

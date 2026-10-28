@@ -17,7 +17,7 @@ import { PrintButton } from '@/components/common/PrintButton'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { ReferencePhotoSection } from '@/components/common/ReferencePhotoViewer'
 import { Pencil, X, Check, Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, RIBBON_PHRASES } from '@/lib/utils'
 import { Order } from '@/types/order'
 import { fetchAllProducts } from '@/lib/api/productApi'
 import { Product } from '@/types/product'
@@ -518,6 +518,21 @@ export default function OrderingOrderDetailPage() {
                 <Field label="리본 오른쪽">
                   <Input value={draft.ribbonRight} onChange={(e) => set('ribbonRight', e.target.value)} />
                 </Field>
+                <div className="space-y-1.5">
+                  <p className="text-xs text-gray-400">경조문구 선택 (클릭하면 위 입력란에 자동 입력)</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {RIBBON_PHRASES.map((phrase) => (
+                      <button
+                        key={phrase}
+                        type="button"
+                        onClick={() => set('ribbonRight', phrase)}
+                        className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:border-green-600 hover:bg-green-50 hover:text-green-700"
+                      >
+                        {phrase}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </>
             ) : (
               <>
