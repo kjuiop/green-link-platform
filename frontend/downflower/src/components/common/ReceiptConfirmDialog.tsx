@@ -310,7 +310,7 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                   <label className="relative flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400">
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
-                    <input type="file" accept="image/*" multiple className="absolute inset-0 opacity-0 cursor-pointer" onClick={() => alert('[DEBUG] 현장사진 input 탭됨')} onChange={makeFileChangeHandler(setSitePhotoFiles)} />
+                    <input type="file" accept="image/*" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={makeFileChangeHandler(setSitePhotoFiles)} />
                   </label>
                 </div>
               </td>
@@ -335,7 +335,7 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                   <label className="relative flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400">
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
-                    <input type="file" accept="image/*" multiple className="absolute inset-0 opacity-0 cursor-pointer" onClick={() => alert('[DEBUG] 매장사진 input 탭됨')} onChange={makeFileChangeHandler(setStorePhotoFiles)} />
+                    <input type="file" accept="image/*" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={makeFileChangeHandler(setStorePhotoFiles)} />
                   </label>
                 </div>
               </td>
