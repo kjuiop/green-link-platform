@@ -57,6 +57,14 @@ public class OrderQueryRepository {
         return new PageImpl<>(content, pageable, total != null ? total : 0L);
     }
 
+    public long sumAmount(OrderSearchCondition condition) {
+        QOrderJpaEntity order = QOrderJpaEntity.orderJpaEntity;
+        BooleanBuilder where = buildWhere(condition, order);
+        Long amountSum = queryFactory.select(order.amount.sum()).from(order).where(where).fetchOne();
+        Long extraCostSum = queryFactory.select(order.extraCost.sum()).from(order).where(where).fetchOne();
+        return (amountSum != null ? amountSum : 0L) + (extraCostSum != null ? extraCostSum : 0L);
+    }
+
     private BooleanBuilder buildWhere(OrderSearchCondition condition, QOrderJpaEntity order) {
         BooleanBuilder where = new BooleanBuilder();
 

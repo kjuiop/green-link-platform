@@ -4,4 +4,5 @@ export interface PageResult<T> {
   size: number
   totalElements: number
   totalPages: number
+  totalAmount: number
 }

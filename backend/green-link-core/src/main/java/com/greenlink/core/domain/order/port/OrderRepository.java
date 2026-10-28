@@ -18,5 +18,7 @@ public interface OrderRepository {
 
     Page<Order> searchPaged(OrderSearchCondition condition, Pageable pageable);
 
+    long sumAmount(OrderSearchCondition condition);
+
     Order save(Order order);
 }

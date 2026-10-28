@@ -187,7 +187,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
             int refCount = refCountMap.getOrDefault(o.getId(), 0L).intValue();
             return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, msgStatusMap.get(o.getId()), refCount, receiptMap.get(o.getId()));
         });
-        return PageResult.of(resultPage);
+        long totalAmount = orderRepository.sumAmount(condition);
+        return PageResult.of(resultPage, totalAmount);
     }
 
     private record VendorInfo(String name, String phone) {}
