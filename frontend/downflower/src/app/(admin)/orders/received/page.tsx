@@ -443,7 +443,7 @@ export default function ReceivedOrdersPage() {
                       variant="admin"
                       onAccept={async () => {
                         await updateOrderStatus(order.id, 'accept')
-                        loadOrders(buildServerParams())
+                        loadOrders(buildServerParams(), page)
                       }}
                     />
                     {order.acceptedAt && (
@@ -541,7 +541,7 @@ export default function ReceivedOrdersPage() {
                       variant="admin"
                       onAccept={async () => {
                         await updateOrderStatus(order.id, 'accept')
-                        loadOrders(buildServerParams())
+                        loadOrders(buildServerParams(), page)
                       }}
                     />
                   </div>
