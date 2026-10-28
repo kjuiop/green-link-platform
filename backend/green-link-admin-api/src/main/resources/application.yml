@@ -12,6 +12,8 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
+  jackson:
+    time-zone: Asia/Seoul
   servlet:
     multipart:
       max-file-size: 10MB
