@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AcceptOrderBadge } from '@/components/common/StatusBadge'
@@ -13,6 +13,7 @@ import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
 import { Plus, Download, Printer } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
+import { OrderDetailPopup } from '@/components/common/OrderDetailPopup'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
 type DeletedFilter = '정상' | '삭제' | '전체'
@@ -113,6 +114,27 @@ export default function OrdersPage() {
   const [applied2Value, setApplied2Value] = useState('')
 
   const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
+
+  const [popups, setPopups] = useState<Array<{ id: string; zIndex: number }>>([])
+  const nextZ = useRef(1000)
+
+  function openPopup(orderId: string) {
+    setPopups((prev) => {
+      const existing = prev.find((p) => p.id === orderId)
+      if (existing) {
+        return prev.map((p) => p.id === orderId ? { ...p, zIndex: ++nextZ.current } : p)
+      }
+      return [...prev, { id: orderId, zIndex: ++nextZ.current }]
+    })
+  }
+
+  function closePopup(orderId: string) {
+    setPopups((prev) => prev.filter((p) => p.id !== orderId))
+  }
+
+  function focusPopup(orderId: string) {
+    setPopups((prev) => prev.map((p) => p.id === orderId ? { ...p, zIndex: ++nextZ.current } : p))
+  }
 
   function buildServerParams(fromDate = dateFrom, toDate = dateTo): OrderSearchParams {
     const params: OrderSearchParams = {}
@@ -471,9 +493,13 @@ export default function OrdersPage() {
                     />
                   </TableCell>
                   <TableCell>
-                    <Link href={`/ordering/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
+                    <button
+                      type="button"
+                      onClick={() => openPopup(String(order.id))}
+                      className="font-mono text-xs text-blue-600 hover:underline"
+                    >
                       {order.orderNumber}
-                    </Link>
+                    </button>
                     {order.isDeleted && (
                       <span className="ml-1.5 rounded bg-red-100 px-1 py-0.5 text-[10px] font-medium text-red-600">삭제</span>
                     )}
@@ -563,14 +589,24 @@ export default function OrdersPage() {
                     />
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      title="주문서 인쇄"
-                      onClick={() => window.open(`/orders/${order.id}/print`, '_blank', 'width=900,height=1050,resizable=yes,scrollbars=yes')}
-                      className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                    >
-                      <Printer className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        title="주문서 보기"
+                        onClick={() => openPopup(String(order.id))}
+                        className="rounded px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
+                      >
+                        주문서
+                      </button>
+                      <button
+                        type="button"
+                        title="주문서 인쇄"
+                        onClick={() => window.open(`/orders/${order.id}/print`, '_blank', 'width=900,height=1050,resizable=yes,scrollbars=yes')}
+                        className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                      >
+                        <Printer className="h-4 w-4" />
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -602,52 +638,59 @@ export default function OrdersPage() {
           </div>
         ) : (
           filtered.map((order) => (
-            <Link
+            <div
               key={order.id}
-              href={`/ordering/orders/${order.id}`}
-              className={`block rounded-lg border p-4 ${order.isDeleted ? 'bg-red-50 opacity-60' : 'bg-white hover:bg-gray-50'}`}
+              className={`rounded-lg border p-4 ${order.isDeleted ? 'bg-red-50 opacity-60' : 'bg-white'}`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-xs text-blue-600">{order.orderNumber}</span>
-                    {order.isDeleted && (
-                      <span className="rounded bg-red-100 px-1 py-0.5 text-[10px] font-medium text-red-600">삭제</span>
+              <button
+                type="button"
+                className="w-full text-left"
+                onClick={() => openPopup(String(order.id))}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-xs text-blue-600">{order.orderNumber}</span>
+                      {order.isDeleted && (
+                        <span className="rounded bg-red-100 px-1 py-0.5 text-[10px] font-medium text-red-600">삭제</span>
+                      )}
+                    </div>
+                    <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
+                    <div className="mt-0.5 text-xs text-gray-500">
+                      {order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}
+                    </div>
+                    {order.vendorName && (
+                      <div className="mt-0.5 text-xs text-gray-400">수주사 {order.vendorName}</div>
                     )}
                   </div>
-                  <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
-                  <div className="mt-0.5 text-xs text-gray-500">
-                    {order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <AcceptOrderBadge
+                        status={order.status}
+                        variant="admin"
+                        onAccept={async () => {
+                          await updateOrderStatus(order.id, 'accept')
+                          loadOrders(buildServerParams(), page)
+                        }}
+                      />
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <ClickableMessageBadge status={order.messageStatus} orderId={order.id} photos={order.deliveryPhotos} orderNumber={order.orderNumber} />
+                    </div>
                   </div>
-                  {order.vendorName && (
-                    <div className="mt-0.5 text-xs text-gray-400">수주사 {order.vendorName}</div>
-                  )}
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <div onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
-                    <AcceptOrderBadge
-                      status={order.status}
-                      variant="admin"
-                      onAccept={async () => {
-                        await updateOrderStatus(order.id, 'accept')
-                        loadOrders(buildServerParams(), page)
-                      }}
-                    />
-                  </div>
-                  <ClickableMessageBadge status={order.messageStatus} orderId={order.id} photos={order.deliveryPhotos} orderNumber={order.orderNumber} />
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
+                  <span>
+                    {order.deliveryAt.split(' ')[0]}
+                    {order.deliveryTimeHour && ` ${String(order.deliveryTimeHour).padStart(2, '0')}:${order.deliveryTimeMinute ?? '00'}`}
+                    {order.deliveryTimeType && order.deliveryTimeType !== '직접입력' && ` ${order.deliveryTimeType}`}
+                    {order.deliveryTimeType === '직접입력' && order.deliveryTimeCustom && ` ${order.deliveryTimeCustom}`}
+                  </span>
+                  <span>{order.placeName}</span>
+                  <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
                 </div>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
-                <span>
-                  {order.deliveryAt.split(' ')[0]}
-                  {order.deliveryTimeHour && ` ${String(order.deliveryTimeHour).padStart(2, '0')}:${order.deliveryTimeMinute ?? '00'}`}
-                  {order.deliveryTimeType && order.deliveryTimeType !== '직접입력' && ` ${order.deliveryTimeType}`}
-                  {order.deliveryTimeType === '직접입력' && order.deliveryTimeCustom && ` ${order.deliveryTimeCustom}`}
-                </span>
-                <span>{order.placeName}</span>
-                <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
-              </div>
-              <div className="mt-2 flex justify-end" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+              </button>
+              <div className="mt-2 flex justify-end" onClick={(e) => e.stopPropagation()}>
                 <button
                   type="button"
                   onClick={() => window.open(`/orders/${order.id}/print`, '_blank', 'width=900,height=1050,resizable=yes,scrollbars=yes')}
@@ -657,7 +700,7 @@ export default function OrdersPage() {
                   인쇄
                 </button>
               </div>
-            </Link>
+            </div>
           ))
         )}
         {result && (
@@ -670,6 +713,19 @@ export default function OrdersPage() {
           />
         )}
       </div>
+
+      {/* 주문서 팝업 */}
+      {popups.map((popup, idx) => (
+        <OrderDetailPopup
+          key={popup.id}
+          orderId={popup.id}
+          zIndex={popup.zIndex}
+          initialOffset={idx}
+          onClose={() => closePopup(popup.id)}
+          onFocus={() => focusPopup(popup.id)}
+          onUpdated={() => loadOrders(buildServerParams(), page)}
+        />
+      ))}
     </div>
   )
 }
