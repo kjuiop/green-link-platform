@@ -301,7 +301,7 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
   return createPortal(
     <div
       className="fixed select-none shadow-2xl"
-      style={{ left: pos.x, top: pos.y, zIndex: 55, width: 560, maxWidth: 'calc(100vw - 32px)' }}
+      style={{ left: pos.x, top: pos.y, zIndex: 1100, width: 560, maxWidth: 'calc(100vw - 32px)' }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="receipt-form-title"
@@ -566,7 +566,7 @@ function ReceiptEditDialog({ open, onClose, onSave, orderId, orderNumber, sender
   return createPortal(
     <div
       className="fixed select-none shadow-2xl"
-      style={{ left: pos.x, top: pos.y, zIndex: 55, width: 560, maxWidth: 'calc(100vw - 32px)' }}
+      style={{ left: pos.x, top: pos.y, zIndex: 1100, width: 560, maxWidth: 'calc(100vw - 32px)' }}
       role="dialog"
       aria-modal="true"
     >

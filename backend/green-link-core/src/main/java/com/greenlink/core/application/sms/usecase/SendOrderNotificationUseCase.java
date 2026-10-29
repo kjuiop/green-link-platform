@@ -1,5 +1,5 @@
 package com.greenlink.core.application.sms.usecase;
 
 public interface SendOrderNotificationUseCase {
-    void notify(Long orderId, String vendorPhone, String vendorName, String orderingCompanyName);
+    void notify(Long orderId, String vendorPhone, String vendorName, String orderingCompanyName, String notificationTitle);
 }

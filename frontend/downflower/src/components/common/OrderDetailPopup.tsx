@@ -149,6 +149,10 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
 
   async function saveEdit() {
     if (!draft) return
+    if (!draft.vendorId) {
+      setSaveError('수주업체를 선택해 주세요.')
+      return
+    }
     setSaving(true)
     setSaveError(null)
     try {
