@@ -56,6 +56,8 @@ function Row({ label, value }: { label: string; value: string }) {
 
 export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, onFocus, onUpdated }: Props) {
   const [pos, setPos] = useState({ x: 60 + initialOffset * 32, y: 40 + initialOffset * 32 })
+  const posRef = useRef(pos)
+  posRef.current = pos
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
 
   const [order, setOrder] = useState<Order | null>(null)
@@ -96,7 +98,7 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
 
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
-    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y }
+    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: posRef.current.x, origY: posRef.current.y }
 
     const onMove = (ev: MouseEvent) => {
       if (!dragRef.current) return
@@ -112,7 +114,7 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
-  }, [pos])
+  }, [])
 
   if (!order && !loading && !loadError) return null
 
