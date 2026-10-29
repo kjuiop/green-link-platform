@@ -485,6 +485,11 @@ export default function OrdersPage() {
                       recipientName={order.recipientName}
                       recipientPhone={order.recipientPhone}
                     />
+                    <div className="mt-0.5 text-[10px] text-gray-400">
+                      {order.messageSchedule === 'scheduled' && order.scheduledMessageHour
+                        ? `예약 ${String(order.scheduledMessageHour).padStart(2, '0')}:${order.scheduledMessageMinute ?? '00'}`
+                        : '자동발송'}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <ReceiptInfoCell

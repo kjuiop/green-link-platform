@@ -466,6 +466,11 @@ export default function ReceivedOrdersPage() {
                       recipientName={order.recipientName}
                       recipientPhone={order.recipientPhone}
                     />
+                    <div className="mt-0.5 text-[10px] text-gray-400">
+                      {order.messageSchedule === 'scheduled' && order.scheduledMessageHour
+                        ? `예약 ${String(order.scheduledMessageHour).padStart(2, '0')}:${order.scheduledMessageMinute ?? '00'}`
+                        : '자동발송'}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <ReceiptInfoCell
@@ -565,6 +570,11 @@ export default function ReceivedOrdersPage() {
                     recipientName={order.recipientName}
                     recipientPhone={order.recipientPhone}
                   />
+                  <span className="text-[10px] text-gray-400">
+                    {order.messageSchedule === 'scheduled' && order.scheduledMessageHour
+                      ? `예약 ${String(order.scheduledMessageHour).padStart(2, '0')}:${order.scheduledMessageMinute ?? '00'}`
+                      : '자동발송'}
+                  </span>
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
