@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ClipboardCheck, Upload, X, Images, Download } from 'lucide-react'
@@ -200,6 +201,19 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
+  useEffect(() => {
+    if (!open) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = ''
+    }
+  }, [open, onClose])
+
   function makeFileChangeHandler(setter: React.Dispatch<React.SetStateAction<{ id: string; file: File; url: string }[]>>) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files ?? [])
@@ -260,16 +274,31 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
     }
   }
 
-  return (
-    <>
-      <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }} modal={false}>
-        <DialogContent className="sm:max-w-2xl" showCloseButton>
-          <DialogTitle>
-            인수확인
-            <span className="ml-2 text-xs font-normal text-gray-400">{orderNumber}</span>
-          </DialogTitle>
+  if (!open) return null
 
-          <div className="flex gap-6 rounded-lg border bg-gray-50 px-4 py-2.5 text-sm">
+  return createPortal(
+    <>
+      {/* backdrop */}
+      <div className="fixed inset-0 z-50 bg-black/10 backdrop-blur-xs" onClick={onClose} />
+      {/* popup */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="receipt-form-title"
+        className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-4 text-sm ring-1 ring-black/10 sm:max-w-2xl"
+      >
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <span id="receipt-form-title" className="text-base font-medium">인수확인</span>
+            <span className="ml-2 text-xs font-normal text-gray-400">{orderNumber}</span>
+          </div>
+          <button type="button" onClick={onClose} className="-mr-1 flex h-7 w-7 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100">
+            <X className="h-4 w-4" />
+            <span className="sr-only">닫기</span>
+          </button>
+        </div>
+
+        <div className="flex gap-6 rounded-lg border bg-gray-50 px-4 py-2.5 text-sm">
           <span>
             <span className="text-gray-500">보내는분</span>
             <span className="ml-2 font-medium">{senderName ?? '-'}</span>
@@ -280,7 +309,7 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
           </span>
         </div>
 
-        <table className="w-full divide-y rounded-lg border text-sm [border-spacing:0] overflow-hidden">
+        <table className="mt-4 w-full divide-y rounded-lg border text-sm [border-spacing:0] overflow-hidden">
           <colgroup>
             <col className="w-20" />
             <col />
@@ -397,15 +426,15 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
         </table>
 
         {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
+          <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
         )}
 
-        <Button className="w-full bg-green-700 hover:bg-green-800" disabled={saving} onClick={handleSave}>
+        <Button className="mt-3 w-full bg-green-700 hover:bg-green-800" disabled={saving} onClick={handleSave}>
           {saving ? '처리 중…' : '배송완료'}
         </Button>
-        </DialogContent>
-      </Dialog>
-    </>
+      </div>
+    </>,
+    document.body
   )
 }
 
