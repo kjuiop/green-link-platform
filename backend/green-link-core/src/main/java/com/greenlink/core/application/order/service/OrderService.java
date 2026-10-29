@@ -318,6 +318,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
 
+        Long previousVendorId = order.getVendorId();
         String changeDetail = buildChangeDetail(order, cmd);
 
         order.updateInfo(
@@ -355,6 +356,16 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
 
         Order saved = orderRepository.save(order);
         recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.UPDATED, changeDetail);
+
+        if (!Objects.equals(previousVendorId, cmd.vendorId())) {
+            String vendorPhone = resolveVendorPhone(saved.getVendorId());
+            if (vendorPhone != null && !vendorPhone.isBlank()) {
+                String vendorName = resolveVendorName(saved.getVendorId());
+                String orderingCompanyName = resolveOrderingCompanyName(saved.getOrderingCompanyId());
+                eventPublisher.publishEvent(new OrderCreatedEvent(saved.getId(), vendorPhone, vendorName, orderingCompanyName));
+            }
+        }
+
         return toResult(saved);
     }
 
