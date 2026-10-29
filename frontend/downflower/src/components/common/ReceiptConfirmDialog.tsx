@@ -280,12 +280,13 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
     <>
       {/* backdrop */}
       <div className="fixed inset-0 z-50 bg-black/10 backdrop-blur-xs" onClick={onClose} />
-      {/* popup */}
+      {/* centering wrapper: flex 방식으로 transform 제거 (iOS hit-test 좌표 버그 회피) */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center px-4 pointer-events-none">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="receipt-form-title"
-        className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-4 text-sm ring-1 ring-black/10 sm:max-w-2xl"
+        className="pointer-events-auto max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-4 text-sm ring-1 ring-black/10"
       >
         <div className="mb-4 flex items-start justify-between">
           <div>
@@ -336,7 +337,10 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                       </button>
                     </div>
                   ))}
-                  <div className="relative flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400">
+                  <div
+                    className="relative flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400 touch-manipulation"
+                    onTouchEnd={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation() }}
+                  >
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
                     <input type="file" accept="image/*" multiple tabIndex={-1} className="absolute inset-0 opacity-0 cursor-pointer" onChange={makeFileChangeHandler(setSitePhotoFiles)} />
@@ -361,7 +365,10 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                       </button>
                     </div>
                   ))}
-                  <div className="relative flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400">
+                  <div
+                    className="relative flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400 touch-manipulation"
+                    onTouchEnd={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation() }}
+                  >
                     <Upload className="h-4 w-4" />
                     <span className="text-[10px]">업로드</span>
                     <input type="file" accept="image/*" multiple tabIndex={-1} className="absolute inset-0 opacity-0 cursor-pointer" onChange={makeFileChangeHandler(setStorePhotoFiles)} />
@@ -432,6 +439,7 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
         <Button className="mt-3 w-full bg-green-700 hover:bg-green-800" disabled={saving} onClick={handleSave}>
           {saving ? '처리 중…' : '배송완료'}
         </Button>
+      </div>
       </div>
     </>,
     document.body
