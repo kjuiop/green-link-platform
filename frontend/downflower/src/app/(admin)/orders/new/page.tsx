@@ -371,7 +371,7 @@ export default function NewOrderPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-1.5">
-                <Label>리본 왼쪽 (보내는 사람·회사명)</Label>
+                <Label>보내는이</Label>
                 <Input
                   placeholder="예: 주식회사 OO 부장 홍길동"
                   value={ribbonLeft}
@@ -379,7 +379,7 @@ export default function NewOrderPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>리본 오른쪽 (축하·근조 문구)</Label>
+                <Label>경조문구</Label>
                 <Input
                   placeholder="예: 삼가 고인의 명복을 빕니다"
                   value={ribbonRight}

@@ -33,6 +33,10 @@ const SERVER_FIELD_MAP: Partial<Record<SearchField, StringOrderSearchKey>> = {
   '주문자': 'ordererName',
   '보내는분': 'ribbonLeft',
   '인수자': 'receiverName',
+  '배달장소': 'address',
+  '받는분': 'recipientName',
+  '수주사명': 'vendorName',
+  '발주사명': 'orderingCompanyName',
 }
 
 const MSG_STATUS_FILTERS: { label: string; value: string }[] = [

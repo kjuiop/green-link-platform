@@ -1,5 +1,7 @@
 package com.greenlink.admin.adapter.out.persistence.order;
 
+import com.greenlink.admin.adapter.out.persistence.admin.QAdminJpaEntity;
+import com.greenlink.admin.adapter.out.persistence.company.QCompanyJpaEntity;
 import com.greenlink.admin.adapter.out.persistence.receipt.QReceiptConfirmationJpaEntity;
 import com.greenlink.admin.adapter.out.persistence.sms.QSmsMessageJpaEntity;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
@@ -8,6 +10,8 @@ import com.greenlink.core.domain.sms.model.SmsStatus;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.data.domain.Page;
@@ -32,7 +36,7 @@ public class OrderQueryRepository {
         return queryFactory
                 .selectFrom(order)
                 .where(buildWhere(condition, order))
-                .orderBy(order.deliveryDate.desc(), order.createdAt.desc())
+                .orderBy(pendingFirst(order), order.createdAt.desc())
                 .fetch();
     }
 
@@ -43,7 +47,7 @@ public class OrderQueryRepository {
         List<OrderJpaEntity> content = queryFactory
                 .selectFrom(order)
                 .where(where)
-                .orderBy(order.deliveryDate.desc(), order.createdAt.desc())
+                .orderBy(pendingFirst(order), order.createdAt.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
@@ -63,6 +67,13 @@ public class OrderQueryRepository {
         Long amountSum = queryFactory.select(order.amount.sum()).from(order).where(where).fetchOne();
         Long extraCostSum = queryFactory.select(order.extraCost.sum()).from(order).where(where).fetchOne();
         return (amountSum != null ? amountSum : 0L) + (extraCostSum != null ? extraCostSum : 0L);
+    }
+
+    private OrderSpecifier<Integer> pendingFirst(QOrderJpaEntity order) {
+        return new CaseBuilder()
+                .when(order.status.eq(OrderStatus.PENDING)).then(0)
+                .otherwise(1)
+                .asc();
     }
 
     private BooleanBuilder buildWhere(OrderSearchCondition condition, QOrderJpaEntity order) {
@@ -111,6 +122,30 @@ public class OrderQueryRepository {
             where.and(order.isDeleted.isTrue());
         } else {
             where.and(order.isDeleted.isFalse());
+        }
+        if (condition.address() != null && !condition.address().isBlank()) {
+            where.and(order.placeName.containsIgnoreCase(condition.address())
+                    .or(order.address.containsIgnoreCase(condition.address()))
+                    .or(order.roomName.containsIgnoreCase(condition.address())));
+        }
+        if (condition.recipientName() != null && !condition.recipientName().isBlank()) {
+            where.and(order.recipientName.containsIgnoreCase(condition.recipientName()));
+        }
+        if (condition.vendorName() != null && !condition.vendorName().isBlank()) {
+            QAdminJpaEntity admin = QAdminJpaEntity.adminJpaEntity;
+            where.and(JPAExpressions.selectOne()
+                    .from(admin)
+                    .where(admin.id.eq(order.vendorId)
+                            .and(admin.name.containsIgnoreCase(condition.vendorName())))
+                    .exists());
+        }
+        if (condition.orderingCompanyName() != null && !condition.orderingCompanyName().isBlank()) {
+            QCompanyJpaEntity company = QCompanyJpaEntity.companyJpaEntity;
+            where.and(JPAExpressions.selectOne()
+                    .from(company)
+                    .where(company.id.eq(order.orderingCompanyId)
+                            .and(company.companyName.containsIgnoreCase(condition.orderingCompanyName())))
+                    .exists());
         }
         if (condition.messageStatus() != null && !condition.messageStatus().isBlank()) {
             QSmsMessageJpaEntity sms = QSmsMessageJpaEntity.smsMessageJpaEntity;
