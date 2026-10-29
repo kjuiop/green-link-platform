@@ -623,7 +623,11 @@ export default function OrderingOrderDetailPage() {
                         type="radio"
                         name="messageSchedule"
                         checked={draft.messageSchedule === 'scheduled'}
-                        onChange={() => set('messageSchedule', 'scheduled')}
+                        onChange={() => {
+                          set('messageSchedule', 'scheduled')
+                          if (!draft.scheduledMessageHour) set('scheduledMessageHour', '0')
+                          if (!draft.scheduledMessageMinute) set('scheduledMessageMinute', '00')
+                        }}
                         className="accent-green-700"
                       />
                       <span className="text-sm">예약발송</span>
