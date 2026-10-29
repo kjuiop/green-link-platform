@@ -174,6 +174,10 @@ export type OrderSearchParams = {
   messageStatus?: string
   ribbonLeft?: string
   deleted?: boolean
+  address?: string
+  recipientName?: string
+  vendorName?: string
+  orderingCompanyName?: string
 }
 
 function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: number): string {
@@ -190,6 +194,10 @@ function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: numbe
   if (params?.messageStatus) query.set('messageStatus', params.messageStatus)
   if (params?.ribbonLeft) query.set('ribbonLeft', params.ribbonLeft)
   if (params?.deleted !== undefined) query.set('deleted', String(params.deleted))
+  if (params?.address) query.set('address', params.address)
+  if (params?.recipientName) query.set('recipientName', params.recipientName)
+  if (params?.vendorName) query.set('vendorName', params.vendorName)
+  if (params?.orderingCompanyName) query.set('orderingCompanyName', params.orderingCompanyName)
   if (page !== undefined) query.set('page', String(page))
   if (size !== undefined) query.set('size', String(size))
   return query.toString()
