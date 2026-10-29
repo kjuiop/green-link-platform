@@ -57,7 +57,13 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, onFocus, onUpdated }: Props) {
-  const [pos, setPos] = useState({ x: 60 + initialOffset * 32, y: 40 + initialOffset * 32 })
+  const [pos, setPos] = useState(() => {
+    if (typeof window === 'undefined') return { x: 60 + initialOffset * 32, y: 40 + initialOffset * 32 }
+    return {
+      x: Math.max(0, Math.round((window.innerWidth - 860) / 2) + initialOffset * 32),
+      y: Math.max(0, Math.round(window.innerHeight * 0.05) + initialOffset * 32),
+    }
+  })
   const posRef = useRef(pos)
   posRef.current = pos
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
