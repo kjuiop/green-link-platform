@@ -132,7 +132,7 @@ const deliveryTimeTypeConfig: Record<DeliveryTimeType, string> = {
   '까지':     'bg-gray-100 text-gray-700 border-gray-200',
   '예식':     'bg-purple-100 text-purple-700 border-purple-200',
   '행사':     'bg-blue-100 text-blue-700 border-blue-200',
-  '3시간이내': 'bg-orange-100 text-orange-800 border-orange-300',
+  '3시간이내': 'bg-orange-500 text-white border-orange-500',
   '직접입력': 'bg-gray-100 text-gray-700 border-gray-200',
 }
 
