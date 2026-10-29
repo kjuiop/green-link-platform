@@ -338,8 +338,7 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                     </div>
                   ))}
                   <div
-                    className="relative flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
-                    style={{ touchAction: 'manipulation' }}
+                    className="relative flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400 touch-manipulation"
                     onTouchEnd={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation() }}
                   >
                     <Upload className="h-4 w-4" />
@@ -367,8 +366,7 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
                     </div>
                   ))}
                   <div
-                    className="relative flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
-                    style={{ touchAction: 'manipulation' }}
+                    className="relative flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400 touch-manipulation"
                     onTouchEnd={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation() }}
                   >
                     <Upload className="h-4 w-4" />
