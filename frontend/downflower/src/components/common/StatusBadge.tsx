@@ -146,8 +146,8 @@ export function DeliveryTimeTypeBadge({
   if (!type) return <span className="text-gray-400">-</span>
   const label = type === '직접입력' && custom ? custom : type
   return (
-    <Badge variant="outline" className={deliveryTimeTypeConfig[type]}>
+    <span className={`inline-flex h-5 items-center rounded-full border px-2 py-0.5 text-xs font-medium ${deliveryTimeTypeConfig[type]}`}>
       {label}
-    </Badge>
+    </span>
   )
 }
