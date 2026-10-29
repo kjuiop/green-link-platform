@@ -675,7 +675,7 @@ export default function OrderingOrderDetailPage() {
                   label="발송 예약시간"
                   value={
                     order.messageSchedule === 'scheduled' && order.scheduledMessageHour
-                      ? `예약발송 ${String(order.scheduledMessageHour).padStart(2, '0')}:${order.scheduledMessageMinute ?? '00'}`
+                      ? `예약발송 ${order.deliveryAt.slice(0, 10)} ${String(order.scheduledMessageHour).padStart(2, '0')}:${order.scheduledMessageMinute ?? '00'}`
                       : '자동발송 (즉시)'
                   }
                 />
