@@ -132,7 +132,7 @@ const deliveryTimeTypeConfig: Record<DeliveryTimeType, string> = {
   '까지':     'bg-gray-100 text-gray-700 border-gray-200',
   '예식':     'bg-purple-100 text-purple-700 border-purple-200',
   '행사':     'bg-blue-100 text-blue-700 border-blue-200',
-  '3시간이내': 'bg-amber-100 text-amber-700 border-amber-200',
+  '3시간이내': 'bg-orange-100 text-orange-700 border-orange-300 font-bold',
   '직접입력': 'bg-gray-100 text-gray-700 border-gray-200',
 }
 
@@ -146,8 +146,8 @@ export function DeliveryTimeTypeBadge({
   if (!type) return <span className="text-gray-400">-</span>
   const label = type === '직접입력' && custom ? custom : type
   return (
-    <Badge variant="outline" className={deliveryTimeTypeConfig[type]}>
+    <span className={`inline-flex h-5 items-center rounded-full border px-2 py-0.5 text-xs font-medium ${deliveryTimeTypeConfig[type]}`}>
       {label}
-    </Badge>
+    </span>
   )
 }

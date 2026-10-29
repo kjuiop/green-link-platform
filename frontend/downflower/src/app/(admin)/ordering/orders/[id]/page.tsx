@@ -603,6 +603,60 @@ export default function OrderingOrderDetailPage() {
                     </label>
                   </div>
                 </Field>
+                <Field label="문자 발송 설정">
+                  <div className="space-y-1.5 pt-1">
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <input
+                        type="radio"
+                        name="messageSchedule"
+                        checked={draft.messageSchedule !== 'scheduled'}
+                        onChange={() => set('messageSchedule', 'immediate')}
+                        className="accent-green-700"
+                      />
+                      <span className="text-sm">자동발송</span>
+                      {draft.messageSchedule !== 'scheduled' && (
+                        <span className="text-xs text-gray-400">배송완료 처리 즉시 발송</span>
+                      )}
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <input
+                        type="radio"
+                        name="messageSchedule"
+                        checked={draft.messageSchedule === 'scheduled'}
+                        onChange={() => {
+                          set('messageSchedule', 'scheduled')
+                          if (!draft.scheduledMessageHour) set('scheduledMessageHour', '0')
+                          if (!draft.scheduledMessageMinute) set('scheduledMessageMinute', '00')
+                        }}
+                        className="accent-green-700"
+                      />
+                      <span className="text-sm">예약발송</span>
+                      {draft.messageSchedule === 'scheduled' && (
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={draft.scheduledMessageHour ?? ''}
+                            onChange={(e) => set('scheduledMessageHour', e.target.value)}
+                            className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                          >
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <option key={i} value={String(i)}>{i}시</option>
+                            ))}
+                          </select>
+                          <select
+                            value={draft.scheduledMessageMinute ?? ''}
+                            onChange={(e) => set('scheduledMessageMinute', e.target.value)}
+                            className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                          >
+                            {['00', '10', '20', '30', '40', '50'].map((m) => (
+                              <option key={m} value={m}>{m}분</option>
+                            ))}
+                          </select>
+                          <span className="text-xs text-gray-400">배송날짜 기준</span>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                </Field>
               </>
             ) : (
               <>
@@ -616,6 +670,14 @@ export default function OrderingOrderDetailPage() {
                     order.sendPhotoToOrderer ? '주문자' : '',
                     order.sendPhotoToRecipient ? '받는 분' : '',
                   ].filter(Boolean).join(', ') || '미발송'}
+                />
+                <Row
+                  label="발송 예약시간"
+                  value={
+                    order.messageSchedule === 'scheduled' && order.scheduledMessageHour
+                      ? `예약발송 ${order.deliveryAt.slice(0, 10)} ${String(order.scheduledMessageHour).padStart(2, '0')}:${order.scheduledMessageMinute ?? '00'}`
+                      : '자동발송 (즉시)'
+                  }
                 />
               </>
             )}

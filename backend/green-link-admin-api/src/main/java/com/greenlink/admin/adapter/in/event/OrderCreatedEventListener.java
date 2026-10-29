@@ -17,6 +17,6 @@ public class OrderCreatedEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onOrderCreated(OrderCreatedEvent event) {
-        sendOrderNotificationUseCase.notify(event.orderId(), event.vendorPhone(), event.vendorName(), event.orderingCompanyName());
+        sendOrderNotificationUseCase.notify(event.orderId(), event.vendorPhone(), event.vendorName(), event.orderingCompanyName(), event.notificationTitle());
     }
 }

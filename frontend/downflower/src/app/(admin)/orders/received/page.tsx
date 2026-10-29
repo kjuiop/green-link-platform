@@ -1,18 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useState, useEffect, useRef } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AcceptOrderBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
-import { ReceiptConfirmButton, ReceiptInfoCell } from '@/components/common/ReceiptConfirmDialog'
+import { ReceiptInfoCell } from '@/components/common/ReceiptConfirmDialog'
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
 import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
 import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
-import { Download, Printer } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
+import { OrderDetailPopup } from '@/components/common/OrderDetailPopup'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
 type DeletedFilter = '정상' | '삭제' | '전체'
@@ -33,6 +33,10 @@ const SERVER_FIELD_MAP: Partial<Record<SearchField, StringOrderSearchKey>> = {
   '주문자': 'ordererName',
   '보내는분': 'ribbonLeft',
   '인수자': 'receiverName',
+  '배달장소': 'address',
+  '받는분': 'recipientName',
+  '수주사명': 'vendorName',
+  '발주사명': 'orderingCompanyName',
 }
 
 const MSG_STATUS_FILTERS: { label: string; value: string }[] = [
@@ -69,8 +73,20 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
 ]
 
 const PAGE_SIZE_OPTIONS = [10, 50, 100, 200, 300, 500]
+const YEAR_OPTIONS = [new Date().getFullYear(), new Date().getFullYear() - 1]
+
+function getMonthRange(year: number, month: number): { from: string; to: string } {
+  const m = String(month).padStart(2, '0')
+  const lastDay = new Date(year, month, 0).getDate()
+  return { from: `${year}-${m}-01`, to: `${year}-${m}-${String(lastDay).padStart(2, '0')}` }
+}
 
 export default function ReceivedOrdersPage() {
+  const today = new Date()
+  const initYear = today.getFullYear()
+  const initMonth = today.getMonth() + 1
+  const initRange = getMonthRange(initYear, initMonth)
+
   const [result, setResult] = useState<PageResult<Order> | null>(null)
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(10)
@@ -82,8 +98,10 @@ export default function ReceivedOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL')
   const [msgStatusFilter, setMsgStatusFilter] = useState('ALL')
   const [deletedFilter, setDeletedFilter] = useState<DeletedFilter>('정상')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
+  const [selectedYear, setSelectedYear] = useState(initYear)
+  const [selectedMonth, setSelectedMonth] = useState(initMonth)
+  const [dateFrom, setDateFrom] = useState(initRange.from)
+  const [dateTo, setDateTo] = useState(initRange.to)
   const [search1Field, setSearch1Field] = useState<SearchField>('주문번호')
   const [search1Value, setSearch1Value] = useState('')
   const [search2Field, setSearch2Field] = useState<SearchField>('수주사명')
@@ -97,12 +115,33 @@ export default function ReceivedOrdersPage() {
 
   const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
 
-  function buildServerParams(): OrderSearchParams {
+  const [popups, setPopups] = useState<Array<{ id: string; zIndex: number }>>([])
+  const nextZ = useRef(1000)
+
+  function openPopup(orderId: string) {
+    setPopups((prev) => {
+      const existing = prev.find((p) => p.id === orderId)
+      if (existing) {
+        return prev.map((p) => p.id === orderId ? { ...p, zIndex: ++nextZ.current } : p)
+      }
+      return [...prev, { id: orderId, zIndex: ++nextZ.current }]
+    })
+  }
+
+  function closePopup(orderId: string) {
+    setPopups((prev) => prev.filter((p) => p.id !== orderId))
+  }
+
+  function focusPopup(orderId: string) {
+    setPopups((prev) => prev.map((p) => p.id === orderId ? { ...p, zIndex: ++nextZ.current } : p))
+  }
+
+  function buildServerParams(fromDate = dateFrom, toDate = dateTo): OrderSearchParams {
     const params: OrderSearchParams = {}
     if (statusFilter !== 'ALL') params.status = STATUS_TO_API[statusFilter]
     if (msgStatusFilter !== 'ALL') params.messageStatus = msgStatusFilter
-    if (dateFrom) params.deliveryDateFrom = dateFrom
-    if (dateTo) params.deliveryDateTo = dateTo
+    if (fromDate) params.deliveryDateFrom = fromDate
+    if (toDate) params.deliveryDateTo = toDate
     const key1 = SERVER_FIELD_MAP[search1Field]
     if (key1 && search1Value) params[key1] = search1Value
     const key2 = SERVER_FIELD_MAP[search2Field]
@@ -120,7 +159,19 @@ export default function ReceivedOrdersPage() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { loadOrders() }, [])
+  useEffect(() => { loadOrders(buildServerParams(initRange.from, initRange.to)) }, [])
+
+  function selectMonth(year: number, month: number) {
+    setSelectedYear(year)
+    setSelectedMonth(month)
+    const from = month === 0 ? '' : getMonthRange(year, month).from
+    const to = month === 0 ? '' : getMonthRange(year, month).to
+    setDateFrom(from)
+    setDateTo(to)
+    setPage(0)
+    setSelectedIds(new Set())
+    loadOrders(buildServerParams(from, to), 0)
+  }
 
   const handleSearch = () => {
     setAppliedDeletedFilter(deletedFilter)
@@ -134,7 +185,10 @@ export default function ReceivedOrdersPage() {
   }
 
   const handleReset = () => {
-    setStatusFilter('ALL'); setMsgStatusFilter('ALL'); setDeletedFilter('정상'); setDateFrom(''); setDateTo('')
+    const r = getMonthRange(initYear, initMonth)
+    setStatusFilter('ALL'); setMsgStatusFilter('ALL'); setDeletedFilter('정상')
+    setSelectedYear(initYear); setSelectedMonth(initMonth)
+    setDateFrom(r.from); setDateTo(r.to)
     setSearch1Field('주문번호'); setSearch1Value('')
     setSearch2Field('수주사명'); setSearch2Value('')
     setAppliedDeletedFilter('정상')
@@ -142,7 +196,7 @@ export default function ReceivedOrdersPage() {
     setApplied2Field('수주사명'); setApplied2Value('')
     setPage(0)
     setSelectedIds(new Set())
-    loadOrders({}, 0)
+    loadOrders({ deliveryDateFrom: r.from, deliveryDateTo: r.to }, 0)
   }
 
   const handlePageChange = (p: number) => {
@@ -234,20 +288,46 @@ export default function ReceivedOrdersPage() {
           ))}
         </div>
 
-        {/* 배송날짜 + 정상/삭제 */}
+        {/* 배송월 */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="w-14 shrink-0 text-xs font-medium text-gray-500">배송월</span>
+          <select
+            value={selectedYear}
+            onChange={(e) => selectMonth(Number(e.target.value), selectedMonth)}
+            className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+          >
+            {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}년</option>)}
+          </select>
+          <div className="flex flex-wrap gap-1">
+            {[{ label: '전체', value: 0 }, ...Array.from({ length: 12 }, (_, i) => ({ label: `${i + 1}월`, value: i + 1 }))].map(({ label, value }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => selectMonth(selectedYear, value)}
+                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                  selectedMonth === value ? 'bg-green-700 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 배송날짜 + 정상/삭제 */}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="w-14 shrink-0 text-xs font-medium text-gray-500">배송날짜</span>
           <input
             type="date"
             value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
+            onChange={(e) => { setDateFrom(e.target.value); setSelectedMonth(0) }}
             className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
           />
           <span className="text-sm text-gray-400">~</span>
           <input
             type="date"
             value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
+            onChange={(e) => { setDateTo(e.target.value); setSelectedMonth(0) }}
             className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
           />
           {isSuperAdmin && (
@@ -324,7 +404,7 @@ export default function ReceivedOrdersPage() {
           <button
             onClick={handleExcelDownload}
             disabled={selectedIds.size === 0 || excelLoading}
-            className="inline-flex items-center gap-1.5 rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Download className="h-3.5 w-3.5" />
             {selectedIds.size > 0 ? `엑셀 다운로드 (${selectedIds.size})` : '엑셀 다운로드'}
@@ -365,20 +445,19 @@ export default function ReceivedOrdersPage() {
               <TableHead>배송현황</TableHead>
               <TableHead>문자현황</TableHead>
               <TableHead>인수정보</TableHead>
-              <TableHead>인수확인</TableHead>
-              <TableHead>인쇄</TableHead>
+              <TableHead>주문서</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={13} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={12} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={13} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={12} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -397,9 +476,13 @@ export default function ReceivedOrdersPage() {
                     />
                   </TableCell>
                   <TableCell>
-                    <Link href={`/vendor/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
+                    <button
+                      type="button"
+                      onClick={() => openPopup(String(order.id))}
+                      className="font-mono text-xs text-blue-600 hover:underline"
+                    >
                       {order.orderNumber}
-                    </Link>
+                    </button>
                     {order.isDeleted && (
                       <span className="ml-1.5 rounded bg-red-100 px-1 py-0.5 text-[10px] font-medium text-red-600">삭제</span>
                     )}
@@ -462,6 +545,11 @@ export default function ReceivedOrdersPage() {
                       recipientName={order.recipientName}
                       recipientPhone={order.recipientPhone}
                     />
+                    <div className="mt-0.5 text-[10px] text-gray-400">
+                      {order.messageSchedule === 'scheduled' && order.scheduledMessageHour
+                        ? `예약 ${String(order.scheduledMessageHour).padStart(2, '0')}:${order.scheduledMessageMinute ?? '00'}`
+                        : '자동발송'}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <ReceiptInfoCell
@@ -471,22 +559,13 @@ export default function ReceivedOrdersPage() {
                     />
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <ReceiptConfirmButton
-                      orderId={order.id}
-                      orderNumber={order.orderNumber}
-                      senderName={order.ribbonLeft}
-                      recipientName={order.recipientName}
-                      initialHasReceipt={order.hasReceipt}
-                    />
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
-                      title="주문서 인쇄"
-                      onClick={() => window.open(`/orders/${order.id}/print`, '_blank', 'width=900,height=1050,resizable=yes,scrollbars=yes')}
-                      className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                      title="주문서 보기"
+                      onClick={() => openPopup(String(order.id))}
+                      className="rounded px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
                     >
-                      <Printer className="h-4 w-4" />
+                      주문서
                     </button>
                   </TableCell>
                 </TableRow>
@@ -519,78 +598,73 @@ export default function ReceivedOrdersPage() {
           </div>
         ) : (
           filtered.map((order) => (
-            <Link
+            <div
               key={order.id}
-              href={`/vendor/orders/${order.id}`}
-              className={`block rounded-lg border p-4 ${order.isDeleted ? 'bg-red-50 opacity-60' : 'bg-white hover:bg-gray-50'}`}
+              className={`rounded-lg border p-4 ${order.isDeleted ? 'bg-red-50 opacity-60' : 'bg-white'}`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-xs text-blue-600">{order.orderNumber}</span>
-                    {order.isDeleted && (
-                      <span className="rounded bg-red-100 px-1 py-0.5 text-[10px] font-medium text-red-600">삭제</span>
+              <button
+                type="button"
+                className="w-full text-left"
+                onClick={() => openPopup(String(order.id))}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-xs text-blue-600">{order.orderNumber}</span>
+                      {order.isDeleted && (
+                        <span className="rounded bg-red-100 px-1 py-0.5 text-[10px] font-medium text-red-600">삭제</span>
+                      )}
+                    </div>
+                    <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
+                    <div className="mt-0.5 text-xs text-gray-500">
+                      {order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}
+                    </div>
+                    {order.vendorName && (
+                      <div className="mt-0.5 text-xs text-gray-400">수주사 {order.vendorName}</div>
                     )}
                   </div>
-                  <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
-                  <div className="mt-0.5 text-xs text-gray-500">
-                    {order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <AcceptOrderBadge
+                        status={order.status}
+                        variant="admin"
+                        onAccept={async () => {
+                          await updateOrderStatus(order.id, 'accept')
+                          loadOrders(buildServerParams(), page)
+                        }}
+                      />
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <ClickableMessageBadge
+                        status={order.messageStatus}
+                        orderId={order.id}
+                        photos={order.deliveryPhotos}
+                        orderNumber={order.orderNumber}
+                        ordererName={order.ordererName}
+                        ordererPhone={order.ordererPhone}
+                        recipientName={order.recipientName}
+                        recipientPhone={order.recipientPhone}
+                      />
+                    </div>
+                    <span className="text-[10px] text-gray-400">
+                      {order.messageSchedule === 'scheduled' && order.scheduledMessageHour
+                        ? `예약 ${String(order.scheduledMessageHour).padStart(2, '0')}:${order.scheduledMessageMinute ?? '00'}`
+                        : '자동발송'}
+                    </span>
                   </div>
-                  {order.vendorName && (
-                    <div className="mt-0.5 text-xs text-gray-400">수주사 {order.vendorName}</div>
-                  )}
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <div onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
-                    <AcceptOrderBadge
-                      status={order.status}
-                      variant="admin"
-                      onAccept={async () => {
-                        await updateOrderStatus(order.id, 'accept')
-                        loadOrders(buildServerParams(), page)
-                      }}
-                    />
-                  </div>
-                  <ClickableMessageBadge
-                    status={order.messageStatus}
-                    orderId={order.id}
-                    photos={order.deliveryPhotos}
-                    orderNumber={order.orderNumber}
-                    ordererName={order.ordererName}
-                    ordererPhone={order.ordererPhone}
-                    recipientName={order.recipientName}
-                    recipientPhone={order.recipientPhone}
-                  />
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
+                  <span>
+                    {order.deliveryAt.split(' ')[0]}
+                    {order.deliveryTimeHour && ` ${String(order.deliveryTimeHour).padStart(2, '0')}:${order.deliveryTimeMinute ?? '00'}`}
+                    {order.deliveryTimeType && order.deliveryTimeType !== '직접입력' && ` ${order.deliveryTimeType}`}
+                    {order.deliveryTimeType === '직접입력' && order.deliveryTimeCustom && ` ${order.deliveryTimeCustom}`}
+                  </span>
+                  <span>{order.placeName}</span>
+                  <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
                 </div>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
-                <span>
-                  {order.deliveryAt.split(' ')[0]}
-                  {order.deliveryTimeHour && ` ${String(order.deliveryTimeHour).padStart(2, '0')}:${order.deliveryTimeMinute ?? '00'}`}
-                  {order.deliveryTimeType && order.deliveryTimeType !== '직접입력' && ` ${order.deliveryTimeType}`}
-                  {order.deliveryTimeType === '직접입력' && order.deliveryTimeCustom && ` ${order.deliveryTimeCustom}`}
-                </span>
-                <span>{order.placeName}</span>
-                <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
-              </div>
-              <div className="mt-2 flex items-center justify-between" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
-                <ReceiptConfirmButton
-                  orderId={order.id}
-                  orderNumber={order.orderNumber}
-                  senderName={order.ribbonLeft}
-                  recipientName={order.recipientName}
-                  initialHasReceipt={order.hasReceipt}
-                />
-                <button
-                  type="button"
-                  onClick={() => window.open(`/orders/${order.id}/print`, '_blank', 'width=900,height=1050,resizable=yes,scrollbars=yes')}
-                  className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
-                >
-                  <Printer className="h-3.5 w-3.5" />
-                  인쇄
-                </button>
-              </div>
-            </Link>
+              </button>
+            </div>
           ))
         )}
         {result && (
@@ -603,6 +677,19 @@ export default function ReceivedOrdersPage() {
           />
         )}
       </div>
+
+      {/* 주문서 팝업 */}
+      {popups.map((popup, idx) => (
+        <OrderDetailPopup
+          key={popup.id}
+          orderId={popup.id}
+          zIndex={popup.zIndex}
+          initialOffset={idx}
+          onClose={() => closePopup(popup.id)}
+          onFocus={() => focusPopup(popup.id)}
+          onUpdated={() => loadOrders(buildServerParams(), page)}
+        />
+      ))}
     </div>
   )
 }
