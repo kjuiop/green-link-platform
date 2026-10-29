@@ -11,6 +11,7 @@ import com.greenlink.core.domain.order.model.Order;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import org.springframework.beans.factory.annotation.Value;
 import com.greenlink.core.domain.sms.model.SmsMessage;
+import com.greenlink.core.domain.sms.model.SmsMessageType;
 import com.greenlink.core.domain.sms.model.SmsStatus;
 import com.greenlink.core.domain.sms.port.SmsClient;
 import com.greenlink.core.domain.sms.port.SmsMessageRepository;
@@ -54,6 +55,12 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     @Override
     @Transactional
     public void send(Long orderId, List<String> photoUrls) {
+        boolean alreadySent = smsMessageRepository.findAllByOrderId(orderId).stream()
+                .anyMatch(m -> m.getType() == SmsMessageType.DELIVERY && m.getStatus() == SmsStatus.SUCCESS);
+        if (alreadySent) {
+            return;
+        }
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
 

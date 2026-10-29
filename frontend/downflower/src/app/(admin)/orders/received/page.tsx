@@ -73,8 +73,20 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
 ]
 
 const PAGE_SIZE_OPTIONS = [10, 50, 100, 200, 300, 500]
+const YEAR_OPTIONS = [new Date().getFullYear(), new Date().getFullYear() - 1]
+
+function getMonthRange(year: number, month: number): { from: string; to: string } {
+  const m = String(month).padStart(2, '0')
+  const lastDay = new Date(year, month, 0).getDate()
+  return { from: `${year}-${m}-01`, to: `${year}-${m}-${String(lastDay).padStart(2, '0')}` }
+}
 
 export default function ReceivedOrdersPage() {
+  const today = new Date()
+  const initYear = today.getFullYear()
+  const initMonth = today.getMonth() + 1
+  const initRange = getMonthRange(initYear, initMonth)
+
   const [result, setResult] = useState<PageResult<Order> | null>(null)
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(10)
@@ -86,8 +98,10 @@ export default function ReceivedOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL')
   const [msgStatusFilter, setMsgStatusFilter] = useState('ALL')
   const [deletedFilter, setDeletedFilter] = useState<DeletedFilter>('정상')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
+  const [selectedYear, setSelectedYear] = useState(initYear)
+  const [selectedMonth, setSelectedMonth] = useState(initMonth)
+  const [dateFrom, setDateFrom] = useState(initRange.from)
+  const [dateTo, setDateTo] = useState(initRange.to)
   const [search1Field, setSearch1Field] = useState<SearchField>('주문번호')
   const [search1Value, setSearch1Value] = useState('')
   const [search2Field, setSearch2Field] = useState<SearchField>('수주사명')
@@ -101,12 +115,12 @@ export default function ReceivedOrdersPage() {
 
   const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
 
-  function buildServerParams(): OrderSearchParams {
+  function buildServerParams(fromDate = dateFrom, toDate = dateTo): OrderSearchParams {
     const params: OrderSearchParams = {}
     if (statusFilter !== 'ALL') params.status = STATUS_TO_API[statusFilter]
     if (msgStatusFilter !== 'ALL') params.messageStatus = msgStatusFilter
-    if (dateFrom) params.deliveryDateFrom = dateFrom
-    if (dateTo) params.deliveryDateTo = dateTo
+    if (fromDate) params.deliveryDateFrom = fromDate
+    if (toDate) params.deliveryDateTo = toDate
     const key1 = SERVER_FIELD_MAP[search1Field]
     if (key1 && search1Value) params[key1] = search1Value
     const key2 = SERVER_FIELD_MAP[search2Field]
@@ -124,7 +138,19 @@ export default function ReceivedOrdersPage() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { loadOrders() }, [])
+  useEffect(() => { loadOrders(buildServerParams(initRange.from, initRange.to)) }, [])
+
+  function selectMonth(year: number, month: number) {
+    setSelectedYear(year)
+    setSelectedMonth(month)
+    const from = month === 0 ? '' : getMonthRange(year, month).from
+    const to = month === 0 ? '' : getMonthRange(year, month).to
+    setDateFrom(from)
+    setDateTo(to)
+    setPage(0)
+    setSelectedIds(new Set())
+    loadOrders(buildServerParams(from, to), 0)
+  }
 
   const handleSearch = () => {
     setAppliedDeletedFilter(deletedFilter)
@@ -138,7 +164,10 @@ export default function ReceivedOrdersPage() {
   }
 
   const handleReset = () => {
-    setStatusFilter('ALL'); setMsgStatusFilter('ALL'); setDeletedFilter('정상'); setDateFrom(''); setDateTo('')
+    const r = getMonthRange(initYear, initMonth)
+    setStatusFilter('ALL'); setMsgStatusFilter('ALL'); setDeletedFilter('정상')
+    setSelectedYear(initYear); setSelectedMonth(initMonth)
+    setDateFrom(r.from); setDateTo(r.to)
     setSearch1Field('주문번호'); setSearch1Value('')
     setSearch2Field('수주사명'); setSearch2Value('')
     setAppliedDeletedFilter('정상')
@@ -146,7 +175,7 @@ export default function ReceivedOrdersPage() {
     setApplied2Field('수주사명'); setApplied2Value('')
     setPage(0)
     setSelectedIds(new Set())
-    loadOrders({}, 0)
+    loadOrders({ deliveryDateFrom: r.from, deliveryDateTo: r.to }, 0)
   }
 
   const handlePageChange = (p: number) => {
@@ -238,20 +267,46 @@ export default function ReceivedOrdersPage() {
           ))}
         </div>
 
-        {/* 배송날짜 + 정상/삭제 */}
+        {/* 배송월 */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="w-14 shrink-0 text-xs font-medium text-gray-500">배송월</span>
+          <select
+            value={selectedYear}
+            onChange={(e) => selectMonth(Number(e.target.value), selectedMonth)}
+            className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+          >
+            {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}년</option>)}
+          </select>
+          <div className="flex flex-wrap gap-1">
+            {[{ label: '전체', value: 0 }, ...Array.from({ length: 12 }, (_, i) => ({ label: `${i + 1}월`, value: i + 1 }))].map(({ label, value }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => selectMonth(selectedYear, value)}
+                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                  selectedMonth === value ? 'bg-green-700 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 배송날짜 + 정상/삭제 */}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="w-14 shrink-0 text-xs font-medium text-gray-500">배송날짜</span>
           <input
             type="date"
             value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
+            onChange={(e) => { setDateFrom(e.target.value); setSelectedMonth(0) }}
             className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
           />
           <span className="text-sm text-gray-400">~</span>
           <input
             type="date"
             value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
+            onChange={(e) => { setDateTo(e.target.value); setSelectedMonth(0) }}
             className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
           />
           {isSuperAdmin && (
