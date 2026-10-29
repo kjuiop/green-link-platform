@@ -277,16 +277,14 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
   if (!open) return null
 
   return createPortal(
-    <>
-      {/* backdrop */}
-      <div className="fixed inset-0 z-50 bg-black/10 backdrop-blur-xs" onClick={onClose} />
-      {/* centering wrapper: flex 방식으로 transform 제거 (iOS hit-test 좌표 버그 회피) */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center px-4 pointer-events-none">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50" onClick={onClose}>
+      <div className="flex min-h-full items-center justify-center py-4 px-4">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="receipt-form-title"
-        className="pointer-events-auto max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-4 text-sm ring-1 ring-black/10"
+        className="w-full max-w-2xl rounded-xl bg-white p-4 text-sm ring-1 ring-black/10"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between">
           <div>
@@ -441,7 +439,7 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
         </Button>
       </div>
       </div>
-    </>,
+    </div>,
     document.body
   )
 }
