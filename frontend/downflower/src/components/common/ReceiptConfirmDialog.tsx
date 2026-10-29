@@ -181,7 +181,13 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [pos, setPos] = useState({ x: 100, y: 80 })
+  const [pos, setPos] = useState(() => {
+    if (typeof window === 'undefined') return { x: 100, y: 80 }
+    return {
+      x: Math.max(0, Math.round((window.innerWidth - 560) / 2)),
+      y: Math.max(0, Math.round(window.innerHeight * 0.1)),
+    }
+  })
   const posRef = useRef(pos)
   posRef.current = pos
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
@@ -496,7 +502,13 @@ function ReceiptEditDialog({ open, onClose, onSave, orderId, orderNumber, sender
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [pos, setPos] = useState({ x: 140, y: 90 })
+  const [pos, setPos] = useState(() => {
+    if (typeof window === 'undefined') return { x: 140, y: 90 }
+    return {
+      x: Math.max(0, Math.round((window.innerWidth - 560) / 2)),
+      y: Math.max(0, Math.round(window.innerHeight * 0.1)),
+    }
+  })
   const posRef = useRef(pos)
   posRef.current = pos
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
