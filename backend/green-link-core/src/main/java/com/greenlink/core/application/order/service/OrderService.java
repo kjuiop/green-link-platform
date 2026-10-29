@@ -140,7 +140,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         if (vendorPhone != null && !vendorPhone.isBlank()) {
             String vendorName = resolveVendorName(saved.getVendorId());
             String orderingCompanyName = resolveOrderingCompanyName(saved.getOrderingCompanyId());
-            eventPublisher.publishEvent(new OrderCreatedEvent(saved.getId(), vendorPhone, vendorName, orderingCompanyName));
+            eventPublisher.publishEvent(new OrderCreatedEvent(saved.getId(), vendorPhone, vendorName, orderingCompanyName, "[온우림] 새 발주가 접수되었습니다."));
         }
 
         return toResult(saved);
@@ -318,6 +318,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
 
+        Long previousVendorId = order.getVendorId();
         String changeDetail = buildChangeDetail(order, cmd);
 
         order.updateInfo(
@@ -355,6 +356,16 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
 
         Order saved = orderRepository.save(order);
         recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.UPDATED, changeDetail);
+
+        if (!Objects.equals(previousVendorId, cmd.vendorId())) {
+            String vendorPhone = resolveVendorPhone(saved.getVendorId());
+            if (vendorPhone != null && !vendorPhone.isBlank()) {
+                String vendorName = resolveVendorName(saved.getVendorId());
+                String orderingCompanyName = resolveOrderingCompanyName(saved.getOrderingCompanyId());
+                eventPublisher.publishEvent(new OrderCreatedEvent(saved.getId(), vendorPhone, vendorName, orderingCompanyName, "[온우림] 수주업체가 변경되었습니다."));
+            }
+        }
+
         return toResult(saved);
     }
 

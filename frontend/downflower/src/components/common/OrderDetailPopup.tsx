@@ -20,6 +20,8 @@ import { cn, RIBBON_PHRASES } from '@/lib/utils'
 import { Order } from '@/types/order'
 import { fetchAllProducts } from '@/lib/api/productApi'
 import { Product } from '@/types/product'
+import { fetchVendors } from '@/lib/api/vendorApi'
+import { Vendor } from '@/types/vendor'
 
 interface Props {
   orderId: string
@@ -78,9 +80,11 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
   const [selectedPhotoUrls, setSelectedPhotoUrls] = useState<string[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [selectedProductId, setSelectedProductId] = useState('')
+  const [vendors, setVendors] = useState<Vendor[]>([])
 
   useEffect(() => {
     fetchAllProducts().then(setProducts).catch(() => setSelectedProductId('__direct__'))
+    fetchVendors('ACTIVE').then(setVendors).catch(() => {})
     Promise.all([
       fetchOrder(orderId),
       fetchReceiptConfirmation(orderId).catch(() => null),
@@ -96,6 +100,14 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
       .finally(() => setLoading(false))
   }, [orderId])
 
+  useEffect(() => {
+    function clampOnResize() {
+      setPos((prev) => ({ x: prev.x, y: Math.max(0, prev.y) }))
+    }
+    window.addEventListener('resize', clampOnResize)
+    return () => window.removeEventListener('resize', clampOnResize)
+  }, [])
+
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     dragRef.current = { startX: e.clientX, startY: e.clientY, origX: posRef.current.x, origY: posRef.current.y }
@@ -104,7 +116,7 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
       if (!dragRef.current) return
       setPos({
         x: dragRef.current.origX + ev.clientX - dragRef.current.startX,
-        y: dragRef.current.origY + ev.clientY - dragRef.current.startY,
+        y: Math.max(0, dragRef.current.origY + ev.clientY - dragRef.current.startY),
       })
     }
     const onUp = () => {
@@ -137,6 +149,10 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
 
   async function saveEdit() {
     if (!draft) return
+    if (!draft.vendorId) {
+      setSaveError('수주업체를 선택해 주세요.')
+      return
+    }
     setSaving(true)
     setSaveError(null)
     try {
@@ -397,7 +413,20 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
                           <Input type="number" value={draft.quantity} onChange={(e) => set('quantity', Number(e.target.value))} />
                         </Field>
                         <Field label="수주업체">
-                          <Input value={draft.vendorName} readOnly className="bg-gray-50 text-gray-500" />
+                          <select
+                            value={draft.vendorId ?? ''}
+                            onChange={(e) => {
+                              const id = e.target.value
+                              const found = vendors.find((v) => v.id === id)
+                              setDraft((prev) => prev ? { ...prev, vendorId: id, vendorName: found?.name ?? '' } : prev)
+                            }}
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                          >
+                            <option value="">업체 선택</option>
+                            {vendors.map((v) => (
+                              <option key={v.id} value={v.id}>{v.name}</option>
+                            ))}
+                          </select>
                         </Field>
                       </div>
                       <Field label="발주금액">

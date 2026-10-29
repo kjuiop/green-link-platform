@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { ClipboardCheck, Upload, X, Images, Download } from 'lucide-react'
+import { ClipboardCheck, Upload, X, Images, Download, GripHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchReceiptConfirmation, saveReceiptConfirmation, updateReceiptInfo, updateOrderStatus, ReceiptConfirmationResult } from '@/lib/api/orderApi'
 
@@ -181,6 +181,30 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [pos, setPos] = useState({ x: 100, y: 80 })
+  const posRef = useRef(pos)
+  posRef.current = pos
+  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
+
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: posRef.current.x, origY: posRef.current.y }
+    const onMove = (ev: MouseEvent) => {
+      if (!dragRef.current) return
+      setPos({
+        x: dragRef.current.origX + ev.clientX - dragRef.current.startX,
+        y: Math.max(0, dragRef.current.origY + ev.clientY - dragRef.current.startY),
+      })
+    }
+    const onUp = () => {
+      dragRef.current = null
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [])
+
   useEffect(() => {
     if (open) {
       sitePhotoFiles.forEach((p) => URL.revokeObjectURL(p.url))
@@ -207,10 +231,8 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKeyDown)
-    document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', onKeyDown)
-      document.body.style.overflow = ''
     }
   }, [open, onClose])
 
@@ -277,26 +299,35 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
   if (!open) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50" onClick={onClose}>
-      <div className="flex min-h-full items-center justify-center py-4 px-4">
+    <div
+      className="fixed select-none shadow-2xl"
+      style={{ left: pos.x, top: pos.y, zIndex: 1100, width: 560, maxWidth: 'calc(100vw - 32px)' }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="receipt-form-title"
+    >
+      {/* 타이틀바 (드래그 핸들) */}
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="receipt-form-title"
-        className="w-full max-w-2xl rounded-xl bg-white p-4 text-sm ring-1 ring-black/10"
-        onClick={(e) => e.stopPropagation()}
+        className="flex cursor-grab items-center justify-between rounded-t-lg bg-[#1e3a5f] px-4 py-2.5 text-white active:cursor-grabbing"
+        onMouseDown={handleDragStart}
       >
-        <div className="mb-4 flex items-start justify-between">
-          <div>
-            <span id="receipt-form-title" className="text-base font-medium">인수확인</span>
-            <span className="ml-2 text-xs font-normal text-gray-400">{orderNumber}</span>
-          </div>
-          <button type="button" onClick={onClose} className="-mr-1 flex h-7 w-7 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100">
-            <X className="h-4 w-4" />
-            <span className="sr-only">닫기</span>
-          </button>
+        <div className="flex items-center gap-2">
+          <GripHorizontal className="h-4 w-4 opacity-60" />
+          <span id="receipt-form-title" className="text-sm font-semibold">인수확인</span>
+          <span className="text-xs opacity-60">{orderNumber}</span>
         </div>
+        <button
+          type="button"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={onClose}
+          className="rounded p-1 opacity-70 hover:bg-white/20 hover:opacity-100"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
 
+      {/* 본문 */}
+      <div className="max-h-[calc(100vh-120px)] overflow-y-auto rounded-b-lg bg-white p-4 text-sm">
         <div className="flex gap-6 rounded-lg border bg-gray-50 px-4 py-2.5 text-sm">
           <span>
             <span className="text-gray-500">보내는분</span>
@@ -438,7 +469,6 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
           {saving ? '처리 중…' : '배송완료'}
         </Button>
       </div>
-      </div>
     </div>,
     document.body
   )
@@ -466,6 +496,30 @@ function ReceiptEditDialog({ open, onClose, onSave, orderId, orderNumber, sender
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [pos, setPos] = useState({ x: 140, y: 90 })
+  const posRef = useRef(pos)
+  posRef.current = pos
+  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
+
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: posRef.current.x, origY: posRef.current.y }
+    const onMove = (ev: MouseEvent) => {
+      if (!dragRef.current) return
+      setPos({
+        x: dragRef.current.origX + ev.clientX - dragRef.current.startX,
+        y: Math.max(0, dragRef.current.origY + ev.clientY - dragRef.current.startY),
+      })
+    }
+    const onUp = () => {
+      dragRef.current = null
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [])
+
   useEffect(() => {
     if (open) {
       setReceiverName(current.receiverName ?? '')
@@ -478,6 +532,15 @@ function ReceiptEditDialog({ open, onClose, onSave, orderId, orderNumber, sender
       setError(null)
     }
   }, [open, current])
+
+  useEffect(() => {
+    if (!open) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => { document.removeEventListener('keydown', onKeyDown) }
+  }, [open, onClose])
 
   async function handleSave() {
     setSaving(true)
@@ -498,14 +561,35 @@ function ReceiptEditDialog({ open, onClose, onSave, orderId, orderNumber, sender
     }
   }
 
-  return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="sm:max-w-2xl" showCloseButton>
-        <DialogTitle>
-          인수확인 수정
-          <span className="ml-2 text-xs font-normal text-gray-400">{orderNumber}</span>
-        </DialogTitle>
+  if (!open) return null
 
+  return createPortal(
+    <div
+      className="fixed select-none shadow-2xl"
+      style={{ left: pos.x, top: pos.y, zIndex: 1100, width: 560, maxWidth: 'calc(100vw - 32px)' }}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="flex cursor-grab items-center justify-between rounded-t-lg bg-[#1e3a5f] px-4 py-2.5 text-white active:cursor-grabbing"
+        onMouseDown={handleDragStart}
+      >
+        <div className="flex items-center gap-2">
+          <GripHorizontal className="h-4 w-4 opacity-60" />
+          <span className="text-sm font-semibold">인수확인 수정</span>
+          <span className="text-xs opacity-60">{orderNumber}</span>
+        </div>
+        <button
+          type="button"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={onClose}
+          className="rounded p-1 opacity-70 hover:bg-white/20 hover:opacity-100"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="max-h-[calc(100vh-120px)] overflow-y-auto rounded-b-lg bg-white p-4 text-sm">
         <div className="flex gap-6 rounded-lg border bg-gray-50 px-4 py-2.5 text-sm">
           <span>
             <span className="text-gray-500">보내는분</span>
@@ -517,7 +601,7 @@ function ReceiptEditDialog({ open, onClose, onSave, orderId, orderNumber, sender
           </span>
         </div>
 
-        <table className="w-full divide-y rounded-lg border text-sm [border-spacing:0] overflow-hidden">
+        <table className="mt-4 w-full divide-y rounded-lg border text-sm [border-spacing:0] overflow-hidden">
           <colgroup>
             <col className="w-20" />
             <col />
@@ -617,14 +701,15 @@ function ReceiptEditDialog({ open, onClose, onSave, orderId, orderNumber, sender
         </table>
 
         {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
+          <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
         )}
 
-        <Button className="w-full bg-green-700 hover:bg-green-800" disabled={saving} onClick={handleSave}>
+        <Button className="mt-3 w-full bg-green-700 hover:bg-green-800" disabled={saving} onClick={handleSave}>
           {saving ? '수정 중…' : '수정하기'}
         </Button>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>,
+    document.body
   )
 }
 

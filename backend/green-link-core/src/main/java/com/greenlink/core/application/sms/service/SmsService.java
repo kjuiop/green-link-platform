@@ -132,8 +132,9 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
 
     @Override
     @Transactional
-    public void notify(Long orderId, String vendorPhone, String vendorName, String orderingCompanyName) {
+    public void notify(Long orderId, String vendorPhone, String vendorName, String orderingCompanyName, String notificationTitle) {
         if (vendorPhone == null || vendorPhone.isBlank()) return;
+        String title = (notificationTitle != null && !notificationTitle.isBlank()) ? notificationTitle : NOTIFICATION_TITLE;
         try {
             Order order = orderRepository.findById(orderId)
                     .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
@@ -145,7 +146,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
 
             SmsMessage smsMessage = SmsMessage.createNotification(orderId, vendorPhone, msg);
             try {
-                SmsResult result = smsClient.send(vendorPhone, msg, null, sender, null, null, NOTIFICATION_TITLE);
+                SmsResult result = smsClient.send(vendorPhone, msg, null, sender, null, null, title);
                 if (result.success()) {
                     smsMessage.markSuccess(result.msgId(), now);
                 } else {

@@ -4,13 +4,13 @@ import { useState, useEffect, useRef } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AcceptOrderBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
-import { ReceiptConfirmButton, ReceiptInfoCell } from '@/components/common/ReceiptConfirmDialog'
+import { ReceiptInfoCell } from '@/components/common/ReceiptConfirmDialog'
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
 import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
 import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
-import { Download, Printer } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
 import { OrderDetailPopup } from '@/components/common/OrderDetailPopup'
 
@@ -445,20 +445,19 @@ export default function ReceivedOrdersPage() {
               <TableHead>배송현황</TableHead>
               <TableHead>문자현황</TableHead>
               <TableHead>인수정보</TableHead>
-              <TableHead>인수확인</TableHead>
-              <TableHead>인쇄</TableHead>
+              <TableHead>주문서</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={13} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={12} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={13} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={12} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -560,33 +559,14 @@ export default function ReceivedOrdersPage() {
                     />
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <ReceiptConfirmButton
-                      orderId={order.id}
-                      orderNumber={order.orderNumber}
-                      senderName={order.ribbonLeft}
-                      recipientName={order.recipientName}
-                      initialHasReceipt={order.hasReceipt}
-                    />
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        title="주문서 보기"
-                        onClick={() => openPopup(String(order.id))}
-                        className="rounded px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
-                      >
-                        주문서
-                      </button>
-                      <button
-                        type="button"
-                        title="주문서 인쇄"
-                        onClick={() => window.open(`/orders/${order.id}/print`, '_blank', 'width=900,height=1050,resizable=yes,scrollbars=yes')}
-                        className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                      >
-                        <Printer className="h-4 w-4" />
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      title="주문서 보기"
+                      onClick={() => openPopup(String(order.id))}
+                      className="rounded px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
+                    >
+                      주문서
+                    </button>
                   </TableCell>
                 </TableRow>
               ))
@@ -684,23 +664,6 @@ export default function ReceivedOrdersPage() {
                   <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
                 </div>
               </button>
-              <div className="mt-2 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
-                <ReceiptConfirmButton
-                  orderId={order.id}
-                  orderNumber={order.orderNumber}
-                  senderName={order.ribbonLeft}
-                  recipientName={order.recipientName}
-                  initialHasReceipt={order.hasReceipt}
-                />
-                <button
-                  type="button"
-                  onClick={() => window.open(`/orders/${order.id}/print`, '_blank', 'width=900,height=1050,resizable=yes,scrollbars=yes')}
-                  className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
-                >
-                  <Printer className="h-3.5 w-3.5" />
-                  인쇄
-                </button>
-              </div>
             </div>
           ))
         )}
