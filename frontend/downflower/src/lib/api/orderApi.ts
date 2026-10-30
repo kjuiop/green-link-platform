@@ -115,7 +115,7 @@ function toFrontend(o: BackendOrder): Order {
     extraCost: o.extraCost ?? undefined,
     deliveryType: '일반',
     deliveryAt: o.deliveryDate ?? '',
-    deliveryTimeType: (o.deliveryTimeType as Order['deliveryTimeType']) ?? undefined,
+    deliveryTimeType: ((o.deliveryTimeType === '3시간내' ? '3시간이내' : o.deliveryTimeType) as Order['deliveryTimeType']) ?? undefined,
     deliveryTimeHour: o.deliveryTimeHour ?? undefined,
     deliveryTimeMinute: o.deliveryTimeMinute ?? undefined,
     deliveryTimeCustom: o.deliveryTimeCustom ?? undefined,
