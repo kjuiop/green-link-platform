@@ -617,7 +617,7 @@ export default function ReceivedOrdersPage() {
                     </div>
                     <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
                     <div className="mt-0.5 text-xs text-gray-500">
-                      {order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}
+                      {order.ribbonLeft || order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}
                     </div>
                     {order.vendorName && (
                       <div className="mt-0.5 text-xs text-gray-400">수주사 {order.vendorName}</div>

@@ -84,6 +84,7 @@ export default function NewOrderPage() {
     deliveryHour?: string
     amount?: string
     recipientName?: string
+    ribbonLeft?: string
     ordererPhone?: string
   }>({})
   const [submitting, setSubmitting] = useState(false)
@@ -107,6 +108,7 @@ export default function NewOrderPage() {
     if (!deliveryHour && deliveryTimeType !== '3시간이내' && deliveryTimeType !== '직접입력') next.deliveryHour = '배송시간을 선택해주세요.'
     if (!amount) next.amount = '발주금액을 입력해주세요.'
     if (!recipientName.trim()) next.recipientName = '받는 분 성함을 입력해주세요.'
+    if (!ribbonLeft.trim()) next.ribbonLeft = '보내는이를 입력해주세요.'
     if (!ordererPhone.trim()) next.ordererPhone = '주문자 휴대폰을 입력해주세요.'
     setErrors(next)
     if (Object.keys(next).length > 0) return
@@ -371,12 +373,14 @@ export default function NewOrderPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-1.5">
-                <Label>보내는이</Label>
+                <Label>보내는이 *</Label>
                 <Input
                   placeholder="예: 주식회사 OO 부장 홍길동"
                   value={ribbonLeft}
                   onChange={(e) => setRibbonLeft(e.target.value)}
+                  className={cn(errors.ribbonLeft && 'border-red-500 focus-visible:ring-red-500')}
                 />
+                {errors.ribbonLeft && <p className="text-xs text-red-500">{errors.ribbonLeft}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>경조문구</Label>
