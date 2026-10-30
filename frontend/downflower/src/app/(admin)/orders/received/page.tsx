@@ -4,11 +4,10 @@ import { useState, useEffect, useRef } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AcceptOrderBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
-import { ReceiptInfoCell } from '@/components/common/ReceiptConfirmDialog'
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
 import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
-import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort } from '@/lib/utils'
+import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort, splitOrderNumber } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { Download } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
@@ -435,7 +434,7 @@ export default function ReceivedOrdersPage() {
                   title="전체 선택"
                 />
               </TableHead>
-              <TableHead>주문번호</TableHead>
+              <TableHead className="w-24">주문번호</TableHead>
               <TableHead><div>배송요구일</div><div className="font-normal text-gray-400">주문접수일</div></TableHead>
               <TableHead className="w-36"><div>발주업체 / 주문자</div><div className="font-normal text-gray-400">수주업체</div></TableHead>
               <TableHead><div>상품명</div><div className="font-normal text-gray-400">받는분</div></TableHead>
@@ -444,20 +443,18 @@ export default function ReceivedOrdersPage() {
               <TableHead>수주금액</TableHead>
               <TableHead>배송현황</TableHead>
               <TableHead>문자현황</TableHead>
-              <TableHead>인수정보</TableHead>
-              <TableHead>주문서</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={12} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={10} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={12} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={10} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -479,9 +476,10 @@ export default function ReceivedOrdersPage() {
                     <button
                       type="button"
                       onClick={() => openPopup(String(order.id))}
-                      className="font-mono text-xs text-blue-600 hover:underline"
+                      className="text-left font-mono text-xs text-blue-600 hover:underline"
                     >
-                      {order.orderNumber}
+                      <span className="block">{splitOrderNumber(order.orderNumber)[0]}</span>
+                      <span className="block">{splitOrderNumber(order.orderNumber)[1]}</span>
                     </button>
                     {order.isDeleted && (
                       <span className="ml-1.5 rounded bg-red-100 px-1 py-0.5 text-[10px] font-medium text-red-600">삭제</span>
@@ -550,23 +548,6 @@ export default function ReceivedOrdersPage() {
                         ? `예약 ${String(order.scheduledMessageHour).padStart(2, '0')}:${order.scheduledMessageMinute ?? '00'}`
                         : '자동발송'}
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <ReceiptInfoCell
-                      hasReceipt={order.hasReceipt}
-                      receiverName={order.receiptReceiverName}
-                      receiverRelation={order.receiptReceiverRelation}
-                    />
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      title="주문서 보기"
-                      onClick={() => openPopup(String(order.id))}
-                      className="rounded px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
-                    >
-                      주문서
-                    </button>
                   </TableCell>
                 </TableRow>
               ))

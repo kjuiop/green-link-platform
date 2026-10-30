@@ -9,6 +9,11 @@ export const RIBBON_PHRASES = [
   '無窮한 發展을 祈願합니다', '삼가 고인의 명복을 빕니다', '생신을 축하드립니다',
 ] as const
 
+export function splitOrderNumber(orderNumber: string): [string, string] {
+  const idx = orderNumber.lastIndexOf('-')
+  return idx < 0 ? [orderNumber, ''] : [orderNumber.slice(0, idx), orderNumber.slice(idx + 1)]
+}
+
 export function formatDeliveryShort(placeName?: string | null, address?: string | null): string {
   const regionPart = (() => {
     if (!address) return ''
