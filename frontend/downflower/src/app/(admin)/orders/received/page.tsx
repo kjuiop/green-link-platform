@@ -423,7 +423,7 @@ export default function ReceivedOrdersPage() {
 
       {/* 데스크톱 테이블 */}
       <div className="hidden rounded-lg border bg-white md:block">
-        <Table className="table-fixed">
+        <Table>
           <TableHeader>
             <TableRow className="[&>th]:h-auto [&>th]:py-1.5 [&>th]:text-xs">
               <TableHead className="w-8">
@@ -503,9 +503,9 @@ export default function ReceivedOrdersPage() {
                     </div>
                     <div className="text-sm text-gray-400">{order.orderedAt}</div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="max-w-[9rem]">
                     <div className="break-all text-sm">{order.orderingCompanyName || '—'}</div>
-                    <div className="text-xs text-gray-500">{order.ordererName || '—'}</div>
+                    <div className="break-all text-xs text-gray-500">{order.ordererName || '—'}</div>
                     <div className="break-all text-sm text-gray-400">{order.vendorName || '—'}</div>
                   </TableCell>
                   <TableCell>
@@ -515,8 +515,8 @@ export default function ReceivedOrdersPage() {
                     </div>
                     {order.recipientName && <div className="text-sm text-gray-400">{order.recipientName}</div>}
                   </TableCell>
-                  <TableCell>
-                    <div className="text-sm">{order.ribbonLeft || '—'}</div>
+                  <TableCell className="max-w-[9rem]">
+                    <div className="break-all text-sm">{order.ribbonLeft || '—'}</div>
                     <div className="break-all text-sm text-gray-400">{formatDeliveryShort(order.placeName, order.address)}</div>
                   </TableCell>
                   <TableCell className="text-sm">{order.quantity}</TableCell>
