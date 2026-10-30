@@ -4,9 +4,8 @@ import { useState, useEffect } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { MessageStatusBadge, DeliveryTimeTypeBadge, AcceptOrderBadge } from '@/components/common/StatusBadge'
 import { fetchOrders, updateOrderStatus } from '@/lib/api/orderApi'
-import { getDeliveryDateRowBg, formatDeliveryShort } from '@/lib/utils'
+import { getDeliveryDateRowBg, formatDeliveryShort, openOrderWindow } from '@/lib/utils'
 import { Order, OrderStatus } from '@/types/order'
-import Link from 'next/link'
 import { Search, Printer } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
@@ -186,9 +185,13 @@ export default function VendorOrdersPage() {
               filtered.map((order) => (
                 <TableRow key={order.id} className={`[&>td]:py-1 cursor-pointer ${getDeliveryDateRowBg(order.deliveryAt)} hover:brightness-95`}>
                   <TableCell>
-                    <Link href={`/vendor/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
+                    <a
+                      href={`/vendor/orders/${order.id}/popup`}
+                      onClick={(e) => { e.preventDefault(); openOrderWindow(order.id, '/vendor/orders') }}
+                      className="font-mono text-xs text-blue-600 hover:underline"
+                    >
                       {order.orderNumber}
-                    </Link>
+                    </a>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm">
@@ -251,9 +254,10 @@ export default function VendorOrdersPage() {
           </div>
         ) : (
           filtered.map((order) => (
-            <Link
+            <a
               key={order.id}
-              href={`/vendor/orders/${order.id}`}
+              href={`/vendor/orders/${order.id}/popup`}
+              onClick={(e) => { e.preventDefault(); openOrderWindow(order.id, '/vendor/orders') }}
               className="block rounded-lg border bg-white p-4 hover:bg-gray-50"
             >
               <div className="flex items-start justify-between gap-2">
@@ -303,7 +307,7 @@ export default function VendorOrdersPage() {
                   인쇄
                 </button>
               </div>
-            </Link>
+            </a>
           ))
         )}
       </div>

@@ -9,11 +9,11 @@ import { fetchOrder, updateOrderStatus, fetchReceiptConfirmation, uploadReceiptP
 import { PrintButton } from '@/components/common/PrintButton'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { ReferencePhotoSection } from '@/components/common/ReferencePhotoViewer'
-import { Upload } from 'lucide-react'
+import { Upload, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Order } from '@/types/order'
 
-export default function VendorOrderDetailPage() {
+export default function VendorOrderPopupPage() {
   const { id } = useParams<{ id: string }>()
 
   const [order, setOrder] = useState<Order | null>(null)
@@ -99,47 +99,55 @@ export default function VendorOrderDetailPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold">{order.orderNumber}</h1>
-          <div className="mt-1">
-            <VendorOrderStatusBadge status={order.status} />
-          </div>
+    <div className="flex h-screen flex-col bg-gray-50">
+      <div className="flex shrink-0 items-center justify-between bg-[#1e3a5f] px-4 py-2.5 text-white">
+        <div className="flex items-center gap-2">
+          <h1 className="font-mono text-sm font-semibold">{order.orderNumber}</h1>
+          <VendorOrderStatusBadge status={order.status} />
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <PrintButton orderId={order.id} />
-          {order.status === '발주대기' && (
-            <>
-              <Button
-                variant="outline"
-                className="border-red-300 text-red-600 hover:bg-red-50"
-                onClick={handleReject}
-                disabled={acting}
-              >
-                수주거절
-              </Button>
-              <Button className="bg-green-700 hover:bg-green-800" onClick={handleAccept} disabled={acting}>
-                주문서 접수
-              </Button>
-            </>
-          )}
-          {order.status === '수주완료' && (
+        <button
+          type="button"
+          onClick={() => window.close()}
+          className="rounded p-1 text-white/80 hover:bg-white/10 hover:text-white"
+          aria-label="닫기"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="flex-1 space-y-3 overflow-y-auto p-4">
+      <div className="flex flex-wrap gap-2">
+        <PrintButton orderId={order.id} />
+        {order.status === '발주대기' && (
+          <>
             <Button
-              className={cn(
-                'gap-1.5',
-                hasSitePhotos
-                  ? 'bg-blue-700 hover:bg-blue-800'
-                  : 'cursor-not-allowed bg-gray-300 text-gray-500',
-              )}
-              disabled={!hasSitePhotos || acting}
-              onClick={handleComplete}
-              title={!hasSitePhotos ? '현장사진을 1장 이상 업로드해주세요' : undefined}
+              variant="outline"
+              className="border-red-300 text-red-600 hover:bg-red-50"
+              onClick={handleReject}
+              disabled={acting}
             >
-              {acting ? '처리 중…' : '배송완료 처리'}
+              수주거절
             </Button>
-          )}
-        </div>
+            <Button className="bg-green-700 hover:bg-green-800" onClick={handleAccept} disabled={acting}>
+              주문서 접수
+            </Button>
+          </>
+        )}
+        {order.status === '수주완료' && (
+          <Button
+            className={cn(
+              'gap-1.5',
+              hasSitePhotos
+                ? 'bg-blue-700 hover:bg-blue-800'
+                : 'cursor-not-allowed bg-gray-300 text-gray-500',
+            )}
+            disabled={!hasSitePhotos || acting}
+            onClick={handleComplete}
+            title={!hasSitePhotos ? '현장사진을 1장 이상 업로드해주세요' : undefined}
+          >
+            {acting ? '처리 중…' : '배송완료 처리'}
+          </Button>
+        )}
       </div>
 
       {actionError && (
@@ -149,7 +157,7 @@ export default function VendorOrderDetailPage() {
       )}
 
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">배송정보</CardTitle>
@@ -199,7 +207,7 @@ export default function VendorOrderDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="sm:col-span-2">
           <CardHeader>
             <CardTitle className="text-sm">인수확인</CardTitle>
           </CardHeader>
@@ -214,7 +222,7 @@ export default function VendorOrderDetailPage() {
         </Card>
 
         {(order.status === '수주완료' || order.status === '배송완료') && (
-          <Card className="lg:col-span-2">
+          <Card className="sm:col-span-2">
             <CardHeader>
               <CardTitle className="text-sm">배송사진</CardTitle>
             </CardHeader>
@@ -278,7 +286,7 @@ export default function VendorOrderDetailPage() {
             </CardContent>
           </Card>
         )}
-        <Card className="lg:col-span-2">
+        <Card className="sm:col-span-2">
           <CardHeader><CardTitle className="text-sm">변경 이력</CardTitle></CardHeader>
           <CardContent>
             {history.length === 0 ? (
@@ -302,6 +310,7 @@ export default function VendorOrderDetailPage() {
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   )
