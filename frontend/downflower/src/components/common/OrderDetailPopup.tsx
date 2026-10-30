@@ -25,10 +25,11 @@ import { Vendor } from '@/types/vendor'
 
 interface Props {
   orderId: string
-  zIndex: number
+  variant?: 'popup' | 'page'
+  zIndex?: number
   initialOffset?: number
   onClose: () => void
-  onFocus: () => void
+  onFocus?: () => void
   onUpdated?: () => void
 }
 
@@ -56,7 +57,8 @@ function Row({ label, value }: { label: string; value: string }) {
   )
 }
 
-export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, onFocus, onUpdated }: Props) {
+export function OrderDetailPopup({ orderId, variant = 'popup', zIndex, initialOffset = 0, onClose, onFocus, onUpdated }: Props) {
+  const isPage = variant === 'page'
   const [pos, setPos] = useState(() => {
     if (typeof window === 'undefined') return { x: 60 + initialOffset * 32, y: 40 + initialOffset * 32 }
     return {
@@ -294,17 +296,20 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
 
   return (
     <div
-      className="fixed shadow-2xl"
-      style={{ left: pos.x, top: pos.y, zIndex, width: 860, maxWidth: 'calc(100vw - 32px)' }}
-      onMouseDown={onFocus}
+      className={isPage ? 'relative mx-auto w-full max-w-[860px] shadow-md' : 'fixed shadow-2xl'}
+      style={isPage ? undefined : { left: pos.x, top: pos.y, zIndex, width: 860, maxWidth: 'calc(100vw - 32px)' }}
+      onMouseDown={isPage ? undefined : onFocus}
     >
       {/* 타이틀바 */}
       <div
-        className="flex select-none cursor-grab items-center justify-between rounded-t-lg bg-[#1e3a5f] px-4 py-2.5 text-white active:cursor-grabbing"
-        onMouseDown={handleDragStart}
+        className={cn(
+          'flex items-center justify-between rounded-t-lg bg-[#1e3a5f] px-4 py-2.5 text-white',
+          !isPage && 'select-none cursor-grab active:cursor-grabbing'
+        )}
+        onMouseDown={isPage ? undefined : handleDragStart}
       >
         <div className="flex items-center gap-2">
-          <GripHorizontal className="h-4 w-4 opacity-60" />
+          {!isPage && <GripHorizontal className="h-4 w-4 opacity-60" />}
           {loading ? (
             <span className="text-sm opacity-70">불러오는 중...</span>
           ) : order ? (
@@ -317,17 +322,19 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
             <span className="text-sm opacity-70">주문서</span>
           )}
         </div>
-        <button
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={onClose}
-          className="rounded p-1 opacity-70 hover:bg-white/20 hover:opacity-100"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        {!isPage && (
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={onClose}
+            className="rounded p-1 opacity-70 hover:bg-white/20 hover:opacity-100"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* 본문 (스크롤) */}
-      <div className="max-h-[calc(100vh-120px)] overflow-y-auto rounded-b-lg bg-gray-50">
+      <div className={cn('rounded-b-lg bg-gray-50', !isPage && 'max-h-[calc(100vh-120px)] overflow-y-auto')}>
         {loading ? (
           <div className="flex h-40 items-center justify-center text-sm text-gray-400">불러오는 중...</div>
         ) : loadError ? (
@@ -822,7 +829,7 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
 
       {/* 배송완료 사진 선택 다이얼로그 */}
       {completeDialogOpen && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-black/50">
+        <div className={cn('inset-0 z-50 flex items-center justify-center bg-black/50', isPage ? 'fixed' : 'absolute z-10 rounded-lg')}>
           <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-5 py-4">
               <h2 className="font-semibold">발송할 배송사진 선택</h2>
@@ -854,7 +861,7 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
 
       {/* 삭제 확인 다이얼로그 */}
       {confirmDelete && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-black/50">
+        <div className={cn('inset-0 z-50 flex items-center justify-center bg-black/50', isPage ? 'fixed' : 'absolute z-10 rounded-lg')}>
           <div className="w-full max-w-sm rounded-lg bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-5 py-4">
               <h2 className="font-semibold">주문서 삭제</h2>

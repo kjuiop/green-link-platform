@@ -489,14 +489,15 @@ export default function OrdersPage() {
                     />
                   </TableCell>
                   <TableCell>
-                    <button
-                      type="button"
-                      onClick={() => openPopup(String(order.id))}
-                      className="text-left font-mono text-xs text-blue-600 hover:underline"
+                    <a
+                      href={`/orders/${order.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block text-left font-mono text-xs text-blue-600 hover:underline"
                     >
                       <span className="block">{splitOrderNumber(order.orderNumber)[0]}</span>
                       <span className="block">{splitOrderNumber(order.orderNumber)[1]}</span>
-                    </button>
+                    </a>
                     {order.isDeleted && (
                       <span className="ml-1.5 rounded bg-red-100 px-1 py-0.5 text-[10px] font-medium text-red-600">삭제</span>
                     )}
