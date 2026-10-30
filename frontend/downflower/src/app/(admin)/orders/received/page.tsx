@@ -7,7 +7,7 @@ import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
 import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
-import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort, splitOrderNumber } from '@/lib/utils'
+import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort, splitOrderNumber, openOrderWindow } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { Download } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
@@ -473,14 +473,14 @@ export default function ReceivedOrdersPage() {
                     />
                   </TableCell>
                   <TableCell>
-                    <button
-                      type="button"
-                      onClick={() => openPopup(String(order.id))}
-                      className="text-left font-mono text-xs text-blue-600 hover:underline"
+                    <a
+                      href={`/orders/${order.id}/popup`}
+                      onClick={(e) => { e.preventDefault(); openOrderWindow(order.id) }}
+                      className="inline-block text-left font-mono text-xs text-blue-600 hover:underline"
                     >
                       <span className="block">{splitOrderNumber(order.orderNumber)[0]}</span>
                       <span className="block">{splitOrderNumber(order.orderNumber)[1]}</span>
-                    </button>
+                    </a>
                     {order.isDeleted && (
                       <span className="ml-1.5 rounded bg-red-100 px-1 py-0.5 text-[10px] font-medium text-red-600">삭제</span>
                     )}
