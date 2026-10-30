@@ -21,7 +21,7 @@ export default function OrderPopupWindowPage() {
 
   return (
     <div className="flex h-screen flex-col bg-gray-50">
-      <div className="flex items-center justify-between bg-[#1e3a5f] px-4 py-2.5 text-white">
+      <div className="flex shrink-0 items-center justify-between bg-[#1e3a5f] px-4 py-2.5 text-white">
         <div className="flex items-center gap-2">
           {loading ? (
             <span className="text-sm opacity-70">불러오는 중...</span>

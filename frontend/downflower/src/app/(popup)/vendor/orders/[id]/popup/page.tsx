@@ -116,201 +116,201 @@ export default function VendorOrderPopupPage() {
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
-      <div className="flex flex-wrap gap-2">
-        <PrintButton orderId={order.id} />
-        {order.status === '발주대기' && (
-          <>
+        <div className="flex flex-wrap gap-2">
+          <PrintButton orderId={order.id} />
+          {order.status === '발주대기' && (
+            <>
+              <Button
+                variant="outline"
+                className="border-red-300 text-red-600 hover:bg-red-50"
+                onClick={handleReject}
+                disabled={acting}
+              >
+                수주거절
+              </Button>
+              <Button className="bg-green-700 hover:bg-green-800" onClick={handleAccept} disabled={acting}>
+                주문서 접수
+              </Button>
+            </>
+          )}
+          {order.status === '수주완료' && (
             <Button
-              variant="outline"
-              className="border-red-300 text-red-600 hover:bg-red-50"
-              onClick={handleReject}
-              disabled={acting}
+              className={cn(
+                'gap-1.5',
+                hasSitePhotos
+                  ? 'bg-blue-700 hover:bg-blue-800'
+                  : 'cursor-not-allowed bg-gray-300 text-gray-500',
+              )}
+              disabled={!hasSitePhotos || acting}
+              onClick={handleComplete}
+              title={!hasSitePhotos ? '현장사진을 1장 이상 업로드해주세요' : undefined}
             >
-              수주거절
+              {acting ? '처리 중…' : '배송완료 처리'}
             </Button>
-            <Button className="bg-green-700 hover:bg-green-800" onClick={handleAccept} disabled={acting}>
-              주문서 접수
-            </Button>
-          </>
-        )}
-        {order.status === '수주완료' && (
-          <Button
-            className={cn(
-              'gap-1.5',
-              hasSitePhotos
-                ? 'bg-blue-700 hover:bg-blue-800'
-                : 'cursor-not-allowed bg-gray-300 text-gray-500',
-            )}
-            disabled={!hasSitePhotos || acting}
-            onClick={handleComplete}
-            title={!hasSitePhotos ? '현장사진을 1장 이상 업로드해주세요' : undefined}
-          >
-            {acting ? '처리 중…' : '배송완료 처리'}
-          </Button>
-        )}
-      </div>
-
-      {actionError && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
-          {actionError}
+          )}
         </div>
-      )}
+
+        {actionError && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+            {actionError}
+          </div>
+        )}
 
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">배송정보</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="상품명" value={order.productName} />
-            <Row label="배송예정" value={
-              order.deliveryAt && order.deliveryTimeHour && order.deliveryTimeMinute !== undefined && order.deliveryTimeMinute !== ''
-                ? `${order.deliveryAt} ${order.deliveryTimeHour.padStart(2, '0')}:${order.deliveryTimeMinute.padStart(2, '0')}`
-                : order.deliveryTimeType
-                  ? `${order.deliveryAt} ${order.deliveryTimeType === '직접입력' ? (order.deliveryTimeCustom ?? order.deliveryTimeType) : order.deliveryTimeType}`
-                  : order.deliveryAt
-            } />
-            <Row label="주소" value={`${order.address} ${order.addressDetail}`} />
-            <Row label="장소명" value={order.placeName} />
-            {order.roomName && <Row label="빈소·호실" value={order.roomName} />}
-            {order.recipientName && <Row label="받는 분" value={order.recipientName} />}
-            {order.eventInfo && <Row label="행사정보" value={order.eventInfo} />}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">리본 문구</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="리본 왼쪽" value={order.ribbonLeft} />
-            <Row label="리본 오른쪽" value={order.ribbonRight} />
-          </CardContent>
-        </Card>
-
-        {order.vendorMemo && (
+        <div className="grid gap-3 sm:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">전달사항</CardTitle>
+              <CardTitle className="text-sm">배송정보</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm">{order.vendorMemo}</p>
+            <CardContent className="space-y-2 text-sm">
+              <Row label="상품명" value={order.productName} />
+              <Row label="배송예정" value={
+                order.deliveryAt && order.deliveryTimeHour && order.deliveryTimeMinute !== undefined && order.deliveryTimeMinute !== ''
+                  ? `${order.deliveryAt} ${order.deliveryTimeHour.padStart(2, '0')}:${order.deliveryTimeMinute.padStart(2, '0')}`
+                  : order.deliveryTimeType
+                    ? `${order.deliveryAt} ${order.deliveryTimeType === '직접입력' ? (order.deliveryTimeCustom ?? order.deliveryTimeType) : order.deliveryTimeType}`
+                    : order.deliveryAt
+              } />
+              <Row label="주소" value={`${order.address} ${order.addressDetail}`} />
+              <Row label="장소명" value={order.placeName} />
+              {order.roomName && <Row label="빈소·호실" value={order.roomName} />}
+              {order.recipientName && <Row label="받는 분" value={order.recipientName} />}
+              {order.eventInfo && <Row label="행사정보" value={order.eventInfo} />}
             </CardContent>
           </Card>
-        )}
 
-        <Card>
-          <CardHeader><CardTitle className="text-sm">참고 이미지</CardTitle></CardHeader>
-          <CardContent>
-            <ReferencePhotoSection orderId={id} />
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">리본 문구</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <Row label="리본 왼쪽" value={order.ribbonLeft} />
+              <Row label="리본 오른쪽" value={order.ribbonRight} />
+            </CardContent>
+          </Card>
 
-        <Card className="sm:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-sm">인수확인</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ReceiptConfirmButton
-              orderId={order.id}
-              orderNumber={order.orderNumber}
-              senderName={order.ribbonLeft}
-              recipientName={order.recipientName}
-            />
-          </CardContent>
-        </Card>
+          {order.vendorMemo && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">전달사항</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm">{order.vendorMemo}</p>
+              </CardContent>
+            </Card>
+          )}
 
-        {(order.status === '수주완료' || order.status === '배송완료') && (
+          <Card>
+            <CardHeader><CardTitle className="text-sm">참고 이미지</CardTitle></CardHeader>
+            <CardContent>
+              <ReferencePhotoSection orderId={id} />
+            </CardContent>
+          </Card>
+
           <Card className="sm:col-span-2">
             <CardHeader>
-              <CardTitle className="text-sm">배송사진</CardTitle>
+              <CardTitle className="text-sm">인수확인</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* 현장사진 */}
-              <div>
-                <div className="mb-1.5 flex items-center gap-2">
-                  <span className="text-xs font-medium text-gray-600">현장사진</span>
-                  <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700">SMS 발송</span>
-                  {(receiptConfirmation?.sitePhotoUrls.length ?? 0) > 0 && (
-                    <span className="text-xs text-gray-400">({receiptConfirmation!.sitePhotoUrls.length}장)</span>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {receiptConfirmation?.sitePhotoUrls.map((url, idx) => (
-                    <div key={idx} className="h-24 w-24 overflow-hidden rounded border">
-                      <img src={url} alt="현장사진" className="h-full w-full object-cover" />
-                    </div>
-                  ))}
-                  {order.status !== '배송완료' && (
-                    <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded border-2 border-dashed border-blue-200 text-blue-400 hover:border-blue-400 hover:text-blue-600">
-                      <Upload className="h-5 w-5" />
-                      <span className="text-xs">추가</span>
-                      <input type="file" accept="image/*" multiple className="hidden"
-                        onChange={(e) => handlePhotoUpload(e, 'SITE')} />
-                    </label>
-                  )}
-                </div>
-              </div>
+            <CardContent>
+              <ReceiptConfirmButton
+                orderId={order.id}
+                orderNumber={order.orderNumber}
+                senderName={order.ribbonLeft}
+                recipientName={order.recipientName}
+              />
+            </CardContent>
+          </Card>
 
-              {/* 매장사진 */}
-              <div>
-                <div className="mb-1.5 flex items-center gap-2">
-                  <span className="text-xs font-medium text-gray-600">매장사진</span>
-                  {(receiptConfirmation?.storePhotoUrls.length ?? 0) > 0 && (
-                    <span className="text-xs text-gray-400">({receiptConfirmation!.storePhotoUrls.length}장)</span>
-                  )}
+          {(order.status === '수주완료' || order.status === '배송완료') && (
+            <Card className="sm:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-sm">배송사진</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* 현장사진 */}
+                <div>
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-600">현장사진</span>
+                    <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700">SMS 발송</span>
+                    {(receiptConfirmation?.sitePhotoUrls.length ?? 0) > 0 && (
+                      <span className="text-xs text-gray-400">({receiptConfirmation!.sitePhotoUrls.length}장)</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {receiptConfirmation?.sitePhotoUrls.map((url, idx) => (
+                      <div key={idx} className="h-24 w-24 overflow-hidden rounded border">
+                        <img src={url} alt="현장사진" className="h-full w-full object-cover" />
+                      </div>
+                    ))}
+                    {order.status !== '배송완료' && (
+                      <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded border-2 border-dashed border-blue-200 text-blue-400 hover:border-blue-400 hover:text-blue-600">
+                        <Upload className="h-5 w-5" />
+                        <span className="text-xs">추가</span>
+                        <input type="file" accept="image/*" multiple className="hidden"
+                          onChange={(e) => handlePhotoUpload(e, 'SITE')} />
+                      </label>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {receiptConfirmation?.storePhotoUrls.map((url, idx) => (
-                    <div key={idx} className="h-24 w-24 overflow-hidden rounded border">
-                      <img src={url} alt="매장사진" className="h-full w-full object-cover" />
-                    </div>
-                  ))}
-                  {order.status !== '배송완료' && (
-                    <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:text-gray-600">
-                      <Upload className="h-5 w-5" />
-                      <span className="text-xs">추가</span>
-                      <input type="file" accept="image/*" multiple className="hidden"
-                        onChange={(e) => handlePhotoUpload(e, 'STORE')} />
-                    </label>
-                  )}
-                </div>
-              </div>
 
-              {order.status === '수주완료' && !hasSitePhotos && (
-                <p className="text-xs text-amber-600">
-                  현장사진을 1장 이상 업로드해야 배송완료 처리가 가능합니다.
-                </p>
+                {/* 매장사진 */}
+                <div>
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-600">매장사진</span>
+                    {(receiptConfirmation?.storePhotoUrls.length ?? 0) > 0 && (
+                      <span className="text-xs text-gray-400">({receiptConfirmation!.storePhotoUrls.length}장)</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {receiptConfirmation?.storePhotoUrls.map((url, idx) => (
+                      <div key={idx} className="h-24 w-24 overflow-hidden rounded border">
+                        <img src={url} alt="매장사진" className="h-full w-full object-cover" />
+                      </div>
+                    ))}
+                    {order.status !== '배송완료' && (
+                      <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded border-2 border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:text-gray-600">
+                        <Upload className="h-5 w-5" />
+                        <span className="text-xs">추가</span>
+                        <input type="file" accept="image/*" multiple className="hidden"
+                          onChange={(e) => handlePhotoUpload(e, 'STORE')} />
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                {order.status === '수주완료' && !hasSitePhotos && (
+                  <p className="text-xs text-amber-600">
+                    현장사진을 1장 이상 업로드해야 배송완료 처리가 가능합니다.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          <Card className="sm:col-span-2">
+            <CardHeader><CardTitle className="text-sm">변경 이력</CardTitle></CardHeader>
+            <CardContent>
+              {history.length === 0 ? (
+                <p className="text-sm text-gray-400">이력이 없습니다.</p>
+              ) : (
+                <ol className="relative border-l border-gray-200">
+                  {history.map((h) => (
+                    <li key={h.id} className="mb-4 ml-4">
+                      <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border border-white bg-green-600" />
+                      <p className="text-xs text-gray-400">{h.createdAt}</p>
+                      <p className="text-sm font-medium">{ACTION_LABEL[h.action] ?? h.action}</p>
+                      <p className="text-xs text-gray-500">{h.detail}</p>
+                      {(h.actorCompany || h.actorName) && (
+                        <p className="text-xs text-gray-400">
+                          {[h.actorCompany, h.actorName].filter(Boolean).join(' / ')}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ol>
               )}
             </CardContent>
           </Card>
-        )}
-        <Card className="sm:col-span-2">
-          <CardHeader><CardTitle className="text-sm">변경 이력</CardTitle></CardHeader>
-          <CardContent>
-            {history.length === 0 ? (
-              <p className="text-sm text-gray-400">이력이 없습니다.</p>
-            ) : (
-              <ol className="relative border-l border-gray-200">
-                {history.map((h) => (
-                  <li key={h.id} className="mb-4 ml-4">
-                    <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border border-white bg-green-600" />
-                    <p className="text-xs text-gray-400">{h.createdAt}</p>
-                    <p className="text-sm font-medium">{ACTION_LABEL[h.action] ?? h.action}</p>
-                    <p className="text-xs text-gray-500">{h.detail}</p>
-                    {(h.actorCompany || h.actorName) && (
-                      <p className="text-xs text-gray-400">
-                        {[h.actorCompany, h.actorName].filter(Boolean).join(' / ')}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+        </div>
       </div>
     </div>
   )
