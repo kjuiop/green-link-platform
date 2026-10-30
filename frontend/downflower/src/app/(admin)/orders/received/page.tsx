@@ -7,7 +7,7 @@ import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
 import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
-import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort, splitOrderNumber } from '@/lib/utils'
+import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort, splitOrderNumber, openOrderWindow } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { Download } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
@@ -474,9 +474,8 @@ export default function ReceivedOrdersPage() {
                   </TableCell>
                   <TableCell>
                     <a
-                      href={`/orders/${order.id}?from=received`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={`/orders/${order.id}/popup`}
+                      onClick={(e) => { e.preventDefault(); openOrderWindow(order.id) }}
                       className="inline-block text-left font-mono text-xs text-blue-600 hover:underline"
                     >
                       <span className="block">{splitOrderNumber(order.orderNumber)[0]}</span>
