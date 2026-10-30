@@ -8,6 +8,38 @@ import { ClipboardCheck, Upload, X, Images, Download, GripHorizontal } from 'luc
 import { cn } from '@/lib/utils'
 import { fetchReceiptConfirmation, saveReceiptConfirmation, updateReceiptInfo, updateOrderStatus, ReceiptConfirmationResult } from '@/lib/api/orderApi'
 
+function compressImage(file: File): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    const blobUrl = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(blobUrl)
+      const MAX = 1920
+      let { width, height } = img
+      if (width > MAX || height > MAX) {
+        if (width > height) { height = Math.round((height * MAX) / width); width = MAX }
+        else { width = Math.round((width * MAX) / height); height = MAX }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { resolve(file); return }
+      ctx.drawImage(img, 0, 0, width, height)
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { resolve(file); return }
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+        },
+        'image/jpeg',
+        0.85
+      )
+    }
+    img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(file) }
+    img.src = blobUrl
+  })
+}
+
 interface Props {
   orderId: string
   orderNumber: string
@@ -241,36 +273,6 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
       document.removeEventListener('keydown', onKeyDown)
     }
   }, [open, onClose])
-
-  function compressImage(file: File): Promise<File> {
-    return new Promise((resolve) => {
-      const img = new Image()
-      const blobUrl = URL.createObjectURL(file)
-      img.onload = () => {
-        URL.revokeObjectURL(blobUrl)
-        const MAX = 1920
-        let { width, height } = img
-        if (width > MAX || height > MAX) {
-          if (width > height) { height = Math.round((height * MAX) / width); width = MAX }
-          else { width = Math.round((width * MAX) / height); height = MAX }
-        }
-        const canvas = document.createElement('canvas')
-        canvas.width = width
-        canvas.height = height
-        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) { resolve(file); return }
-            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
-          },
-          'image/jpeg',
-          0.85
-        )
-      }
-      img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(file) }
-      img.src = blobUrl
-    })
-  }
 
   function makeFileChangeHandler(setter: React.Dispatch<React.SetStateAction<{ id: string; file: File; url: string }[]>>) {
     return async (e: React.ChangeEvent<HTMLInputElement>) => {
