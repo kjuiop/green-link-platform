@@ -436,9 +436,9 @@ export default function ReceivedOrdersPage() {
               </TableHead>
               <TableHead className="w-24">주문번호</TableHead>
               <TableHead><div>배송요구일</div><div className="font-normal text-gray-400">주문접수일</div></TableHead>
-              <TableHead className="w-36"><div>발주업체 / 주문자</div><div className="font-normal text-gray-400">수주업체</div></TableHead>
+              <TableHead className="w-44"><div>발주업체 / 주문자</div><div className="font-normal text-gray-400">수주업체</div></TableHead>
               <TableHead><div>상품명</div><div className="font-normal text-gray-400">받는분</div></TableHead>
-              <TableHead className="w-36"><div>보내는이</div><div className="font-normal text-gray-400">배송지</div></TableHead>
+              <TableHead className="w-64"><div>보내는이</div><div className="font-normal text-gray-400">배송지</div></TableHead>
               <TableHead>수량</TableHead>
               <TableHead>수주금액</TableHead>
               <TableHead>배송현황</TableHead>
@@ -501,7 +501,7 @@ export default function ReceivedOrdersPage() {
                     </div>
                     <div className="text-sm text-gray-400">{order.orderedAt}</div>
                   </TableCell>
-                  <TableCell className="max-w-[9rem] whitespace-normal">
+                  <TableCell className="max-w-[11rem] whitespace-normal">
                     <div className="break-all text-sm">{order.orderingCompanyName || '—'}</div>
                     <div className="break-all text-xs text-gray-500">{order.ordererName || '—'}</div>
                     <div className="break-all text-sm text-gray-400">{order.vendorName || '—'}</div>
@@ -513,7 +513,7 @@ export default function ReceivedOrdersPage() {
                     </div>
                     {order.recipientName && <div className="text-sm text-gray-400">{order.recipientName}</div>}
                   </TableCell>
-                  <TableCell className="max-w-[9rem] whitespace-normal">
+                  <TableCell className="max-w-[16rem] whitespace-normal">
                     <div className="break-all text-sm">{order.ribbonLeft || '—'}</div>
                     <div className="break-all text-sm text-gray-400">{formatDeliveryShort(order.placeName, order.address)}</div>
                   </TableCell>
