@@ -437,9 +437,9 @@ export default function ReceivedOrdersPage() {
               </TableHead>
               <TableHead>주문번호</TableHead>
               <TableHead><div>배송요구일</div><div className="font-normal text-gray-400">주문접수일</div></TableHead>
-              <TableHead><div>발주업체 / 주문자</div><div className="font-normal text-gray-400">수주업체</div></TableHead>
+              <TableHead className="w-36"><div>발주업체 / 주문자</div><div className="font-normal text-gray-400">수주업체</div></TableHead>
               <TableHead><div>상품명</div><div className="font-normal text-gray-400">받는분</div></TableHead>
-              <TableHead><div>보내는이</div><div className="font-normal text-gray-400">배송지</div></TableHead>
+              <TableHead className="w-36"><div>보내는이</div><div className="font-normal text-gray-400">배송지</div></TableHead>
               <TableHead>수량</TableHead>
               <TableHead>수주금액</TableHead>
               <TableHead>배송현황</TableHead>
@@ -504,9 +504,9 @@ export default function ReceivedOrdersPage() {
                     <div className="text-sm text-gray-400">{order.orderedAt}</div>
                   </TableCell>
                   <TableCell>
-                    <div className="max-w-[9rem] break-words text-sm">{order.orderingCompanyName || '—'}</div>
+                    <div className="max-w-[9rem] break-all text-sm">{order.orderingCompanyName || '—'}</div>
                     <div className="text-xs text-gray-500">{order.ordererName || '—'}</div>
-                    <div className="max-w-[9rem] break-words text-sm text-gray-400">{order.vendorName || '—'}</div>
+                    <div className="max-w-[9rem] break-all text-sm text-gray-400">{order.vendorName || '—'}</div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm">
