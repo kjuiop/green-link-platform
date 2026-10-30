@@ -637,7 +637,7 @@ export default function OrdersPage() {
                     </div>
                     <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
                     <div className="mt-0.5 text-xs text-gray-500">
-                      {order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}
+                      보내는이 {order.ordererName}{order.recipientName ? ` / 받는분 ${order.recipientName}` : ''}
                     </div>
                     {order.vendorName && (
                       <div className="mt-0.5 text-xs text-gray-400">수주사 {order.vendorName}</div>
@@ -666,7 +666,7 @@ export default function OrdersPage() {
                     {order.deliveryTimeType && order.deliveryTimeType !== '직접입력' && ` ${order.deliveryTimeType}`}
                     {order.deliveryTimeType === '직접입력' && order.deliveryTimeCustom && ` ${order.deliveryTimeCustom}`}
                   </span>
-                  <span>{order.placeName}</span>
+                  <span className="break-all">{order.placeName}</span>
                   <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
                 </div>
               </button>
