@@ -28,6 +28,7 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
+  const canEdit = typeof window === 'undefined' || localStorage.getItem('role') !== 'VENDOR'
   const [saveError, setSaveError] = useState<string | null>(null)
   const [receiptConfirmation, setReceiptConfirmation] = useState<ReceiptConfirmationResult | null>(null)
   const [history, setHistory] = useState<OrderHistoryItem[]>([])
@@ -241,7 +242,7 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
   return {
     orderId,
     order, draft, setDraft, loading, loadError,
-    isEditing, saving, saveError, isSuperAdmin,
+    isEditing, saving, saveError, isSuperAdmin, canEdit,
     receiptConfirmation, history, smsMessages, resending,
     products, vendors, selectedProductId, setSelectedProductId,
     completeDialogOpen, setCompleteDialogOpen, selectedPhotoUrls,
