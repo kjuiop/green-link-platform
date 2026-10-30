@@ -104,7 +104,7 @@ export default function NewOrderPage() {
     if (!vendorId) next.vendorId = '수주업체를 선택해주세요.'
     if (!productName.trim()) next.productName = '상품명을 입력해주세요.'
     if (!deliveryDate) next.deliveryDate = '배송날짜를 입력해주세요.'
-    if (!deliveryHour && deliveryTimeType !== '3시간내' && deliveryTimeType !== '직접입력') next.deliveryHour = '배송시간을 선택해주세요.'
+    if (!deliveryHour && deliveryTimeType !== '3시간이내' && deliveryTimeType !== '직접입력') next.deliveryHour = '배송시간을 선택해주세요.'
     if (!amount) next.amount = '발주금액을 입력해주세요.'
     if (!recipientName.trim()) next.recipientName = '받는 분 성함을 입력해주세요.'
     if (!ordererPhone.trim()) next.ordererPhone = '주문자 휴대폰을 입력해주세요.'
@@ -129,8 +129,8 @@ export default function NewOrderPage() {
         extraCost: extraCost ? Number(extraCost) : undefined,
         deliveryDate,
         deliveryTimeType,
-        deliveryTimeHour: ['3시간내', '직접입력'].includes(deliveryTimeType) ? '' : deliveryHour,
-        deliveryTimeMinute: ['3시간내', '직접입력'].includes(deliveryTimeType) ? '' : deliveryMinute,
+        deliveryTimeHour: ['3시간이내', '직접입력'].includes(deliveryTimeType) ? '' : deliveryHour,
+        deliveryTimeMinute: ['3시간이내', '직접입력'].includes(deliveryTimeType) ? '' : deliveryMinute,
         deliveryTimeCustom,
         address,
         addressDetail,
@@ -426,9 +426,9 @@ export default function NewOrderPage() {
               {errors.deliveryDate && <p className="text-xs text-red-500">{errors.deliveryDate}</p>}
             </div>
             <div className="space-y-1">
-              <Label>{['3시간내', '직접입력'].includes(deliveryTimeType) ? '배송시간' : '배송시간 *'}</Label>
+              <Label>{['3시간이내', '직접입력'].includes(deliveryTimeType) ? '배송시간' : '배송시간 *'}</Label>
               <div className="flex flex-wrap items-center gap-2">
-                {!['3시간내', '직접입력'].includes(deliveryTimeType) && (
+                {!['3시간이내', '직접입력'].includes(deliveryTimeType) && (
                   <>
                     <select
                       value={deliveryHour}
@@ -459,7 +459,7 @@ export default function NewOrderPage() {
                   onChange={(e) => setDeliveryTimeType(e.target.value)}
                   className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
                 >
-                  {['까지', '예식', '행사', '3시간내', '직접입력'].map((opt) => (
+                  {['까지', '예식', '행사', '3시간이내', '직접입력'].map((opt) => (
                     <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </select>

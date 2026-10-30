@@ -242,10 +242,41 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
     }
   }, [open, onClose])
 
+  function compressImage(file: File): Promise<File> {
+    return new Promise((resolve) => {
+      const img = new Image()
+      const blobUrl = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(blobUrl)
+        const MAX = 1920
+        let { width, height } = img
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round((height * MAX) / width); width = MAX }
+          else { width = Math.round((width * MAX) / height); height = MAX }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) { resolve(file); return }
+            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+          },
+          'image/jpeg',
+          0.85
+        )
+      }
+      img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(file) }
+      img.src = blobUrl
+    })
+  }
+
   function makeFileChangeHandler(setter: React.Dispatch<React.SetStateAction<{ id: string; file: File; url: string }[]>>) {
-    return (e: React.ChangeEvent<HTMLInputElement>) => {
+    return async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files ?? [])
-      const next = files.map((f, i) => ({
+      const compressed = await Promise.all(files.map(compressImage))
+      const next = compressed.map((f, i) => ({
         id: `rc-${Date.now()}-${i}`,
         file: f,
         url: URL.createObjectURL(f),
