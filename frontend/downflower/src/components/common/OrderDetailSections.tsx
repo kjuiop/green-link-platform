@@ -69,9 +69,11 @@ export function OrderActionButtons({ d }: { d: D }) {
           </Button>
         </>
       ) : (
-        <Button variant="outline" className="gap-1.5" onClick={d.startEdit}>
-          <Pencil className="h-3.5 w-3.5" />수정
-        </Button>
+        d.canEdit && (
+          <Button variant="outline" className="gap-1.5" onClick={d.startEdit}>
+            <Pencil className="h-3.5 w-3.5" />수정
+          </Button>
+        )
       )}
       {d.isSuperAdmin && !isEditing && (
         <Button
