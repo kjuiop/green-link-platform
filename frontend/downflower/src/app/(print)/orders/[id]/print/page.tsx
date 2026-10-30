@@ -5,6 +5,31 @@ import { useParams } from 'next/navigation'
 import { fetchOrder, updateOrderStatus } from '@/lib/api/orderApi'
 import { Order } from '@/types/order'
 
+function buildDeliveryAddress(order: Order): string {
+  const parts: string[] = []
+  const addr = [order.address, order.addressDetail].filter(Boolean).join(' ')
+  if (addr) parts.push(addr)
+  const place = [order.placeName, order.roomName].filter(Boolean).join(' ')
+  if (place) parts.push(place)
+  return parts.join(' / ')
+}
+
+function buildDeliveryDateTime(order: Order): string {
+  if (!order.deliveryAt) return ''
+  let result = order.deliveryAt
+  const type = order.deliveryTimeType
+  if (type === '3시간이내') {
+    result += ' 3시간이내'
+  } else if (type === '직접입력' && order.deliveryTimeCustom) {
+    result += ' ' + order.deliveryTimeCustom
+  } else if ((type === '까지' || type === '예식' || type === '행사') && order.deliveryTimeHour && order.deliveryTimeMinute) {
+    result += ` ${order.deliveryTimeHour}:${order.deliveryTimeMinute}`
+    if (type !== '까지') result += ' ' + type
+    else result += '까지'
+  }
+  return result
+}
+
 export default function PrintOrderPage() {
   const { id } = useParams<{ id: string }>()
   const [order, setOrder] = useState<Order | null>(null)
@@ -130,10 +155,9 @@ export default function PrintOrderPage() {
             </tr>
             <tr>
               <td>배달정보</td>
-              <td colSpan={2} className="left">
-                배달주소: {order.address} {order.addressDetail}<br />
-                장소: {order.placeName} {order.roomName}<br />
-                배달일시: {order.deliveryAt}
+              <td colSpan={2} className="left" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                배달주소: {buildDeliveryAddress(order)}<br />
+                배달일시: {buildDeliveryDateTime(order)}
               </td>
             </tr>
             <tr>
@@ -194,9 +218,9 @@ export default function PrintOrderPage() {
             </tr>
             <tr>
               <td>배달정보</td>
-              <td colSpan={2} className="left">
-                배달주소: {order.address} {order.addressDetail}<br />
-                배달일시: {order.deliveryAt}
+              <td colSpan={2} className="left" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                배달주소: {buildDeliveryAddress(order)}<br />
+                배달일시: {buildDeliveryDateTime(order)}
               </td>
             </tr>
             <tr>
