@@ -294,13 +294,13 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
 
   return (
     <div
-      className="fixed select-none shadow-2xl"
+      className="fixed shadow-2xl"
       style={{ left: pos.x, top: pos.y, zIndex, width: 860, maxWidth: 'calc(100vw - 32px)' }}
       onMouseDown={onFocus}
     >
       {/* 타이틀바 */}
       <div
-        className="flex cursor-grab items-center justify-between rounded-t-lg bg-[#1e3a5f] px-4 py-2.5 text-white active:cursor-grabbing"
+        className="flex select-none cursor-grab items-center justify-between rounded-t-lg bg-[#1e3a5f] px-4 py-2.5 text-white active:cursor-grabbing"
         onMouseDown={handleDragStart}
       >
         <div className="flex items-center gap-2">
@@ -526,10 +526,10 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
                 <CardContent className="space-y-3 text-sm">
                   {isEditing ? (
                     <>
-                      <Field label="리본 왼쪽">
+                      <Field label="보내는이">
                         <Input value={draft.ribbonLeft} onChange={(e) => set('ribbonLeft', e.target.value)} />
                       </Field>
-                      <Field label="리본 오른쪽">
+                      <Field label="경조문구">
                         <Input value={draft.ribbonRight} onChange={(e) => set('ribbonRight', e.target.value)} />
                       </Field>
                       <div className="space-y-1.5">
@@ -546,8 +546,8 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
                     </>
                   ) : (
                     <>
-                      <Row label="리본 왼쪽" value={order.ribbonLeft} />
-                      <Row label="리본 오른쪽" value={order.ribbonRight} />
+                      <Row label="보내는이" value={order.ribbonLeft} />
+                      <Row label="경조문구" value={order.ribbonRight} />
                     </>
                   )}
                 </CardContent>
