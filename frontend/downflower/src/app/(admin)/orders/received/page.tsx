@@ -474,7 +474,7 @@ export default function ReceivedOrdersPage() {
                   </TableCell>
                   <TableCell>
                     <a
-                      href={`/orders/${order.id}`}
+                      href={`/orders/${order.id}?from=received`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-block text-left font-mono text-xs text-blue-600 hover:underline"
