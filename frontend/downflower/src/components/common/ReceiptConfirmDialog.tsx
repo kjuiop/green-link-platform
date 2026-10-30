@@ -357,6 +357,7 @@ function ReceiptFormDialog({ open, onClose, onSave, onDeliveryComplete, orderId,
               <td className="px-3 py-2.5 align-top text-gray-500">
                 현장사진
                 <span className="ml-0.5 text-red-500">*</span>
+                <div className="mt-0.5 text-[10px] font-medium text-blue-600">문자 발송용</div>
               </td>
               <td colSpan={3} className="px-3 py-2.5">
                 <div className="flex flex-wrap gap-2">
@@ -623,7 +624,10 @@ function ReceiptEditDialog({ open, onClose, onSave, orderId, orderNumber, sender
           <tbody className="divide-y">
             {current.sitePhotoUrls.length > 0 && (
               <tr>
-                <td className="px-3 py-2.5 align-top text-gray-500">현장사진</td>
+                <td className="px-3 py-2.5 align-top text-gray-500">
+                  현장사진
+                  <div className="mt-0.5 text-[10px] font-medium text-blue-600">문자 발송용</div>
+                </td>
                 <td colSpan={3} className="px-3 py-2.5">
                   <div className="flex flex-wrap gap-2">
                     {current.sitePhotoUrls.map((url, idx) => (
