@@ -504,9 +504,9 @@ export default function ReceivedOrdersPage() {
                     <div className="text-sm text-gray-400">{order.orderedAt}</div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">{order.orderingCompanyName || '—'}</div>
+                    <div className="max-w-[9rem] break-words text-sm">{order.orderingCompanyName || '—'}</div>
                     <div className="text-xs text-gray-500">{order.ordererName || '—'}</div>
-                    <div className="text-sm text-gray-400">{order.vendorName || '—'}</div>
+                    <div className="max-w-[9rem] break-words text-sm text-gray-400">{order.vendorName || '—'}</div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm">
@@ -517,7 +517,7 @@ export default function ReceivedOrdersPage() {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">{order.ribbonLeft || '—'}</div>
-                    <div className="text-sm text-gray-400">{formatDeliveryShort(order.placeName, order.address)}</div>
+                    <div className="max-w-[9rem] break-all text-sm text-gray-400">{formatDeliveryShort(order.placeName, order.address)}</div>
                   </TableCell>
                   <TableCell className="text-sm">{order.quantity}</TableCell>
                   <TableCell className="text-sm">{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원</TableCell>
@@ -617,7 +617,7 @@ export default function ReceivedOrdersPage() {
                     </div>
                     <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
                     <div className="mt-0.5 text-xs text-gray-500">
-                      보내는이 {order.ordererName}{order.recipientName ? ` / 받는분 ${order.recipientName}` : ''}
+                      {order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}
                     </div>
                     {order.vendorName && (
                       <div className="mt-0.5 text-xs text-gray-400">수주사 {order.vendorName}</div>
