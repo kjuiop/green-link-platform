@@ -503,7 +503,7 @@ export default function ReceivedOrdersPage() {
                     </div>
                     <div className="text-sm text-gray-400">{order.orderedAt}</div>
                   </TableCell>
-                  <TableCell className="max-w-[9rem]">
+                  <TableCell className="max-w-[9rem] whitespace-normal">
                     <div className="break-all text-sm">{order.orderingCompanyName || '—'}</div>
                     <div className="break-all text-xs text-gray-500">{order.ordererName || '—'}</div>
                     <div className="break-all text-sm text-gray-400">{order.vendorName || '—'}</div>
@@ -515,7 +515,7 @@ export default function ReceivedOrdersPage() {
                     </div>
                     {order.recipientName && <div className="text-sm text-gray-400">{order.recipientName}</div>}
                   </TableCell>
-                  <TableCell className="max-w-[9rem]">
+                  <TableCell className="max-w-[9rem] whitespace-normal">
                     <div className="break-all text-sm">{order.ribbonLeft || '—'}</div>
                     <div className="break-all text-sm text-gray-400">{formatDeliveryShort(order.placeName, order.address)}</div>
                   </TableCell>
