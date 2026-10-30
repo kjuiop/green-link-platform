@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AcceptOrderBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
-import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort, splitOrderNumber } from '@/lib/utils'
+import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort, splitOrderNumber, openOrderWindow } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
@@ -490,9 +490,8 @@ export default function OrdersPage() {
                   </TableCell>
                   <TableCell>
                     <a
-                      href={`/orders/${order.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={`/orders/${order.id}/popup`}
+                      onClick={(e) => { e.preventDefault(); openOrderWindow(order.id) }}
                       className="inline-block text-left font-mono text-xs text-blue-600 hover:underline"
                     >
                       <span className="block">{splitOrderNumber(order.orderNumber)[0]}</span>
