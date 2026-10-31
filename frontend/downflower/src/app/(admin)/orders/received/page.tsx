@@ -11,6 +11,7 @@ import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort, sp
 import { OrderStatus, Order } from '@/types/order'
 import { Download } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
+import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { OrderDetailPopup } from '@/components/common/OrderDetailPopup'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
@@ -645,6 +646,20 @@ export default function ReceivedOrdersPage() {
                   <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
                 </div>
               </button>
+              {!order.isDeleted && (
+                <div className="mt-3 border-t pt-3">
+                  <ReceiptConfirmButton
+                    layout="card"
+                    showPhotoButton={order.status === '배송완료'}
+                    orderId={String(order.id)}
+                    orderNumber={order.orderNumber}
+                    senderName={order.ribbonLeft}
+                    recipientName={order.recipientName}
+                    initialHasReceipt={order.hasReceipt}
+                    onDeliveryComplete={() => loadOrders(buildServerParams(), page)}
+                  />
+                </div>
+              )}
             </div>
           ))
         )}
