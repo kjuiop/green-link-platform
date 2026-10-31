@@ -14,8 +14,8 @@ export function splitOrderNumber(orderNumber: string): [string, string] {
   return idx < 0 ? [orderNumber, ''] : [orderNumber.slice(0, idx), orderNumber.slice(idx + 1)]
 }
 
-export function openOrderWindow(orderId: number | string, basePath = '/orders') {
-  window.open(`${basePath}/${orderId}/popup`, `order-${orderId}`, 'width=900,height=900,resizable=yes,scrollbars=yes')
+export function openOrderWindow(orderId: number | string) {
+  window.open(`/orders/${orderId}/popup`, `order-${orderId}`, 'width=900,height=900,resizable=yes,scrollbars=yes')
 }
 
 export function formatDeliveryShort(placeName?: string | null, address?: string | null): string {
