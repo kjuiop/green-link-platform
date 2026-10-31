@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { ClipboardCheck, Upload, X, Images, Download, GripHorizontal } from 'lucide-react'
+import { Check, ClipboardCheck, Upload, X, Images, Download, GripHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchReceiptConfirmation, saveReceiptConfirmation, updateReceiptInfo, updateOrderStatus, ReceiptConfirmationResult } from '@/lib/api/orderApi'
 
@@ -48,9 +48,16 @@ interface Props {
   // 목록 페이지에서 사전 로딩된 값. undefined이면 마운트 시 자동 fetch
   initialHasReceipt?: boolean
   onDeliveryComplete?: () => void
+  // card: 모바일 카드 하단용 — 버튼을 가로 균등 분할하고 터치 영역을 키운다
+  layout?: 'inline' | 'card'
 }
 
-export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipientName, initialHasReceipt, onDeliveryComplete }: Props) {
+export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipientName, initialHasReceipt, onDeliveryComplete, layout = 'inline' }: Props) {
+  const isCard = layout === 'card'
+  const baseBtn = isCard
+    ? 'inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-medium'
+    : 'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium'
+  const iconCls = isCard ? 'h-4 w-4' : 'h-3 w-3'
   const [formOpen, setFormOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [viewerOpen, setViewerOpen] = useState(false)
@@ -86,6 +93,21 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
     }
   }
 
+  async function handleViewClick(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (saved) { setViewerOpen(true); return }
+    setFetching(true)
+    try {
+      const data = await fetchReceiptConfirmation(orderId)
+      setSaved(data)
+      if (data) setViewerOpen(true)
+    } catch {
+    } finally {
+      setFetching(false)
+    }
+  }
+
   function handleOpen(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
@@ -106,33 +128,42 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
   // saved가 있거나 사전 로딩 힌트가 true면 confirmed 상태로 렌더링
   if (saved || initialHasReceipt === true) {
     return (
-      <div className="flex flex-col items-start gap-1">
+      <div className={isCard ? 'flex w-full gap-2' : 'flex flex-col items-start gap-1'}>
         <button
           type="button"
           onClick={handleConfirmedClick}
           disabled={fetching}
-          className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:bg-gray-50 disabled:cursor-wait"
+          className={cn(
+            baseBtn,
+            'disabled:cursor-wait',
+            isCard
+              ? 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100'
+              : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50',
+          )}
         >
-          <ClipboardCheck className="h-3 w-3" />
+          {isCard ? <Check className={iconCls} /> : <ClipboardCheck className={iconCls} />}
           {fetching ? '확인 중…' : '인수확인'}
         </button>
-        {saved && (saved.sitePhotoUrls.length > 0 || saved.storePhotoUrls.length > 0) && (
+        {(saved ? saved.sitePhotoUrls.length > 0 || saved.storePhotoUrls.length > 0 : isCard) && (
           <>
             <button
               type="button"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setViewerOpen(true) }}
-              className="inline-flex items-center gap-1 rounded-md border border-blue-300 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+              onClick={handleViewClick}
+              disabled={fetching}
+              className={cn(baseBtn, 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:cursor-wait')}
             >
-              <Images className="h-3 w-3" />
+              <Images className={iconCls} />
               사진보기
             </button>
 
-            <PhotoViewerDialog
-              open={viewerOpen}
-              onClose={() => setViewerOpen(false)}
-              photos={[...saved.sitePhotoUrls, ...saved.storePhotoUrls].map((url, i) => ({ id: String(i), url }))}
-              orderNumber={orderNumber}
-            />
+            {saved && (
+              <PhotoViewerDialog
+                open={viewerOpen}
+                onClose={() => setViewerOpen(false)}
+                photos={[...saved.sitePhotoUrls, ...saved.storePhotoUrls].map((url, i) => ({ id: String(i), url }))}
+                orderNumber={orderNumber}
+              />
+            )}
           </>
         )}
 
@@ -169,9 +200,9 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
         type="button"
         onClick={handleOpen}
         disabled={fetching}
-        className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:bg-gray-50 disabled:cursor-wait"
+        className={cn(baseBtn, 'border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 disabled:cursor-wait', isCard && 'w-full')}
       >
-        <ClipboardCheck className="h-3 w-3" />
+        <ClipboardCheck className={iconCls} />
         {fetching ? '확인 중…' : '인수확인'}
       </button>
 
