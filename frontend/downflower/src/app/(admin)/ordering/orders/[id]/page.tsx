@@ -850,7 +850,7 @@ export default function OrderingOrderDetailPage() {
                     {msg.imageUrl && (
                       <img src={msg.imageUrl} alt="발송사진" className="h-20 w-20 rounded border object-cover" />
                     )}
-                    {msg.failReason && <p className="text-xs text-red-400">{msg.failReason}</p>}
+                    {msg.failReason && <p className={msg.status === 'SUCCESS' ? 'text-xs text-amber-600' : 'text-xs text-red-400'}>{msg.failReason}</p>}
                   </div>
                 ))}
               </div>

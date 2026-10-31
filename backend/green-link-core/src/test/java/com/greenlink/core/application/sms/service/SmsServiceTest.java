@@ -67,6 +67,7 @@ class SmsServiceTest {
         ArgumentCaptor<SmsMessage> captor = ArgumentCaptor.forClass(SmsMessage.class);
         verify(smsMessageRepository).save(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(SmsStatus.SUCCESS);
+        assertThat(captor.getValue().getFailReason()).isEqualTo("예약 거절 → 즉시발송 전환: 예약 시간 오류");
         verify(smsClient, times(2)).send(any(), any(), any(), any(), any(), any(), any());
     }
 
