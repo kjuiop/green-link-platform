@@ -7,6 +7,7 @@ import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
 import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
+import { useOrderUpdatedListener } from '@/components/common/useOrderSync'
 import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort, splitOrderNumber, openOrderWindow } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { Download } from 'lucide-react'
@@ -160,6 +161,7 @@ export default function ReceivedOrdersPage() {
   }
 
   useEffect(() => { loadOrders(buildServerParams(initRange.from, initRange.to)) }, [])
+  useOrderUpdatedListener(() => loadOrders(buildServerParams(), page))
 
   function selectMonth(year: number, month: number) {
     setSelectedYear(year)

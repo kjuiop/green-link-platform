@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AcceptOrderBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
+import { useOrderUpdatedListener } from '@/components/common/useOrderSync'
 import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort, splitOrderNumber, openOrderWindow } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { PageResult } from '@/types/page'
@@ -159,6 +160,7 @@ export default function OrdersPage() {
   }
 
   useEffect(() => { loadOrders(buildServerParams(initRange.from, initRange.to)) }, [])
+  useOrderUpdatedListener(() => loadOrders(buildServerParams(), page))
 
   function selectMonth(year: number, month: number) {
     setSelectedYear(year)
