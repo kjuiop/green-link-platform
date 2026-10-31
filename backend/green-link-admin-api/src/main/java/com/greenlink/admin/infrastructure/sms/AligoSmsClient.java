@@ -80,7 +80,7 @@ public class AligoSmsClient implements SmsClient {
                 return new SmsResult(true, msgId, null);
             } else {
                 String message = String.valueOf(responseBody.get("message"));
-                return new SmsResult(false, null, message);
+                return SmsResult.rejected(message);
             }
         } catch (Exception e) {
             return new SmsResult(false, null, e.getMessage());
