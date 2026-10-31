@@ -1,6 +1,6 @@
 package com.greenlink.core.application.sms.service;
 
-import com.greenlink.core.application.sms.dto.SmsResult;
+import com.greenlink.core.domain.sms.model.SmsResult;
 import com.greenlink.core.domain.order.model.Order;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.sms.model.SmsMessage;

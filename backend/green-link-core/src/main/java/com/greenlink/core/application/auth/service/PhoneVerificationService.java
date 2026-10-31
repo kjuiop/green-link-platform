@@ -5,7 +5,7 @@ import com.greenlink.core.application.auth.usecase.FindIdByPhoneUseCase;
 import com.greenlink.core.application.auth.usecase.ResetPasswordUseCase;
 import com.greenlink.core.application.auth.usecase.SendPhoneVerificationUseCase;
 import com.greenlink.core.application.auth.usecase.VerifyPhoneCodeUseCase;
-import com.greenlink.core.application.sms.dto.SmsResult;
+import com.greenlink.core.domain.sms.model.SmsResult;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.phoneverification.model.PhoneVerification;

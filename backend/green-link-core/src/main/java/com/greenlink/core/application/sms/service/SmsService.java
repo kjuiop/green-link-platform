@@ -2,7 +2,7 @@ package com.greenlink.core.application.sms.service;
 
 import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.sms.dto.SmsMessageResult;
-import com.greenlink.core.application.sms.dto.SmsResult;
+import com.greenlink.core.domain.sms.model.SmsResult;
 import com.greenlink.core.application.sms.usecase.GetSmsMessagesUseCase;
 import com.greenlink.core.application.sms.usecase.ResendMmsUseCase;
 import com.greenlink.core.application.sms.usecase.SendDeliveryMmsUseCase;
