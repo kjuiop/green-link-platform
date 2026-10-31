@@ -1,4 +1,4 @@
-package com.greenlink.admin.infrastructure.sms;
+package com.greenlink.admin.adapter.out.sms;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

@@ -1,4 +1,4 @@
-package com.greenlink.core.application.sms.dto;
+package com.greenlink.core.domain.sms.model;
 
 public record SmsResult(boolean success, String msgId, String failReason, boolean rejectedByProvider) {
 

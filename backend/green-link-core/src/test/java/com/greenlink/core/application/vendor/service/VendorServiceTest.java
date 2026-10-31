@@ -46,13 +46,13 @@ class VendorServiceTest {
     }
 
     private Company savedCompany(Long id) {
-        return Company.of(id, "123-45-67890", "테스트꽃집", "홍대표", "02-1234-5678",
+        return Company.of(id, "123-45-67890", "테스트꽃집", "홍대표", "02-1234-5678", null,
                 "서울시 강남구", "101호", CompanyType.VENDOR, CompanyStatus.ACTIVE, true);
     }
 
     private Admin savedAdmin(Long id, Long companyId, AdminStatus status) {
         return Admin.of(id, "vendor01", "encodedPw", "홍길동", "010-1234-5678",
-                companyId, status, "2026-10-22T10:00:00");
+                companyId, status, "2026-10-22T10:00:00", null);
     }
 
     // ── createVendor ──────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ class VendorServiceTest {
         given(adminRepository.existsByLoginId("vendor01")).willReturn(true);
 
         assertThatThrownBy(() -> service.createVendor(
-                new CreateVendorCommand("테스트꽃집", "123-45-67890", "서울", "", "홍길동", "010-0000-0000", "vendor01", "pw", "VENDOR")))
+                new CreateVendorCommand("테스트꽃집", "123-45-67890", null, "서울", "", "홍길동", "010-0000-0000", "vendor01", "pw", "VENDOR")))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(VendorErrorCode.DUPLICATE_LOGIN_ID));
@@ -76,7 +76,7 @@ class VendorServiceTest {
         given(companyRepository.existsByBusinessNo("123-45-67890")).willReturn(true);
 
         assertThatThrownBy(() -> service.createVendor(
-                new CreateVendorCommand("테스트꽃집", "123-45-67890", "서울", "", "홍길동", "010-0000-0000", "vendor01", "pw", "VENDOR")))
+                new CreateVendorCommand("테스트꽃집", "123-45-67890", null, "서울", "", "홍길동", "010-0000-0000", "vendor01", "pw", "VENDOR")))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(VendorErrorCode.DUPLICATE_BUSINESS_NO));
@@ -91,7 +91,7 @@ class VendorServiceTest {
         given(adminRepository.save(any(Admin.class))).willReturn(savedAdmin(2L, 1L, AdminStatus.ACTIVE));
 
         VendorResult result = service.createVendor(
-                new CreateVendorCommand("테스트꽃집", "123-45-67890", "서울", "", "홍길동", "010-0000-0000", "vendor01", "pw", "VENDOR"));
+                new CreateVendorCommand("테스트꽃집", "123-45-67890", null, "서울", "", "홍길동", "010-0000-0000", "vendor01", "pw", "VENDOR"));
 
         assertThat(result.id()).isEqualTo(2L);
         assertThat(result.companyName()).isEqualTo("테스트꽃집");

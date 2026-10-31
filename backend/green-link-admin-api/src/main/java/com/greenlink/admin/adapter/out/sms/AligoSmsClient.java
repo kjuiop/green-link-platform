@@ -1,6 +1,6 @@
-package com.greenlink.admin.infrastructure.sms;
+package com.greenlink.admin.adapter.out.sms;
 
-import com.greenlink.core.application.sms.dto.SmsResult;
+import com.greenlink.core.domain.sms.model.SmsResult;
 import com.greenlink.core.domain.sms.port.SmsClient;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
