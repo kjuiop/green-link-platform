@@ -104,7 +104,9 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
       const data = await fetchReceiptConfirmation(orderId)
       setSaved(data)
       if (data) setViewerOpen(true)
+      else alert('등록된 사진이 없습니다.')
     } catch {
+      alert('사진을 불러오지 못했습니다. 다시 시도해 주세요.')
     } finally {
       setFetching(false)
     }
