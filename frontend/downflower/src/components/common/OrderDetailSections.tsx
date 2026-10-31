@@ -514,7 +514,7 @@ export function SmsHistoryCard({ d, className }: SectionProps) {
                 {msg.sentAt && <p className="text-xs text-gray-400">{msg.sentAt}</p>}
                 {msg.message && <p className="whitespace-pre-wrap border-t pt-1.5 text-sm text-gray-800">{msg.message}</p>}
                 {msg.imageUrl && <img src={msg.imageUrl} alt="발송사진" className="h-20 w-20 rounded border object-cover" />}
-                {msg.failReason && <p className="text-xs text-red-400">{msg.failReason}</p>}
+                {msg.failReason && <p className={msg.status === 'SUCCESS' ? 'text-xs text-amber-600' : 'text-xs text-red-400'}>{msg.failReason}</p>}
               </div>
             ))}
           </div>

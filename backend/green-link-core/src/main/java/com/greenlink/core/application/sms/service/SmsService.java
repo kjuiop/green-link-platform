@@ -222,14 +222,18 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         SmsMessage smsMessage = SmsMessage.create(orderId, receiver, msg, imageUrl);
         try {
             SmsResult result = smsClient.send(receiver, msg, imageUrl, sender, rdate, rtime, null);
+            String fallbackReason = null;
             boolean reserved = rdate != null && !rdate.isBlank();
             if (reserved && result.rejectedByProvider()) {
                 // 알리고 예약 최소 간격 등으로 예약이 거절되면 즉시발송으로 폴백
                 org.slf4j.LoggerFactory.getLogger(SmsService.class)
                         .warn("알리고 예약발송 거절 → 즉시발송 폴백 orderId={} rdate={} rtime={} reason={}", orderId, rdate, rtime, result.failReason());
+                fallbackReason = result.failReason();
                 result = smsClient.send(receiver, msg, imageUrl, sender, null, null, null);
             }
-            if (result.success()) {
+            if (result.success() && fallbackReason != null) {
+                smsMessage.markSuccessWithFallback(result.msgId(), sentAt, fallbackReason);
+            } else if (result.success()) {
                 smsMessage.markSuccess(result.msgId(), sentAt);
             } else {
                 smsMessage.markFail(result.failReason(), sentAt);
