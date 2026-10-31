@@ -7,6 +7,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class OrderTest {
 
+    private static final String ACCEPTED_AT = "2026-10-22 10:00:00";
+
     private Order pendingOrder() {
         return Order.create(
                 1L, null, "DF-20261022-0001", null, "장미꽃다발", 1, 50000L, null,
@@ -20,7 +22,7 @@ class OrderTest {
 
     private Order acceptedOrder() {
         Order o = pendingOrder();
-        o.accept();
+        o.accept(ACCEPTED_AT);
         return o;
     }
 
@@ -33,14 +35,14 @@ class OrderTest {
     @Test
     void accept_fromPending_setsAccepted() {
         Order order = pendingOrder();
-        order.accept();
+        order.accept(ACCEPTED_AT);
         assertThat(order.getStatus()).isEqualTo(OrderStatus.ACCEPTED);
     }
 
     @Test
     void accept_fromNonPending_throwsIllegalStateException() {
         Order order = acceptedOrder();
-        assertThatThrownBy(order::accept)
+        assertThatThrownBy(() -> order.accept(ACCEPTED_AT))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("발주대기 상태에서만");
     }
