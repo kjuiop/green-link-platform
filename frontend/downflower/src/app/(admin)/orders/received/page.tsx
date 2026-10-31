@@ -650,6 +650,7 @@ export default function ReceivedOrdersPage() {
                 <div className="mt-3 border-t pt-3">
                   <ReceiptConfirmButton
                     layout="card"
+                    showPhotoButton={order.status === '배송완료'}
                     orderId={String(order.id)}
                     orderNumber={order.orderNumber}
                     senderName={order.ribbonLeft}

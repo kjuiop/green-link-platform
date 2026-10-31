@@ -50,9 +50,11 @@ interface Props {
   onDeliveryComplete?: () => void
   // card: 모바일 카드 하단용 — 버튼을 가로 균등 분할하고 터치 영역을 키운다
   layout?: 'inline' | 'card'
+  // false면 사진보기 버튼을 숨긴다 (배송완료 건에서만 노출할 때 사용)
+  showPhotoButton?: boolean
 }
 
-export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipientName, initialHasReceipt, onDeliveryComplete, layout = 'inline' }: Props) {
+export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipientName, initialHasReceipt, onDeliveryComplete, layout = 'inline', showPhotoButton = true }: Props) {
   const isCard = layout === 'card'
   const baseBtn = isCard
     ? 'inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-medium'
@@ -144,7 +146,7 @@ export function ReceiptConfirmButton({ orderId, orderNumber, senderName, recipie
           {isCard ? <Check className={iconCls} /> : <ClipboardCheck className={iconCls} />}
           {fetching ? '확인 중…' : '인수확인'}
         </button>
-        {(saved ? saved.sitePhotoUrls.length > 0 || saved.storePhotoUrls.length > 0 : isCard) && (
+        {showPhotoButton && (saved ? saved.sitePhotoUrls.length > 0 || saved.storePhotoUrls.length > 0 : isCard) && (
           <>
             <button
               type="button"
