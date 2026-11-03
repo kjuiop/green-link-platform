@@ -74,6 +74,8 @@ public class OrderController {
             @RequestParam(required = false) String recipientName,
             @RequestParam(required = false) String vendorName,
             @RequestParam(required = false) String orderingCompanyName,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Long resolvedVendorId = vendorId;
@@ -103,7 +105,7 @@ public class OrderController {
                 status, resolvedVendorId, orderNumber, productName, ordererName,
                 deliveryDateFrom, deliveryDateTo, resolvedOrderingCompanyId,
                 receiverName, messageStatus, ribbonLeft, resolvedDeleted,
-                address, recipientName, vendorName, orderingCompanyName);
+                address, recipientName, vendorName, orderingCompanyName, sortBy, sortDir);
         return ResponseEntity.ok(getOrdersUseCase.getOrdersPaged(condition, PageRequest.of(page, size)));
     }
 

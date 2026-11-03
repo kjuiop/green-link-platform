@@ -113,7 +113,11 @@ export default function OrdersPage() {
   const [applied2Field, setApplied2Field] = useState<SearchField>('수주사명')
   const [applied2Value, setApplied2Value] = useState('')
 
-  const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
+  const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null
+  const isSuperAdmin = role === 'SUPER_ADMIN'
+  const canSeeMsgTime = isSuperAdmin || role === 'ORDERING'
+
+  const [msgTimeSortDir, setMsgTimeSortDir] = useState<'asc' | 'desc' | null>(null)
 
   const [popups, setPopups] = useState<Array<{ id: string; zIndex: number }>>([])
   const nextZ = useRef(1000)
@@ -147,6 +151,7 @@ export default function OrdersPage() {
     const key2 = SERVER_FIELD_MAP[search2Field]
     if (key2 && search2Value) params[key2] = search2Value
     if (isSuperAdmin && deletedFilter === '삭제') params.deleted = true
+    if (msgTimeSortDir) { params.sortBy = 'messageSentAt'; params.sortDir = msgTimeSortDir }
     return params
   }
 
@@ -195,6 +200,7 @@ export default function OrdersPage() {
     setAppliedDeletedFilter('정상')
     setApplied1Field('주문번호'); setApplied1Value('')
     setApplied2Field('수주사명'); setApplied2Value('')
+    setMsgTimeSortDir(null)
     setPage(0)
     setSelectedIds(new Set())
     loadOrders({ deliveryDateFrom: r.from, deliveryDateTo: r.to }, 0)
@@ -460,7 +466,24 @@ export default function OrdersPage() {
               <TableHead>수량</TableHead>
               <TableHead><div>상품명</div><div className="font-normal text-gray-400">발주금액</div></TableHead>
               <TableHead>배송현황</TableHead>
-              <TableHead>문자현황</TableHead>
+              <TableHead>
+                {canSeeMsgTime ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = msgTimeSortDir === 'desc' ? 'asc' : 'desc'
+                      setMsgTimeSortDir(next)
+                      setPage(0)
+                      setSelectedIds(new Set())
+                      loadOrders({ ...buildServerParams(), sortBy: 'messageSentAt', sortDir: next }, 0)
+                    }}
+                    className="flex items-center gap-0.5 hover:text-green-700"
+                  >
+                    문자발송
+                    <span className="text-[10px]">{msgTimeSortDir === 'asc' ? '↑' : msgTimeSortDir === 'desc' ? '↓' : '↕'}</span>
+                  </button>
+                ) : '문자발송'}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -570,6 +593,11 @@ export default function OrdersPage() {
                         ? `예약 ${String(order.scheduledMessageHour).padStart(2, '0')}:${order.scheduledMessageMinute ?? '00'}`
                         : '자동발송'}
                     </div>
+                    {canSeeMsgTime && order.messageSentAt && (
+                      <div className="mt-0.5 text-[10px] text-blue-500">
+                        {order.messageSentAt.slice(0, 16).replace('T', ' ')}
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

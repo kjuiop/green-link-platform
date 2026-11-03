@@ -55,4 +55,5 @@ export interface Order {
   hasReceipt?: boolean
   receiptReceiverName?: string
   receiptReceiverRelation?: string
+  messageSentAt?: string
 }

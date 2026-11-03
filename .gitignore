@@ -36,3 +36,4 @@ logs/
 docs
 
 .playwright-mcp
+test-upload-comparison.png
