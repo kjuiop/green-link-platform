@@ -46,7 +46,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/vendors", "/api/vendors/**").hasAnyRole("SUPER_ADMIN", "ORDERING")
                 .requestMatchers("/api/photos", "/api/photos/**").hasAnyRole("SUPER_ADMIN", "ORDERING")
                 .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").authenticated()
-                .requestMatchers("/api/products", "/api/products/**").hasAnyRole("SUPER_ADMIN", "ORDERING")
+                .requestMatchers("/api/products", "/api/products/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/orders", "/api/orders/**").authenticated()
                 .anyRequest().authenticated()
             )

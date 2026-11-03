@@ -137,13 +137,15 @@ export default function ProductsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">상품관리</h1>
-        <Button
-          className="bg-green-700 hover:bg-green-800"
-          onClick={openRegister}
-          disabled={role === 'SUPER_ADMIN' && selectedCompanyId == null}
-        >
-          상품 등록
-        </Button>
+        {role === 'SUPER_ADMIN' && (
+          <Button
+            className="bg-green-700 hover:bg-green-800"
+            onClick={openRegister}
+            disabled={selectedCompanyId == null}
+          >
+            상품 등록
+          </Button>
+        )}
       </div>
 
       {role === 'SUPER_ADMIN' && (
@@ -178,7 +180,7 @@ export default function ProductsPage() {
               <TableHead className="w-36 text-right">기본가격</TableHead>
               <TableHead>메모</TableHead>
               <TableHead className="w-32">등록일</TableHead>
-              <TableHead className="w-24 text-center">관리</TableHead>
+              {role === 'SUPER_ADMIN' && <TableHead className="w-24 text-center">관리</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -198,12 +200,16 @@ export default function ProductsPage() {
               products.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell>
-                    <button
-                      onClick={() => openEdit(product)}
-                      className="font-medium text-blue-700 hover:underline"
-                    >
-                      {product.name}
-                    </button>
+                    {role === 'SUPER_ADMIN' ? (
+                      <button
+                        onClick={() => openEdit(product)}
+                        className="font-medium text-blue-700 hover:underline"
+                      >
+                        {product.name}
+                      </button>
+                    ) : (
+                      <span className="font-medium">{product.name}</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right text-sm">
                     {product.price.toLocaleString()}원
@@ -212,22 +218,24 @@ export default function ProductsPage() {
                   <TableCell className="text-sm text-gray-500">
                     {product.createdAt.slice(0, 10)}
                   </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex justify-center gap-1.5">
-                      <button
-                        onClick={() => openEdit(product)}
-                        className="rounded border px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-50"
-                      >
-                        수정
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(product)}
-                        className="rounded border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50"
-                      >
-                        삭제
-                      </button>
-                    </div>
-                  </TableCell>
+                  {role === 'SUPER_ADMIN' && (
+                    <TableCell className="text-center">
+                      <div className="flex justify-center gap-1.5">
+                        <button
+                          onClick={() => openEdit(product)}
+                          className="rounded border px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                        >
+                          수정
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(product)}
+                          className="rounded border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50"
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
@@ -261,12 +269,16 @@ export default function ProductsPage() {
             <div key={product.id} className="rounded-lg border bg-white p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <button
-                    onClick={() => openEdit(product)}
-                    className="font-medium text-blue-700 hover:underline"
-                  >
-                    {product.name}
-                  </button>
+                  {role === 'SUPER_ADMIN' ? (
+                    <button
+                      onClick={() => openEdit(product)}
+                      className="font-medium text-blue-700 hover:underline"
+                    >
+                      {product.name}
+                    </button>
+                  ) : (
+                    <span className="font-medium">{product.name}</span>
+                  )}
                   <div className="mt-1 text-sm font-semibold text-green-700">
                     {product.price.toLocaleString()}원
                   </div>
@@ -275,20 +287,22 @@ export default function ProductsPage() {
                   )}
                   <div className="mt-1 text-xs text-gray-400">{product.createdAt.slice(0, 10)}</div>
                 </div>
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={() => openEdit(product)}
-                    className="rounded border px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-50"
-                  >
-                    수정
-                  </button>
-                  <button
-                    onClick={() => setDeleteTarget(product)}
-                    className="rounded border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50"
-                  >
-                    삭제
-                  </button>
-                </div>
+                {role === 'SUPER_ADMIN' && (
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => openEdit(product)}
+                      className="rounded border px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                    >
+                      수정
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(product)}
+                      className="rounded border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))
