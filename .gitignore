@@ -35,4 +35,5 @@ logs/
 # docs
 docs
 
-.playwright-mcptest-upload-comparison.png
+.playwright-mcp
+test-upload-comparison.png
