@@ -287,12 +287,25 @@ export default function NewOrderPage() {
             </div>
             <div className="space-y-1.5">
               <Label>추가비용</Label>
-              <Input
-                type="number"
-                placeholder="0"
-                value={extraCost}
-                onChange={(e) => setExtraCost(e.target.value)}
-              />
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={extraCost}
+                  onChange={(e) => setExtraCost(e.target.value)}
+                  className="flex-1"
+                />
+                {[10000, 20000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setExtraCost(String(amt))}
+                    className="shrink-0 rounded-md border px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    {amt.toLocaleString()}원
+                  </button>
+                ))}
+              </div>
               {extraCost && amount ? (
                 <p className="text-xs text-gray-500">
                   최종 발주금액: {(Number(amount) + Number(extraCost)).toLocaleString()}원
@@ -330,7 +343,7 @@ export default function NewOrderPage() {
                 ))}
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr]">
                 <div className="space-y-1.5">
                   <Label>
                     {selectedEventType === '장례식' ? '장례식장' : selectedEventType === '결혼식' ? '예식장' : '장소'}
@@ -418,15 +431,35 @@ export default function NewOrderPage() {
           <CardContent className="space-y-2 pt-2 pb-3">
             <div className="space-y-1">
               <Label>배송날짜 *</Label>
-              <Input
-                type="date"
-                value={deliveryDate}
-                onChange={(e) => {
-                  setDeliveryDate(e.target.value)
-                  if (e.target.value) setErrors((prev) => ({ ...prev, deliveryDate: undefined }))
-                }}
-                className={cn(errors.deliveryDate && 'border-red-500 focus-visible:ring-red-500')}
-              />
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="date"
+                  value={deliveryDate}
+                  onChange={(e) => {
+                    setDeliveryDate(e.target.value)
+                    if (e.target.value) setErrors((prev) => ({ ...prev, deliveryDate: undefined }))
+                  }}
+                  className={cn('flex-1', errors.deliveryDate && 'border-red-500 focus-visible:ring-red-500')}
+                />
+                {(['금일', '익일'] as const).map((label, offset) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => {
+                      const d = new Date()
+                      d.setDate(d.getDate() + offset)
+                      const yyyy = d.getFullYear()
+                      const mm = String(d.getMonth() + 1).padStart(2, '0')
+                      const dd = String(d.getDate()).padStart(2, '0')
+                      setDeliveryDate(`${yyyy}-${mm}-${dd}`)
+                      setErrors((prev) => ({ ...prev, deliveryDate: undefined }))
+                    }}
+                    className="shrink-0 rounded-md border px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               {errors.deliveryDate && <p className="text-xs text-red-500">{errors.deliveryDate}</p>}
             </div>
             <div className="space-y-1">
@@ -478,22 +511,6 @@ export default function NewOrderPage() {
               {errors.deliveryHour && <p className="text-xs text-red-500">{errors.deliveryHour}</p>}
             </div>
 
-            <div className="space-y-1">
-              <Label>주소</Label>
-              <Input
-                placeholder="도로명 주소 검색"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>상세주소</Label>
-              <Input
-                placeholder="상세주소"
-                value={addressDetail}
-                onChange={(e) => setAddressDetail(e.target.value)}
-              />
-            </div>
           </CardContent>
         </Card>
 
