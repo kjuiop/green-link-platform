@@ -47,5 +47,6 @@ public record OrderResult(
         boolean hasReceipt,
         String receiptReceiverName,
         String receiptReceiverRelation,
-        boolean isDeleted
+        boolean isDeleted,
+        String messageSentAt
 ) {}

@@ -10,6 +10,7 @@ import com.greenlink.core.domain.sms.model.SmsStatus;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.JPAExpressions;
@@ -36,7 +37,7 @@ public class OrderQueryRepository {
         return queryFactory
                 .selectFrom(order)
                 .where(buildWhere(condition, order))
-                .orderBy(pendingFirst(order), order.createdAt.desc())
+                .orderBy(buildOrderBy(condition, order))
                 .fetch();
     }
 
@@ -47,7 +48,7 @@ public class OrderQueryRepository {
         List<OrderJpaEntity> content = queryFactory
                 .selectFrom(order)
                 .where(where)
-                .orderBy(pendingFirst(order), order.createdAt.desc())
+                .orderBy(buildOrderBy(condition, order))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
@@ -67,6 +68,26 @@ public class OrderQueryRepository {
         Long amountSum = queryFactory.select(order.amount.sum()).from(order).where(where).fetchOne();
         Long extraCostSum = queryFactory.select(order.extraCost.sum()).from(order).where(where).fetchOne();
         return (amountSum != null ? amountSum : 0L) + (extraCostSum != null ? extraCostSum : 0L);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private OrderSpecifier<?>[] buildOrderBy(OrderSearchCondition condition, QOrderJpaEntity order) {
+        if ("messageSentAt".equals(condition.sortBy())) {
+            QSmsMessageJpaEntity sms = QSmsMessageJpaEntity.smsMessageJpaEntity;
+            Expression<String> maxSentAt = (Expression<String>) JPAExpressions
+                    .select(sms.sentAt.max())
+                    .from(sms)
+                    .where(sms.orderId.eq(order.id).and(sms.status.eq(SmsStatus.SUCCESS)));
+            boolean desc = "desc".equalsIgnoreCase(condition.sortDir());
+            return new OrderSpecifier[]{
+                new OrderSpecifier(
+                    desc ? com.querydsl.core.types.Order.DESC : com.querydsl.core.types.Order.ASC,
+                    maxSentAt,
+                    OrderSpecifier.NullHandling.NullsLast
+                )
+            };
+        }
+        return new OrderSpecifier[]{pendingFirst(order), order.createdAt.desc()};
     }
 
     private OrderSpecifier<Integer> pendingFirst(QOrderJpaEntity order) {

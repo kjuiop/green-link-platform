@@ -159,7 +159,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Map<Long, VendorInfo> infoMap = buildVendorInfoMap();
         Map<Long, OrderingInfo> orderingInfoMap = buildOrderingCompanyInfoMap();
         List<Long> orderIds = orders.stream().map(Order::getId).toList();
-        Map<Long, String> msgStatusMap = buildMessageStatusMap(orderIds);
+        Map<Long, MessageInfo> msgInfoMap = buildMessageInfoMap(orderIds);
         Map<Long, Long> refCountMap = orderIds.isEmpty() ? Map.of() : referencePhotoRepository.countByOrderIds(orderIds);
         Map<Long, ReceiptConfirmation> receiptMap = buildReceiptMap(orderIds);
         return orders.stream()
@@ -167,7 +167,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                     VendorInfo v = infoMap.get(o.getVendorId());
                     OrderingInfo oi = o.getOrderingCompanyId() != null ? orderingInfoMap.get(o.getOrderingCompanyId()) : null;
                     int refCount = refCountMap.getOrDefault(o.getId(), 0L).intValue();
-                    return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, msgStatusMap.get(o.getId()), refCount, receiptMap.get(o.getId()));
+                    MessageInfo mi = msgInfoMap.getOrDefault(o.getId(), new MessageInfo("NONE", null));
+                    return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, mi.status(), mi.sentAt(), refCount, receiptMap.get(o.getId()));
                 })
                 .toList();
     }
@@ -178,14 +179,15 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Map<Long, VendorInfo> infoMap = buildVendorInfoMap();
         Map<Long, OrderingInfo> orderingInfoMap = buildOrderingCompanyInfoMap();
         List<Long> orderIds = page.getContent().stream().map(Order::getId).toList();
-        Map<Long, String> msgStatusMap = buildMessageStatusMap(orderIds);
+        Map<Long, MessageInfo> msgInfoMap = buildMessageInfoMap(orderIds);
         Map<Long, Long> refCountMap = orderIds.isEmpty() ? Map.of() : referencePhotoRepository.countByOrderIds(orderIds);
         Map<Long, ReceiptConfirmation> receiptMap = buildReceiptMap(orderIds);
         Page<OrderResult> resultPage = page.map(o -> {
             VendorInfo v = infoMap.get(o.getVendorId());
             OrderingInfo oi = o.getOrderingCompanyId() != null ? orderingInfoMap.get(o.getOrderingCompanyId()) : null;
             int refCount = refCountMap.getOrDefault(o.getId(), 0L).intValue();
-            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, msgStatusMap.get(o.getId()), refCount, receiptMap.get(o.getId()));
+            MessageInfo mi = msgInfoMap.getOrDefault(o.getId(), new MessageInfo("NONE", null));
+            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, mi.status(), mi.sentAt(), refCount, receiptMap.get(o.getId()));
         });
         long totalAmount = orderRepository.sumAmount(condition);
         return PageResult.of(resultPage, totalAmount);
@@ -194,6 +196,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     private record VendorInfo(String name, String phone) {}
 
     private record OrderingInfo(String name, String phone) {}
+
+    private record MessageInfo(String status, String sentAt) {}
 
     private Map<Long, VendorInfo> buildVendorInfoMap() {
         List<Admin> adminsWithCompany = adminRepository.findAllVendors();
@@ -235,7 +239,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         return companyRepository.findById(orderingCompanyId).map(Company::getPhone).orElse(null);
     }
 
-    private OrderResult toResult(Order order, String vendorName, String vendorPhone, String orderingCompanyName, String orderingCompanyPhone, String messageStatus, int referencePhotoCount, ReceiptConfirmation receipt) {
+    private OrderResult toResult(Order order, String vendorName, String vendorPhone, String orderingCompanyName, String orderingCompanyPhone, String messageStatus, String messageSentAt, int referencePhotoCount, ReceiptConfirmation receipt) {
         return new OrderResult(
                 order.getId(),
                 order.getOrderNumber(),
@@ -283,7 +287,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 receipt != null,
                 receipt != null ? receipt.getReceiverName() : null,
                 receipt != null ? receipt.getReceiverRelation() : null,
-                order.isDeleted()
+                order.isDeleted(),
+                messageSentAt
         );
     }
 
@@ -293,20 +298,26 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 .collect(Collectors.toMap(ReceiptConfirmation::getOrderId, r -> r));
     }
 
-    private Map<Long, String> buildMessageStatusMap(List<Long> orderIds) {
+    private Map<Long, MessageInfo> buildMessageInfoMap(List<Long> orderIds) {
         if (orderIds.isEmpty()) return Map.of();
         List<SmsMessage> messages = smsMessageRepository.findAllByOrderIdIn(orderIds);
         Map<Long, List<SmsMessage>> byOrder = messages.stream()
                 .collect(Collectors.groupingBy(SmsMessage::getOrderId));
-        Map<Long, String> result = new HashMap<>();
+        Map<Long, MessageInfo> result = new HashMap<>();
         for (Long id : orderIds) {
             List<SmsMessage> msgs = byOrder.getOrDefault(id, List.of());
             if (msgs.isEmpty()) {
-                result.put(id, "NONE");
+                result.put(id, new MessageInfo("NONE", null));
             } else if (msgs.stream().anyMatch(m -> m.getStatus() == SmsStatus.SUCCESS)) {
-                result.put(id, "SENT");
+                String sentAt = msgs.stream()
+                        .filter(m -> m.getStatus() == SmsStatus.SUCCESS)
+                        .map(SmsMessage::getSentAt)
+                        .filter(Objects::nonNull)
+                        .findFirst()
+                        .orElse(null);
+                result.put(id, new MessageInfo("SENT", sentAt));
             } else {
-                result.put(id, "FAIL");
+                result.put(id, new MessageInfo("FAIL", null));
             }
         }
         return result;
@@ -479,10 +490,17 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     private OrderResult toResult(Order order) {
         List<SmsMessage> msgs = smsMessageRepository.findAllByOrderId(order.getId());
         String messageStatus;
+        String messageSentAt = null;
         if (msgs.isEmpty()) {
             messageStatus = "NONE";
         } else if (msgs.stream().anyMatch(m -> m.getStatus() == SmsStatus.SUCCESS)) {
             messageStatus = "SENT";
+            messageSentAt = msgs.stream()
+                    .filter(m -> m.getStatus() == SmsStatus.SUCCESS)
+                    .map(SmsMessage::getSentAt)
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .orElse(null);
         } else {
             messageStatus = "FAIL";
         }
@@ -495,6 +513,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 resolveOrderingCompanyName(order.getOrderingCompanyId()),
                 resolveOrderingCompanyPhone(order.getOrderingCompanyId()),
                 messageStatus,
+                messageSentAt,
                 refCount,
                 receipt);
     }
