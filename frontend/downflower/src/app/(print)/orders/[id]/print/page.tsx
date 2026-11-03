@@ -170,8 +170,20 @@ export default function PrintOrderPage() {
             <tr>
               <td>리본</td>
               <td colSpan={2} className="left">
-                경조사어: {order.ribbonRight}<br />
-                보내시는 분: {order.ribbonLeft}
+                {order.ribbonExtras ? (
+                  <>
+                    {[{ left: order.ribbonLeft, right: order.ribbonRight }, ...order.ribbonExtras].map((r, i) => (
+                      <span key={i} style={{ display: 'block' }}>
+                        {i + 1}. 경조사어: {r.right} / 보내시는 분: {r.left}
+                      </span>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    경조사어: {order.ribbonRight}<br />
+                    보내시는 분: {order.ribbonLeft}
+                  </>
+                )}
               </td>
             </tr>
             {order.eventInfo && (
@@ -233,8 +245,20 @@ export default function PrintOrderPage() {
             <tr>
               <td>리본</td>
               <td colSpan={2} className="left">
-                경조사어: {order.ribbonRight}<br />
-                보내시는 분: {order.ribbonLeft}
+                {order.ribbonExtras ? (
+                  <>
+                    {[{ left: order.ribbonLeft, right: order.ribbonRight }, ...order.ribbonExtras].map((r, i) => (
+                      <span key={i} style={{ display: 'block' }}>
+                        {i + 1}. 경조사어: {r.right} / 보내시는 분: {r.left}
+                      </span>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    경조사어: {order.ribbonRight}<br />
+                    보내시는 분: {order.ribbonLeft}
+                  </>
+                )}
               </td>
             </tr>
             <tr>

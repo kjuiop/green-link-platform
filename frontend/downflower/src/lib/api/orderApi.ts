@@ -39,6 +39,7 @@ type BackendOrder = {
   eventInfo: string | null
   ribbonLeft: string | null
   ribbonRight: string | null
+  ribbonExtras: string | null
   ordererName: string
   ordererPhone: string
   recipientName: string | null
@@ -82,6 +83,7 @@ export type CreateOrderPayload = {
   eventInfo: string
   ribbonLeft: string
   ribbonRight: string
+  ribbonExtras?: string
   ordererName: string
   ordererPhone: string
   recipientName: string
@@ -128,6 +130,7 @@ function toFrontend(o: BackendOrder): Order {
     eventInfo: o.eventInfo ?? undefined,
     ribbonLeft: o.ribbonLeft ?? '',
     ribbonRight: o.ribbonRight ?? '',
+    ribbonExtras: o.ribbonExtras ? JSON.parse(o.ribbonExtras) : undefined,
     ordererName: o.ordererName,
     ordererPhone: o.ordererPhone,
     recipientName: o.recipientName ?? undefined,

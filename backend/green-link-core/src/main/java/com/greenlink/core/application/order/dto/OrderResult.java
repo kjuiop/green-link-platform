@@ -28,6 +28,7 @@ public record OrderResult(
         String eventInfo,
         String ribbonLeft,
         String ribbonRight,
+        String ribbonExtras,
         String ordererName,
         String ordererPhone,
         String recipientName,
