@@ -25,6 +25,7 @@ public class Order {
     private String eventInfo;
     private String ribbonLeft;
     private String ribbonRight;
+    private String ribbonExtras;
     private String ordererName;
     private String ordererPhone;
     private String recipientName;
@@ -65,6 +66,7 @@ public class Order {
             String eventInfo,
             String ribbonLeft,
             String ribbonRight,
+            String ribbonExtras,
             String ordererName,
             String ordererPhone,
             String recipientName,
@@ -100,6 +102,7 @@ public class Order {
         o.eventInfo = eventInfo;
         o.ribbonLeft = ribbonLeft;
         o.ribbonRight = ribbonRight;
+        o.ribbonExtras = ribbonExtras;
         o.ordererName = ordererName;
         o.ordererPhone = ordererPhone;
         o.recipientName = recipientName;
@@ -138,6 +141,7 @@ public class Order {
             String eventInfo,
             String ribbonLeft,
             String ribbonRight,
+            String ribbonExtras,
             String ordererName,
             String ordererPhone,
             String recipientName,
@@ -178,6 +182,7 @@ public class Order {
         o.eventInfo = eventInfo;
         o.ribbonLeft = ribbonLeft;
         o.ribbonRight = ribbonRight;
+        o.ribbonExtras = ribbonExtras;
         o.ordererName = ordererName;
         o.ordererPhone = ordererPhone;
         o.recipientName = recipientName;
@@ -250,6 +255,7 @@ public class Order {
             String eventInfo,
             String ribbonLeft,
             String ribbonRight,
+            String ribbonExtras,
             String ordererName,
             String ordererPhone,
             String recipientName,
@@ -281,6 +287,7 @@ public class Order {
         this.eventInfo = eventInfo;
         this.ribbonLeft = ribbonLeft;
         this.ribbonRight = ribbonRight;
+        this.ribbonExtras = ribbonExtras;
         this.ordererName = ordererName;
         this.ordererPhone = ordererPhone;
         this.recipientName = recipientName;
@@ -317,6 +324,7 @@ public class Order {
     public String getEventInfo() { return eventInfo; }
     public String getRibbonLeft() { return ribbonLeft; }
     public String getRibbonRight() { return ribbonRight; }
+    public String getRibbonExtras() { return ribbonExtras; }
     public String getOrdererName() { return ordererName; }
     public String getOrdererPhone() { return ordererPhone; }
     public String getRecipientName() { return recipientName; }

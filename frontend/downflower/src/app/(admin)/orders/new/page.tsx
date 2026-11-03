@@ -56,8 +56,9 @@ export default function NewOrderPage() {
   const [scheduledMinute, setScheduledMinute] = useState('00')
 
   // 리본 / 메모
-  const [ribbonLeft, setRibbonLeft] = useState('')
-  const [ribbonRight, setRibbonRight] = useState('')
+  const [ribbons, setRibbons] = useState<Array<{ left: string; right: string }>>([{ left: '', right: '' }])
+  const ribbonLeft = ribbons[0]?.left ?? ''
+  const ribbonRight = ribbons[0]?.right ?? ''
   const [adminMemo, setAdminMemo] = useState('')
   const [vendorMemo, setVendorMemo] = useState('')
   const [referenceItems, setReferenceItems] = useState<{ file: File; url: string }[]>([])
@@ -140,8 +141,9 @@ export default function NewOrderPage() {
         placeName,
         roomName,
         eventInfo,
-        ribbonLeft,
-        ribbonRight,
+        ribbonLeft: ribbons[0]?.left ?? '',
+        ribbonRight: ribbons[0]?.right ?? '',
+        ribbonExtras: ribbons.length > 1 ? JSON.stringify(ribbons.slice(1)) : undefined,
         ordererName,
         ordererPhone,
         recipientName,
@@ -264,7 +266,14 @@ export default function NewOrderPage() {
                   type="number"
                   min={1}
                   value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                  onChange={(e) => {
+                    const n = Math.max(1, Number(e.target.value))
+                    setQuantity(n)
+                    setRibbons((prev) => {
+                      if (n > prev.length) return [...prev, ...Array.from({ length: n - prev.length }, () => ({ left: '', right: '' }))]
+                      return prev.slice(0, n)
+                    })
+                  }}
                 />
               </div>
             </div>
@@ -382,42 +391,53 @@ export default function NewOrderPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">리본 문구</CardTitle>
+              <CardTitle className="text-sm">리본 문구 {quantity > 1 && <span className="ml-1 text-xs font-normal text-gray-400">({quantity}개 화환)</span>}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>보내는이 *</Label>
-                <Input
-                  placeholder="예: 주식회사 OO 부장 홍길동"
-                  value={ribbonLeft}
-                  onChange={(e) => setRibbonLeft(e.target.value)}
-                  className={cn(errors.ribbonLeft && 'border-red-500 focus-visible:ring-red-500')}
-                />
-                {errors.ribbonLeft && <p className="text-xs text-red-500">{errors.ribbonLeft}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label>경조문구</Label>
-                <Input
-                  placeholder="예: 삼가 고인의 명복을 빕니다"
-                  value={ribbonRight}
-                  onChange={(e) => setRibbonRight(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-xs text-gray-400">경조문구 선택 (클릭하면 위 입력란에 자동 입력)</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {RIBBON_PHRASES.map((phrase) => (
-                    <button
-                      key={phrase}
-                      type="button"
-                      onClick={() => setRibbonRight(phrase)}
-                      className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:border-green-600 hover:bg-green-50 hover:text-green-700"
-                    >
-                      {phrase}
-                    </button>
-                  ))}
+            <CardContent className="space-y-4">
+              {ribbons.map((ribbon, idx) => (
+                <div key={idx} className={cn('space-y-2', idx > 0 && 'border-t pt-4')}>
+                  {quantity > 1 && (
+                    <p className="text-xs font-medium text-gray-500">화환 {idx + 1}번</p>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label>{idx === 0 ? '보내는이 *' : '보내는이'}</Label>
+                    <Input
+                      placeholder="예: 주식회사 OO 부장 홍길동"
+                      value={ribbon.left}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setRibbons((prev) => prev.map((r, i) => i === idx ? { ...r, left: val } : r))
+                        if (idx === 0) setErrors((prev) => ({ ...prev, ribbonLeft: undefined }))
+                      }}
+                      className={cn(idx === 0 && errors.ribbonLeft && 'border-red-500 focus-visible:ring-red-500')}
+                    />
+                    {idx === 0 && errors.ribbonLeft && <p className="text-xs text-red-500">{errors.ribbonLeft}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>경조문구</Label>
+                    <Input
+                      placeholder="예: 삼가 고인의 명복을 빕니다"
+                      value={ribbon.right}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setRibbons((prev) => prev.map((r, i) => i === idx ? { ...r, right: val } : r))
+                      }}
+                    />
+                    <div className="flex flex-wrap gap-1.5">
+                      {RIBBON_PHRASES.map((phrase) => (
+                        <button
+                          key={phrase}
+                          type="button"
+                          onClick={() => setRibbons((prev) => prev.map((r, i) => i === idx ? { ...r, right: phrase } : r))}
+                          className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:border-green-600 hover:bg-green-50 hover:text-green-700"
+                        >
+                          {phrase}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </CardContent>
           </Card>
         </div>

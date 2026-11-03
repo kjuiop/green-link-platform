@@ -81,6 +81,9 @@ public class OrderJpaEntity extends BaseJpaEntity {
     @Column(length = 100)
     private String ribbonRight;
 
+    @Column(columnDefinition = "TEXT")
+    private String ribbonExtras;
+
     @Column(nullable = false, length = 50)
     private String ordererName;
 
@@ -150,6 +153,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
         e.eventInfo = order.getEventInfo();
         e.ribbonLeft = order.getRibbonLeft();
         e.ribbonRight = order.getRibbonRight();
+        e.ribbonExtras = order.getRibbonExtras();
         e.ordererName = order.getOrdererName();
         e.ordererPhone = order.getOrdererPhone();
         e.recipientName = order.getRecipientName();
@@ -192,6 +196,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
                 eventInfo,
                 ribbonLeft,
                 ribbonRight,
+                ribbonExtras,
                 ordererName,
                 ordererPhone,
                 recipientName,
