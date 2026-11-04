@@ -81,6 +81,10 @@ function getMonthRange(year: number, month: number): { from: string; to: string 
   return { from: `${year}-${m}-01`, to: `${year}-${m}-${String(lastDay).padStart(2, '0')}` }
 }
 
+function formatDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export default function OrdersPage() {
   const today = new Date()
   const initYear = today.getFullYear()
@@ -177,6 +181,16 @@ export default function OrdersPage() {
     setPage(0)
     setSelectedIds(new Set())
     loadOrders(buildServerParams(from, to), 0)
+  }
+
+  function selectDate(d: Date) {
+    const s = formatDate(d)
+    setDateFrom(s)
+    setDateTo(s)
+    setSelectedMonth(0)
+    setPage(0)
+    setSelectedIds(new Set())
+    loadOrders(buildServerParams(s, s), 0)
   }
 
   const handleSearch = () => {
@@ -343,6 +357,14 @@ export default function OrdersPage() {
             onChange={(e) => { setDateTo(e.target.value); setSelectedMonth(0) }}
             className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
           />
+          <button type="button" onClick={() => selectDate(today)}
+            className="rounded px-2.5 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200">
+            금일
+          </button>
+          <button type="button" onClick={() => { const d = new Date(today); d.setDate(d.getDate() + 1); selectDate(d) }}
+            className="rounded px-2.5 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200">
+            익일
+          </button>
           {isSuperAdmin && (
             <select
               value={deletedFilter}
