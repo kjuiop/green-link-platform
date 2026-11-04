@@ -56,9 +56,8 @@ export default function NewOrderPage() {
   const [scheduledMinute, setScheduledMinute] = useState('00')
 
   // 리본 / 메모
-  const [ribbons, setRibbons] = useState<Array<{ left: string; right: string }>>([{ left: '', right: '' }])
-  const ribbonLeft = ribbons[0]?.left ?? ''
-  const ribbonRight = ribbons[0]?.right ?? ''
+  const [ribbonLefts, setRibbonLefts] = useState<string[]>([''])
+  const [ribbonRights, setRibbonRights] = useState<string[]>([''])
   const [adminMemo, setAdminMemo] = useState('')
   const [vendorMemo, setVendorMemo] = useState('')
   const [referenceItems, setReferenceItems] = useState<{ file: File; url: string }[]>([])
@@ -109,7 +108,7 @@ export default function NewOrderPage() {
     if (!deliveryHour && deliveryTimeType !== '3시간이내' && deliveryTimeType !== '직접입력') next.deliveryHour = '배송시간을 선택해주세요.'
     if (!amount) next.amount = '발주금액을 입력해주세요.'
     if (!recipientName.trim()) next.recipientName = '받는 분 성함을 입력해주세요.'
-    if (!ribbonLeft.trim()) next.ribbonLeft = '보내는이를 입력해주세요.'
+    if (!(ribbonLefts[0] ?? '').trim()) next.ribbonLeft = '보내는이를 입력해주세요.'
     if (!ordererPhone.trim()) next.ordererPhone = '주문자 휴대폰을 입력해주세요.'
     setErrors(next)
     if (Object.keys(next).length > 0) return
@@ -141,9 +140,17 @@ export default function NewOrderPage() {
         placeName,
         roomName,
         eventInfo,
-        ribbonLeft: ribbons[0]?.left ?? '',
-        ribbonRight: ribbons[0]?.right ?? '',
-        ribbonExtras: ribbons.length > 1 ? JSON.stringify(ribbons.slice(1)) : undefined,
+        ribbonLeft: ribbonLefts[0] ?? '',
+        ribbonRight: ribbonRights[0] ?? '',
+        ribbonExtras: (() => {
+          const maxLen = Math.max(ribbonLefts.length, ribbonRights.length)
+          if (maxLen <= 1) return undefined
+          const extras = Array.from({ length: maxLen - 1 }, (_, i) => ({
+            left: ribbonLefts[i + 1] ?? '',
+            right: ribbonRights[i + 1] ?? '',
+          }))
+          return JSON.stringify(extras)
+        })(),
         ordererName,
         ordererPhone,
         recipientName,
@@ -266,14 +273,7 @@ export default function NewOrderPage() {
                   type="number"
                   min={1}
                   value={quantity}
-                  onChange={(e) => {
-                    const n = Math.max(1, Number(e.target.value))
-                    setQuantity(n)
-                    setRibbons((prev) => {
-                      if (n > prev.length) return [...prev, ...Array.from({ length: n - prev.length }, () => ({ left: '', right: '' }))]
-                      return prev.slice(0, n)
-                    })
-                  }}
+                  onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
                 />
               </div>
             </div>
@@ -368,11 +368,7 @@ export default function NewOrderPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>
-                    {selectedEventType === '장례식' ? '받는 분 (예: 상주 홍길동)' :
-                     selectedEventType === '결혼식' ? '받는 분 (예: 신랑 홍길동)' :
-                     '받는 분'}
-                  </Label>
+                  <Label>받는 분</Label>
                   <Input
                     placeholder={
                       selectedEventType === '장례식' ? '예: 상주 홍길동' :
@@ -391,36 +387,43 @@ export default function NewOrderPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">리본 문구 {quantity > 1 && <span className="ml-1 text-xs font-normal text-gray-400">({quantity}개 화환)</span>}</CardTitle>
+              <CardTitle className="text-sm">리본 문구</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {ribbons.map((ribbon, idx) => (
-                <div key={idx} className={cn('space-y-2', idx > 0 && 'border-t pt-4')}>
-                  {quantity > 1 && (
-                    <p className="text-xs font-medium text-gray-500">화환 {idx + 1}번</p>
-                  )}
-                  <div className="space-y-1.5">
-                    <Label>{idx === 0 ? '보내는이 *' : '보내는이'}</Label>
-                    <Input
-                      placeholder="예: 주식회사 OO 부장 홍길동"
-                      value={ribbon.left}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        setRibbons((prev) => prev.map((r, i) => i === idx ? { ...r, left: val } : r))
-                        if (idx === 0) setErrors((prev) => ({ ...prev, ribbonLeft: undefined }))
-                      }}
-                      className={cn(idx === 0 && errors.ribbonLeft && 'border-red-500 focus-visible:ring-red-500')}
-                    />
-                    {idx === 0 && errors.ribbonLeft && <p className="text-xs text-red-500">{errors.ribbonLeft}</p>}
+            <CardContent className="space-y-5">
+              {/* 경조문구 */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>경조문구</Label>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setRibbonRights((prev) => [...prev, ''])}
+                      className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
+                    >
+                      추가
+                    </button>
+                    {ribbonRights.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setRibbonRights((prev) => prev.slice(0, -1))}
+                        className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
+                      >
+                        삭제
+                      </button>
+                    )}
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>경조문구</Label>
+                </div>
+                {ribbonRights.map((right, idx) => (
+                  <div key={idx} className="space-y-1.5">
+                    {ribbonRights.length > 1 && (
+                      <p className="text-xs font-medium text-gray-400">{idx + 1}번</p>
+                    )}
                     <Input
                       placeholder="예: 삼가 고인의 명복을 빕니다"
-                      value={ribbon.right}
+                      value={right}
                       onChange={(e) => {
                         const val = e.target.value
-                        setRibbons((prev) => prev.map((r, i) => i === idx ? { ...r, right: val } : r))
+                        setRibbonRights((prev) => prev.map((r, i) => i === idx ? val : r))
                       }}
                     />
                     <div className="flex flex-wrap gap-1.5">
@@ -428,7 +431,7 @@ export default function NewOrderPage() {
                         <button
                           key={phrase}
                           type="button"
-                          onClick={() => setRibbons((prev) => prev.map((r, i) => i === idx ? { ...r, right: phrase } : r))}
+                          onClick={() => setRibbonRights((prev) => prev.map((r, i) => i === idx ? phrase : r))}
                           className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:border-green-600 hover:bg-green-50 hover:text-green-700"
                         >
                           {phrase}
@@ -436,8 +439,51 @@ export default function NewOrderPage() {
                       ))}
                     </div>
                   </div>
+                ))}
+              </div>
+
+              {/* 보내는이 */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>보내는이 *</Label>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setRibbonLefts((prev) => [...prev, ''])}
+                      className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
+                    >
+                      추가
+                    </button>
+                    {ribbonLefts.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setRibbonLefts((prev) => prev.slice(0, -1))}
+                        className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
+                      >
+                        삭제
+                      </button>
+                    )}
+                  </div>
                 </div>
-              ))}
+                {ribbonLefts.map((left, idx) => (
+                  <div key={idx} className="space-y-1">
+                    {ribbonLefts.length > 1 && (
+                      <p className="text-xs font-medium text-gray-400">{idx + 1}번</p>
+                    )}
+                    <Input
+                      placeholder="예: 주식회사 OO 부장 홍길동"
+                      value={left}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setRibbonLefts((prev) => prev.map((r, i) => i === idx ? val : r))
+                        if (idx === 0) setErrors((prev) => ({ ...prev, ribbonLeft: undefined }))
+                      }}
+                      className={cn(idx === 0 && errors.ribbonLeft && 'border-red-500 focus-visible:ring-red-500')}
+                    />
+                    {idx === 0 && errors.ribbonLeft && <p className="text-xs text-red-500">{errors.ribbonLeft}</p>}
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
