@@ -485,7 +485,7 @@ export default function OrderingOrderDetailPage() {
                       onChange={(e) => set('placeName', e.target.value)}
                     />
                   </Field>
-                  <Field label={draft.eventType === '장례식' ? '받는 분 (예: 상주 홍길동)' : draft.eventType === '결혼식' ? '받는 분 (예: 신랑 홍길동)' : '받는 분'}>
+                  <Field label="받는 분">
                     <Input
                       placeholder={
                         draft.eventType === '장례식' ? '예: 상주 홍길동' :
