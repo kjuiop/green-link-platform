@@ -26,6 +26,9 @@ public class MemberController {
                 && token.getDetails() instanceof Long cid) {
             companyId = cid;
         }
+        if (companyId == null) {
+            return ResponseEntity.noContent().build();
+        }
         return ResponseEntity.ok(getMemberSummaryUseCase.getMemberSummary(companyId));
     }
 }
