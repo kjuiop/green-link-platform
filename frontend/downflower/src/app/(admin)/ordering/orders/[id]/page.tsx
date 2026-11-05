@@ -153,6 +153,7 @@ export default function OrderingOrderDetailPage() {
       setDraft(updated)
       const sms = await fetchSmsMessages(id).catch(() => [])
       setSmsMessages(sms)
+      window.dispatchEvent(new Event('member-summary-refresh'))
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : '배송완료 처리에 실패했습니다.')
     } finally {

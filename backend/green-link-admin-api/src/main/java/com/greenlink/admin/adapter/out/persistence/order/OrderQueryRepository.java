@@ -168,6 +168,14 @@ public class OrderQueryRepository {
                             .and(company.companyName.containsIgnoreCase(condition.orderingCompanyName())))
                     .exists());
         }
+        if (condition.vendorCompanyId() != null) {
+            QAdminJpaEntity admin = QAdminJpaEntity.adminJpaEntity;
+            where.and(order.vendorId.in(
+                    JPAExpressions.select(admin.id)
+                            .from(admin)
+                            .where(admin.companyId.eq(condition.vendorCompanyId()))
+            ));
+        }
         if (condition.messageStatus() != null && !condition.messageStatus().isBlank()) {
             QSmsMessageJpaEntity sms = QSmsMessageJpaEntity.smsMessageJpaEntity;
             switch (condition.messageStatus()) {
