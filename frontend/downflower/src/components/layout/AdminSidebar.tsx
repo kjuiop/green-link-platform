@@ -21,6 +21,8 @@ import { cn } from '@/lib/utils'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { fetchMenusByRole } from '@/lib/api/menuApi'
 import { type MenuItem } from '@/types/menu'
+import { fetchMemberSummary } from '@/lib/api/memberApi'
+import { type MemberSummary } from '@/types/member'
 
 const ICON_MAP: Record<string, LucideIcon> = {
   '/dashboard': LayoutDashboard,
@@ -46,15 +48,47 @@ function isActive(pathname: string, url: string): boolean {
   return pathname === url || pathname.startsWith(url + '/')
 }
 
+function MemberInfoCard({ summary }: { summary: MemberSummary }) {
+  const isOrdering = summary.companyType === 'ORDERING' || summary.companyType === 'BOTH'
+  const isVendor = summary.companyType === 'VENDOR' || summary.companyType === 'BOTH'
+
+  return (
+    <div className="mx-3 my-2 rounded-lg bg-green-700 p-3 text-white text-xs">
+      <div className="mb-1.5 font-semibold text-green-100">회원정보</div>
+      {isOrdering && (
+        <div className="flex justify-between py-0.5 border-b border-green-600">
+          <span>발주금액</span>
+          <span className="font-medium">{summary.orderingAmount.toLocaleString()}원</span>
+        </div>
+      )}
+      {isVendor && (
+        <div className={cn('flex justify-between py-0.5', isOrdering && 'border-b border-green-600')}>
+          <span>수주금액</span>
+          <span className="font-medium">{summary.vendorAmount.toLocaleString()}원</span>
+        </div>
+      )}
+      {isOrdering && (
+        <div className="flex justify-between pt-0.5">
+          <span className="text-green-200">예치금 잔액</span>
+          <span className="text-green-200">
+            {summary.depositBalance != null ? `${summary.depositBalance.toLocaleString()}원` : '-'}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface SidebarNavProps {
   menus: MenuItem[]
   onNavClick?: () => void
   openId: number | null
   onToggle: (id: number) => void
   userName?: string
+  memberSummary?: MemberSummary | null
 }
 
-function SidebarNav({ menus, onNavClick, openId, onToggle, userName }: SidebarNavProps) {
+function SidebarNav({ menus, onNavClick, openId, onToggle, userName, memberSummary }: SidebarNavProps) {
   const pathname = usePathname()
 
   return (
@@ -63,6 +97,8 @@ function SidebarNav({ menus, onNavClick, openId, onToggle, userName }: SidebarNa
         <span className="text-sm font-bold text-green-700">🌿 온우림</span>
         {userName && <span className="ml-2 text-xs text-gray-400">{userName}</span>}
       </div>
+
+      {memberSummary && <MemberInfoCard summary={memberSummary} />}
 
       <nav className="flex-1 overflow-y-auto py-2">
         {menus.map((menu) => {
@@ -152,10 +188,19 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   const [menus, setMenus] = useState<MenuItem[]>([])
   const [openId, setOpenId] = useState<number | null>(null)
   const [userName, setUserName] = useState<string>('')
+  const [memberSummary, setMemberSummary] = useState<MemberSummary | null>(null)
 
   useEffect(() => {
     setUserName(localStorage.getItem('name') ?? '')
     fetchMenusByRole().then(setMenus).catch(() => {})
+    fetchMemberSummary().then(setMemberSummary).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handler = () => fetchMemberSummary().then(setMemberSummary).catch(() => {})
+    window.addEventListener('member-summary-refresh', handler)
+    return () => window.removeEventListener('member-summary-refresh', handler)
   }, [])
 
   useEffect(() => {
@@ -169,7 +214,7 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   return (
     <>
       <aside className="hidden h-screen w-56 flex-col border-r bg-white md:flex">
-        <SidebarNav menus={menus} openId={openId} onToggle={handleToggle} userName={userName} />
+        <SidebarNav menus={menus} openId={openId} onToggle={handleToggle} userName={userName} memberSummary={memberSummary} />
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={(open) => { if (!open) onMobileClose?.() }}>
@@ -180,6 +225,7 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
             openId={openId}
             onToggle={handleToggle}
             userName={userName}
+            memberSummary={memberSummary}
           />
         </SheetContent>
       </Sheet>

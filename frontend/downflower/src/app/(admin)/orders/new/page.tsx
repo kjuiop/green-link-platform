@@ -166,6 +166,7 @@ export default function NewOrderPage() {
       if (referenceItems.length > 0) {
         await uploadReferencePhotos(String(created.id), referenceItems.map((i) => i.file)).catch(() => {})
       }
+      window.dispatchEvent(new Event('member-summary-refresh'))
       router.push('/orders')
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : '발주 등록에 실패했습니다.')
