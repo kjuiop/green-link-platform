@@ -4,7 +4,11 @@ import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.vendor.dto.CreateVendorCommand;
 import com.greenlink.core.application.vendor.dto.UpdateVendorCommand;
 import com.greenlink.core.application.vendor.dto.VendorResult;
+import com.greenlink.core.application.vendor.dto.VendorResult.RegionDto;
 import com.greenlink.core.application.vendor.dto.VendorSignupCommand;
+import com.greenlink.core.application.vendor.dto.VendorSignupCommand.RegionInput;
+import com.greenlink.core.domain.company.model.CompanyCapability;
+import com.greenlink.core.domain.company.model.CompanyRegion;
 import com.greenlink.core.application.vendor.usecase.CreateVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.DeleteVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.GetVendorUseCase;
@@ -163,6 +167,20 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
                 company.updateType(parseCompanyType(cmd.companyType()));
             }
             Company savedCompany = companyRepository.save(company);
+
+            if (cmd.regions() != null) {
+                List<CompanyRegion> regions = cmd.regions().stream()
+                    .map(r -> CompanyRegion.of(savedCompany.getId(), r.sido(), r.sigungu()))
+                    .toList();
+                companyRepository.saveRegions(savedCompany.getId(), regions);
+            }
+            if (cmd.capabilities() != null) {
+                List<CompanyCapability> caps = cmd.capabilities().stream()
+                    .map(CompanyCapability::valueOf)
+                    .toList();
+                companyRepository.saveCapabilities(savedCompany.getId(), caps);
+            }
+
             return toResult(savedAdmin, savedCompany);
         }
 
@@ -240,6 +258,20 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             savedCompany = companyRepository.save(company);
         }
 
+        if (cmd.regions() != null && !cmd.regions().isEmpty()) {
+            List<CompanyRegion> regions = cmd.regions().stream()
+                .map(r -> CompanyRegion.of(savedCompany.getId(), r.sido(), r.sigungu()))
+                .toList();
+            companyRepository.saveRegions(savedCompany.getId(), regions);
+        }
+
+        if (cmd.capabilities() != null && !cmd.capabilities().isEmpty()) {
+            List<CompanyCapability> caps = cmd.capabilities().stream()
+                .map(CompanyCapability::valueOf)
+                .toList();
+            companyRepository.saveCapabilities(savedCompany.getId(), caps);
+        }
+
         Admin vendorAdmin = Admin.createVendorRequest(
             cmd.loginId(),
             passwordEncoder.encode(cmd.password()),
@@ -271,6 +303,16 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
     }
 
     private VendorResult toResult(Admin admin, Company company) {
+        List<RegionDto> regions = List.of();
+        List<String> capabilities = List.of();
+        if (company != null) {
+            regions = companyRepository.findRegionsByCompanyId(company.getId()).stream()
+                .map(r -> new RegionDto(r.sido(), r.sigungu()))
+                .toList();
+            capabilities = companyRepository.findCapabilitiesByCompanyId(company.getId()).stream()
+                .map(Enum::name)
+                .toList();
+        }
         return new VendorResult(
             admin.getId(),
             company != null ? company.getCompanyName() : null,
@@ -283,7 +325,9 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             admin.getLoginId(),
             admin.getStatus().name(),
             admin.getCreatedAt(),
-            company != null && company.getType() != null ? company.getType().name() : null
+            company != null && company.getType() != null ? company.getType().name() : null,
+            regions,
+            capabilities
         );
     }
 }

@@ -7,12 +7,23 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Pagination } from '@/components/ui/Pagination'
-import { Vendor, VendorStatus, CompanyType } from '@/types/vendor'
+import { Vendor, VendorStatus, CompanyType, RegionDto } from '@/types/vendor'
+import RegionSelector from '@/components/vendor/RegionSelector'
 import { PageResult } from '@/types/page'
 import { fetchVendorsPaged, createVendor, updateVendor, updateVendorStatus, deleteVendor } from '@/lib/api/vendorApi'
 import { Search } from 'lucide-react'
 
 const PAGE_SIZE = 20
+
+const CAPABILITY_OPTIONS = [
+  { value: 'ANNIVERSARY', label: '축하' },
+  { value: 'MEMORIAL',    label: '근조' },
+  { value: 'ORCHID_EAST', label: '동양란' },
+  { value: 'ORCHID_WEST', label: '서양란' },
+  { value: 'FLOWER',      label: '꽃' },
+  { value: 'INDOOR',      label: '관엽' },
+  { value: 'RICE_WREATH', label: '쌀화환' },
+]
 
 const STATUS_FILTERS = [
   { label: '전체', value: 'ALL' },
@@ -68,6 +79,9 @@ export default function VendorsPage() {
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  const [modalRegions, setModalRegions] = useState<RegionDto[]>([])
+  const [modalCapabilities, setModalCapabilities] = useState<string[]>([])
 
   const load = useCallback((status: FilterStatus, p: number) => {
     setLoading(true)
@@ -153,6 +167,8 @@ export default function VendorsPage() {
   const openRegister = () => {
     setEditTarget(null)
     setForm(emptyForm)
+    setModalRegions([])
+    setModalCapabilities([])
     setModalError('')
     setModalOpen(true)
   }
@@ -171,6 +187,8 @@ export default function VendorsPage() {
       password: '',
       companyType: vendor.companyType ?? 'VENDOR',
     })
+    setModalRegions(vendor.regions ?? [])
+    setModalCapabilities(vendor.capabilities ?? [])
     setModalError('')
     setModalOpen(true)
   }
@@ -191,6 +209,8 @@ export default function VendorsPage() {
           managerName: form.managerName,
           phone: form.phone,
           companyType: form.companyType,
+          regions: modalRegions,
+          capabilities: modalCapabilities,
         })
       } else {
         await createVendor({
@@ -483,6 +503,40 @@ export default function VendorsPage() {
               <Label>주소</Label>
               <Input placeholder="업체 주소" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
             </div>
+            {(form.companyType === 'VENDOR' || form.companyType === 'BOTH') && (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">서비스 지역</Label>
+                  <RegionSelector selected={modalRegions} onChange={setModalRegions} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">가능상품</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {CAPABILITY_OPTIONS.map((opt) => {
+                      const active = modalCapabilities.includes(opt.value)
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() =>
+                            setModalCapabilities((prev) =>
+                              active ? prev.filter((v) => v !== opt.value) : [...prev, opt.value]
+                            )
+                          }
+                          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                            active
+                              ? 'border-green-700 bg-green-700 text-white'
+                              : 'border-gray-300 bg-white text-gray-600 hover:border-green-500'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
             <div className="space-y-1.5">
               <Label>아이디 *</Label>
               <Input placeholder="영문·숫자 조합 6자 이상" value={form.loginId} onChange={(e) => setForm((f) => ({ ...f, loginId: e.target.value }))} disabled={!!editTarget} />

@@ -13,5 +13,9 @@ public record VendorSignupCommand(
     String companyPhone,
     String address,
     String detailAddress,
-    List<String> roles
-) {}
+    List<String> roles,
+    List<RegionInput> regions,
+    List<String> capabilities
+) {
+    public record RegionInput(String sido, String sigungu) {}
+}

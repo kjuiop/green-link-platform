@@ -1,5 +1,7 @@
 package com.greenlink.core.domain.company.model;
 
+import java.util.List;
+
 public class Company {
 
     private Long id;
@@ -13,6 +15,8 @@ public class Company {
     private CompanyType type;
     private CompanyStatus status;
     private boolean displayYn;
+    private List<CompanyRegion> regions = List.of();
+    private List<CompanyCapability> capabilities = List.of();
 
     private Company() {}
 
@@ -80,4 +84,6 @@ public class Company {
     public CompanyType getType() { return type; }
     public CompanyStatus getStatus() { return status; }
     public boolean isDisplayYn() { return displayYn; }
+    public List<CompanyRegion> getRegions() { return regions; }
+    public List<CompanyCapability> getCapabilities() { return capabilities; }
 }
