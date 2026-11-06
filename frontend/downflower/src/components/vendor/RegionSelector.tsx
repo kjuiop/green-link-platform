@@ -22,8 +22,12 @@ export default function RegionSelector({ selected, onChange }: Props) {
 
   function add() {
     if (!sido || !sigungu) return
-    const already = selected.some((r) => r.sido === sido && r.sigungu === sigungu)
-    if (already) return
+    if (sigungu === '전체') {
+      if (selected.some((r) => r.sido === sido)) return
+    } else {
+      if (selected.some((r) => r.sido === sido && r.sigungu === '전체')) return
+      if (selected.some((r) => r.sido === sido && r.sigungu === sigungu)) return
+    }
     onChange([...selected, { sido, sigungu }])
     setSigungu('')
   }
@@ -53,6 +57,7 @@ export default function RegionSelector({ selected, onChange }: Props) {
           className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 disabled:opacity-50"
         >
           <option value="">시/군/구 선택</option>
+          {sido && <option value="전체">전체</option>}
           {sigunguList.map((sg) => (
             <option key={sg} value={sg}>{sg}</option>
           ))}

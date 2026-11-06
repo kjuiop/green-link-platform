@@ -311,7 +311,7 @@ export default function SignupPage() {
     const nextErrors: { verified?: string; businessDoc?: string; bankDoc?: string } = {}
     if (!verified) nextErrors.verified = '휴대폰 인증을 완료해주세요.'
     if (!businessDoc) nextErrors.businessDoc = '사업자 사본을 첨부해주세요.'
-    if ((selectedRole === 'VENDOR' || selectedRole === 'BOTH') && !bankDoc) nextErrors.bankDoc = '통장 사본을 첨부해주세요.'
+    if (!bankDoc) nextErrors.bankDoc = '통장 사본을 첨부해주세요.'
     if (Object.keys(nextErrors).length > 0) { setErrors(nextErrors); return }
     setErrors({})
     if (password !== passwordConfirm) {
@@ -711,6 +711,10 @@ export default function SignupPage() {
                 <div>
                   <FileUploadField label="사업자 사본" required file={businessDoc} onChange={(f) => { setBusinessDoc(f); if (f) setErrors((prev) => ({ ...prev, businessDoc: undefined })) }} />
                   {!businessDoc && errors.businessDoc && <p className="mt-1 text-xs text-red-500">{errors.businessDoc}</p>}
+                </div>
+                <div>
+                  <FileUploadField label="통장 사본" required file={bankDoc} onChange={(f) => { setBankDoc(f); if (f) setErrors((prev) => ({ ...prev, bankDoc: undefined })) }} />
+                  {!bankDoc && errors.bankDoc && <p className="mt-1 text-xs text-red-500">{errors.bankDoc}</p>}
                 </div>
               </div>
             )}
