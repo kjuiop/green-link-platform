@@ -226,7 +226,10 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     }
 
     private Map<Long, OrderingInfo> buildOrderingCompanyInfoMap() {
-        return companyRepository.findAllByType(com.greenlink.core.domain.company.model.CompanyType.ORDERING).stream()
+        return companyRepository.findAllByTypeIn(List.of(
+                com.greenlink.core.domain.company.model.CompanyType.ORDERING,
+                com.greenlink.core.domain.company.model.CompanyType.BOTH
+        )).stream()
                 .collect(Collectors.toMap(Company::getId, c -> new OrderingInfo(c.getCompanyName(), c.getPhone())));
     }
 
