@@ -104,6 +104,7 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
         eventInfo: draft.eventInfo ?? '',
         ribbonLeft: draft.ribbonLeft ?? '',
         ribbonRight: draft.ribbonRight ?? '',
+        ribbonExtras: draft.ribbonExtras ? JSON.stringify(draft.ribbonExtras) : undefined,
         ordererName: draft.ordererName,
         ordererPhone: draft.ordererPhone,
         recipientName: draft.recipientName ?? '',

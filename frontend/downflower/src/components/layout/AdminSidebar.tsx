@@ -13,22 +13,23 @@ import {
   Settings,
   ChevronDown,
   SlidersHorizontal,
-  Calculator,
   Menu,
   Package,
+  Newspaper,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { fetchMenusByRole } from '@/lib/api/menuApi'
 import { type MenuItem } from '@/types/menu'
+import { fetchMemberSummary } from '@/lib/api/memberApi'
+import { type MemberSummary } from '@/types/member'
 
 const ICON_MAP: Record<string, LucideIcon> = {
   '/dashboard': LayoutDashboard,
   '/orders/new': Plus,
   '/orders': List,
   '/orders/received': ListChecks,
-  '/settlement': Calculator,
   '/settings': Settings,
   '/settings/message-log': MessageSquare,
   '/settings/messages': SlidersHorizontal,
@@ -37,6 +38,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/settings/products': Package,
   '/products': Package,
   '/settings/vendors': Users,
+  '/community': Newspaper,
 }
 
 function isActive(pathname: string, url: string): boolean {
@@ -48,23 +50,75 @@ function isActive(pathname: string, url: string): boolean {
   return pathname === url || pathname.startsWith(url + '/')
 }
 
+const COMPANY_TYPE_LABEL: Record<string, string> = {
+  ORDERING: '발주사',
+  VENDOR: '수주사',
+  BOTH: '수발주사',
+}
+
+function MemberInfoCard({ summary, name, loginId }: { summary: MemberSummary; name: string; loginId: string }) {
+  const isOrdering = summary.companyType === 'ORDERING' || summary.companyType === 'BOTH'
+  const isVendor = summary.companyType === 'VENDOR' || summary.companyType === 'BOTH'
+
+  return (
+    <div className="mx-3 my-2 rounded-lg bg-green-700 p-3 text-white text-xs">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="font-semibold text-green-100">회원정보</span>
+        <span className="rounded bg-green-600 px-1.5 py-0.5 text-green-100">
+          {COMPANY_TYPE_LABEL[summary.companyType] ?? summary.companyType}
+        </span>
+      </div>
+      {name && (
+        <div className="mb-1.5 flex items-center gap-1 text-green-200">
+          <span className="font-medium text-white">{name}</span>
+          <span>·</span>
+          <span>{loginId}</span>
+        </div>
+      )}
+      {isOrdering && (
+        <div className="flex justify-between py-0.5 border-b border-green-600">
+          <span>발주금액</span>
+          <span className="font-medium">{summary.orderingAmount.toLocaleString()}원</span>
+        </div>
+      )}
+      {isVendor && (
+        <div className={cn('flex justify-between py-0.5', isOrdering && 'border-b border-green-600')}>
+          <span>수주금액</span>
+          <span className="font-medium">{summary.vendorAmount.toLocaleString()}원</span>
+        </div>
+      )}
+      {isOrdering && (
+        <div className="flex justify-between pt-0.5">
+          <span className="text-green-200">예치금 잔액</span>
+          <span className="text-green-200">
+            {summary.depositBalance != null ? `${summary.depositBalance.toLocaleString()}원` : '-'}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface SidebarNavProps {
   menus: MenuItem[]
   onNavClick?: () => void
   openId: number | null
   onToggle: (id: number) => void
-  userName?: string
+  memberName?: string
+  memberLoginId?: string
+  memberSummary?: MemberSummary | null
 }
 
-function SidebarNav({ menus, onNavClick, openId, onToggle, userName }: SidebarNavProps) {
+function SidebarNav({ menus, onNavClick, openId, onToggle, memberName, memberLoginId, memberSummary }: SidebarNavProps) {
   const pathname = usePathname()
 
   return (
     <>
       <div className="flex h-14 items-center border-b px-4">
         <span className="text-sm font-bold text-green-700">🌿 온우림</span>
-        {userName && <span className="ml-2 text-xs text-gray-400">{userName}</span>}
       </div>
+
+      {memberSummary && <MemberInfoCard summary={memberSummary} name={memberName ?? ''} loginId={memberLoginId ?? ''} />}
 
       <nav className="flex-1 overflow-y-auto py-2">
         {menus.map((menu) => {
@@ -153,11 +207,22 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   const pathname = usePathname()
   const [menus, setMenus] = useState<MenuItem[]>([])
   const [openId, setOpenId] = useState<number | null>(null)
-  const [userName, setUserName] = useState<string>('')
+  const [memberName, setMemberName] = useState<string>('')
+  const [memberLoginId, setMemberLoginId] = useState<string>('')
+  const [memberSummary, setMemberSummary] = useState<MemberSummary | null>(null)
 
   useEffect(() => {
-    setUserName(localStorage.getItem('name') ?? '')
+    setMemberName(localStorage.getItem('name') ?? '')
+    setMemberLoginId(localStorage.getItem('loginId') ?? '')
     fetchMenusByRole().then(setMenus).catch(() => {})
+    fetchMemberSummary().then(setMemberSummary).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handler = () => fetchMemberSummary().then(setMemberSummary).catch(() => {})
+    window.addEventListener('member-summary-refresh', handler)
+    return () => window.removeEventListener('member-summary-refresh', handler)
   }, [])
 
   useEffect(() => {
@@ -171,7 +236,7 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   return (
     <>
       <aside className="hidden h-screen w-56 flex-col border-r bg-white md:flex">
-        <SidebarNav menus={menus} openId={openId} onToggle={handleToggle} userName={userName} />
+        <SidebarNav menus={menus} openId={openId} onToggle={handleToggle} memberName={memberName} memberLoginId={memberLoginId} memberSummary={memberSummary} />
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={(open) => { if (!open) onMobileClose?.() }}>
@@ -181,7 +246,9 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
             onNavClick={onMobileClose}
             openId={openId}
             onToggle={handleToggle}
-            userName={userName}
+            memberName={memberName}
+            memberLoginId={memberLoginId}
+            memberSummary={memberSummary}
           />
         </SheetContent>
       </Sheet>

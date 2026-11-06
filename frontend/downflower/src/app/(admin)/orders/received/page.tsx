@@ -7,10 +7,12 @@ import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
 import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
+import { useOrderUpdatedListener } from '@/components/common/useOrderSync'
 import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort, splitOrderNumber, openOrderWindow } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { Download } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
+import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { OrderDetailPopup } from '@/components/common/OrderDetailPopup'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
@@ -80,6 +82,10 @@ function getMonthRange(year: number, month: number): { from: string; to: string 
   return { from: `${year}-${m}-01`, to: `${year}-${m}-${String(lastDay).padStart(2, '0')}` }
 }
 
+function formatDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export default function ReceivedOrdersPage() {
   const today = new Date()
   const initYear = today.getFullYear()
@@ -112,7 +118,9 @@ export default function ReceivedOrdersPage() {
   const [applied2Field, setApplied2Field] = useState<SearchField>('수주사명')
   const [applied2Value, setApplied2Value] = useState('')
 
-  const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
+  const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null
+  const isSuperAdmin = role === 'SUPER_ADMIN'
+  const canSeeMsgTime = isSuperAdmin || role === 'ORDERING'
 
   const [popups, setPopups] = useState<Array<{ id: string; zIndex: number }>>([])
   const nextZ = useRef(1000)
@@ -159,6 +167,7 @@ export default function ReceivedOrdersPage() {
   }
 
   useEffect(() => { loadOrders(buildServerParams(initRange.from, initRange.to)) }, [])
+  useOrderUpdatedListener(() => loadOrders(buildServerParams(), page))
 
   function selectMonth(year: number, month: number) {
     setSelectedYear(year)
@@ -170,6 +179,16 @@ export default function ReceivedOrdersPage() {
     setPage(0)
     setSelectedIds(new Set())
     loadOrders(buildServerParams(from, to), 0)
+  }
+
+  function selectDate(d: Date) {
+    const s = formatDate(d)
+    setDateFrom(s)
+    setDateTo(s)
+    setSelectedMonth(0)
+    setPage(0)
+    setSelectedIds(new Set())
+    loadOrders(buildServerParams(s, s), 0)
   }
 
   const handleSearch = () => {
@@ -329,6 +348,14 @@ export default function ReceivedOrdersPage() {
             onChange={(e) => { setDateTo(e.target.value); setSelectedMonth(0) }}
             className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
           />
+          <button type="button" onClick={() => selectDate(today)}
+            className="rounded px-2.5 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200">
+            금일
+          </button>
+          <button type="button" onClick={() => { const d = new Date(today); d.setDate(d.getDate() + 1); selectDate(d) }}
+            className="rounded px-2.5 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200">
+            익일
+          </button>
           {isSuperAdmin && (
             <select
               value={deletedFilter}
@@ -548,6 +575,9 @@ export default function ReceivedOrdersPage() {
                         ? `예약 ${String(order.scheduledMessageHour).padStart(2, '0')}:${order.scheduledMessageMinute ?? '00'}`
                         : '자동발송'}
                     </div>
+                    {canSeeMsgTime && order.messageSentAt && (
+                      <div className="mt-0.5 text-[10px] text-blue-500">{order.messageSentAt.slice(0, 16).replace('T', ' ')}</div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -632,6 +662,9 @@ export default function ReceivedOrdersPage() {
                         ? `예약 ${String(order.scheduledMessageHour).padStart(2, '0')}:${order.scheduledMessageMinute ?? '00'}`
                         : '자동발송'}
                     </span>
+                    {canSeeMsgTime && order.messageSentAt && (
+                      <span className="text-[10px] text-blue-500">{order.messageSentAt.slice(0, 16).replace('T', ' ')}</span>
+                    )}
                   </div>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
@@ -645,6 +678,20 @@ export default function ReceivedOrdersPage() {
                   <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
                 </div>
               </button>
+              {!order.isDeleted && (
+                <div className="mt-3 border-t pt-3">
+                  <ReceiptConfirmButton
+                    layout="card"
+                    showPhotoButton={order.status === '배송완료'}
+                    orderId={String(order.id)}
+                    orderNumber={order.orderNumber}
+                    senderName={order.ribbonLeft}
+                    recipientName={order.recipientName}
+                    initialHasReceipt={order.hasReceipt}
+                    onDeliveryComplete={() => loadOrders(buildServerParams(), page)}
+                  />
+                </div>
+              )}
             </div>
           ))
         )}

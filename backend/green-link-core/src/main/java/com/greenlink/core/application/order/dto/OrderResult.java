@@ -28,6 +28,7 @@ public record OrderResult(
         String eventInfo,
         String ribbonLeft,
         String ribbonRight,
+        String ribbonExtras,
         String ordererName,
         String ordererPhone,
         String recipientName,
@@ -47,5 +48,6 @@ public record OrderResult(
         boolean hasReceipt,
         String receiptReceiverName,
         String receiptReceiverRelation,
-        boolean isDeleted
+        boolean isDeleted,
+        String messageSentAt
 ) {}

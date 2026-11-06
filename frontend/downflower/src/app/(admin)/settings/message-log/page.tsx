@@ -176,8 +176,8 @@ export default function MessagesPage() {
                   <TableCell className="font-mono text-sm">{sms.receiver}</TableCell>
                   <TableCell>
                     {sms.status === 'SUCCESS' ? (
-                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-                        발송성공
+                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700" title={sms.failReason ?? undefined}>
+                        발송성공{sms.failReason && <span className="ml-1 text-amber-600">(즉시전환)</span>}
                       </span>
                     ) : (
                       <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700" title={sms.failReason ?? undefined}>

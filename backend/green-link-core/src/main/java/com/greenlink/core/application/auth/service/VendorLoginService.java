@@ -52,7 +52,7 @@ public class VendorLoginService implements VendorLoginUseCase {
             throw new BusinessException(AuthErrorCode.ACCOUNT_INACTIVE);
         }
 
-        String token = tokenProvider.generateToken(admin.getId(), List.of("VENDOR"));
+        String token = tokenProvider.generateToken(admin.getId(), List.of("VENDOR"), admin.getCompanyId());
         return new VendorLoginResult(token, admin.getCompanyId());
     }
 }

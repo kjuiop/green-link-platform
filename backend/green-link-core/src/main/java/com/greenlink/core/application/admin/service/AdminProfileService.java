@@ -33,7 +33,7 @@ public class AdminProfileService implements GetAdminProfileUseCase, UpdateAdminP
     public void updateProfile(UpdateAdminProfileCommand cmd) {
         Admin admin = adminRepository.findById(cmd.adminId())
             .orElseThrow(() -> new BusinessException(AdminErrorCode.ADMIN_NOT_FOUND));
-        admin.updateProfile(cmd.name(), cmd.phone());
+        admin.updateProfile(cmd.name(), cmd.phone(), null);
         adminRepository.save(admin);
     }
 }

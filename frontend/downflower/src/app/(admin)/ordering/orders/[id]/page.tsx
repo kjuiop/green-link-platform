@@ -87,6 +87,14 @@ export default function OrderingOrderDetailPage() {
 
   async function saveEdit() {
     if (!draft) return
+    if (!draft.ordererName?.trim()) {
+      setSaveError('주문자명을 입력해주세요.')
+      return
+    }
+    if (!draft.ordererPhone?.trim()) {
+      setSaveError('주문자 연락처를 입력해주세요.')
+      return
+    }
     setSaving(true)
     setSaveError(null)
     try {
@@ -153,6 +161,7 @@ export default function OrderingOrderDetailPage() {
       setDraft(updated)
       const sms = await fetchSmsMessages(id).catch(() => [])
       setSmsMessages(sms)
+      window.dispatchEvent(new Event('member-summary-refresh'))
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : '배송완료 처리에 실패했습니다.')
     } finally {
@@ -448,12 +457,6 @@ export default function OrderingOrderDetailPage() {
                 <Field label="배송예정">
                   <Input value={draft.deliveryAt.slice(0, 10)} onChange={(e) => set('deliveryAt', e.target.value)} />
                 </Field>
-                <Field label="주소">
-                  <Input value={draft.address} onChange={(e) => set('address', e.target.value)} />
-                </Field>
-                <Field label="상세주소">
-                  <Input value={draft.addressDetail} onChange={(e) => set('addressDetail', e.target.value)} />
-                </Field>
                 <Field label="행사유형">
                   <div className="flex flex-wrap gap-1.5 pt-0.5">
                     {(['장례식', '결혼식', '기타'] as const).map((type) => (
@@ -485,7 +488,7 @@ export default function OrderingOrderDetailPage() {
                       onChange={(e) => set('placeName', e.target.value)}
                     />
                   </Field>
-                  <Field label={draft.eventType === '장례식' ? '받는 분 (예: 상주 홍길동)' : draft.eventType === '결혼식' ? '받는 분 (예: 신랑 홍길동)' : '받는 분'}>
+                  <Field label="받는 분">
                     <Input
                       placeholder={
                         draft.eventType === '장례식' ? '예: 상주 홍길동' :
@@ -850,7 +853,7 @@ export default function OrderingOrderDetailPage() {
                     {msg.imageUrl && (
                       <img src={msg.imageUrl} alt="발송사진" className="h-20 w-20 rounded border object-cover" />
                     )}
-                    {msg.failReason && <p className="text-xs text-red-400">{msg.failReason}</p>}
+                    {msg.failReason && <p className={msg.status === 'SUCCESS' ? 'text-xs text-amber-600' : 'text-xs text-red-400'}>{msg.failReason}</p>}
                   </div>
                 ))}
               </div>

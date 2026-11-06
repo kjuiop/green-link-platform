@@ -302,7 +302,7 @@ function SmsHistoryDialog({ open, onClose, orderId, orderNumber }: {
                     </span>
                   </div>
                   {m.sentAt && <p className="text-xs text-gray-400">{m.sentAt}</p>}
-                  {m.failReason && <p className="text-xs text-red-500">{m.failReason}</p>}
+                  {m.failReason && <p className={m.status === 'SUCCESS' ? 'text-xs text-amber-600' : 'text-xs text-red-500'}>{m.failReason}</p>}
                   {m.imageUrl && (
                     <img src={m.imageUrl} alt="발송 사진" className="h-24 w-24 rounded border object-cover" />
                   )}

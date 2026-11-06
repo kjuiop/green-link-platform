@@ -29,6 +29,7 @@ export interface Order {
   eventInfo?: string
   ribbonLeft: string
   ribbonRight: string
+  ribbonExtras?: Array<{ left: string; right: string }>
   ordererName: string
   ordererPhone: string
   recipientName?: string
@@ -55,4 +56,5 @@ export interface Order {
   hasReceipt?: boolean
   receiptReceiverName?: string
   receiptReceiverRelation?: string
+  messageSentAt?: string
 }

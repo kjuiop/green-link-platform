@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -239,35 +240,126 @@ export function DeliveryInfoCard({ d, className }: SectionProps) {
 }
 
 export function RibbonCard({ d, className }: SectionProps) {
-  const { order, draft, isEditing, set } = d
+  const { order, isEditing, set } = d
+  const [ribbonLefts, setRibbonLefts] = useState<string[]>([''])
+  const [ribbonRights, setRibbonRights] = useState<string[]>([''])
+
+  useEffect(() => {
+    if (isEditing) {
+      const extras = order.ribbonExtras ?? []
+      setRibbonLefts([order.ribbonLeft, ...extras.map((e) => e.left)])
+      setRibbonRights([order.ribbonRight, ...extras.map((e) => e.right)])
+    }
+  }, [isEditing])
+
+  function syncToOrder(lefts: string[], rights: string[]) {
+    set('ribbonLeft', lefts[0] ?? '')
+    set('ribbonRight', rights[0] ?? '')
+    const maxLen = Math.max(lefts.length, rights.length)
+    const extras = maxLen > 1
+      ? Array.from({ length: maxLen - 1 }, (_, i) => ({ left: lefts[i + 1] ?? '', right: rights[i + 1] ?? '' }))
+      : undefined
+    set('ribbonExtras', extras)
+  }
+
+  function updateLefts(newLefts: string[]) {
+    setRibbonLefts(newLefts)
+    syncToOrder(newLefts, ribbonRights)
+  }
+
+  function updateRights(newRights: string[]) {
+    setRibbonRights(newRights)
+    syncToOrder(ribbonLefts, newRights)
+  }
+
+  const allExtras = [
+    { left: order.ribbonLeft, right: order.ribbonRight },
+    ...(order.ribbonExtras ?? []),
+  ]
+
   return (
     <Card className={className}>
       <CardHeader><CardTitle className="text-sm">리본 문구</CardTitle></CardHeader>
-      <CardContent className="space-y-3 text-sm">
+      <CardContent className="space-y-4 text-sm">
         {isEditing ? (
           <>
-            <Field label="보내는이">
-              <Input value={draft.ribbonLeft} onChange={(e) => set('ribbonLeft', e.target.value)} />
-            </Field>
-            <Field label="경조문구">
-              <Input value={draft.ribbonRight} onChange={(e) => set('ribbonRight', e.target.value)} />
-            </Field>
-            <div className="space-y-1.5">
-              <p className="text-xs text-gray-400">경조문구 선택</p>
-              <div className="flex flex-wrap gap-1.5">
-                {RIBBON_PHRASES.map((phrase) => (
-                  <button key={phrase} type="button" onClick={() => set('ribbonRight', phrase)}
-                    className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:border-green-600 hover:bg-green-50 hover:text-green-700">
-                    {phrase}
-                  </button>
-                ))}
+            {/* 경조문구 */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-500">경조문구</span>
+                <div className="flex gap-1">
+                  <button type="button"
+                    onClick={() => updateRights([...ribbonRights, ''])}
+                    className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50">추가</button>
+                  {ribbonRights.length > 1 && (
+                    <button type="button"
+                      onClick={() => updateRights(ribbonRights.slice(0, -1))}
+                      className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50">삭제</button>
+                  )}
+                </div>
               </div>
+              {ribbonRights.map((right, idx) => (
+                <div key={idx} className="space-y-1.5">
+                  {ribbonRights.length > 1 && <p className="text-xs text-gray-400">{idx + 1}번</p>}
+                  <Input
+                    value={right}
+                    onChange={(e) => updateRights(ribbonRights.map((r, i) => i === idx ? e.target.value : r))}
+                  />
+                  <div className="flex flex-wrap gap-1.5">
+                    {RIBBON_PHRASES.map((phrase) => (
+                      <button key={phrase} type="button"
+                        onClick={() => updateRights(ribbonRights.map((r, i) => i === idx ? phrase : r))}
+                        className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:border-green-600 hover:bg-green-50 hover:text-green-700">
+                        {phrase}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 보내는이 */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-500">보내는이</span>
+                <div className="flex gap-1">
+                  <button type="button"
+                    onClick={() => updateLefts([...ribbonLefts, ''])}
+                    className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50">추가</button>
+                  {ribbonLefts.length > 1 && (
+                    <button type="button"
+                      onClick={() => updateLefts(ribbonLefts.slice(0, -1))}
+                      className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50">삭제</button>
+                  )}
+                </div>
+              </div>
+              {ribbonLefts.map((left, idx) => (
+                <div key={idx} className="space-y-1">
+                  {ribbonLefts.length > 1 && <p className="text-xs text-gray-400">{idx + 1}번</p>}
+                  <Input
+                    value={left}
+                    onChange={(e) => updateLefts(ribbonLefts.map((l, i) => i === idx ? e.target.value : l))}
+                  />
+                </div>
+              ))}
             </div>
           </>
         ) : (
           <>
-            <Row label="보내는이" value={order.ribbonLeft} />
-            <Row label="경조문구" value={order.ribbonRight} />
+            {allExtras.length > 1 ? (
+              allExtras.map((r, i) => (
+                <div key={i} className={cn('space-y-0.5', i > 0 && 'border-t pt-2')}>
+                  <p className="text-xs font-medium text-gray-400">{i + 1}번</p>
+                  <Row label="보내는이" value={r.left} />
+                  <Row label="경조문구" value={r.right} />
+                </div>
+              ))
+            ) : (
+              <>
+                <Row label="보내는이" value={order.ribbonLeft} />
+                <Row label="경조문구" value={order.ribbonRight} />
+              </>
+            )}
           </>
         )}
       </CardContent>
@@ -514,7 +606,7 @@ export function SmsHistoryCard({ d, className }: SectionProps) {
                 {msg.sentAt && <p className="text-xs text-gray-400">{msg.sentAt}</p>}
                 {msg.message && <p className="whitespace-pre-wrap border-t pt-1.5 text-sm text-gray-800">{msg.message}</p>}
                 {msg.imageUrl && <img src={msg.imageUrl} alt="발송사진" className="h-20 w-20 rounded border object-cover" />}
-                {msg.failReason && <p className="text-xs text-red-400">{msg.failReason}</p>}
+                {msg.failReason && <p className={msg.status === 'SUCCESS' ? 'text-xs text-amber-600' : 'text-xs text-red-400'}>{msg.failReason}</p>}
               </div>
             ))}
           </div>

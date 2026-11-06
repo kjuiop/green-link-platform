@@ -60,6 +60,11 @@ public class SmsMessage {
         this.sentAt = sentAt;
     }
 
+    public void markSuccessWithFallback(String aligoMsgId, String sentAt, String fallbackReason) {
+        markSuccess(aligoMsgId, sentAt);
+        this.failReason = "예약 거절 → 즉시발송 전환: " + fallbackReason;
+    }
+
     public void markFail(String failReason, String sentAt) {
         this.status = SmsStatus.FAIL;
         this.failReason = failReason;

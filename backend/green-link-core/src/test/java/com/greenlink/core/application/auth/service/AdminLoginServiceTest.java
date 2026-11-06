@@ -43,11 +43,11 @@ class AdminLoginServiceTest {
     }
 
     private Admin activeAdmin() {
-        return Admin.of(1L, "admin01", "hashedPw", "관리자", "010-0000-0000", null, AdminStatus.ACTIVE, null);
+        return Admin.of(1L, "admin01", "hashedPw", "관리자", "010-0000-0000", null, AdminStatus.ACTIVE, null, null);
     }
 
     private Company vendorCompany() {
-        return Company.of(1L, null, "테스트업체", null, null, null, null, CompanyType.VENDOR, CompanyStatus.ACTIVE, true);
+        return Company.of(1L, null, "테스트업체", null, null, null, null, null, CompanyType.VENDOR, CompanyStatus.ACTIVE, true);
     }
 
     @Test
@@ -84,7 +84,7 @@ class AdminLoginServiceTest {
 
     @Test
     void login_withPendingAccount_throwsAccountPending() {
-        Admin pending = Admin.of(2L, "vendor01", "hashedPw", "홍길동", "010-1111-2222", 1L, AdminStatus.PENDING, null);
+        Admin pending = Admin.of(2L, "vendor01", "hashedPw", "홍길동", "010-1111-2222", 1L, AdminStatus.PENDING, null, null);
         given(adminRepository.findByLoginId("vendor01")).willReturn(Optional.of(pending));
         given(passwordEncoder.matches("rawPw", "hashedPw")).willReturn(true);
 
@@ -96,7 +96,7 @@ class AdminLoginServiceTest {
 
     @Test
     void login_withInactiveAccount_throwsAccountInactive() {
-        Admin inactive = Admin.of(3L, "vendor02", "hashedPw", "김철수", "010-3333-4444", 1L, AdminStatus.INACTIVE, null);
+        Admin inactive = Admin.of(3L, "vendor02", "hashedPw", "김철수", "010-3333-4444", 1L, AdminStatus.INACTIVE, null, null);
         given(adminRepository.findByLoginId("vendor02")).willReturn(Optional.of(inactive));
         given(passwordEncoder.matches("rawPw", "hashedPw")).willReturn(true);
 
@@ -108,7 +108,7 @@ class AdminLoginServiceTest {
 
     @Test
     void login_asVendor_generatesVendorRoleToken() {
-        Admin vendor = Admin.of(4L, "vendor03", "hashedPw", "홍길동", "010-5555-6666", 1L, AdminStatus.ACTIVE, null);
+        Admin vendor = Admin.of(4L, "vendor03", "hashedPw", "홍길동", "010-5555-6666", 1L, AdminStatus.ACTIVE, null, null);
         given(adminRepository.findByLoginId("vendor03")).willReturn(Optional.of(vendor));
         given(passwordEncoder.matches("rawPw", "hashedPw")).willReturn(true);
         given(companyRepository.findById(1L)).willReturn(Optional.of(vendorCompany()));

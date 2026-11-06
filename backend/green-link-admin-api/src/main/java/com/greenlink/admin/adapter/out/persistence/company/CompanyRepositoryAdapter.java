@@ -1,12 +1,15 @@
 package com.greenlink.admin.adapter.out.persistence.company;
 
 import com.greenlink.core.domain.company.model.Company;
+import com.greenlink.core.domain.company.model.CompanyCapability;
+import com.greenlink.core.domain.company.model.CompanyRegion;
 import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,11 +20,17 @@ import static com.greenlink.admin.adapter.out.persistence.company.QCompanyJpaEnt
 public class CompanyRepositoryAdapter implements CompanyRepository {
 
     private final CompanyJpaRepository jpaRepository;
+    private final CompanyRegionJpaRepository regionJpaRepository;
+    private final CompanyCapabilityJpaRepository capabilityJpaRepository;
     private final JPAQueryFactory queryFactory;
 
     public CompanyRepositoryAdapter(CompanyJpaRepository jpaRepository,
+                                     CompanyRegionJpaRepository regionJpaRepository,
+                                     CompanyCapabilityJpaRepository capabilityJpaRepository,
                                      JPAQueryFactory queryFactory) {
         this.jpaRepository = jpaRepository;
+        this.regionJpaRepository = regionJpaRepository;
+        this.capabilityJpaRepository = capabilityJpaRepository;
         this.queryFactory = queryFactory;
     }
 
@@ -79,5 +88,37 @@ public class CompanyRepositoryAdapter implements CompanyRepository {
     public Page<Company> findAllDisplayed(Pageable pageable) {
         return jpaRepository.findAllByDisplayYnTrue(pageable)
             .map(CompanyJpaEntity::toDomain);
+    }
+
+    @Override
+    @Transactional
+    public void saveRegions(Long companyId, List<CompanyRegion> regions) {
+        regionJpaRepository.deleteAllByCompanyId(companyId);
+        regionJpaRepository.saveAll(regions.stream()
+            .map(CompanyRegionJpaEntity::from)
+            .toList());
+    }
+
+    @Override
+    @Transactional
+    public void saveCapabilities(Long companyId, List<CompanyCapability> capabilities) {
+        capabilityJpaRepository.deleteAllByCompanyId(companyId);
+        capabilityJpaRepository.saveAll(capabilities.stream()
+            .map(c -> CompanyCapabilityJpaEntity.from(companyId, c))
+            .toList());
+    }
+
+    @Override
+    public List<CompanyRegion> findRegionsByCompanyId(Long companyId) {
+        return regionJpaRepository.findAllByCompanyId(companyId).stream()
+            .map(CompanyRegionJpaEntity::toDomain)
+            .toList();
+    }
+
+    @Override
+    public List<CompanyCapability> findCapabilitiesByCompanyId(Long companyId) {
+        return capabilityJpaRepository.findAllByCompanyId(companyId).stream()
+            .map(CompanyCapabilityJpaEntity::toDomain)
+            .toList();
     }
 }

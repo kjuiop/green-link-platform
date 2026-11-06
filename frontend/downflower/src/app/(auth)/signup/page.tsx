@@ -7,6 +7,17 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Upload, X, Search } from 'lucide-react'
 import Link from 'next/link'
+import RegionSelector, { RegionInput } from '@/components/vendor/RegionSelector'
+
+const CAPABILITY_OPTIONS = [
+  { value: 'ANNIVERSARY', label: '축하' },
+  { value: 'MEMORIAL',    label: '근조' },
+  { value: 'ORCHID_EAST', label: '동양란' },
+  { value: 'ORCHID_WEST', label: '서양란' },
+  { value: 'FLOWER',      label: '꽃' },
+  { value: 'INDOOR',      label: '관엽' },
+  { value: 'RICE_WREATH', label: '쌀화환' },
+]
 
 const TERMS_VENDOR = `제1조 (목적)
 본 약관은 온우림(이하 "플랫폼")가 제공하는 수발주 관리 서비스를 이용하는 수주업체(이하 "회원")의 권리·의무 및 책임 사항을 규정함을 목적으로 합니다.
@@ -181,6 +192,10 @@ export default function SignupPage() {
   const [countdown, setCountdown] = useState(0)
   const [errors, setErrors] = useState<{ verified?: string; businessDoc?: string; bankDoc?: string }>({})
 
+  // 지역·가능상품 (수주사/수발주사)
+  const [regions, setRegions] = useState<RegionInput[]>([])
+  const [capabilities, setCapabilities] = useState<string[]>([])
+
   // 첨부서류
   const [businessDoc, setBusinessDoc] = useState<File | null>(null)
   const [bankDoc, setBankDoc] = useState<File | null>(null)
@@ -296,7 +311,7 @@ export default function SignupPage() {
     const nextErrors: { verified?: string; businessDoc?: string; bankDoc?: string } = {}
     if (!verified) nextErrors.verified = '휴대폰 인증을 완료해주세요.'
     if (!businessDoc) nextErrors.businessDoc = '사업자 사본을 첨부해주세요.'
-    if ((selectedRole === 'VENDOR' || selectedRole === 'BOTH') && !bankDoc) nextErrors.bankDoc = '통장 사본을 첨부해주세요.'
+    if (!bankDoc) nextErrors.bankDoc = '통장 사본을 첨부해주세요.'
     if (Object.keys(nextErrors).length > 0) { setErrors(nextErrors); return }
     setErrors({})
     if (password !== passwordConfirm) {
@@ -311,6 +326,7 @@ export default function SignupPage() {
         password,
         name,
         phone,
+        email: email || undefined,
         businessNo,
         companyName,
         ceoName,
@@ -318,6 +334,8 @@ export default function SignupPage() {
         address,
         detailAddress,
         roles: resolveRoles(),
+        regions: selectedRole !== 'ORDERING' ? regions : [],
+        capabilities: selectedRole !== 'ORDERING' ? capabilities : [],
       }),
     })
     if (res.ok) {
@@ -694,6 +712,47 @@ export default function SignupPage() {
                 <div>
                   <FileUploadField label="사업자 사본" required file={businessDoc} onChange={(f) => { setBusinessDoc(f); if (f) setErrors((prev) => ({ ...prev, businessDoc: undefined })) }} />
                   {!businessDoc && errors.businessDoc && <p className="mt-1 text-xs text-red-500">{errors.businessDoc}</p>}
+                </div>
+                <div>
+                  <FileUploadField label="통장 사본" required file={bankDoc} onChange={(f) => { setBankDoc(f); if (f) setErrors((prev) => ({ ...prev, bankDoc: undefined })) }} />
+                  {!bankDoc && errors.bankDoc && <p className="mt-1 text-xs text-red-500">{errors.bankDoc}</p>}
+                </div>
+              </div>
+            )}
+
+            {/* 지역 및 가능상품 — 수주사/수발주사만 */}
+            {(selectedRole === 'VENDOR' || selectedRole === 'BOTH') && (
+              <div className="space-y-3 rounded-lg border bg-gray-50 p-3">
+                <p className="text-xs font-medium text-gray-500">서비스 지역 및 가능상품 (선택)</p>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">서비스 지역</Label>
+                  <RegionSelector selected={regions} onChange={setRegions} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">가능상품</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {CAPABILITY_OPTIONS.map((opt) => {
+                      const active = capabilities.includes(opt.value)
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() =>
+                            setCapabilities((prev) =>
+                              active ? prev.filter((v) => v !== opt.value) : [...prev, opt.value]
+                            )
+                          }
+                          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                            active
+                              ? 'border-green-700 bg-green-700 text-white'
+                              : 'border-gray-300 bg-white text-gray-600 hover:border-green-500'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             )}

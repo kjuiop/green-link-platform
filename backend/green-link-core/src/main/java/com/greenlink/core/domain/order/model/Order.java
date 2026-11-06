@@ -25,6 +25,7 @@ public class Order {
     private String eventInfo;
     private String ribbonLeft;
     private String ribbonRight;
+    private String ribbonExtras;
     private String ordererName;
     private String ordererPhone;
     private String recipientName;
@@ -65,6 +66,7 @@ public class Order {
             String eventInfo,
             String ribbonLeft,
             String ribbonRight,
+            String ribbonExtras,
             String ordererName,
             String ordererPhone,
             String recipientName,
@@ -100,6 +102,7 @@ public class Order {
         o.eventInfo = eventInfo;
         o.ribbonLeft = ribbonLeft;
         o.ribbonRight = ribbonRight;
+        o.ribbonExtras = ribbonExtras;
         o.ordererName = ordererName;
         o.ordererPhone = ordererPhone;
         o.recipientName = recipientName;
@@ -138,6 +141,7 @@ public class Order {
             String eventInfo,
             String ribbonLeft,
             String ribbonRight,
+            String ribbonExtras,
             String ordererName,
             String ordererPhone,
             String recipientName,
@@ -178,6 +182,7 @@ public class Order {
         o.eventInfo = eventInfo;
         o.ribbonLeft = ribbonLeft;
         o.ribbonRight = ribbonRight;
+        o.ribbonExtras = ribbonExtras;
         o.ordererName = ordererName;
         o.ordererPhone = ordererPhone;
         o.recipientName = recipientName;
@@ -226,6 +231,13 @@ public class Order {
         this.completedAt = completedAt;
     }
 
+    public void resetToPending() {
+        if (this.status != OrderStatus.REJECTED && this.status != OrderStatus.ACCEPTED) {
+            throw new IllegalStateException("수주거절 또는 수주완료 상태에서만 발주대기로 복귀할 수 있습니다. 현재 상태: " + this.status);
+        }
+        this.status = OrderStatus.PENDING;
+    }
+
     public void softDelete() {
         this.isDeleted = true;
     }
@@ -250,6 +262,7 @@ public class Order {
             String eventInfo,
             String ribbonLeft,
             String ribbonRight,
+            String ribbonExtras,
             String ordererName,
             String ordererPhone,
             String recipientName,
@@ -281,6 +294,7 @@ public class Order {
         this.eventInfo = eventInfo;
         this.ribbonLeft = ribbonLeft;
         this.ribbonRight = ribbonRight;
+        this.ribbonExtras = ribbonExtras;
         this.ordererName = ordererName;
         this.ordererPhone = ordererPhone;
         this.recipientName = recipientName;
@@ -317,6 +331,7 @@ public class Order {
     public String getEventInfo() { return eventInfo; }
     public String getRibbonLeft() { return ribbonLeft; }
     public String getRibbonRight() { return ribbonRight; }
+    public String getRibbonExtras() { return ribbonExtras; }
     public String getOrdererName() { return ordererName; }
     public String getOrdererPhone() { return ordererPhone; }
     public String getRecipientName() { return recipientName; }

@@ -56,8 +56,8 @@ export default function NewOrderPage() {
   const [scheduledMinute, setScheduledMinute] = useState('00')
 
   // 리본 / 메모
-  const [ribbonLeft, setRibbonLeft] = useState('')
-  const [ribbonRight, setRibbonRight] = useState('')
+  const [ribbonLefts, setRibbonLefts] = useState<string[]>([''])
+  const [ribbonRights, setRibbonRights] = useState<string[]>([''])
   const [adminMemo, setAdminMemo] = useState('')
   const [vendorMemo, setVendorMemo] = useState('')
   const [referenceItems, setReferenceItems] = useState<{ file: File; url: string }[]>([])
@@ -108,7 +108,7 @@ export default function NewOrderPage() {
     if (!deliveryHour && deliveryTimeType !== '3시간이내' && deliveryTimeType !== '직접입력') next.deliveryHour = '배송시간을 선택해주세요.'
     if (!amount) next.amount = '발주금액을 입력해주세요.'
     if (!recipientName.trim()) next.recipientName = '받는 분 성함을 입력해주세요.'
-    if (!ribbonLeft.trim()) next.ribbonLeft = '보내는이를 입력해주세요.'
+    if (!(ribbonLefts[0] ?? '').trim()) next.ribbonLeft = '보내는이를 입력해주세요.'
     if (!ordererPhone.trim()) next.ordererPhone = '주문자 휴대폰을 입력해주세요.'
     setErrors(next)
     if (Object.keys(next).length > 0) return
@@ -140,8 +140,17 @@ export default function NewOrderPage() {
         placeName,
         roomName,
         eventInfo,
-        ribbonLeft,
-        ribbonRight,
+        ribbonLeft: ribbonLefts[0] ?? '',
+        ribbonRight: ribbonRights[0] ?? '',
+        ribbonExtras: (() => {
+          const maxLen = Math.max(ribbonLefts.length, ribbonRights.length)
+          if (maxLen <= 1) return undefined
+          const extras = Array.from({ length: maxLen - 1 }, (_, i) => ({
+            left: ribbonLefts[i + 1] ?? '',
+            right: ribbonRights[i + 1] ?? '',
+          }))
+          return JSON.stringify(extras)
+        })(),
         ordererName,
         ordererPhone,
         recipientName,
@@ -157,6 +166,7 @@ export default function NewOrderPage() {
       if (referenceItems.length > 0) {
         await uploadReferencePhotos(String(created.id), referenceItems.map((i) => i.file)).catch(() => {})
       }
+      window.dispatchEvent(new Event('member-summary-refresh'))
       router.push('/orders')
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : '발주 등록에 실패했습니다.')
@@ -287,12 +297,25 @@ export default function NewOrderPage() {
             </div>
             <div className="space-y-1.5">
               <Label>추가비용</Label>
-              <Input
-                type="number"
-                placeholder="0"
-                value={extraCost}
-                onChange={(e) => setExtraCost(e.target.value)}
-              />
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={extraCost}
+                  onChange={(e) => setExtraCost(e.target.value)}
+                  className="flex-1"
+                />
+                {[10000, 20000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setExtraCost(String(amt))}
+                    className="shrink-0 rounded-md border px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    {amt.toLocaleString()}원
+                  </button>
+                ))}
+              </div>
               {extraCost && amount ? (
                 <p className="text-xs text-gray-500">
                   최종 발주금액: {(Number(amount) + Number(extraCost)).toLocaleString()}원
@@ -330,7 +353,7 @@ export default function NewOrderPage() {
                 ))}
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr]">
                 <div className="space-y-1.5">
                   <Label>
                     {selectedEventType === '장례식' ? '장례식장' : selectedEventType === '결혼식' ? '예식장' : '장소'}
@@ -346,11 +369,7 @@ export default function NewOrderPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>
-                    {selectedEventType === '장례식' ? '받는 분 (예: 상주 홍길동)' :
-                     selectedEventType === '결혼식' ? '받는 분 (예: 신랑 홍길동)' :
-                     '받는 분'}
-                  </Label>
+                  <Label>받는 분</Label>
                   <Input
                     placeholder={
                       selectedEventType === '장례식' ? '예: 상주 홍길동' :
@@ -371,39 +390,100 @@ export default function NewOrderPage() {
             <CardHeader>
               <CardTitle className="text-sm">리본 문구</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>보내는이 *</Label>
-                <Input
-                  placeholder="예: 주식회사 OO 부장 홍길동"
-                  value={ribbonLeft}
-                  onChange={(e) => setRibbonLeft(e.target.value)}
-                  className={cn(errors.ribbonLeft && 'border-red-500 focus-visible:ring-red-500')}
-                />
-                {errors.ribbonLeft && <p className="text-xs text-red-500">{errors.ribbonLeft}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label>경조문구</Label>
-                <Input
-                  placeholder="예: 삼가 고인의 명복을 빕니다"
-                  value={ribbonRight}
-                  onChange={(e) => setRibbonRight(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-xs text-gray-400">경조문구 선택 (클릭하면 위 입력란에 자동 입력)</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {RIBBON_PHRASES.map((phrase) => (
+            <CardContent className="space-y-5">
+              {/* 경조문구 */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>경조문구</Label>
+                  <div className="flex gap-1.5">
                     <button
-                      key={phrase}
                       type="button"
-                      onClick={() => setRibbonRight(phrase)}
-                      className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:border-green-600 hover:bg-green-50 hover:text-green-700"
+                      onClick={() => setRibbonRights((prev) => [...prev, ''])}
+                      className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
                     >
-                      {phrase}
+                      추가
                     </button>
-                  ))}
+                    {ribbonRights.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setRibbonRights((prev) => prev.slice(0, -1))}
+                        className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
+                      >
+                        삭제
+                      </button>
+                    )}
+                  </div>
                 </div>
+                {ribbonRights.map((right, idx) => (
+                  <div key={idx} className="space-y-1.5">
+                    {ribbonRights.length > 1 && (
+                      <p className="text-xs font-medium text-gray-400">{idx + 1}번</p>
+                    )}
+                    <Input
+                      placeholder="예: 삼가 고인의 명복을 빕니다"
+                      value={right}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setRibbonRights((prev) => prev.map((r, i) => i === idx ? val : r))
+                      }}
+                    />
+                    <div className="flex flex-wrap gap-1.5">
+                      {RIBBON_PHRASES.map((phrase) => (
+                        <button
+                          key={phrase}
+                          type="button"
+                          onClick={() => setRibbonRights((prev) => prev.map((r, i) => i === idx ? phrase : r))}
+                          className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:border-green-600 hover:bg-green-50 hover:text-green-700"
+                        >
+                          {phrase}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 보내는이 */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>보내는이 *</Label>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setRibbonLefts((prev) => [...prev, ''])}
+                      className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
+                    >
+                      추가
+                    </button>
+                    {ribbonLefts.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setRibbonLefts((prev) => prev.slice(0, -1))}
+                        className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
+                      >
+                        삭제
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {ribbonLefts.map((left, idx) => (
+                  <div key={idx} className="space-y-1">
+                    {ribbonLefts.length > 1 && (
+                      <p className="text-xs font-medium text-gray-400">{idx + 1}번</p>
+                    )}
+                    <Input
+                      placeholder="예: 주식회사 OO 부장 홍길동"
+                      value={left}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setRibbonLefts((prev) => prev.map((r, i) => i === idx ? val : r))
+                        if (idx === 0) setErrors((prev) => ({ ...prev, ribbonLeft: undefined }))
+                      }}
+                      className={cn(idx === 0 && errors.ribbonLeft && 'border-red-500 focus-visible:ring-red-500')}
+                    />
+                    {idx === 0 && errors.ribbonLeft && <p className="text-xs text-red-500">{errors.ribbonLeft}</p>}
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -418,15 +498,35 @@ export default function NewOrderPage() {
           <CardContent className="space-y-2 pt-2 pb-3">
             <div className="space-y-1">
               <Label>배송날짜 *</Label>
-              <Input
-                type="date"
-                value={deliveryDate}
-                onChange={(e) => {
-                  setDeliveryDate(e.target.value)
-                  if (e.target.value) setErrors((prev) => ({ ...prev, deliveryDate: undefined }))
-                }}
-                className={cn(errors.deliveryDate && 'border-red-500 focus-visible:ring-red-500')}
-              />
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="date"
+                  value={deliveryDate}
+                  onChange={(e) => {
+                    setDeliveryDate(e.target.value)
+                    if (e.target.value) setErrors((prev) => ({ ...prev, deliveryDate: undefined }))
+                  }}
+                  className={cn('flex-1', errors.deliveryDate && 'border-red-500 focus-visible:ring-red-500')}
+                />
+                {(['금일', '익일'] as const).map((label, offset) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => {
+                      const d = new Date()
+                      d.setDate(d.getDate() + offset)
+                      const yyyy = d.getFullYear()
+                      const mm = String(d.getMonth() + 1).padStart(2, '0')
+                      const dd = String(d.getDate()).padStart(2, '0')
+                      setDeliveryDate(`${yyyy}-${mm}-${dd}`)
+                      setErrors((prev) => ({ ...prev, deliveryDate: undefined }))
+                    }}
+                    className="shrink-0 rounded-md border px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               {errors.deliveryDate && <p className="text-xs text-red-500">{errors.deliveryDate}</p>}
             </div>
             <div className="space-y-1">
@@ -437,8 +537,15 @@ export default function NewOrderPage() {
                     <select
                       value={deliveryHour}
                       onChange={(e) => {
-                        setDeliveryHour(e.target.value)
-                        if (e.target.value) setErrors((prev) => ({ ...prev, deliveryHour: undefined }))
+                        const newHour = e.target.value
+                        setDeliveryHour(newHour)
+                        if (newHour) setErrors((prev) => ({ ...prev, deliveryHour: undefined }))
+                        if (deliveryTimeType === '예식' && newHour) {
+                          const autoHour = ((Number(newHour) - 1) + 24) % 24
+                          setMessageSchedule('scheduled')
+                          setScheduledHour(String(autoHour))
+                          setScheduledMinute(deliveryMinute)
+                        }
                       }}
                       className={cn('rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700', errors.deliveryHour && 'border-red-500')}
                     >
@@ -449,7 +556,13 @@ export default function NewOrderPage() {
                     </select>
                     <select
                       value={deliveryMinute}
-                      onChange={(e) => setDeliveryMinute(e.target.value)}
+                      onChange={(e) => {
+                        const newMinute = e.target.value
+                        setDeliveryMinute(newMinute)
+                        if (deliveryTimeType === '예식' && deliveryHour) {
+                          setScheduledMinute(newMinute)
+                        }
+                      }}
                       className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
                     >
                       {['00', '10', '20', '30', '40', '50'].map((m) => (
@@ -460,7 +573,16 @@ export default function NewOrderPage() {
                 )}
                 <select
                   value={deliveryTimeType}
-                  onChange={(e) => setDeliveryTimeType(e.target.value)}
+                  onChange={(e) => {
+                    const newType = e.target.value
+                    setDeliveryTimeType(newType)
+                    if (newType === '예식' && deliveryHour) {
+                      const autoHour = ((Number(deliveryHour) - 1) + 24) % 24
+                      setMessageSchedule('scheduled')
+                      setScheduledHour(String(autoHour))
+                      setScheduledMinute(deliveryMinute)
+                    }
+                  }}
                   className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
                 >
                   {['까지', '예식', '행사', '3시간이내', '직접입력'].map((opt) => (
@@ -478,22 +600,6 @@ export default function NewOrderPage() {
               {errors.deliveryHour && <p className="text-xs text-red-500">{errors.deliveryHour}</p>}
             </div>
 
-            <div className="space-y-1">
-              <Label>주소</Label>
-              <Input
-                placeholder="도로명 주소 검색"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>상세주소</Label>
-              <Input
-                placeholder="상세주소"
-                value={addressDetail}
-                onChange={(e) => setAddressDetail(e.target.value)}
-              />
-            </div>
           </CardContent>
         </Card>
 

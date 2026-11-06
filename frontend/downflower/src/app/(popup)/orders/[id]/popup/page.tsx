@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation'
 import { X } from 'lucide-react'
 import { OrderStatusBadge, DeliveryTimeTypeBadge } from '@/components/common/StatusBadge'
 import { useOrderDetail, LoadedOrderDetail } from '@/components/common/useOrderDetail'
+import { notifyOrderUpdated } from '@/components/common/useOrderSync'
 import {
   OrderActionButtons, SaveErrorBanner,
   BasicInfoCard, DeliveryInfoCard, RibbonCard, ContactCard, MemoCard,
@@ -15,7 +16,7 @@ const WINDOW_OVERLAY = 'fixed inset-0 z-50 flex items-center justify-center bg-b
 
 export default function OrderPopupWindowPage() {
   const { id } = useParams<{ id: string }>()
-  const detail = useOrderDetail(id, { onClose: () => window.close() })
+  const detail = useOrderDetail(id, { onUpdated: () => notifyOrderUpdated(id), onClose: () => window.close() })
   const { order, draft, loading, loadError } = detail
   const loaded: LoadedOrderDetail | null = order && draft ? { ...detail, order, draft } : null
 

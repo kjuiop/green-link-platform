@@ -39,6 +39,7 @@ type BackendOrder = {
   eventInfo: string | null
   ribbonLeft: string | null
   ribbonRight: string | null
+  ribbonExtras: string | null
   ordererName: string
   ordererPhone: string
   recipientName: string | null
@@ -58,6 +59,7 @@ type BackendOrder = {
   receiptReceiverName: string | null
   receiptReceiverRelation: string | null
   isDeleted: boolean
+  messageSentAt: string | null
 }
 
 export type CreateOrderPayload = {
@@ -81,6 +83,7 @@ export type CreateOrderPayload = {
   eventInfo: string
   ribbonLeft: string
   ribbonRight: string
+  ribbonExtras?: string
   ordererName: string
   ordererPhone: string
   recipientName: string
@@ -127,6 +130,7 @@ function toFrontend(o: BackendOrder): Order {
     eventInfo: o.eventInfo ?? undefined,
     ribbonLeft: o.ribbonLeft ?? '',
     ribbonRight: o.ribbonRight ?? '',
+    ribbonExtras: o.ribbonExtras ? JSON.parse(o.ribbonExtras) : undefined,
     ordererName: o.ordererName,
     ordererPhone: o.ordererPhone,
     recipientName: o.recipientName ?? undefined,
@@ -141,6 +145,7 @@ function toFrontend(o: BackendOrder): Order {
     acceptedAt: o.acceptedAt ?? null,
     completedAt: o.completedAt ?? undefined,
     messageStatus: o.messageStatus === 'SENT' ? '발송' : o.messageStatus === 'FAIL' ? '실패' : '미발송',
+    messageSentAt: o.messageSentAt ?? undefined,
     isDeleted: o.isDeleted ?? false,
     referencePhotoCount: o.referencePhotoCount ?? 0,
     hasReceipt: o.hasReceipt,
@@ -178,6 +183,8 @@ export type OrderSearchParams = {
   recipientName?: string
   vendorName?: string
   orderingCompanyName?: string
+  sortBy?: string
+  sortDir?: string
 }
 
 function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: number): string {
@@ -198,6 +205,8 @@ function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: numbe
   if (params?.recipientName) query.set('recipientName', params.recipientName)
   if (params?.vendorName) query.set('vendorName', params.vendorName)
   if (params?.orderingCompanyName) query.set('orderingCompanyName', params.orderingCompanyName)
+  if (params?.sortBy) query.set('sortBy', params.sortBy)
+  if (params?.sortDir) query.set('sortDir', params.sortDir)
   if (page !== undefined) query.set('page', String(page))
   if (size !== undefined) query.set('size', String(size))
   return query.toString()

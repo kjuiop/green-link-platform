@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AcceptOrderBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
+import { useOrderUpdatedListener } from '@/components/common/useOrderSync'
 import { getDeliveryDateRowBg, getDeliveryDateTextStyle, formatDeliveryShort, splitOrderNumber, openOrderWindow } from '@/lib/utils'
 import { OrderStatus, Order } from '@/types/order'
 import { PageResult } from '@/types/page'
@@ -80,6 +81,10 @@ function getMonthRange(year: number, month: number): { from: string; to: string 
   return { from: `${year}-${m}-01`, to: `${year}-${m}-${String(lastDay).padStart(2, '0')}` }
 }
 
+function formatDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export default function OrdersPage() {
   const today = new Date()
   const initYear = today.getFullYear()
@@ -112,7 +117,11 @@ export default function OrdersPage() {
   const [applied2Field, setApplied2Field] = useState<SearchField>('수주사명')
   const [applied2Value, setApplied2Value] = useState('')
 
-  const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
+  const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null
+  const isSuperAdmin = role === 'SUPER_ADMIN'
+  const canSeeMsgTime = isSuperAdmin || role === 'ORDERING'
+
+  const [msgTimeSortDir, setMsgTimeSortDir] = useState<'asc' | 'desc' | null>(null)
 
   const [popups, setPopups] = useState<Array<{ id: string; zIndex: number }>>([])
   const nextZ = useRef(1000)
@@ -146,6 +155,7 @@ export default function OrdersPage() {
     const key2 = SERVER_FIELD_MAP[search2Field]
     if (key2 && search2Value) params[key2] = search2Value
     if (isSuperAdmin && deletedFilter === '삭제') params.deleted = true
+    if (msgTimeSortDir) { params.sortBy = 'messageSentAt'; params.sortDir = msgTimeSortDir }
     return params
   }
 
@@ -159,6 +169,7 @@ export default function OrdersPage() {
   }
 
   useEffect(() => { loadOrders(buildServerParams(initRange.from, initRange.to)) }, [])
+  useOrderUpdatedListener(() => loadOrders(buildServerParams(), page))
 
   function selectMonth(year: number, month: number) {
     setSelectedYear(year)
@@ -170,6 +181,16 @@ export default function OrdersPage() {
     setPage(0)
     setSelectedIds(new Set())
     loadOrders(buildServerParams(from, to), 0)
+  }
+
+  function selectDate(d: Date) {
+    const s = formatDate(d)
+    setDateFrom(s)
+    setDateTo(s)
+    setSelectedMonth(0)
+    setPage(0)
+    setSelectedIds(new Set())
+    loadOrders(buildServerParams(s, s), 0)
   }
 
   const handleSearch = () => {
@@ -193,6 +214,7 @@ export default function OrdersPage() {
     setAppliedDeletedFilter('정상')
     setApplied1Field('주문번호'); setApplied1Value('')
     setApplied2Field('수주사명'); setApplied2Value('')
+    setMsgTimeSortDir(null)
     setPage(0)
     setSelectedIds(new Set())
     loadOrders({ deliveryDateFrom: r.from, deliveryDateTo: r.to }, 0)
@@ -335,6 +357,14 @@ export default function OrdersPage() {
             onChange={(e) => { setDateTo(e.target.value); setSelectedMonth(0) }}
             className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
           />
+          <button type="button" onClick={() => selectDate(today)}
+            className="rounded px-2.5 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200">
+            금일
+          </button>
+          <button type="button" onClick={() => { const d = new Date(today); d.setDate(d.getDate() + 1); selectDate(d) }}
+            className="rounded px-2.5 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200">
+            익일
+          </button>
           {isSuperAdmin && (
             <select
               value={deletedFilter}
@@ -347,7 +377,7 @@ export default function OrdersPage() {
           )}
         </div>
 
-        {/* 검색 조건 2쌍 */}
+        {/* 검색 조건 2쌍 (모바일: 1쌍, sm 이상: 2쌍) */}
         <div className="mt-2 flex flex-wrap gap-2">
           <div className="flex min-w-0 flex-1 gap-1.5">
             <select
@@ -366,7 +396,7 @@ export default function OrdersPage() {
               className="min-w-0 flex-1 rounded-md border px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-700"
             />
           </div>
-          <div className="flex min-w-0 flex-1 gap-1.5">
+          <div className="hidden min-w-0 flex-1 gap-1.5 sm:flex">
             <select
               value={search2Field}
               onChange={(e) => { setSearch2Field(e.target.value as SearchField); setSearch2Value('') }}
@@ -458,7 +488,24 @@ export default function OrdersPage() {
               <TableHead>수량</TableHead>
               <TableHead><div>상품명</div><div className="font-normal text-gray-400">발주금액</div></TableHead>
               <TableHead>배송현황</TableHead>
-              <TableHead>문자현황</TableHead>
+              <TableHead>
+                {canSeeMsgTime ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = msgTimeSortDir === 'desc' ? 'asc' : 'desc'
+                      setMsgTimeSortDir(next)
+                      setPage(0)
+                      setSelectedIds(new Set())
+                      loadOrders({ ...buildServerParams(), sortBy: 'messageSentAt', sortDir: next }, 0)
+                    }}
+                    className="flex items-center gap-0.5 hover:text-green-700"
+                  >
+                    문자발송
+                    <span className="text-[10px]">{msgTimeSortDir === 'asc' ? '↑' : msgTimeSortDir === 'desc' ? '↓' : '↕'}</span>
+                  </button>
+                ) : '문자발송'}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -568,6 +615,11 @@ export default function OrdersPage() {
                         ? `예약 ${String(order.scheduledMessageHour).padStart(2, '0')}:${order.scheduledMessageMinute ?? '00'}`
                         : '자동발송'}
                     </div>
+                    {canSeeMsgTime && order.messageSentAt && (
+                      <div className="mt-0.5 text-[10px] text-blue-500">
+                        {order.messageSentAt.slice(0, 16).replace('T', ' ')}
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
