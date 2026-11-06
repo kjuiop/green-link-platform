@@ -46,12 +46,13 @@ public class Admin {
     }
 
     public static Admin createVendorRequest(String loginId, String encodedPassword,
-                                             String name, String phone, Long companyId) {
+                                             String name, String phone, String email, Long companyId) {
         Admin a = new Admin();
         a.loginId = loginId;
         a.password = encodedPassword;
         a.name = name;
         a.phone = phone;
+        a.email = email;
         a.companyId = companyId;
         a.status = AdminStatus.PENDING;
         return a;

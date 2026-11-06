@@ -11,6 +11,7 @@ public record VendorSignupRequest(
     @NotBlank String password,
     @NotBlank String name,
     @NotBlank String phone,
+    String email,
     String businessNo,
     @NotBlank String companyName,
     String ceoName,
@@ -23,7 +24,7 @@ public record VendorSignupRequest(
 ) {
     public VendorSignupCommand toCommand() {
         return new VendorSignupCommand(
-            loginId, password, name, phone,
+            loginId, password, name, phone, email,
             businessNo, companyName, ceoName, companyPhone,
             address, detailAddress, roles, regions, capabilities
         );

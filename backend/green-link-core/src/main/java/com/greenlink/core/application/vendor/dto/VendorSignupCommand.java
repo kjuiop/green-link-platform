@@ -7,6 +7,7 @@ public record VendorSignupCommand(
     String password,
     String managerName,
     String phone,
+    String email,
     String businessNo,
     String companyName,
     String ceoName,

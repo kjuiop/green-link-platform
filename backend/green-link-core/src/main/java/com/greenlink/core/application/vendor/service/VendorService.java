@@ -281,6 +281,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             passwordEncoder.encode(cmd.password()),
             cmd.managerName(),
             cmd.phone(),
+            cmd.email(),
             savedCompany.getId()
         );
         Admin savedAdmin = adminRepository.save(vendorAdmin);
