@@ -1,7 +1,3 @@
-export interface SigunguEntry {
-  name: string
-}
-
 export interface SidoEntry {
   name: string
   sigunguList: string[]
@@ -96,9 +92,9 @@ export const SIDO_LIST: SidoEntry[] = [
     name: '전라남도',
     sigunguList: [
       '강진군', '고흥군', '곡성군', '광양시', '구례군', '나주시', '담양군',
-      'mokpo시', '무안군', '보성군', '순천시', '신안군', '여수시', '영광군',
+      '목포시', '무안군', '보성군', '순천시', '신안군', '여수시', '영광군',
       '영암군', '완도군', '장성군', '장흥군', '진도군', '함평군', '해남군',
-      '화순군', '목포시',
+      '화순군',
     ],
   },
   {
