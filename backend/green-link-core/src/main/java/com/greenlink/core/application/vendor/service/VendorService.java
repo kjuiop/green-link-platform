@@ -120,7 +120,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             businessNo,
             cmd.companyName(),
             "",
-            cmd.phone(),
+            cmd.companyPhone() != null && !cmd.companyPhone().isBlank() ? cmd.companyPhone() : cmd.phone(),
             (cmd.faxNumber() != null && !cmd.faxNumber().isBlank()) ? cmd.faxNumber() : null,
             cmd.address() != null ? cmd.address() : "",
             cmd.detailAddress() != null ? cmd.detailAddress() : "",
@@ -133,6 +133,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             passwordEncoder.encode(cmd.password()),
             cmd.managerName(),
             cmd.phone(),
+            cmd.email(),
             savedCompany.getId()
         );
         Admin savedAdmin = adminRepository.save(vendorAdmin);
@@ -147,7 +148,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             .filter(Admin::isVendor)
             .orElseThrow(() -> new BusinessException(VendorErrorCode.VENDOR_NOT_FOUND));
 
-        admin.updateProfile(cmd.managerName(), cmd.phone());
+        admin.updateProfile(cmd.managerName(), cmd.phone(), cmd.email());
         Admin savedAdmin = adminRepository.save(admin);
 
         Company company = companyRepository.findById(admin.getCompanyId())
@@ -163,6 +164,9 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
                 cmd.address() != null ? cmd.address() : "",
                 cmd.detailAddress() != null ? cmd.detailAddress() : ""
             );
+            if (cmd.companyPhone() != null && !cmd.companyPhone().isBlank()) {
+                company.updatePhone(cmd.companyPhone());
+            }
             if (cmd.companyType() != null && !cmd.companyType().isBlank()) {
                 company.updateType(parseCompanyType(cmd.companyType()));
             }
@@ -277,6 +281,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             passwordEncoder.encode(cmd.password()),
             cmd.managerName(),
             cmd.phone(),
+            cmd.email(),
             savedCompany.getId()
         );
         Admin savedAdmin = adminRepository.save(vendorAdmin);
@@ -318,8 +323,10 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             company != null ? company.getCompanyName() : null,
             company != null ? company.getBusinessNo() : null,
             company != null ? company.getFaxNumber() : null,
+            company != null ? company.getPhone() : null,
             admin.getName(),
             admin.getPhone(),
+            admin.getEmail(),
             company != null ? company.getAddress() : null,
             company != null ? company.getDetailAddress() : null,
             admin.getLoginId(),

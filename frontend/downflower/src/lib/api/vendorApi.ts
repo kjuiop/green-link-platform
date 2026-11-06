@@ -7,9 +7,12 @@ type BackendVendor = {
   companyName: string
   businessNo?: string
   faxNumber?: string
+  companyPhone?: string
   managerName: string
   phone: string
+  email?: string
   address: string
+  detailAddress?: string
   loginId: string
   status: string
   createdAt?: string
@@ -22,9 +25,12 @@ type CreateVendorPayload = {
   companyName: string
   businessNo?: string
   faxNumber?: string
+  companyPhone?: string
   address: string
+  detailAddress?: string
   managerName: string
   phone: string
+  email?: string
   loginId: string
   password: string
   companyType?: string
@@ -34,9 +40,12 @@ type UpdateVendorPayload = {
   companyName: string
   businessNo?: string
   faxNumber?: string
+  companyPhone?: string
   address: string
+  detailAddress?: string
   managerName: string
   phone: string
+  email?: string
   companyType?: string
   regions?: RegionDto[]
   capabilities?: string[]
@@ -48,9 +57,12 @@ function toFrontend(v: BackendVendor): Vendor {
     name: v.companyName,
     businessNumber: v.businessNo ?? undefined,
     faxNumber: v.faxNumber ?? undefined,
+    companyPhone: v.companyPhone ?? undefined,
     managerName: v.managerName,
     phone: v.phone,
+    email: v.email ?? undefined,
     address: v.address,
+    detailAddress: v.detailAddress ?? undefined,
     loginId: v.loginId,
     status: v.status as Vendor['status'],
     createdAt: v.createdAt ?? undefined,

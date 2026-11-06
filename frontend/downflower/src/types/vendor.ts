@@ -11,9 +11,12 @@ export interface Vendor {
   name: string
   businessNumber?: string
   faxNumber?: string
+  companyPhone?: string
   managerName: string
   phone: string
+  email?: string
   address: string
+  detailAddress?: string
   loginId: string
   status: VendorStatus
   createdAt?: string

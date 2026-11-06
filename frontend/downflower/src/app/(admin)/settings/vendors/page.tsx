@@ -47,8 +47,8 @@ const COMPANY_TYPE_LABELS: Record<CompanyType, string> = {
 }
 
 const emptyForm = {
-  name: '', businessNumber: '', faxNumber: '', managerName: '', phone: '',
-  address: '', detailAddress: '', loginId: '', password: '', companyType: 'VENDOR' as CompanyType,
+  name: '', businessNumber: '', faxNumber: '', companyPhone: '', managerName: '', phone: '',
+  email: '', address: '', detailAddress: '', loginId: '', password: '', companyType: 'VENDOR' as CompanyType,
 }
 
 function formatPhone(value: string) {
@@ -179,10 +179,12 @@ export default function VendorsPage() {
       name: vendor.name,
       businessNumber: vendor.businessNumber ?? '',
       faxNumber: vendor.faxNumber ?? '',
+      companyPhone: vendor.companyPhone ?? '',
       managerName: vendor.managerName,
       phone: vendor.phone,
+      email: vendor.email ?? '',
       address: vendor.address,
-      detailAddress: '',
+      detailAddress: vendor.detailAddress ?? '',
       loginId: vendor.loginId,
       password: '',
       companyType: vendor.companyType ?? 'VENDOR',
@@ -205,9 +207,12 @@ export default function VendorsPage() {
           companyName: form.name,
           businessNo: form.businessNumber || undefined,
           faxNumber: form.faxNumber || undefined,
+          companyPhone: form.companyPhone || undefined,
           address: form.address,
+          detailAddress: form.detailAddress || undefined,
           managerName: form.managerName,
           phone: form.phone,
+          email: form.email || undefined,
           companyType: form.companyType,
           regions: modalRegions,
           capabilities: modalCapabilities,
@@ -217,9 +222,12 @@ export default function VendorsPage() {
           companyName: form.name,
           businessNo: form.businessNumber || undefined,
           faxNumber: form.faxNumber || undefined,
+          companyPhone: form.companyPhone || undefined,
           address: form.address,
+          detailAddress: form.detailAddress || undefined,
           managerName: form.managerName,
           phone: form.phone,
+          email: form.email || undefined,
           loginId: form.loginId,
           password: form.password,
           companyType: form.companyType,
@@ -492,16 +500,28 @@ export default function VendorsPage() {
               <Input placeholder="02-0000-0000" value={form.faxNumber} onChange={(e) => setForm((f) => ({ ...f, faxNumber: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
+              <Label>업체 연락처</Label>
+              <Input placeholder="02-0000-0000 / 010-0000-0000" inputMode="numeric" value={form.companyPhone} onChange={(e) => setForm((f) => ({ ...f, companyPhone: formatPhone(e.target.value) }))} />
+            </div>
+            <div className="space-y-1.5">
               <Label>담당자명 *</Label>
               <Input placeholder="담당자 성함" value={form.managerName} onChange={(e) => setForm((f) => ({ ...f, managerName: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
-              <Label>연락처 *</Label>
+              <Label>담당자 연락처 *</Label>
               <Input placeholder="010-0000-0000" inputMode="numeric" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: formatPhone(e.target.value) }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>이메일</Label>
+              <Input type="email" placeholder="example@email.com" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
               <Label>주소</Label>
               <Input placeholder="업체 주소" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>상세주소</Label>
+              <Input placeholder="건물명, 동/호수 등" value={form.detailAddress} onChange={(e) => setForm((f) => ({ ...f, detailAddress: e.target.value }))} />
             </div>
             {(form.companyType === 'VENDOR' || form.companyType === 'BOTH') && (
               <>

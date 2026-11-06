@@ -10,18 +10,20 @@ public record UpdateVendorRequest(
     @NotBlank String companyName,
     String businessNo,
     String faxNumber,
+    String companyPhone,
     String address,
     String detailAddress,
     @NotBlank String managerName,
     @NotBlank String phone,
+    String email,
     String companyType,
     List<RegionInput> regions,
     List<String> capabilities
 ) {
     public UpdateVendorCommand toCommand() {
         return new UpdateVendorCommand(
-            companyName, businessNo, faxNumber, address, detailAddress,
-            managerName, phone, companyType, regions, capabilities
+            companyName, businessNo, faxNumber, companyPhone, address, detailAddress,
+            managerName, phone, email, companyType, regions, capabilities
         );
     }
 }
