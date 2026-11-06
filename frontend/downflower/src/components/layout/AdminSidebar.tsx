@@ -15,6 +15,7 @@ import {
   SlidersHorizontal,
   Menu,
   Package,
+  Newspaper,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -37,6 +38,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/settings/products': Package,
   '/products': Package,
   '/settings/vendors': Users,
+  '/community': Newspaper,
 }
 
 function isActive(pathname: string, url: string): boolean {
