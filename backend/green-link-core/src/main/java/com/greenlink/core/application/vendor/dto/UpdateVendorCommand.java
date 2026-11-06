@@ -1,5 +1,9 @@
 package com.greenlink.core.application.vendor.dto;
 
+import com.greenlink.core.application.vendor.dto.VendorSignupCommand.RegionInput;
+
+import java.util.List;
+
 public record UpdateVendorCommand(
     String companyName,
     String businessNo,
@@ -8,5 +12,7 @@ public record UpdateVendorCommand(
     String detailAddress,
     String managerName,
     String phone,
-    String companyType
+    String companyType,
+    List<RegionInput> regions,
+    List<String> capabilities
 ) {}

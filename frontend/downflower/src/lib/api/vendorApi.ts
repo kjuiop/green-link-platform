@@ -1,4 +1,4 @@
-import { Vendor } from '@/types/vendor'
+import { Vendor, RegionDto } from '@/types/vendor'
 import { PageResult } from '@/types/page'
 import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
@@ -14,6 +14,8 @@ type BackendVendor = {
   status: string
   createdAt?: string
   companyType?: string
+  regions?: RegionDto[]
+  capabilities?: string[]
 }
 
 type CreateVendorPayload = {
@@ -36,6 +38,8 @@ type UpdateVendorPayload = {
   managerName: string
   phone: string
   companyType?: string
+  regions?: RegionDto[]
+  capabilities?: string[]
 }
 
 function toFrontend(v: BackendVendor): Vendor {
@@ -51,6 +55,8 @@ function toFrontend(v: BackendVendor): Vendor {
     status: v.status as Vendor['status'],
     createdAt: v.createdAt ?? undefined,
     companyType: (v.companyType as Vendor['companyType']) ?? undefined,
+    regions: v.regions ?? [],
+    capabilities: v.capabilities ?? [],
   }
 }
 

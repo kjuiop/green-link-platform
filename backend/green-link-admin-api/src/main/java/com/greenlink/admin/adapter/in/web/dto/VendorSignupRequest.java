@@ -1,6 +1,7 @@
 package com.greenlink.admin.adapter.in.web.dto;
 
 import com.greenlink.core.application.vendor.dto.VendorSignupCommand;
+import com.greenlink.core.application.vendor.dto.VendorSignupCommand.RegionInput;
 import jakarta.validation.constraints.NotBlank;
 
 import java.util.List;
@@ -16,21 +17,15 @@ public record VendorSignupRequest(
     String companyPhone,
     String address,
     String detailAddress,
-    List<String> roles
+    List<String> roles,
+    List<RegionInput> regions,
+    List<String> capabilities
 ) {
     public VendorSignupCommand toCommand() {
         return new VendorSignupCommand(
-            loginId,
-            password,
-            name,
-            phone,
-            businessNo,
-            companyName,
-            ceoName,
-            companyPhone,
-            address,
-            detailAddress,
-            roles
+            loginId, password, name, phone,
+            businessNo, companyName, ceoName, companyPhone,
+            address, detailAddress, roles, regions, capabilities
         );
     }
 }
