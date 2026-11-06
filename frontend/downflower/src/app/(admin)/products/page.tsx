@@ -11,7 +11,6 @@ import { Pagination } from '@/components/ui/Pagination'
 import { Product } from '@/types/product'
 import { PageResult } from '@/types/page'
 import { fetchProducts, createProduct, updateProduct, deleteProduct } from '@/lib/api/productApi'
-import { fetchOrderingCompanies, OrderingCompany } from '@/lib/api/orderApi'
 
 const PAGE_SIZE = 20
 
@@ -24,8 +23,6 @@ function formatPrice(value: string) {
 
 export default function ProductsPage() {
   const [role, setRole] = useState<string>('')
-  const [companies, setCompanies] = useState<OrderingCompany[]>([])
-  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null)
 
   const [result, setResult] = useState<PageResult<Product> | null>(null)
   const [page, setPage] = useState(0)
@@ -42,20 +39,13 @@ export default function ProductsPage() {
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
-    const r = localStorage.getItem('role') ?? ''
-    setRole(r)
-    if (r === 'SUPER_ADMIN') {
-      fetchOrderingCompanies().then((list) => {
-        setCompanies(list)
-        if (list.length > 0) setSelectedCompanyId(list[0].id)
-      })
-    }
+    setRole(localStorage.getItem('role') ?? '')
   }, [])
 
-  const load = useCallback((p: number, companyId: number | null) => {
+  const load = useCallback((p: number) => {
     setLoading(true)
     setPageError('')
-    fetchProducts(p, PAGE_SIZE, companyId ?? undefined)
+    fetchProducts(p, PAGE_SIZE)
       .then(setResult)
       .catch((e) => setPageError(e.message))
       .finally(() => setLoading(false))
@@ -63,9 +53,8 @@ export default function ProductsPage() {
 
   useEffect(() => {
     if (role === '') return
-    if (role === 'SUPER_ADMIN' && selectedCompanyId == null) return
-    load(page, selectedCompanyId)
-  }, [page, load, role, selectedCompanyId])
+    load(page)
+  }, [page, load, role])
 
   const openRegister = () => {
     setEditTarget(null)
@@ -104,11 +93,10 @@ export default function ProductsPage() {
           name: form.name.trim(),
           price: rawPrice,
           memo: form.memo.trim() || undefined,
-          orderingCompanyId: selectedCompanyId ?? undefined,
         })
         setPage(0)
       }
-      load(editTarget ? page : 0, selectedCompanyId)
+      load(editTarget ? page : 0)
       setModalOpen(false)
     } catch (e: unknown) {
       setModalError(e instanceof Error ? e.message : '저장에 실패했습니다.')
@@ -123,7 +111,7 @@ export default function ProductsPage() {
     try {
       await deleteProduct(deleteTarget.id)
       setDeleteTarget(null)
-      load(page, selectedCompanyId)
+      load(page)
     } catch (e: unknown) {
       setPageError(e instanceof Error ? e.message : '삭제에 실패했습니다.')
     } finally {
@@ -137,33 +125,12 @@ export default function ProductsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">상품관리</h1>
-        <Button
-          className="bg-green-700 hover:bg-green-800"
-          onClick={openRegister}
-          disabled={role === 'SUPER_ADMIN' && selectedCompanyId == null}
-        >
-          상품 등록
-        </Button>
+        {role === 'SUPER_ADMIN' && (
+          <Button className="bg-green-700 hover:bg-green-800" onClick={openRegister}>
+            상품 등록
+          </Button>
+        )}
       </div>
-
-      {role === 'SUPER_ADMIN' && (
-        <div className="flex items-center gap-3 rounded-lg border bg-white px-4 py-3">
-          <label className="text-sm font-medium text-gray-600 shrink-0">발주업체</label>
-          <select
-            className="rounded-md border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-            value={selectedCompanyId ?? ''}
-            onChange={(e) => {
-              setPage(0)
-              setSelectedCompanyId(e.target.value ? Number(e.target.value) : null)
-            }}
-          >
-            {companies.length === 0 && <option value="">등록된 발주업체가 없습니다</option>}
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>{c.companyName}</option>
-            ))}
-          </select>
-        </div>
-      )}
 
       {pageError && (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{pageError}</p>
@@ -178,7 +145,7 @@ export default function ProductsPage() {
               <TableHead className="w-36 text-right">기본가격</TableHead>
               <TableHead>메모</TableHead>
               <TableHead className="w-32">등록일</TableHead>
-              <TableHead className="w-24 text-center">관리</TableHead>
+              {role === 'SUPER_ADMIN' && <TableHead className="w-24 text-center">관리</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -198,36 +165,25 @@ export default function ProductsPage() {
               products.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell>
-                    <button
-                      onClick={() => openEdit(product)}
-                      className="font-medium text-blue-700 hover:underline"
-                    >
-                      {product.name}
-                    </button>
+                    {role === 'SUPER_ADMIN' ? (
+                      <button onClick={() => openEdit(product)} className="font-medium text-blue-700 hover:underline">
+                        {product.name}
+                      </button>
+                    ) : (
+                      <span className="font-medium">{product.name}</span>
+                    )}
                   </TableCell>
-                  <TableCell className="text-right text-sm">
-                    {product.price.toLocaleString()}원
-                  </TableCell>
+                  <TableCell className="text-right text-sm">{product.price.toLocaleString()}원</TableCell>
                   <TableCell className="text-sm text-gray-500">{product.memo ?? '—'}</TableCell>
-                  <TableCell className="text-sm text-gray-500">
-                    {product.createdAt.slice(0, 10)}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex justify-center gap-1.5">
-                      <button
-                        onClick={() => openEdit(product)}
-                        className="rounded border px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-50"
-                      >
-                        수정
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(product)}
-                        className="rounded border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50"
-                      >
-                        삭제
-                      </button>
-                    </div>
-                  </TableCell>
+                  <TableCell className="text-sm text-gray-500">{product.createdAt.slice(0, 10)}</TableCell>
+                  {role === 'SUPER_ADMIN' && (
+                    <TableCell className="text-center">
+                      <div className="flex justify-center gap-1.5">
+                        <button onClick={() => openEdit(product)} className="rounded border px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-50">수정</button>
+                        <button onClick={() => setDeleteTarget(product)} className="rounded border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50">삭제</button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
@@ -249,46 +205,29 @@ export default function ProductsPage() {
       {/* 모바일 카드 */}
       <div className="space-y-3 md:hidden">
         {loading ? (
-          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
-            불러오는 중...
-          </div>
+          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">불러오는 중...</div>
         ) : products.length === 0 ? (
-          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
-            등록된 상품이 없습니다.
-          </div>
+          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">등록된 상품이 없습니다.</div>
         ) : (
           products.map((product) => (
             <div key={product.id} className="rounded-lg border bg-white p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <button
-                    onClick={() => openEdit(product)}
-                    className="font-medium text-blue-700 hover:underline"
-                  >
-                    {product.name}
-                  </button>
-                  <div className="mt-1 text-sm font-semibold text-green-700">
-                    {product.price.toLocaleString()}원
-                  </div>
-                  {product.memo && (
-                    <div className="mt-0.5 text-xs text-gray-500">{product.memo}</div>
+                  {role === 'SUPER_ADMIN' ? (
+                    <button onClick={() => openEdit(product)} className="font-medium text-blue-700 hover:underline">{product.name}</button>
+                  ) : (
+                    <span className="font-medium">{product.name}</span>
                   )}
+                  <div className="mt-1 text-sm font-semibold text-green-700">{product.price.toLocaleString()}원</div>
+                  {product.memo && <div className="mt-0.5 text-xs text-gray-500">{product.memo}</div>}
                   <div className="mt-1 text-xs text-gray-400">{product.createdAt.slice(0, 10)}</div>
                 </div>
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={() => openEdit(product)}
-                    className="rounded border px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-50"
-                  >
-                    수정
-                  </button>
-                  <button
-                    onClick={() => setDeleteTarget(product)}
-                    className="rounded border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50"
-                  >
-                    삭제
-                  </button>
-                </div>
+                {role === 'SUPER_ADMIN' && (
+                  <div className="flex gap-1.5">
+                    <button onClick={() => openEdit(product)} className="rounded border px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-50">수정</button>
+                    <button onClick={() => setDeleteTarget(product)} className="rounded border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50">삭제</button>
+                  </div>
+                )}
               </div>
             </div>
           ))
@@ -313,11 +252,7 @@ export default function ProductsPage() {
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label>상품명 *</Label>
-              <Input
-                placeholder="예: 근조화환 3단"
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              />
+              <Input placeholder="예: 근조화환 3단" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
               <Label>기본가격 *</Label>
@@ -326,9 +261,7 @@ export default function ProductsPage() {
                   inputMode="numeric"
                   placeholder="0"
                   value={form.price}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, price: formatPrice(e.target.value) }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, price: formatPrice(e.target.value) }))}
                   className="pr-6"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">원</span>
@@ -343,17 +276,11 @@ export default function ProductsPage() {
                 onChange={(e) => setForm((f) => ({ ...f, memo: e.target.value }))}
               />
             </div>
-            {modalError && (
-              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{modalError}</p>
-            )}
+            {modalError && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{modalError}</p>}
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setModalOpen(false)}>취소</Button>
-            <Button
-              className="bg-green-700 hover:bg-green-800"
-              disabled={modalSaving}
-              onClick={handleSave}
-            >
+            <Button className="bg-green-700 hover:bg-green-800" disabled={modalSaving} onClick={handleSave}>
               {modalSaving ? '저장 중...' : editTarget ? '저장' : '등록'}
             </Button>
           </DialogFooter>
@@ -373,11 +300,7 @@ export default function ProductsPage() {
           </p>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>취소</Button>
-            <Button
-              variant="destructive"
-              disabled={deleting}
-              onClick={handleDelete}
-            >
+            <Button variant="destructive" disabled={deleting} onClick={handleDelete}>
               {deleting ? '삭제 중...' : '삭제'}
             </Button>
           </DialogFooter>
