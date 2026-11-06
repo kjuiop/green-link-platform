@@ -326,6 +326,7 @@ export default function SignupPage() {
         password,
         name,
         phone,
+        email: email || undefined,
         businessNo,
         companyName,
         ceoName,

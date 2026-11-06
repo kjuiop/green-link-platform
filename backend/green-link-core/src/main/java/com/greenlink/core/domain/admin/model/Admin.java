@@ -7,6 +7,7 @@ public class Admin {
     private String password;
     private String name;
     private String phone;
+    private String email;
     private Long companyId;
     private AdminStatus status;
     private String createdAt;
@@ -32,12 +33,13 @@ public class Admin {
     }
 
     public static Admin createVendor(String loginId, String encodedPassword,
-                                      String name, String phone, Long companyId) {
+                                      String name, String phone, String email, Long companyId) {
         Admin a = new Admin();
         a.loginId = loginId;
         a.password = encodedPassword;
         a.name = name;
         a.phone = phone;
+        a.email = email;
         a.companyId = companyId;
         a.status = AdminStatus.ACTIVE;
         return a;
@@ -55,7 +57,7 @@ public class Admin {
         return a;
     }
 
-    public static Admin of(Long id, String loginId, String password, String name, String phone,
+    public static Admin of(Long id, String loginId, String password, String name, String phone, String email,
                            Long companyId, AdminStatus status, String createdAt, String deletedAt) {
         Admin a = new Admin();
         a.id = id;
@@ -63,6 +65,7 @@ public class Admin {
         a.password = password;
         a.name = name;
         a.phone = phone;
+        a.email = email;
         a.companyId = companyId;
         a.status = status;
         a.createdAt = createdAt;
@@ -84,9 +87,10 @@ public class Admin {
         this.password = encodedPassword;
     }
 
-    public void updateProfile(String name, String phone) {
+    public void updateProfile(String name, String phone, String email) {
         this.name = name;
         this.phone = phone;
+        this.email = email;
     }
 
     public Long getId() { return id; }
@@ -94,6 +98,7 @@ public class Admin {
     public String getPassword() { return password; }
     public String getName() { return name; }
     public String getPhone() { return phone; }
+    public String getEmail() { return email; }
     public Long getCompanyId() { return companyId; }
     public AdminStatus getStatus() { return status; }
     public String getCreatedAt() { return createdAt; }

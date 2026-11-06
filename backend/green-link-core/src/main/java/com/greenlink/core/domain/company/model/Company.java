@@ -73,6 +73,10 @@ public class Company {
         this.detailAddress = detailAddress;
     }
 
+    public void updatePhone(String phone) {
+        this.phone = phone;
+    }
+
     public Long getId() { return id; }
     public String getBusinessNo() { return businessNo; }
     public String getCompanyName() { return companyName; }

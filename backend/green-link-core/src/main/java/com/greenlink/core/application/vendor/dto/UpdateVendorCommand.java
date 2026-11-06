@@ -8,10 +8,12 @@ public record UpdateVendorCommand(
     String companyName,
     String businessNo,
     String faxNumber,
+    String companyPhone,
     String address,
     String detailAddress,
     String managerName,
     String phone,
+    String email,
     String companyType,
     List<RegionInput> regions,
     List<String> capabilities
