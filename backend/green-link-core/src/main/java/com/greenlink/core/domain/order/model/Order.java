@@ -231,6 +231,10 @@ public class Order {
         this.completedAt = completedAt;
     }
 
+    public void resetToPending() {
+        this.status = OrderStatus.PENDING;
+    }
+
     public void softDelete() {
         this.isDeleted = true;
     }

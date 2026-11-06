@@ -537,8 +537,15 @@ export default function NewOrderPage() {
                     <select
                       value={deliveryHour}
                       onChange={(e) => {
-                        setDeliveryHour(e.target.value)
-                        if (e.target.value) setErrors((prev) => ({ ...prev, deliveryHour: undefined }))
+                        const newHour = e.target.value
+                        setDeliveryHour(newHour)
+                        if (newHour) setErrors((prev) => ({ ...prev, deliveryHour: undefined }))
+                        if (deliveryTimeType === '예식' && newHour) {
+                          const autoHour = ((Number(newHour) - 1) + 24) % 24
+                          setMessageSchedule('scheduled')
+                          setScheduledHour(String(autoHour))
+                          setScheduledMinute(deliveryMinute)
+                        }
                       }}
                       className={cn('rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700', errors.deliveryHour && 'border-red-500')}
                     >
@@ -549,7 +556,13 @@ export default function NewOrderPage() {
                     </select>
                     <select
                       value={deliveryMinute}
-                      onChange={(e) => setDeliveryMinute(e.target.value)}
+                      onChange={(e) => {
+                        const newMinute = e.target.value
+                        setDeliveryMinute(newMinute)
+                        if (deliveryTimeType === '예식' && deliveryHour) {
+                          setScheduledMinute(newMinute)
+                        }
+                      }}
                       className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
                     >
                       {['00', '10', '20', '30', '40', '50'].map((m) => (
@@ -560,7 +573,16 @@ export default function NewOrderPage() {
                 )}
                 <select
                   value={deliveryTimeType}
-                  onChange={(e) => setDeliveryTimeType(e.target.value)}
+                  onChange={(e) => {
+                    const newType = e.target.value
+                    setDeliveryTimeType(newType)
+                    if (newType === '예식' && deliveryHour) {
+                      const autoHour = ((Number(deliveryHour) - 1) + 24) % 24
+                      setMessageSchedule('scheduled')
+                      setScheduledHour(String(autoHour))
+                      setScheduledMinute(deliveryMinute)
+                    }
+                  }}
                   className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
                 >
                   {['까지', '예식', '행사', '3시간이내', '직접입력'].map((opt) => (
