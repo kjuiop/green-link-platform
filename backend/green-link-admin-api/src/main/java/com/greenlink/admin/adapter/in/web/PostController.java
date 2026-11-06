@@ -13,6 +13,8 @@ import com.greenlink.core.application.post.usecase.UpdateNoticeSettingsUseCase;
 import com.greenlink.core.application.post.usecase.UpdatePostUseCase;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.post.model.PostSearchCondition;
+import com.greenlink.core.global.exception.BusinessException;
+import com.greenlink.core.global.exception.post.PostErrorCode;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -76,13 +78,18 @@ public class PostController {
     public ResponseEntity<PostResult> createPost(
             @RequestPart("data") CreatePostRequest request,
             @RequestPart(value = "files", required = false) List<MultipartFile> files,
-            Authentication authentication) throws IOException {
+            Authentication authentication) {
 
         Long authorId = extractMemberId(authentication);
         Long companyId = extractCompanyId(authentication);
         String companyName = resolveCompanyName(companyId);
 
-        List<MultipartFileData> fileData = toFileDataList(files);
+        List<MultipartFileData> fileData;
+        try {
+            fileData = toFileDataList(files);
+        } catch (IOException e) {
+            throw new BusinessException(PostErrorCode.POST_UPLOAD_FAILED);
+        }
 
         CreatePostCommand command = new CreatePostCommand(
                 authorId,

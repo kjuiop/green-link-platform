@@ -28,6 +28,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Transactional(readOnly = true)
@@ -75,10 +76,10 @@ public class PostService implements CreatePostUseCase, GetPostUseCase, UpdatePos
 
     @Override
     public Page<PostSummaryResult> getPosts(PostSearchCondition condition, Pageable pageable) {
-        return postRepository.search(condition, pageable).map(post -> {
-            List<PostAttachment> attachments = postRepository.findAttachmentsByPostId(post.getId());
-            return toSummaryResult(post, !attachments.isEmpty());
-        });
+        Page<Post> posts = postRepository.search(condition, pageable);
+        List<Long> postIds = posts.stream().map(Post::getId).toList();
+        Set<Long> postIdsWithAttachment = postRepository.findPostIdsHavingAttachments(postIds);
+        return posts.map(post -> toSummaryResult(post, postIdsWithAttachment.contains(post.getId())));
     }
 
     @Override

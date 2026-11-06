@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface PostRepository {
     Post save(Post post);
@@ -18,4 +19,5 @@ public interface PostRepository {
     void incrementViewCount(Long id);
     void softDelete(Long id);
     List<PostAttachment> findAttachmentsByPostId(Long postId);
+    Set<Long> findPostIdsHavingAttachments(List<Long> postIds);
 }

@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 public class PostRepositoryAdapter implements PostRepository {
@@ -72,5 +73,11 @@ public class PostRepositoryAdapter implements PostRepository {
         return postAttachmentJpaRepository.findAllByPostId(postId).stream()
                 .map(PostAttachmentJpaEntity::toDomain)
                 .toList();
+    }
+
+    @Override
+    public Set<Long> findPostIdsHavingAttachments(List<Long> postIds) {
+        if (postIds == null || postIds.isEmpty()) return Set.of();
+        return postAttachmentJpaRepository.findDistinctPostIdsByPostIdIn(postIds);
     }
 }
