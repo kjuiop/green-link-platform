@@ -50,13 +50,31 @@ function isActive(pathname: string, url: string): boolean {
   return pathname === url || pathname.startsWith(url + '/')
 }
 
-function MemberInfoCard({ summary }: { summary: MemberSummary }) {
+const COMPANY_TYPE_LABEL: Record<string, string> = {
+  ORDERING: '발주사',
+  VENDOR: '수주사',
+  BOTH: '수발주사',
+}
+
+function MemberInfoCard({ summary, name, loginId }: { summary: MemberSummary; name: string; loginId: string }) {
   const isOrdering = summary.companyType === 'ORDERING' || summary.companyType === 'BOTH'
   const isVendor = summary.companyType === 'VENDOR' || summary.companyType === 'BOTH'
 
   return (
     <div className="mx-3 my-2 rounded-lg bg-green-700 p-3 text-white text-xs">
-      <div className="mb-1.5 font-semibold text-green-100">회원정보</div>
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="font-semibold text-green-100">회원정보</span>
+        <span className="rounded bg-green-600 px-1.5 py-0.5 text-green-100">
+          {COMPANY_TYPE_LABEL[summary.companyType] ?? summary.companyType}
+        </span>
+      </div>
+      {name && (
+        <div className="mb-1.5 flex items-center gap-1 text-green-200">
+          <span className="font-medium text-white">{name}</span>
+          <span>·</span>
+          <span>{loginId}</span>
+        </div>
+      )}
       {isOrdering && (
         <div className="flex justify-between py-0.5 border-b border-green-600">
           <span>발주금액</span>
@@ -86,21 +104,21 @@ interface SidebarNavProps {
   onNavClick?: () => void
   openId: number | null
   onToggle: (id: number) => void
-  userName?: string
+  memberName?: string
+  memberLoginId?: string
   memberSummary?: MemberSummary | null
 }
 
-function SidebarNav({ menus, onNavClick, openId, onToggle, userName, memberSummary }: SidebarNavProps) {
+function SidebarNav({ menus, onNavClick, openId, onToggle, memberName, memberLoginId, memberSummary }: SidebarNavProps) {
   const pathname = usePathname()
 
   return (
     <>
       <div className="flex h-14 items-center border-b px-4">
         <span className="text-sm font-bold text-green-700">🌿 온우림</span>
-        {userName && <span className="ml-2 text-xs text-gray-400">{userName}</span>}
       </div>
 
-      {memberSummary && <MemberInfoCard summary={memberSummary} />}
+      {memberSummary && <MemberInfoCard summary={memberSummary} name={memberName ?? ''} loginId={memberLoginId ?? ''} />}
 
       <nav className="flex-1 overflow-y-auto py-2">
         {menus.map((menu) => {
@@ -189,11 +207,13 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   const pathname = usePathname()
   const [menus, setMenus] = useState<MenuItem[]>([])
   const [openId, setOpenId] = useState<number | null>(null)
-  const [userName, setUserName] = useState<string>('')
+  const [memberName, setMemberName] = useState<string>('')
+  const [memberLoginId, setMemberLoginId] = useState<string>('')
   const [memberSummary, setMemberSummary] = useState<MemberSummary | null>(null)
 
   useEffect(() => {
-    setUserName(localStorage.getItem('name') ?? '')
+    setMemberName(localStorage.getItem('name') ?? '')
+    setMemberLoginId(localStorage.getItem('loginId') ?? '')
     fetchMenusByRole().then(setMenus).catch(() => {})
     fetchMemberSummary().then(setMemberSummary).catch(() => {})
   }, [])
@@ -216,7 +236,7 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   return (
     <>
       <aside className="hidden h-screen w-56 flex-col border-r bg-white md:flex">
-        <SidebarNav menus={menus} openId={openId} onToggle={handleToggle} userName={userName} memberSummary={memberSummary} />
+        <SidebarNav menus={menus} openId={openId} onToggle={handleToggle} memberName={memberName} memberLoginId={memberLoginId} memberSummary={memberSummary} />
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={(open) => { if (!open) onMobileClose?.() }}>
@@ -226,7 +246,8 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
             onNavClick={onMobileClose}
             openId={openId}
             onToggle={handleToggle}
-            userName={userName}
+            memberName={memberName}
+            memberLoginId={memberLoginId}
             memberSummary={memberSummary}
           />
         </SheetContent>

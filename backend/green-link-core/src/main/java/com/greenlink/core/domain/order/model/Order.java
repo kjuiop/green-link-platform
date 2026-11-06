@@ -232,8 +232,8 @@ public class Order {
     }
 
     public void resetToPending() {
-        if (this.status != OrderStatus.REJECTED) {
-            throw new IllegalStateException("수주거절 상태에서만 발주대기로 복귀할 수 있습니다. 현재 상태: " + this.status);
+        if (this.status != OrderStatus.REJECTED && this.status != OrderStatus.ACCEPTED) {
+            throw new IllegalStateException("수주거절 또는 수주완료 상태에서만 발주대기로 복귀할 수 있습니다. 현재 상태: " + this.status);
         }
         this.status = OrderStatus.PENDING;
     }

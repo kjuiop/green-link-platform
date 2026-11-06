@@ -375,7 +375,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.UPDATED, changeDetail);
 
         if (!Objects.equals(previousVendorId, cmd.vendorId())) {
-            if (saved.getStatus() == OrderStatus.REJECTED) {
+            if (saved.getStatus() == OrderStatus.REJECTED || saved.getStatus() == OrderStatus.ACCEPTED) {
                 saved.resetToPending();
                 saved = orderRepository.save(saved);
             }

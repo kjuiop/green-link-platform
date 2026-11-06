@@ -42,7 +42,6 @@ export function Header({ userName, onMenuOpen, accountHref = '/settings/account'
       <div className="flex-1" />
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-2 rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-          {userName && <span className="text-sm">{userName}</span>}
           <User className="h-5 w-5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-36">

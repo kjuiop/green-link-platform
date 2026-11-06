@@ -87,6 +87,14 @@ export default function OrderingOrderDetailPage() {
 
   async function saveEdit() {
     if (!draft) return
+    if (!draft.ordererName?.trim()) {
+      setSaveError('주문자명을 입력해주세요.')
+      return
+    }
+    if (!draft.ordererPhone?.trim()) {
+      setSaveError('주문자 연락처를 입력해주세요.')
+      return
+    }
     setSaving(true)
     setSaveError(null)
     try {
@@ -448,12 +456,6 @@ export default function OrderingOrderDetailPage() {
               <>
                 <Field label="배송예정">
                   <Input value={draft.deliveryAt.slice(0, 10)} onChange={(e) => set('deliveryAt', e.target.value)} />
-                </Field>
-                <Field label="주소">
-                  <Input value={draft.address} onChange={(e) => set('address', e.target.value)} />
-                </Field>
-                <Field label="상세주소">
-                  <Input value={draft.addressDetail} onChange={(e) => set('addressDetail', e.target.value)} />
                 </Field>
                 <Field label="행사유형">
                   <div className="flex flex-wrap gap-1.5 pt-0.5">
