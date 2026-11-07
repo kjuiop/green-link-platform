@@ -7,44 +7,48 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Pagination } from '@/components/ui/Pagination'
+import { Vendor, VendorStatus, CompanyType, RegionDto } from '@/types/vendor'
+import RegionSelector from '@/components/vendor/RegionSelector'
 import { PageResult } from '@/types/page'
-import { CompanyInfo, CompanyType, fetchCompaniesPaged, updateCompanyType } from '@/lib/api/companyApi'
-import { createVendor } from '@/lib/api/vendorApi'
+import { fetchVendorsPaged, createVendor, updateVendor, updateVendorStatus, deleteVendor } from '@/lib/api/vendorApi'
 import { Search } from 'lucide-react'
 
 const PAGE_SIZE = 20
 
-const COMPANY_TYPE_OPTIONS: { value: CompanyType; label: string }[] = [
-  { value: 'VENDOR', label: '수주사' },
-  { value: 'ORDERING', label: '발주사' },
-  { value: 'BOTH', label: '둘 다' },
+const CAPABILITY_OPTIONS = [
+  { value: 'ANNIVERSARY', label: '축하' },
+  { value: 'MEMORIAL',    label: '근조' },
+  { value: 'ORCHID_EAST', label: '동양란' },
+  { value: 'ORCHID_WEST', label: '서양란' },
+  { value: 'FLOWER',      label: '꽃' },
+  { value: 'INDOOR',      label: '관엽' },
+  { value: 'RICE_WREATH', label: '쌀화환' },
 ]
 
+const STATUS_FILTERS = [
+  { label: '전체', value: 'ALL' },
+  { label: '활성', value: 'ACTIVE' },
+  { label: '대기', value: 'PENDING' },
+  { label: '정지', value: 'INACTIVE' },
+] as const
+
+type FilterStatus = 'ALL' | VendorStatus
+
+const STATUS_LABELS: Record<VendorStatus, string> = {
+  ACTIVE: '활성',
+  INACTIVE: '정지',
+  PENDING: '대기',
+}
+
 const COMPANY_TYPE_LABELS: Record<CompanyType, string> = {
-  VENDOR: '수주사',
-  ORDERING: '발주사',
+  ORDERING: '발주',
+  VENDOR: '수주',
   BOTH: '발주+수주',
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  ACTIVE: '활성',
-  INACTIVE: '정지',
-}
-
-type RegisterForm = {
-  name: string
-  businessNumber: string
-  managerName: string
-  phone: string
-  address: string
-  loginId: string
-  password: string
-  companyType: CompanyType
-}
-
-const emptyRegisterForm: RegisterForm = {
-  name: '', businessNumber: '', managerName: '', phone: '',
-  address: '', loginId: '', password: '', companyType: 'VENDOR',
+const emptyForm = {
+  name: '', businessNumber: '', faxNumber: '', companyPhone: '', managerName: '', phone: '',
+  email: '', address: '', detailAddress: '', loginId: '', password: '', companyType: 'VENDOR' as CompanyType,
 }
 
 function formatPhone(value: string) {
@@ -55,95 +59,210 @@ function formatPhone(value: string) {
 }
 
 export default function VendorsPage() {
-  const [result, setResult] = useState<PageResult<CompanyInfo> | null>(null)
+  const [result, setResult] = useState<PageResult<Vendor> | null>(null)
   const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL')
   const [appliedQuery, setAppliedQuery] = useState('')
+  const [appliedStatus, setAppliedStatus] = useState<FilterStatus>('ALL')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [staged, setStaged] = useState<Record<string, VendorStatus>>({})
+  const [saving, setSaving] = useState(false)
   const [pageError, setPageError] = useState('')
 
-  const [typeModalOpen, setTypeModalOpen] = useState(false)
-  const [typeTarget, setTypeTarget] = useState<CompanyInfo | null>(null)
-  const [selectedType, setSelectedType] = useState<CompanyType>('VENDOR')
-  const [typeSaving, setTypeSaving] = useState(false)
-  const [typeError, setTypeError] = useState('')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<Vendor | null>(null)
+  const [form, setForm] = useState(emptyForm)
+  const [modalError, setModalError] = useState('')
+  const [modalSaving, setModalSaving] = useState(false)
 
-  const [registerOpen, setRegisterOpen] = useState(false)
-  const [registerForm, setRegisterForm] = useState<RegisterForm>(emptyRegisterForm)
-  const [registerError, setRegisterError] = useState('')
-  const [registerSaving, setRegisterSaving] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
-  const load = useCallback((p: number) => {
+  const [modalRegions, setModalRegions] = useState<RegionDto[]>([])
+  const [modalCapabilities, setModalCapabilities] = useState<string[]>([])
+
+  const load = useCallback((status: FilterStatus, p: number) => {
     setLoading(true)
     setPageError('')
-    fetchCompaniesPaged(p, PAGE_SIZE)
+    fetchVendorsPaged(status !== 'ALL' ? status : undefined, p, PAGE_SIZE)
       .then(setResult)
       .catch((e) => setPageError(e.message))
       .finally(() => setLoading(false))
   }, [])
 
-  useEffect(() => { load(page) }, [page, load])
+  useEffect(() => { load(appliedStatus, page) }, [page, appliedStatus, load])
 
-  const handleSearch = () => { setAppliedQuery(query); setPage(0) }
-  const handleReset = () => { setQuery(''); setAppliedQuery(''); setPage(0) }
-
-  const companies = result?.content ?? []
-  const filtered = companies.filter((c) => {
-    if (!appliedQuery) return true
-    return c.companyName.includes(appliedQuery) || (c.businessNo ?? '').includes(appliedQuery)
-  })
-
-  const openTypeEdit = (company: CompanyInfo) => {
-    setTypeTarget(company)
-    setSelectedType(company.type)
-    setTypeError('')
-    setTypeModalOpen(true)
+  const handleSearch = () => {
+    setAppliedQuery(query)
+    setAppliedStatus(statusFilter)
+    setPage(0)
+    setSelected(new Set())
+    setStaged({})
   }
 
-  const handleTypeSave = async () => {
-    if (!typeTarget) return
-    setTypeSaving(true)
-    setTypeError('')
+  const handleReset = () => {
+    setQuery(''); setStatusFilter('ALL')
+    setAppliedQuery(''); setAppliedStatus('ALL')
+    setPage(0)
+    setSelected(new Set())
+    setStaged({})
+  }
+
+  const vendors = result?.content ?? []
+
+  const filtered = vendors.filter((v) => {
+    if (!appliedQuery) return true
+    return (
+      v.name.includes(appliedQuery) ||
+      v.managerName.includes(appliedQuery) ||
+      v.phone.includes(appliedQuery)
+    )
+  })
+
+  const allChecked = filtered.length > 0 && filtered.every((v) => selected.has(v.id))
+  const someChecked = filtered.some((v) => selected.has(v.id))
+
+  const toggleAll = () => {
+    if (allChecked) {
+      setSelected((prev) => { const next = new Set(prev); filtered.forEach((v) => next.delete(v.id)); return next })
+    } else {
+      setSelected((prev) => { const next = new Set(prev); filtered.forEach((v) => next.add(v.id)); return next })
+    }
+  }
+
+  const toggleOne = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const handleStatusChange = (vendor: Vendor, status: VendorStatus) => {
+    setStaged((prev) => ({ ...prev, [vendor.id]: status }))
+  }
+
+  const handleStagedSave = async () => {
+    if (Object.keys(staged).length === 0) return
+    setSaving(true)
+    setPageError('')
     try {
-      await updateCompanyType(typeTarget.id, selectedType)
-      load(page)
-      setTypeModalOpen(false)
+      await Promise.all(
+        Object.entries(staged).map(([id, status]) =>
+          updateVendorStatus(id, status === 'ACTIVE' ? 'activate' : 'suspend')
+        )
+      )
+      load(appliedStatus, page)
+      setStaged({})
+      setSelected(new Set())
     } catch (e: unknown) {
-      setTypeError(e instanceof Error ? e.message : '업체유형 변경에 실패했습니다.')
+      setPageError(e instanceof Error ? e.message : '상태 변경에 실패했습니다.')
     } finally {
-      setTypeSaving(false)
+      setSaving(false)
     }
   }
 
   const openRegister = () => {
-    setRegisterForm(emptyRegisterForm)
-    setRegisterError('')
-    setRegisterOpen(true)
+    setEditTarget(null)
+    setForm(emptyForm)
+    setModalRegions([])
+    setModalCapabilities([])
+    setModalError('')
+    setModalOpen(true)
   }
 
-  const handleRegister = async () => {
-    if (!registerForm.name || !registerForm.managerName || !registerForm.phone || !registerForm.loginId || !registerForm.password) return
-    setRegisterSaving(true)
-    setRegisterError('')
+  const openEdit = (vendor: Vendor) => {
+    setEditTarget(vendor)
+    setForm({
+      name: vendor.name,
+      businessNumber: vendor.businessNumber ?? '',
+      faxNumber: vendor.faxNumber ?? '',
+      companyPhone: vendor.companyPhone ?? '',
+      managerName: vendor.managerName,
+      phone: vendor.phone,
+      email: vendor.email ?? '',
+      address: vendor.address,
+      detailAddress: vendor.detailAddress ?? '',
+      loginId: vendor.loginId,
+      password: '',
+      companyType: vendor.companyType ?? 'VENDOR',
+    })
+    setModalRegions(vendor.regions ?? [])
+    setModalCapabilities(vendor.capabilities ?? [])
+    setModalError('')
+    setModalOpen(true)
+  }
+
+  const handleSave = async () => {
+    if (!form.name || !form.managerName || !form.phone || !form.loginId) return
+    if (!editTarget && !form.password) return
+
+    setModalSaving(true)
+    setModalError('')
     try {
-      await createVendor({
-        companyName: registerForm.name,
-        businessNo: registerForm.businessNumber || undefined,
-        address: registerForm.address,
-        managerName: registerForm.managerName,
-        phone: registerForm.phone,
-        loginId: registerForm.loginId,
-        password: registerForm.password,
-        companyType: registerForm.companyType,
-      })
-      load(0)
-      setPage(0)
-      setRegisterOpen(false)
+      if (editTarget) {
+        await updateVendor(editTarget.id, {
+          companyName: form.name,
+          businessNo: form.businessNumber || undefined,
+          faxNumber: form.faxNumber || undefined,
+          companyPhone: form.companyPhone || undefined,
+          address: form.address,
+          detailAddress: form.detailAddress || undefined,
+          managerName: form.managerName,
+          phone: form.phone,
+          email: form.email || undefined,
+          companyType: form.companyType,
+          regions: modalRegions,
+          capabilities: modalCapabilities,
+        })
+      } else {
+        await createVendor({
+          companyName: form.name,
+          businessNo: form.businessNumber || undefined,
+          faxNumber: form.faxNumber || undefined,
+          companyPhone: form.companyPhone || undefined,
+          address: form.address,
+          detailAddress: form.detailAddress || undefined,
+          managerName: form.managerName,
+          phone: form.phone,
+          email: form.email || undefined,
+          loginId: form.loginId,
+          password: form.password,
+          companyType: form.companyType,
+        })
+      }
+      load(appliedStatus, editTarget ? page : 0)
+      if (!editTarget) setPage(0)
+      setModalOpen(false)
     } catch (e: unknown) {
-      setRegisterError(e instanceof Error ? e.message : '업체 등록에 실패했습니다.')
+      setModalError(e instanceof Error ? e.message : '저장에 실패했습니다.')
     } finally {
-      setRegisterSaving(false)
+      setModalSaving(false)
     }
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!editTarget) return
+    setDeleting(true)
+    try {
+      await deleteVendor(editTarget.id)
+      setDeleteConfirmOpen(false)
+      setModalOpen(false)
+      load(appliedStatus, page)
+    } catch (e: unknown) {
+      setModalError(e instanceof Error ? e.message : '삭제에 실패했습니다.')
+      setDeleteConfirmOpen(false)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handlePageChange = (p: number) => {
+    setPage(p)
+    setSelected(new Set())
+    setStaged({})
   }
 
   return (
@@ -158,12 +277,26 @@ export default function VendorsPage() {
       )}
 
       <div className="rounded-lg border bg-white p-4">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-3">
+          {STATUS_FILTERS.map(({ label, value }) => (
+            <label key={value} className="flex cursor-pointer items-center gap-1.5">
+              <input
+                type="radio"
+                name="statusFilter"
+                checked={statusFilter === value}
+                onChange={() => setStatusFilter(value)}
+                className="accent-green-700"
+              />
+              <span className="text-sm text-gray-700">{label}</span>
+            </label>
+          ))}
+        </div>
+        <div className="mt-3 flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="업체명, 사업자번호로 검색"
+              placeholder="업체명, 담당자명, 연락처로 검색"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -177,49 +310,83 @@ export default function VendorsPage() {
 
       {/* 데스크톱 테이블 */}
       <div className="hidden rounded-lg border bg-white md:block">
+        <div className="flex items-center justify-end border-b px-4 py-2">
+          <button
+            onClick={handleStagedSave}
+            disabled={saving || Object.keys(staged).length === 0}
+            className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+          >
+            {saving ? '저장 중...' : '저장'}
+          </button>
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <input
+                  type="checkbox"
+                  checked={allChecked}
+                  ref={(el) => { if (el) el.indeterminate = someChecked && !allChecked }}
+                  onChange={toggleAll}
+                  className="accent-green-700"
+                />
+              </TableHead>
               <TableHead>업체명</TableHead>
-              <TableHead>업체유형</TableHead>
+              <TableHead>거래유형</TableHead>
+              <TableHead>담당자명</TableHead>
+              <TableHead>연락처</TableHead>
+              <TableHead>주소</TableHead>
+              <TableHead>아이디</TableHead>
               <TableHead>상태</TableHead>
-              <TableHead>사업자번호</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((company) => (
-                <TableRow key={company.id}>
+              filtered.map((vendor) => (
+                <TableRow key={vendor.id} className={selected.has(vendor.id) ? 'bg-blue-50' : ''}>
                   <TableCell>
-                    <button onClick={() => openTypeEdit(company)} className="font-medium text-blue-700 hover:underline">
-                      {company.companyName}
+                    <input
+                      type="checkbox"
+                      checked={selected.has(vendor.id)}
+                      onChange={() => toggleOne(vendor.id)}
+                      className="accent-green-700"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <button onClick={() => openEdit(vendor)} className="font-medium text-blue-700 hover:underline">
+                      {vendor.name}
                     </button>
                   </TableCell>
+                  <TableCell className="text-sm">
+                    {vendor.companyType ? COMPANY_TYPE_LABELS[vendor.companyType] : '—'}
+                  </TableCell>
+                  <TableCell className="text-sm">{vendor.managerName}</TableCell>
+                  <TableCell className="text-sm">{vendor.phone}</TableCell>
+                  <TableCell className="text-sm">{vendor.address}</TableCell>
+                  <TableCell className="font-mono text-xs text-gray-500">{vendor.loginId}</TableCell>
                   <TableCell>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      company.type === 'ORDERING' ? 'bg-blue-100 text-blue-700' :
-                      company.type === 'BOTH' ? 'bg-purple-100 text-purple-700' :
-                      'bg-green-100 text-green-700'
-                    }`}>
-                      {COMPANY_TYPE_LABELS[company.type]}
-                    </span>
+                    <select
+                      value={staged[vendor.id] ?? vendor.status}
+                      onChange={(e) => handleStatusChange(vendor, e.target.value as VendorStatus)}
+                      className="rounded border border-gray-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-700"
+                    >
+                      <option value="ACTIVE">활성</option>
+                      <option value="INACTIVE">정지</option>
+                      <option value="PENDING" disabled>대기</option>
+                    </select>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-600">
-                    {STATUS_LABELS[company.status] ?? company.status}
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-500">{company.businessNo ?? '-'}</TableCell>
                 </TableRow>
               ))
             )}
@@ -232,7 +399,7 @@ export default function VendorsPage() {
               totalPages={result.totalPages}
               totalElements={result.totalElements}
               size={result.size}
-              onPageChange={(p) => setPage(p)}
+              onPageChange={handlePageChange}
             />
           </div>
         )}
@@ -240,28 +407,52 @@ export default function VendorsPage() {
 
       {/* 모바일 카드 */}
       <div className="space-y-3 md:hidden">
+        {Object.keys(staged).length > 0 && (
+          <div className="flex justify-end">
+            <button
+              onClick={handleStagedSave}
+              disabled={saving}
+              className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            >
+              {saving ? '저장 중...' : '변경 저장'}
+            </button>
+          </div>
+        )}
         {loading ? (
-          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">불러오는 중...</div>
+          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
+            불러오는 중...
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">검색 결과가 없습니다.</div>
+          <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">
+            검색 결과가 없습니다.
+          </div>
         ) : (
-          filtered.map((company) => (
-            <div key={company.id} className="rounded-lg border bg-white p-4">
+          filtered.map((vendor) => (
+            <div key={vendor.id} className="rounded-lg border bg-white p-4">
               <div className="flex items-center justify-between gap-2">
-                <button onClick={() => openTypeEdit(company)} className="truncate font-medium text-blue-700">
-                  {company.companyName}
+                <button onClick={() => openEdit(vendor)} className="truncate font-medium text-blue-700">
+                  {vendor.name}
                 </button>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                  company.type === 'ORDERING' ? 'bg-blue-100 text-blue-700' :
-                  company.type === 'BOTH' ? 'bg-purple-100 text-purple-700' :
-                  'bg-green-100 text-green-700'
-                }`}>
-                  {COMPANY_TYPE_LABELS[company.type]}
-                </span>
+                <select
+                  value={staged[vendor.id] ?? vendor.status}
+                  onChange={(e) => handleStatusChange(vendor, e.target.value as VendorStatus)}
+                  className="shrink-0 rounded border border-gray-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-700"
+                >
+                  <option value="ACTIVE">활성</option>
+                  <option value="INACTIVE">정지</option>
+                  <option value="PENDING" disabled>대기</option>
+                </select>
               </div>
-              <div className="mt-1.5 text-xs text-gray-500">
-                {company.businessNo && <div>{company.businessNo}</div>}
-                <div>{STATUS_LABELS[company.status] ?? company.status}</div>
+              <div className="mt-1.5 space-y-0.5 text-xs text-gray-500">
+                <div>{vendor.managerName} · {vendor.phone}</div>
+                {vendor.companyType && (
+                  <div className="text-gray-400">거래유형: {COMPANY_TYPE_LABELS[vendor.companyType]}</div>
+                )}
+                {vendor.address && <div className="truncate">{vendor.address}</div>}
+                <div className="font-mono text-gray-400">{vendor.loginId}</div>
+                <div className={`font-medium ${vendor.status === 'ACTIVE' ? 'text-green-600' : vendor.status === 'PENDING' ? 'text-yellow-600' : 'text-red-500'}`}>
+                  {STATUS_LABELS[vendor.status]}
+                </div>
               </div>
             </div>
           ))
@@ -272,119 +463,155 @@ export default function VendorsPage() {
             totalPages={result.totalPages}
             totalElements={result.totalElements}
             size={result.size}
-            onPageChange={(p) => setPage(p)}
+            onPageChange={handlePageChange}
           />
         )}
       </div>
 
-      {/* 업체유형 수정 모달 */}
-      <Dialog open={typeModalOpen} onOpenChange={setTypeModalOpen}>
-        <DialogContent className="max-w-sm">
+      {/* 등록/수정 모달 */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{typeTarget?.companyName} — 업체유형 변경</DialogTitle>
+            <DialogTitle>{editTarget ? `${editTarget.name} 수정` : '업체 등록'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="flex gap-2">
-              {COMPANY_TYPE_OPTIONS.map((opt) => (
-                <label key={opt.value} className={`flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border-2 px-3 py-2 text-sm font-medium transition-colors ${
-                  selectedType === opt.value
-                    ? 'border-green-600 bg-green-50 text-green-800'
-                    : 'border-gray-200 text-gray-600 hover:border-green-300'
-                }`}>
-                  <input
-                    type="radio"
-                    name="companyType"
-                    value={opt.value}
-                    checked={selectedType === opt.value}
-                    onChange={() => setSelectedType(opt.value)}
-                    className="sr-only"
-                  />
-                  {opt.label}
-                </label>
-              ))}
+            <div className="space-y-1.5">
+              <Label>업체명 *</Label>
+              <Input placeholder="업체명" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
             </div>
-            {typeError && (
-              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{typeError}</p>
+            <div className="space-y-1.5">
+              <Label>거래유형</Label>
+              <select
+                value={form.companyType}
+                onChange={(e) => setForm((f) => ({ ...f, companyType: e.target.value as CompanyType }))}
+                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+              >
+                <option value="VENDOR">수주</option>
+                <option value="ORDERING">발주</option>
+                <option value="BOTH">발주+수주</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>사업자번호</Label>
+              <Input placeholder="000-00-00000" value={form.businessNumber} onChange={(e) => setForm((f) => ({ ...f, businessNumber: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>팩스번호</Label>
+              <Input placeholder="02-0000-0000" value={form.faxNumber} onChange={(e) => setForm((f) => ({ ...f, faxNumber: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>업체 연락처</Label>
+              <Input placeholder="02-0000-0000 / 010-0000-0000" inputMode="numeric" value={form.companyPhone} onChange={(e) => setForm((f) => ({ ...f, companyPhone: formatPhone(e.target.value) }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>담당자명 *</Label>
+              <Input placeholder="담당자 성함" value={form.managerName} onChange={(e) => setForm((f) => ({ ...f, managerName: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>담당자 연락처 *</Label>
+              <Input placeholder="010-0000-0000" inputMode="numeric" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: formatPhone(e.target.value) }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>이메일</Label>
+              <Input type="email" placeholder="example@email.com" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>주소</Label>
+              <Input placeholder="업체 주소" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>상세주소</Label>
+              <Input placeholder="건물명, 동/호수 등" value={form.detailAddress} onChange={(e) => setForm((f) => ({ ...f, detailAddress: e.target.value }))} />
+            </div>
+            {(form.companyType === 'VENDOR' || form.companyType === 'BOTH') && (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">서비스 지역</Label>
+                  <RegionSelector selected={modalRegions} onChange={setModalRegions} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">가능상품</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {CAPABILITY_OPTIONS.map((opt) => {
+                      const active = modalCapabilities.includes(opt.value)
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() =>
+                            setModalCapabilities((prev) =>
+                              active ? prev.filter((v) => v !== opt.value) : [...prev, opt.value]
+                            )
+                          }
+                          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                            active
+                              ? 'border-green-700 bg-green-700 text-white'
+                              : 'border-gray-300 bg-white text-gray-600 hover:border-green-500'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+            <div className="space-y-1.5">
+              <Label>아이디 *</Label>
+              <Input placeholder="영문·숫자 조합 6자 이상" value={form.loginId} onChange={(e) => setForm((f) => ({ ...f, loginId: e.target.value }))} disabled={!!editTarget} />
+            </div>
+            {!editTarget && (
+              <div className="space-y-1.5">
+                <Label>초기 비밀번호 *</Label>
+                <Input type="password" placeholder="8자 이상" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} />
+              </div>
+            )}
+            {modalError && (
+              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{modalError}</p>
             )}
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setTypeModalOpen(false)}>취소</Button>
-            <Button className="bg-green-700 hover:bg-green-800" disabled={typeSaving} onClick={handleTypeSave}>
-              {typeSaving ? '저장 중...' : '저장'}
+            {editTarget && (
+              <Button
+                variant="outline"
+                className="mr-auto border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={() => setDeleteConfirmOpen(true)}
+              >
+                삭제
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => setModalOpen(false)}>취소</Button>
+            <Button
+              className="bg-green-700 hover:bg-green-800"
+              disabled={modalSaving || !form.name || !form.managerName || !form.phone || !form.loginId || (!editTarget && !form.password)}
+              onClick={handleSave}
+            >
+              {modalSaving ? '저장 중...' : editTarget ? '저장' : '등록'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* 업체 등록 모달 */}
-      <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
-        <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
+      {/* 삭제 확인 모달 */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>업체 등록</DialogTitle>
+            <DialogTitle>업체 삭제</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>업체유형 *</Label>
-              <div className="flex gap-2">
-                {COMPANY_TYPE_OPTIONS.map((opt) => (
-                  <label key={opt.value} className={`flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border-2 px-3 py-2 text-sm font-medium transition-colors ${
-                    registerForm.companyType === opt.value
-                      ? 'border-green-600 bg-green-50 text-green-800'
-                      : 'border-gray-200 text-gray-600 hover:border-green-300'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="registerCompanyType"
-                      value={opt.value}
-                      checked={registerForm.companyType === opt.value}
-                      onChange={() => setRegisterForm((f) => ({ ...f, companyType: opt.value }))}
-                      className="sr-only"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>업체명 *</Label>
-              <Input placeholder="업체명" value={registerForm.name} onChange={(e) => setRegisterForm((f) => ({ ...f, name: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>사업자번호</Label>
-              <Input placeholder="000-00-00000" value={registerForm.businessNumber} onChange={(e) => setRegisterForm((f) => ({ ...f, businessNumber: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>담당자명 *</Label>
-              <Input placeholder="담당자 성함" value={registerForm.managerName} onChange={(e) => setRegisterForm((f) => ({ ...f, managerName: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>연락처 *</Label>
-              <Input placeholder="010-0000-0000" inputMode="numeric" value={registerForm.phone} onChange={(e) => setRegisterForm((f) => ({ ...f, phone: formatPhone(e.target.value) }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>주소</Label>
-              <Input placeholder="업체 주소" value={registerForm.address} onChange={(e) => setRegisterForm((f) => ({ ...f, address: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>아이디 *</Label>
-              <Input placeholder="영문·숫자 조합 6자 이상" value={registerForm.loginId} onChange={(e) => setRegisterForm((f) => ({ ...f, loginId: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>초기 비밀번호 *</Label>
-              <Input type="password" placeholder="8자 이상" value={registerForm.password} onChange={(e) => setRegisterForm((f) => ({ ...f, password: e.target.value }))} />
-            </div>
-            {registerError && (
-              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{registerError}</p>
-            )}
-          </div>
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">{editTarget?.name}</span> 업체를 삭제하시겠습니까?
+            <br />
+            삭제된 업체는 복구할 수 없습니다.
+          </p>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setRegisterOpen(false)}>취소</Button>
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>취소</Button>
             <Button
-              className="bg-green-700 hover:bg-green-800"
-              disabled={registerSaving || !registerForm.name || !registerForm.managerName || !registerForm.phone || !registerForm.loginId || !registerForm.password}
-              onClick={handleRegister}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleting}
+              onClick={handleDeleteConfirm}
             >
-              {registerSaving ? '저장 중...' : '등록'}
+              {deleting ? '삭제 중...' : '삭제'}
             </Button>
           </DialogFooter>
         </DialogContent>
