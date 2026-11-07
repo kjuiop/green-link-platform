@@ -3,6 +3,7 @@ package com.greenlink.admin.adapter.out.storage;
 import com.greenlink.core.domain.photo.port.PhotoStorage;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.photo.PhotoErrorCode;
+import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -11,10 +12,15 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.UUID;
 
 @Component
 public class S3PhotoStorageAdapter implements PhotoStorage {
+
+    private static final int MAX_LONG_EDGE = 1200;
+    private static final double JPEG_QUALITY = 0.85;
 
     private final S3Client s3Client;
     private final String bucket;
@@ -30,17 +36,17 @@ public class S3PhotoStorageAdapter implements PhotoStorage {
 
     @Override
     public UploadResult store(Long orderId, String originalFileName, byte[] content, String contentType) {
-        String ext = extractExtension(originalFileName);
-        String key = "orders/" + orderId + "/" + UUID.randomUUID() + (ext.isEmpty() ? "" : "." + ext);
+        byte[] jpegBytes = toJpeg(content);
+        String key = "orders/" + orderId + "/" + UUID.randomUUID() + ".jpg";
 
         try {
             s3Client.putObject(
                     PutObjectRequest.builder()
                             .bucket(bucket)
                             .key(key)
-                            .contentType(contentType)
+                            .contentType("image/jpeg")
                             .build(),
-                    RequestBody.fromBytes(content)
+                    RequestBody.fromBytes(jpegBytes)
             );
         } catch (S3Exception e) {
             throw new BusinessException(PhotoErrorCode.PHOTO_UPLOAD_FAILED);
@@ -55,9 +61,19 @@ public class S3PhotoStorageAdapter implements PhotoStorage {
         s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(s3Key).build());
     }
 
-    private String extractExtension(String fileName) {
-        if (fileName == null) return "";
-        int dot = fileName.lastIndexOf('.');
-        return dot >= 0 ? fileName.substring(dot + 1).toLowerCase() : "";
+    // 비율 유지하며 long edge 1200px 이하로 축소 + JPEG 85% 압축
+    private byte[] toJpeg(byte[] source) {
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            Thumbnails.of(new java.io.ByteArrayInputStream(source))
+                    .size(MAX_LONG_EDGE, MAX_LONG_EDGE)
+                    .keepAspectRatio(true)
+                    .outputFormat("jpg")
+                    .outputQuality(JPEG_QUALITY)
+                    .toOutputStream(out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new BusinessException(PhotoErrorCode.PHOTO_UPLOAD_FAILED);
+        }
     }
 }

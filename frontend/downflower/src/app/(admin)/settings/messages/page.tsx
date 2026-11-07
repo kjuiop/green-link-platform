@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { fetchSmsSettings, saveSmsSettings } from '@/lib/api/settingsApi'
+import type { SmsProvider } from '@/lib/api/companyApi'
 
 type EventType = '장례식' | '결혼식' | '기타'
 
@@ -19,10 +20,18 @@ const VARIABLES = [
   { key: '{주문번호}', desc: '주문번호' },
 ]
 
+const PROVIDERS: { value: SmsProvider; label: string }[] = [
+  { value: 'ALIGO', label: '알리고 (Aligo)' },
+  { value: 'MESSAGEME', label: '메세지미 (MessageMe)' },
+]
+
 export default function SettingsMessagesPage() {
   const [activeTab, setActiveTab] = useState<EventType>('장례식')
   const [senderNumber, setSenderNumber] = useState('')
   const [senderName, setSenderName] = useState('')
+  const [provider, setProvider] = useState<SmsProvider>('ALIGO')
+  const [apiKey, setApiKey] = useState('')
+  const [userId, setUserId] = useState('')
   const [templates, setTemplates] = useState<Record<EventType, string>>({
     장례식: '',
     결혼식: '',
@@ -38,6 +47,9 @@ export default function SettingsMessagesPage() {
       .then((data) => {
         setSenderNumber(data.senderNumber ?? '')
         setSenderName(data.senderName ?? '')
+        setProvider(data.provider ?? 'ALIGO')
+        setApiKey(data.apiKey ?? '')
+        setUserId(data.userId ?? '')
         setTemplates({
           장례식: data.templateFuneral ?? '',
           결혼식: data.templateWedding ?? '',
@@ -58,6 +70,9 @@ export default function SettingsMessagesPage() {
         templateFuneral: templates['장례식'],
         templateWedding: templates['결혼식'],
         templateOthers: templates['기타'],
+        provider,
+        apiKey,
+        userId,
       })
       setSaveResult('success')
       setTimeout(() => setSaveResult('idle'), 2000)
@@ -79,29 +94,71 @@ export default function SettingsMessagesPage() {
     <div className="space-y-4">
       <h1 className="text-xl font-bold">문자 설정</h1>
 
-      {/* 발신 정보 */}
+      {/* 인증문자 발송 제공사 */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">발신 정보</CardTitle>
+          <CardTitle className="text-sm">인증문자 발송 설정</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2">
+        <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <Label>발신번호</Label>
-            <Input
-              placeholder="010-0000-0000"
-              value={senderNumber}
-              onChange={(e) => setSenderNumber(e.target.value)}
-              disabled={loading}
-            />
+            <Label>SMS 제공사</Label>
+            <div className="flex gap-3">
+              {PROVIDERS.map(({ value, label }) => (
+                <label key={value} className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="radio"
+                    name="provider"
+                    value={value}
+                    checked={provider === value}
+                    onChange={() => setProvider(value)}
+                    className="accent-green-700"
+                    disabled={loading}
+                  />
+                  <span className="text-sm">{label}</span>
+                </label>
+              ))}
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label>발신자명</Label>
-            <Input
-              placeholder="온우림"
-              value={senderName}
-              onChange={(e) => setSenderName(e.target.value)}
-              disabled={loading}
-            />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>발신번호</Label>
+              <Input
+                placeholder="010-0000-0000"
+                value={senderNumber}
+                onChange={(e) => setSenderNumber(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>발신자명</Label>
+              <Input
+                placeholder="온우림"
+                value={senderName}
+                onChange={(e) => setSenderName(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>API Key</Label>
+              <Input
+                placeholder={provider === 'ALIGO' ? '알리고 API Key' : '메세지미 API Key'}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            {provider === 'ALIGO' && (
+              <div className="space-y-1.5">
+                <Label>User ID</Label>
+                <Input
+                  placeholder="알리고 User ID"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -112,7 +169,6 @@ export default function SettingsMessagesPage() {
           <CardTitle className="text-sm">배송완료 문자 템플릿</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* 탭 */}
           <div className="flex gap-1 rounded-lg border bg-gray-50 p-1">
             {EVENT_TABS.map((tab) => (
               <button
@@ -131,7 +187,6 @@ export default function SettingsMessagesPage() {
             ))}
           </div>
 
-          {/* 변수 안내 */}
           <div className="flex flex-wrap gap-2">
             {VARIABLES.map(({ key, desc }) => (
               <button
@@ -147,7 +202,6 @@ export default function SettingsMessagesPage() {
             <span className="self-center text-xs text-gray-400">클릭하면 커서 위치에 삽입</span>
           </div>
 
-          {/* 템플릿 입력 */}
           <div className="space-y-1.5">
             <Label>{activeTab} 문자 내용</Label>
             <Textarea

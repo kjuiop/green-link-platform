@@ -1,0 +1,11 @@
+CREATE TABLE company_integrations (
+  id         BIGINT NOT NULL AUTO_INCREMENT,
+  company_id    BIGINT NOT NULL,
+  provider      VARCHAR(50) NOT NULL,
+  api_key       VARCHAR(200) DEFAULT NULL,
+  sender_number VARCHAR(20) DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_company (company_id)
+);
