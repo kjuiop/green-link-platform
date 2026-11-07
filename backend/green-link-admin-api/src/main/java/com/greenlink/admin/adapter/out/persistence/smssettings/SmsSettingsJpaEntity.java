@@ -27,18 +27,32 @@ public class SmsSettingsJpaEntity extends BaseJpaEntity {
     @Column(columnDefinition = "TEXT")
     private String templateOthers;
 
+    @Column(length = 50)
+    private String provider;
+
+    @Column(length = 200)
+    private String apiKey;
+
+    @Column(length = 100)
+    private String userId;
+
     protected SmsSettingsJpaEntity() {}
 
     public void update(String senderNumber, String senderName,
-                       String templateFuneral, String templateWedding, String templateOthers) {
+                       String templateFuneral, String templateWedding, String templateOthers,
+                       String provider, String apiKey, String userId) {
         this.senderNumber = senderNumber;
         this.senderName = senderName;
         this.templateFuneral = templateFuneral;
         this.templateWedding = templateWedding;
         this.templateOthers = templateOthers;
+        this.provider = provider != null ? provider : "ALIGO";
+        this.apiKey = apiKey;
+        this.userId = userId;
     }
 
     public SmsSettings toDomain() {
-        return SmsSettings.of(id, senderNumber, senderName, templateFuneral, templateWedding, templateOthers);
+        return SmsSettings.of(id, senderNumber, senderName, templateFuneral, templateWedding, templateOthers,
+                provider, apiKey, userId);
     }
 }

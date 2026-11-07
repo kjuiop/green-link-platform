@@ -6,5 +6,8 @@ public record SmsSettingsResult(
         String senderName,
         String templateFuneral,
         String templateWedding,
-        String templateOthers
+        String templateOthers,
+        String provider,
+        String apiKey,
+        String userId
 ) {}

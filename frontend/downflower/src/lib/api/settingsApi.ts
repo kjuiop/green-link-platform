@@ -1,4 +1,5 @@
 import { authBearerHeader, fetchWithAuth } from './fetchWithAuth'
+import type { SmsProvider } from './companyApi'
 
 export type SmsSettingsResult = {
   id: number | null
@@ -7,6 +8,9 @@ export type SmsSettingsResult = {
   templateFuneral: string
   templateWedding: string
   templateOthers: string
+  provider: SmsProvider
+  apiKey: string | null
+  userId: string | null
 }
 
 export async function fetchSmsSettings(): Promise<SmsSettingsResult> {

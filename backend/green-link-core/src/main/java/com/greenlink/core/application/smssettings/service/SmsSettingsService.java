@@ -29,13 +29,15 @@ public class SmsSettingsService implements GetSmsSettingsUseCase, SaveSmsSetting
     public SmsSettingsResult save(SaveSmsSettingsCommand command) {
         SmsSettings settings = repository.get();
         settings.update(command.senderNumber(), command.senderName(),
-                command.templateFuneral(), command.templateWedding(), command.templateOthers());
+                command.templateFuneral(), command.templateWedding(), command.templateOthers(),
+                command.provider(), command.apiKey(), command.userId());
         return toResult(repository.save(settings));
     }
 
     private SmsSettingsResult toResult(SmsSettings s) {
         return new SmsSettingsResult(
                 s.getId(), s.getSenderNumber(), s.getSenderName(),
-                s.getTemplateFuneral(), s.getTemplateWedding(), s.getTemplateOthers());
+                s.getTemplateFuneral(), s.getTemplateWedding(), s.getTemplateOthers(),
+                s.getProvider(), s.getApiKey(), s.getUserId());
     }
 }
