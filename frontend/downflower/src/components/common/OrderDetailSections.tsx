@@ -11,6 +11,7 @@ import { ReferencePhotoSection } from '@/components/common/ReferencePhotoViewer'
 import { Pencil, X, Check, Trash2 } from 'lucide-react'
 import { cn, RIBBON_PHRASES } from '@/lib/utils'
 import type { LoadedOrderDetail } from '@/components/common/useOrderDetail'
+import VendorSelectModal from '@/components/common/VendorSelectModal'
 
 type D = LoadedOrderDetail
 interface SectionProps { d: D; className?: string }
@@ -98,6 +99,7 @@ export function SaveErrorBanner({ d }: { d: D }) {
 
 export function BasicInfoCard({ d, className }: SectionProps) {
   const { order, draft, isEditing, products, vendors, selectedProductId, set } = d
+  const [vendorModalOpen, setVendorModalOpen] = useState(false)
   return (
     <Card className={className}>
       <CardHeader><CardTitle className="text-sm">기본정보</CardTitle></CardHeader>
@@ -132,20 +134,22 @@ export function BasicInfoCard({ d, className }: SectionProps) {
                 <Input type="number" value={draft.quantity} onChange={(e) => set('quantity', Number(e.target.value))} />
               </Field>
               <Field label="수주업체">
-                <select
-                  value={draft.vendorId ?? ''}
-                  onChange={(e) => {
-                    const id = e.target.value
-                    const found = vendors.find((v) => v.id === id)
-                    d.setDraft((prev) => prev ? { ...prev, vendorId: id, vendorName: found?.name ?? '' } : prev)
-                  }}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                <button
+                  type="button"
+                  onClick={() => setVendorModalOpen(true)}
+                  className="flex h-9 w-full items-center rounded-md border border-input bg-background px-3 text-sm hover:bg-gray-50"
                 >
-                  <option value="">업체 선택</option>
-                  {vendors.map((v) => (
-                    <option key={v.id} value={v.id}>{v.name}</option>
-                  ))}
-                </select>
+                  {draft.vendorName || <span className="text-gray-400">업체 선택 (지도)</span>}
+                </button>
+                <VendorSelectModal
+                  open={vendorModalOpen}
+                  vendors={vendors}
+                  onSelect={(v) => {
+                    d.setDraft((prev) => prev ? { ...prev, vendorId: v.id, vendorName: v.name } : prev)
+                    setVendorModalOpen(false)
+                  }}
+                  onClose={() => setVendorModalOpen(false)}
+                />
               </Field>
             </div>
             <Field label="발주금액">
