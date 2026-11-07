@@ -36,6 +36,26 @@ const SIDO_NAME_MAP: Record<string, string> = {
   '전라북도': '전북특별자치도',
 }
 
+const SIDO_COLORS: Record<string, { base: string; hover: string }> = {
+  '서울특별시':    { base: '#fca5a5', hover: '#f87171' },
+  '부산광역시':    { base: '#fdba74', hover: '#fb923c' },
+  '대구광역시':    { base: '#fcd34d', hover: '#fbbf24' },
+  '인천광역시':    { base: '#86efac', hover: '#4ade80' },
+  '광주광역시':    { base: '#6ee7b7', hover: '#34d399' },
+  '대전광역시':    { base: '#67e8f9', hover: '#22d3ee' },
+  '울산광역시':    { base: '#93c5fd', hover: '#60a5fa' },
+  '세종특별자치시': { base: '#c4b5fd', hover: '#a78bfa' },
+  '경기도':       { base: '#f9a8d4', hover: '#f472b6' },
+  '강원도':       { base: '#a5b4fc', hover: '#818cf8' },
+  '충청북도':     { base: '#fde68a', hover: '#fcd34d' },
+  '충청남도':     { base: '#bbf7d0', hover: '#86efac' },
+  '전라북도':     { base: '#fed7aa', hover: '#fdba74' },
+  '전라남도':     { base: '#a7f3d0', hover: '#6ee7b7' },
+  '경상북도':     { base: '#bfdbfe', hover: '#93c5fd' },
+  '경상남도':     { base: '#ddd6fe', hover: '#c4b5fd' },
+  '제주특별자치도': { base: '#fecdd3', hover: '#fda4af' },
+}
+
 type Props = {
   open: boolean
   vendors: Vendor[]
@@ -130,16 +150,16 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                             key={geo.rsmKey}
                             geography={geo}
                             onClick={() => handleSidoSelect(sido)}
-                            fill={isSelected ? '#15803d' : '#d1fae5'}
+                            fill={isSelected ? '#15803d' : (SIDO_COLORS[sido]?.base ?? '#d1fae5')}
                             stroke="#fff"
                             strokeWidth={0.5}
                             style={{ cursor: 'pointer', outline: 'none' }}
                             onMouseEnter={(e) => {
-                              if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', '#6ee7b7')
+                              if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', SIDO_COLORS[sido]?.hover ?? '#6ee7b7')
                               setHoveredSido(sido)
                             }}
                             onMouseLeave={(e) => {
-                              if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', '#d1fae5')
+                              if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', SIDO_COLORS[sido]?.base ?? '#d1fae5')
                               setHoveredSido(null)
                             }}
                           />
