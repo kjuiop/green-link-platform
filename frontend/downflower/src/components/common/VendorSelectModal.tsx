@@ -76,7 +76,7 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="flex w-full max-w-3xl flex-col rounded-lg bg-white shadow-xl" style={{ maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
+      <div className="flex w-full max-w-5xl flex-col rounded-lg bg-white shadow-xl" style={{ maxHeight: '95vh' }} onClick={(e) => e.stopPropagation()}>
         {/* 헤더 */}
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h2 className="text-base font-semibold">수주업체 선택</h2>
@@ -103,17 +103,17 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
         </div>
 
         {/* 본문 */}
-        <div className="flex min-h-0 flex-1 overflow-hidden" style={{ minHeight: '460px' }}>
+        <div className="flex min-h-0 flex-1 overflow-hidden" style={{ minHeight: '580px' }}>
           {/* 지도 영역 */}
           <div className="flex flex-col border-r overflow-y-auto" style={{ width: '45%' }}>
             {/* PC: SVG 지도 */}
-            <div className="hidden sm:flex flex-col overflow-hidden" style={{ height: '400px', flexShrink: 0 }}>
+            <div className="hidden sm:flex flex-col overflow-hidden" style={{ height: '520px', flexShrink: 0 }}>
               <div className="flex-1 min-h-0 overflow-hidden">
                 <ComposableMap
                   projection="geoMercator"
                   projectionConfig={{ center: [127.5, 36], scale: 3800 }}
                   width={430}
-                  height={469}
+                  height={463}
                   style={{ width: '100%', height: '100%' }}
                 >
                   <Geographies geography={GEO_URL}>
