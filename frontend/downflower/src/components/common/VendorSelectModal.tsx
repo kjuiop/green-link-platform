@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
 import { X } from 'lucide-react'
 import { Vendor } from '@/types/vendor'
+import { SIDO_LIST as SIDO_DATA } from '@/data/regions'
 
 const GEO_URL = '/korea-sido.json'
 
@@ -29,6 +30,12 @@ const CAP_LABEL: Record<string, string> = {
   ORCHID_WEST: '서양란', FLOWER: '꽃', INDOOR: '관엽', RICE_WREATH: '쌀화환',
 }
 
+// GeoJSON의 구 행정명 → regions.ts 현행 행정명 매핑
+const SIDO_NAME_MAP: Record<string, string> = {
+  '강원도': '강원특별자치도',
+  '전라북도': '전북특별자치도',
+}
+
 type Props = {
   open: boolean
   vendors: Vendor[]
@@ -44,21 +51,17 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
 
   const sigunguList = useMemo(() => {
     if (!selectedSido) return []
-    const set = new Set<string>()
-    vendors.forEach((v) =>
-      (v.regions ?? [])
-        .filter((r) => r.sido === selectedSido)
-        .forEach((r) => set.add(r.sigungu))
-    )
-    return Array.from(set).sort()
-  }, [vendors, selectedSido])
+    const normalizedSido = SIDO_NAME_MAP[selectedSido] ?? selectedSido
+    return SIDO_DATA.find((s) => s.name === normalizedSido)?.sigunguList ?? []
+  }, [selectedSido])
 
   const filteredVendors = useMemo(() => {
+    const normalizedSido = selectedSido ? (SIDO_NAME_MAP[selectedSido] ?? selectedSido) : null
     return vendors.filter((v) => {
       if (v.status !== 'ACTIVE') return false
-      const regionMatch = selectedSido
+      const regionMatch = normalizedSido
         ? (v.regions ?? []).some(
-            (r) => r.sido === selectedSido && (!selectedSigungu || r.sigungu === selectedSigungu)
+            (r) => r.sido === normalizedSido && (!selectedSigungu || r.sigungu === selectedSigungu)
           )
         : true
       const capMatch =
