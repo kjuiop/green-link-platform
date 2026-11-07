@@ -113,7 +113,7 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                   projection="geoMercator"
                   projectionConfig={{ center: [127.5, 36], scale: 3800 }}
                   width={430}
-                  height={500}
+                  height={469}
                   style={{ width: '100%', height: '100%' }}
                 >
                   <Geographies geography={GEO_URL}>
