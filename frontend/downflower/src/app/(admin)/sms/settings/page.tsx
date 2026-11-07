@@ -158,7 +158,10 @@ export default function SmsSettingsPage() {
         })
         .catch(() => setError(true))
         .finally(() => setLoading(false))
+      return
     }
+
+    setLoading(false)
   }, [role, myCompanyId])
 
   useEffect(() => {
