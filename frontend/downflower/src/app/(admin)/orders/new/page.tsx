@@ -13,6 +13,7 @@ import { createOrder, fetchOrderingCompanies, uploadReferencePhotos, OrderingCom
 import { fetchAllProducts } from '@/lib/api/productApi'
 import { Vendor } from '@/types/vendor'
 import { Product } from '@/types/product'
+import VendorSelectModal from '@/components/common/VendorSelectModal'
 
 function formatPhone(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 11)
@@ -26,6 +27,8 @@ export default function NewOrderPage() {
 
   // 기본정보
   const [vendorId, setVendorId] = useState('')
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
+  const [vendorModalOpen, setVendorModalOpen] = useState(false)
   const [productName, setProductName] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [amount, setAmount] = useState('')
@@ -208,19 +211,17 @@ export default function NewOrderPage() {
             )}
             <div className="space-y-1.5">
               <Label>수주업체 *</Label>
-              <select
-                value={vendorId}
-                onChange={(e) => { setVendorId(e.target.value); setErrors((prev) => ({ ...prev, vendorId: undefined })) }}
+              <button
+                type="button"
+                onClick={() => setVendorModalOpen(true)}
                 className={cn(
-                  'w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700',
+                  'w-full rounded-md border bg-white px-3 py-2 text-left text-sm focus:outline-none focus:ring-2 focus:ring-green-700',
                   errors.vendorId && 'border-red-500',
+                  !selectedVendor && 'text-gray-400',
                 )}
               >
-                <option value="">업체 선택</option>
-                {vendors.map((v) => (
-                  <option key={v.id} value={v.id}>{v.name}</option>
-                ))}
-              </select>
+                {selectedVendor ? selectedVendor.name : '업체 선택 (지도)'}
+              </button>
               {errors.vendorId && <p className="text-xs text-red-500">{errors.vendorId}</p>}
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -798,6 +799,18 @@ export default function NewOrderPage() {
           {submitting ? '등록 중...' : '발주 등록'}
         </Button>
       </div>
+
+      <VendorSelectModal
+        open={vendorModalOpen}
+        vendors={vendors}
+        onSelect={(v) => {
+          setSelectedVendor(v)
+          setVendorId(v.id)
+          setErrors((prev) => ({ ...prev, vendorId: undefined }))
+          setVendorModalOpen(false)
+        }}
+        onClose={() => setVendorModalOpen(false)}
+      />
     </div>
   )
 }
