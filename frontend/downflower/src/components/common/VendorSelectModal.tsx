@@ -76,7 +76,7 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="flex w-full max-w-5xl flex-col rounded-lg bg-white shadow-xl" style={{ maxHeight: '95vh' }} onClick={(e) => e.stopPropagation()}>
+      <div className="flex w-full max-w-7xl flex-col rounded-lg bg-white shadow-xl" style={{ maxHeight: '95vh' }} onClick={(e) => e.stopPropagation()}>
         {/* 헤더 */}
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h2 className="text-base font-semibold">수주업체 선택</h2>
@@ -103,17 +103,17 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
         </div>
 
         {/* 본문 */}
-        <div className="flex min-h-0 flex-1 overflow-hidden" style={{ minHeight: '580px' }}>
+        <div className="flex min-h-0 flex-1 overflow-hidden" style={{ minHeight: '700px' }}>
           {/* 지도 영역 */}
           <div className="flex flex-col border-r overflow-y-auto" style={{ width: '45%' }}>
             {/* PC: SVG 지도 */}
-            <div className="hidden sm:flex flex-col overflow-hidden" style={{ height: '520px', flexShrink: 0 }}>
+            <div className="hidden sm:flex flex-col overflow-hidden" style={{ height: '620px', flexShrink: 0 }}>
               <div className="flex-1 min-h-0 overflow-hidden">
                 <ComposableMap
                   projection="geoMercator"
                   projectionConfig={{ center: [127.5, 36], scale: 3800 }}
                   width={430}
-                  height={463}
+                  height={444}
                   style={{ width: '100%', height: '100%' }}
                 >
                   <Geographies geography={GEO_URL}>
@@ -168,45 +168,33 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
               ))}
             </div>
 
-            {/* 시/군/구 선택 */}
-            {selectedSido && sigunguList.length > 0 && (
-              <div className="border-t p-3">
-                <p className="mb-1.5 text-xs font-medium text-gray-500">{selectedSido}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => setSelectedSigungu(null)}
-                    className={`rounded px-2 py-1 text-xs ${
-                      !selectedSigungu ? 'bg-green-700 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    전체
-                  </button>
-                  {sigunguList.map((sg) => (
-                    <button
-                      key={sg}
-                      onClick={() => setSelectedSigungu(sg === selectedSigungu ? null : sg)}
-                      className={`rounded px-2 py-1 text-xs ${
-                        selectedSigungu === sg
-                          ? 'bg-green-700 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {sg}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* 업체 목록 */}
           <div className="flex flex-1 flex-col overflow-hidden">
             <div className="border-b px-4 py-2">
-              <p className="text-xs text-gray-500">
-                {selectedSido
-                  ? `${selectedSido}${selectedSigungu ? ` · ${selectedSigungu}` : ''} · ${filteredVendors.length}개 업체`
-                  : `전체 · ${filteredVendors.length}개 업체`}
-              </p>
+              {selectedSido && sigunguList.length > 0 ? (
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 text-xs font-medium text-gray-600">{selectedSido}</span>
+                  <select
+                    value={selectedSigungu ?? ''}
+                    onChange={(e) => setSelectedSigungu(e.target.value || null)}
+                    className="flex-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-700"
+                  >
+                    <option value="">구·군 전체</option>
+                    {sigunguList.map((sg) => (
+                      <option key={sg} value={sg}>{sg}</option>
+                    ))}
+                  </select>
+                  <span className="shrink-0 text-xs text-gray-400">{filteredVendors.length}개</span>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500">
+                  {selectedSido
+                    ? `${selectedSido} · ${filteredVendors.length}개 업체`
+                    : `전체 · ${filteredVendors.length}개 업체`}
+                </p>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {filteredVendors.length === 0 ? (
