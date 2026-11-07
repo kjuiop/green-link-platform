@@ -102,14 +102,14 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
         </div>
 
         {/* 본문 */}
-        <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div className="flex min-h-0 flex-1 overflow-hidden" style={{ minHeight: '460px' }}>
           {/* 지도 영역 */}
-          <div className="flex flex-col border-r" style={{ width: '45%' }}>
+          <div className="flex flex-col border-r overflow-y-auto" style={{ width: '45%' }}>
             {/* PC: SVG 지도 */}
-            <div className="hidden flex-1 overflow-auto sm:block">
+            <div className="hidden sm:block" style={{ height: '400px', flexShrink: 0 }}>
               <ComposableMap
                 projection="geoMercator"
-                projectionConfig={{ center: [127.5, 36], scale: 2800 }}
+                projectionConfig={{ center: [127.5, 36], scale: 3800 }}
                 style={{ width: '100%', height: '100%' }}
               >
                 <Geographies geography={GEO_URL}>
