@@ -74,8 +74,8 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex w-full max-w-3xl flex-col rounded-lg bg-white shadow-xl" style={{ maxHeight: '90vh' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="flex w-full max-w-3xl flex-col rounded-lg bg-white shadow-xl" style={{ maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
         {/* 헤더 */}
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h2 className="text-base font-semibold">수주업체 선택</h2>
@@ -218,7 +218,7 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                       <p className="mt-1 text-xs text-gray-400">
                         {(v.regions ?? [])
                           .slice(0, 3)
-                          .map((r) => `${r.sido.replace(/(특별|광역|자치)?(시|도)$/, '')} ${r.sigungu}`)
+                          .map((r) => `${r.sido.replace(/(특별자치시|특별자치도|광역시|특별시|자치시|자치도|시|도)$/, '')} ${r.sigungu}`)
                           .join(' · ')}
                         {(v.regions ?? []).length > 3 && ` 외 ${(v.regions ?? []).length - 3}곳`}
                       </p>
