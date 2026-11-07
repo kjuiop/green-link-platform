@@ -23,11 +23,16 @@ public class CompanyIntegrationRepositoryAdapter implements CompanyIntegrationRe
 
     @Override
     public CompanyIntegration save(CompanyIntegration integration) {
-        CompanyIntegrationJpaEntity entity = jpaRepository.findByCompanyId(integration.getCompanyId())
-                .orElseGet(() -> CompanyIntegrationJpaEntity.createNew(
-                        integration.getCompanyId(), integration.getProvider(),
-                        integration.getApiKey(), integration.getSenderNumber()));
-        entity.update(integration.getProvider(), integration.getApiKey(), integration.getSenderNumber());
+        Optional<CompanyIntegrationJpaEntity> existing = jpaRepository.findByCompanyId(integration.getCompanyId());
+        CompanyIntegrationJpaEntity entity;
+        if (existing.isPresent()) {
+            entity = existing.get();
+            entity.update(integration.getProvider(), integration.getApiKey(), integration.getSenderNumber());
+        } else {
+            entity = CompanyIntegrationJpaEntity.createNew(
+                    integration.getCompanyId(), integration.getProvider(),
+                    integration.getApiKey(), integration.getSenderNumber());
+        }
         return jpaRepository.save(entity).toDomain();
     }
 

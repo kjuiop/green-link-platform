@@ -54,7 +54,7 @@ export async function saveCompanySmsIntegration(
 }
 
 export async function fetchCompanies(): Promise<CompanyInfo[]> {
-  const res = await fetchWithAuth('/api/companies/paged?page=0&size=100', { headers: authHeaders() })
+  const res = await fetchWithAuth('/api/companies/paged?page=0&size=200', { headers: authHeaders() })
   if (!res.ok) throw new Error('업체 목록을 불러오지 못했습니다.')
   const data = await res.json()
   return data.content ?? []

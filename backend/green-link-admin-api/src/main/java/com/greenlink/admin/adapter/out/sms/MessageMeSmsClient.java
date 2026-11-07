@@ -68,14 +68,4 @@ public class MessageMeSmsClient implements SmsClient {
         }
     }
 
-    // rdate: "20261107", rtime: "1430" → "2026|11|07|14|30|00"
-    private String formatReserveDate(String rdate, String rtime) {
-        if (rdate == null || rdate.length() < 8) return null;
-        String year  = rdate.substring(0, 4);
-        String month = rdate.substring(4, 6);
-        String day   = rdate.substring(6, 8);
-        String hour  = (rtime != null && rtime.length() >= 2) ? rtime.substring(0, 2) : "00";
-        String min   = (rtime != null && rtime.length() >= 4) ? rtime.substring(2, 4) : "00";
-        return year + "|" + month + "|" + day + "|" + hour + "|" + min + "|00";
-    }
 }
