@@ -40,6 +40,7 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
   const [selectedSido, setSelectedSido] = useState<string | null>(null)
   const [selectedSigungu, setSelectedSigungu] = useState<string | null>(null)
   const [selectedCapability, setSelectedCapability] = useState('ALL')
+  const [hoveredSido, setHoveredSido] = useState<string | null>(null)
 
   const sigunguList = useMemo(() => {
     if (!selectedSido) return []
@@ -106,35 +107,48 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
           {/* 지도 영역 */}
           <div className="flex flex-col border-r overflow-y-auto" style={{ width: '45%' }}>
             {/* PC: SVG 지도 */}
-            <div className="hidden sm:block" style={{ height: '400px', flexShrink: 0 }}>
-              <ComposableMap
-                projection="geoMercator"
-                projectionConfig={{ center: [127.5, 36], scale: 3800 }}
-                style={{ width: '100%', height: '100%' }}
-              >
-                <Geographies geography={GEO_URL}>
-                  {({ geographies }) =>
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    geographies.map((geo: any) => {
-                      const sido = (geo.properties as { name?: string })?.name ?? ''
-                      const isSelected = selectedSido === sido
-                      return (
-                        <Geography
-                          key={geo.rsmKey}
-                          geography={geo}
-                          onClick={() => handleSidoSelect(sido)}
-                          fill={isSelected ? '#15803d' : '#d1fae5'}
-                          stroke="#fff"
-                          strokeWidth={0.5}
-                          style={{ cursor: 'pointer', outline: 'none' }}
-                          onMouseEnter={(e) => { if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', '#6ee7b7') }}
-                          onMouseLeave={(e) => { if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', '#d1fae5') }}
-                        />
-                      )
-                    })
-                  }
-                </Geographies>
-              </ComposableMap>
+            <div className="hidden sm:flex flex-col overflow-hidden" style={{ height: '400px', flexShrink: 0 }}>
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <ComposableMap
+                  projection="geoMercator"
+                  projectionConfig={{ center: [127.5, 36], scale: 3800 }}
+                  width={430}
+                  height={469}
+                  style={{ width: '100%', height: '100%' }}
+                >
+                  <Geographies geography={GEO_URL}>
+                    {({ geographies }) =>
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      geographies.map((geo: any) => {
+                        const sido = (geo.properties as { name?: string })?.name ?? ''
+                        const isSelected = selectedSido === sido
+                        return (
+                          <Geography
+                            key={geo.rsmKey}
+                            geography={geo}
+                            onClick={() => handleSidoSelect(sido)}
+                            fill={isSelected ? '#15803d' : '#d1fae5'}
+                            stroke="#fff"
+                            strokeWidth={0.5}
+                            style={{ cursor: 'pointer', outline: 'none' }}
+                            onMouseEnter={(e) => {
+                              if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', '#6ee7b7')
+                              setHoveredSido(sido)
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', '#d1fae5')
+                              setHoveredSido(null)
+                            }}
+                          />
+                        )
+                      })
+                    }
+                  </Geographies>
+                </ComposableMap>
+              </div>
+              <div className="border-t bg-gray-50 px-3 py-1 text-center text-xs text-gray-500" style={{ minHeight: '24px' }}>
+                {hoveredSido ?? selectedSido ?? '시도를 선택하세요'}
+              </div>
             </div>
 
             {/* 모바일: 시도 버튼 그리드 */}
