@@ -1,12 +1,15 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
+import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps'
+import { geoCentroid } from 'd3-geo'
 import { X } from 'lucide-react'
 import { Vendor } from '@/types/vendor'
 import { SIDO_LIST as SIDO_DATA } from '@/data/regions'
+import { SIDO_VIEWPORT } from '@/data/sidoViewport'
 
 const GEO_URL = '/korea-sido.json'
+const SIGUNGU_GEO_URL = '/korea-sigungu.json'
 
 const CAPABILITIES = [
   { value: 'ALL', label: '전체' },
@@ -36,25 +39,7 @@ const SIDO_NAME_MAP: Record<string, string> = {
   '전라북도': '전북특별자치도',
 }
 
-const SIDO_COLORS: Record<string, { base: string; hover: string }> = {
-  '서울특별시':    { base: '#fca5a5', hover: '#f87171' },
-  '부산광역시':    { base: '#fdba74', hover: '#fb923c' },
-  '대구광역시':    { base: '#fcd34d', hover: '#fbbf24' },
-  '인천광역시':    { base: '#86efac', hover: '#4ade80' },
-  '광주광역시':    { base: '#6ee7b7', hover: '#34d399' },
-  '대전광역시':    { base: '#67e8f9', hover: '#22d3ee' },
-  '울산광역시':    { base: '#93c5fd', hover: '#60a5fa' },
-  '세종특별자치시': { base: '#c4b5fd', hover: '#a78bfa' },
-  '경기도':       { base: '#f9a8d4', hover: '#f472b6' },
-  '강원도':       { base: '#a5b4fc', hover: '#818cf8' },
-  '충청북도':     { base: '#fde68a', hover: '#fcd34d' },
-  '충청남도':     { base: '#bbf7d0', hover: '#86efac' },
-  '전라북도':     { base: '#fed7aa', hover: '#fdba74' },
-  '전라남도':     { base: '#a7f3d0', hover: '#6ee7b7' },
-  '경상북도':     { base: '#bfdbfe', hover: '#93c5fd' },
-  '경상남도':     { base: '#ddd6fe', hover: '#c4b5fd' },
-  '제주특별자치도': { base: '#fecdd3', hover: '#fda4af' },
-}
+const MAP_FILL = { base: '#e5e7eb', hover: '#d1d5db', selected: '#15803d' }
 
 type Props = {
   open: boolean
@@ -68,6 +53,8 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
   const [selectedSigungu, setSelectedSigungu] = useState<string | null>(null)
   const [selectedCapability, setSelectedCapability] = useState('ALL')
   const [hoveredSido, setHoveredSido] = useState<string | null>(null)
+  const [mapLevel, setMapLevel] = useState<'national' | 'sido'>('national')
+  const [hoveredSigungu, setHoveredSigungu] = useState<string | null>(null)
 
   const sigunguList = useMemo(() => {
     if (!selectedSido) return []
@@ -91,9 +78,20 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
   }, [vendors, selectedSido, selectedSigungu, selectedCapability])
 
   function handleSidoSelect(sido: string) {
-    setSelectedSido(sido === selectedSido ? null : sido)
+    setSelectedSido(sido)
     setSelectedSigungu(null)
+    setMapLevel('sido')
   }
+
+  function handleBackToNational() {
+    setSelectedSido(null)
+    setSelectedSigungu(null)
+    setMapLevel('national')
+    setHoveredSigungu(null)
+  }
+
+  const normalizedSelectedSido = selectedSido ? (SIDO_NAME_MAP[selectedSido] ?? selectedSido) : null
+  const sidoViewport = normalizedSelectedSido ? SIDO_VIEWPORT[normalizedSelectedSido] : null
 
   if (!open) return null
 
@@ -131,47 +129,157 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
           <div className="flex flex-col border-r overflow-y-auto" style={{ width: '45%' }}>
             {/* PC: SVG 지도 */}
             <div className="hidden sm:flex flex-col overflow-hidden" style={{ height: '620px', flexShrink: 0 }}>
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <ComposableMap
-                  projection="geoMercator"
-                  projectionConfig={{ center: [127.5, 36], scale: 3800 }}
-                  width={430}
-                  height={444}
-                  style={{ width: '100%', height: '100%' }}
-                >
-                  <Geographies geography={GEO_URL}>
-                    {({ geographies }) =>
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      geographies.map((geo: any) => {
-                        const sido = (geo.properties as { name?: string })?.name ?? ''
-                        const isSelected = selectedSido === sido
-                        return (
-                          <Geography
-                            key={geo.rsmKey}
-                            geography={geo}
-                            onClick={() => handleSidoSelect(sido)}
-                            fill={isSelected ? '#15803d' : (SIDO_COLORS[sido]?.base ?? '#d1fae5')}
-                            stroke="#fff"
-                            strokeWidth={0.5}
-                            style={{ cursor: 'pointer', outline: 'none' }}
-                            onMouseEnter={(e) => {
-                              if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', SIDO_COLORS[sido]?.hover ?? '#6ee7b7')
-                              setHoveredSido(sido)
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', SIDO_COLORS[sido]?.base ?? '#d1fae5')
-                              setHoveredSido(null)
-                            }}
-                          />
-                        )
-                      })
-                    }
-                  </Geographies>
-                </ComposableMap>
-              </div>
-              <div className="border-t bg-gray-50 px-3 py-1 text-center text-xs text-gray-500" style={{ minHeight: '24px' }}>
-                {hoveredSido ?? selectedSido ?? '시도를 선택하세요'}
-              </div>
+              {mapLevel === 'national' ? (
+                <>
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <ComposableMap
+                      projection="geoMercator"
+                      projectionConfig={{ center: [127.5, 36], scale: 3800 }}
+                      width={430}
+                      height={444}
+                      style={{ width: '100%', height: '100%' }}
+                    >
+                      <Geographies geography={GEO_URL}>
+                        {({ geographies }) => {
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          const geos = geographies as any[]
+                          return (
+                            <>
+                              {geos.map((geo) => {
+                                const sido = (geo.properties as { name?: string })?.name ?? ''
+                                const isSelected = selectedSido === sido
+                                return (
+                                  <Geography
+                                    key={geo.rsmKey}
+                                    geography={geo}
+                                    onClick={() => handleSidoSelect(sido)}
+                                    fill={isSelected ? MAP_FILL.selected : MAP_FILL.base}
+                                    stroke="#fff"
+                                    strokeWidth={0.5}
+                                    style={{ cursor: 'pointer', outline: 'none' }}
+                                    onMouseEnter={(e) => {
+                                      if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.hover)
+                                      setHoveredSido(sido)
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.base)
+                                      setHoveredSido(null)
+                                    }}
+                                  />
+                                )
+                              })}
+                              {geos.map((geo) => {
+                                const sido = (geo.properties as { name?: string })?.name ?? ''
+                                const isSelected = selectedSido === sido
+                                const centroid = geoCentroid(geo)
+                                const shortName = sido
+                                  .replace('특별자치시', '').replace('특별자치도', '')
+                                  .replace('광역시', '').replace('특별시', '')
+                                  .replace('자치시', '').replace('자치도', '')
+                                return (
+                                  <Marker key={geo.rsmKey + '-label'} coordinates={centroid}>
+                                    <text
+                                      fontSize={9}
+                                      textAnchor="middle"
+                                      dominantBaseline="central"
+                                      fill={isSelected ? '#fff' : '#374151'}
+                                      style={{ pointerEvents: 'none', userSelect: 'none' }}
+                                    >
+                                      {shortName}
+                                    </text>
+                                  </Marker>
+                                )
+                              })}
+                            </>
+                          )
+                        }}
+                      </Geographies>
+                    </ComposableMap>
+                  </div>
+                  <div className="border-t bg-gray-50 px-3 py-1 text-center text-xs text-gray-500" style={{ minHeight: '24px' }}>
+                    {hoveredSido ?? selectedSido ?? '시도를 선택하세요'}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={handleBackToNational}
+                    className="flex items-center gap-1 border-b px-3 py-1.5 text-xs text-green-700 hover:bg-green-50 w-full shrink-0"
+                  >
+                    ← 전국지도보기
+                  </button>
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <ComposableMap
+                      projection="geoMercator"
+                      projectionConfig={
+                        sidoViewport
+                          ? { center: sidoViewport.center, scale: sidoViewport.scale }
+                          : { center: [127.5, 36], scale: 3800 }
+                      }
+                      width={430}
+                      height={420}
+                      style={{ width: '100%', height: '100%' }}
+                    >
+                      <Geographies geography={SIGUNGU_GEO_URL}>
+                        {({ geographies }) => {
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          const filtered = geographies.filter((geo: any) => geo.properties.sido === normalizedSelectedSido)
+                          return (
+                            <>
+                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                              {filtered.map((geo: any) => {
+                                const sigungu = (geo.properties as { name?: string })?.name ?? ''
+                                const isSelected = selectedSigungu === sigungu
+                                return (
+                                  <Geography
+                                    key={geo.rsmKey}
+                                    geography={geo}
+                                    onClick={() => setSelectedSigungu(sigungu === selectedSigungu ? null : sigungu)}
+                                    fill={isSelected ? MAP_FILL.selected : MAP_FILL.base}
+                                    stroke="#fff"
+                                    strokeWidth={0.5}
+                                    style={{ cursor: 'pointer', outline: 'none' }}
+                                    onMouseEnter={(e) => {
+                                      if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.hover)
+                                      setHoveredSigungu(sigungu)
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.base)
+                                      setHoveredSigungu(null)
+                                    }}
+                                  />
+                                )
+                              })}
+                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                              {filtered.map((geo: any) => {
+                                const sigungu = (geo.properties as { name?: string })?.name ?? ''
+                                const isSelected = selectedSigungu === sigungu
+                                const centroid = geoCentroid(geo)
+                                return (
+                                  <Marker key={geo.rsmKey + '-label'} coordinates={centroid}>
+                                    <text
+                                      fontSize={7}
+                                      textAnchor="middle"
+                                      dominantBaseline="central"
+                                      fill={isSelected ? '#fff' : '#374151'}
+                                      style={{ pointerEvents: 'none', userSelect: 'none' }}
+                                    >
+                                      {sigungu}
+                                    </text>
+                                  </Marker>
+                                )
+                              })}
+                            </>
+                          )
+                        }}
+                      </Geographies>
+                    </ComposableMap>
+                  </div>
+                  <div className="border-t bg-gray-50 px-3 py-1 text-center text-xs text-gray-500" style={{ minHeight: '24px' }}>
+                    {hoveredSigungu ?? selectedSigungu ?? selectedSido ?? '구·군을 선택하세요'}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* 모바일: 시도 버튼 그리드 */}
