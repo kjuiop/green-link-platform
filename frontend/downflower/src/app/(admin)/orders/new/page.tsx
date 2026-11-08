@@ -240,6 +240,7 @@ export default function NewOrderPage() {
                     } else if (id === '') {
                       setProductName('')
                       setUnitPrice(0)
+                      setAmount('')
                     } else {
                       const found = products.find((p) => p.id === id)
                       if (found) {
@@ -281,7 +282,7 @@ export default function NewOrderPage() {
                   pattern="[0-9]*"
                   value={quantity}
                   onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9]/g, '')
+                    const val = e.target.value.replace(/[^0-9]/g, '').replace(/^0+([1-9])/, '$1')
                     setQuantity(val)
                     if (unitPrice > 0) setAmount(String(unitPrice * (Number(val) || 1)))
                   }}
