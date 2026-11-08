@@ -39,7 +39,16 @@ const SIDO_NAME_MAP: Record<string, string> = {
   '전라북도': '전북특별자치도',
 }
 
-const MAP_FILL = { base: '#e5e7eb', hover: '#d1d5db', selected: '#15803d' }
+const MAP_FILL = { base: '#ffffff', hover: '#f0fdf4', selected: '#15803d' }
+
+// 레이블이 겹치는 시도의 텍스트 위치 보정 (SVG dx/dy, 단위: px)
+const SIDO_LABEL_OFFSET: Record<string, [number, number]> = {
+  '서울특별시':    [-12, -8],
+  '경기도':       [ 14,  8],
+  '인천광역시':   [-18,  0],
+  '세종특별자치시': [ 0, -10],
+  '대전광역시':   [  0,  10],
+}
 
 type Props = {
   open: boolean
@@ -154,8 +163,8 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                                     geography={geo}
                                     onClick={() => handleSidoSelect(sido)}
                                     fill={isSelected ? MAP_FILL.selected : MAP_FILL.base}
-                                    stroke="#fff"
-                                    strokeWidth={0.5}
+                                    stroke="#9ca3af"
+                                    strokeWidth={0.7}
                                     style={{ cursor: 'pointer', outline: 'none' }}
                                     onMouseEnter={(e) => {
                                       if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.hover)
@@ -176,13 +185,20 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                                   .replace('특별자치시', '').replace('특별자치도', '')
                                   .replace('광역시', '').replace('특별시', '')
                                   .replace('자치시', '').replace('자치도', '')
+                                const [dx, dy] = SIDO_LABEL_OFFSET[sido] ?? [0, 0]
                                 return (
                                   <Marker key={geo.rsmKey + '-label'} coordinates={centroid}>
                                     <text
-                                      fontSize={9}
+                                      fontSize={10}
+                                      fontWeight="600"
                                       textAnchor="middle"
                                       dominantBaseline="central"
-                                      fill={isSelected ? '#fff' : '#374151'}
+                                      dx={dx}
+                                      dy={dy}
+                                      fill={isSelected ? '#fff' : '#1f2937'}
+                                      stroke={isSelected ? 'none' : '#fff'}
+                                      strokeWidth={2.5}
+                                      paintOrder="stroke"
                                       style={{ pointerEvents: 'none', userSelect: 'none' }}
                                     >
                                       {shortName}
@@ -236,8 +252,8 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                                     geography={geo}
                                     onClick={() => setSelectedSigungu(sigungu === selectedSigungu ? null : sigungu)}
                                     fill={isSelected ? MAP_FILL.selected : MAP_FILL.base}
-                                    stroke="#fff"
-                                    strokeWidth={0.5}
+                                    stroke="#9ca3af"
+                                    strokeWidth={0.7}
                                     style={{ cursor: 'pointer', outline: 'none' }}
                                     onMouseEnter={(e) => {
                                       if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.hover)
@@ -258,10 +274,14 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                                 return (
                                   <Marker key={geo.rsmKey + '-label'} coordinates={centroid}>
                                     <text
-                                      fontSize={7}
+                                      fontSize={8}
+                                      fontWeight="600"
                                       textAnchor="middle"
                                       dominantBaseline="central"
-                                      fill={isSelected ? '#fff' : '#374151'}
+                                      fill={isSelected ? '#fff' : '#1f2937'}
+                                      stroke={isSelected ? 'none' : '#fff'}
+                                      strokeWidth={2.5}
+                                      paintOrder="stroke"
                                       style={{ pointerEvents: 'none', userSelect: 'none' }}
                                     >
                                       {sigungu}
