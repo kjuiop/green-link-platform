@@ -289,12 +289,6 @@ export function DeliveryInfoCard({ d, className }: SectionProps) {
                 />
               )}
             </Field>
-            <Field label="주소">
-              <Input value={draft.address} onChange={(e) => set('address', e.target.value)} />
-            </Field>
-            <Field label="상세주소">
-              <Input value={draft.addressDetail} onChange={(e) => set('addressDetail', e.target.value)} />
-            </Field>
             <Field label="행사유형">
               <div className="flex flex-wrap gap-1.5 pt-0.5">
                 {(['장례식', '결혼식', '기타'] as const).map((type) => (
