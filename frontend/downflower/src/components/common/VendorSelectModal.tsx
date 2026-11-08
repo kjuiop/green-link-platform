@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps'
 import { geoCentroid } from 'd3-geo'
 import { X } from 'lucide-react'
@@ -85,6 +85,16 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
       return regionMatch && capMatch
     })
   }, [vendors, selectedSido, selectedSigungu, selectedCapability])
+
+  useEffect(() => {
+    if (!open) {
+      setSelectedSido(null)
+      setSelectedSigungu(null)
+      setMapLevel('national')
+      setHoveredSido(null)
+      setHoveredSigungu(null)
+    }
+  }, [open])
 
   function handleSidoSelect(sido: string) {
     setSelectedSido(sido)
