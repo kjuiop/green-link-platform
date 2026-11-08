@@ -525,6 +525,10 @@ export default function OrderingOrderDetailPage() {
                       onChange={(e) => {
                         const newType = e.target.value as DeliveryTimeType
                         set('deliveryTimeType', newType)
+                        if (['3시간이내', '직접입력'].includes(newType)) {
+                          set('deliveryTimeHour', '')
+                          set('deliveryTimeMinute', '')
+                        }
                         if (newType === '예식' && draft.deliveryTimeHour) {
                           const autoHour = ((Number(draft.deliveryTimeHour) - 1) + 24) % 24
                           set('messageSchedule', 'scheduled')
