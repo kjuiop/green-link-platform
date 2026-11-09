@@ -151,7 +151,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
             String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             String msg = buildNotificationMessage(order, vendorName, orderingCompanyName);
 
-            CompanyConfig companyConfig = resolveCompanyConfig(order.getOrderingCompanyId(), settings);
+            CompanyConfig companyConfig = new CompanyConfig(settings.getProvider(), settings.getApiKey(), settings.getSenderNumber());
             SmsClient client = smsClientFactory.getByProvider(companyConfig.provider);
 
             SmsMessage smsMessage = SmsMessage.createNotification(orderId, vendorPhone, msg);
@@ -253,10 +253,16 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         String vendorLine = (vendorName != null && !vendorName.isBlank())
                 ? "수주업체: " + vendorName + "\n" : "";
 
+        String recipientName = order.getRecipientName() != null && !order.getRecipientName().isBlank()
+                ? order.getRecipientName() : order.getOrdererName();
+        String recipientPhoneLine = (order.getRecipientPhone() != null && !order.getRecipientPhone().isBlank())
+                ? "받는 이 연락처: " + order.getRecipientPhone() + "\n" : "";
+
         return "주문번호: " + order.getOrderNumber() + "\n"
                 + orderingLine
                 + vendorLine
-                + "주문자: " + order.getOrdererName() + " / " + order.getOrdererPhone() + "\n"
+                + "받는 이: " + recipientName + "\n"
+                + recipientPhoneLine
                 + "배송지: " + address + "\n"
                 + "배송요구일: " + deliveryInfo + "\n"
                 + "상품명: " + order.getProductName() + " / " + order.getQuantity() + "개\n"
