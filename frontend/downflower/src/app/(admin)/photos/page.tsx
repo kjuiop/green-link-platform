@@ -6,7 +6,7 @@ import { OrderStatusBadge } from '@/components/common/StatusBadge'
 import { fetchOrders, fetchAllPhotos, PhotoResult } from '@/lib/api/orderApi'
 import { Order } from '@/types/order'
 import Image from 'next/image'
-import Link from 'next/link'
+import { openOrderWindow } from '@/lib/utils'
 
 type OrderWithPhotos = { order: Order; photos: PhotoResult[] }
 
@@ -62,9 +62,9 @@ export default function PhotosPage() {
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm">
-                  <Link href={`/ordering/orders/${order.id}`} className="text-blue-600 hover:underline">
+                  <button type="button" onClick={() => openOrderWindow(order.id)} className="text-blue-600 hover:underline">
                     {order.orderNumber}
-                  </Link>
+                  </button>
                 </CardTitle>
                 <OrderStatusBadge status={order.status} />
               </div>

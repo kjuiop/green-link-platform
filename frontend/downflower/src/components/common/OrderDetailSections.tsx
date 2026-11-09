@@ -11,6 +11,8 @@ import { ReferencePhotoSection } from '@/components/common/ReferencePhotoViewer'
 import { Pencil, X, Check, Trash2 } from 'lucide-react'
 import { cn, RIBBON_PHRASES } from '@/lib/utils'
 import type { LoadedOrderDetail } from '@/components/common/useOrderDetail'
+import type { DeliveryTimeType } from '@/types/order'
+import VendorSelectModal from '@/components/common/VendorSelectModal'
 
 type D = LoadedOrderDetail
 interface SectionProps { d: D; className?: string }
@@ -98,6 +100,7 @@ export function SaveErrorBanner({ d }: { d: D }) {
 
 export function BasicInfoCard({ d, className }: SectionProps) {
   const { order, draft, isEditing, products, vendors, selectedProductId, set } = d
+  const [vendorModalOpen, setVendorModalOpen] = useState(false)
   return (
     <Card className={className}>
       <CardHeader><CardTitle className="text-sm">기본정보</CardTitle></CardHeader>
@@ -132,20 +135,22 @@ export function BasicInfoCard({ d, className }: SectionProps) {
                 <Input type="number" value={draft.quantity} onChange={(e) => set('quantity', Number(e.target.value))} />
               </Field>
               <Field label="수주업체">
-                <select
-                  value={draft.vendorId ?? ''}
-                  onChange={(e) => {
-                    const id = e.target.value
-                    const found = vendors.find((v) => v.id === id)
-                    d.setDraft((prev) => prev ? { ...prev, vendorId: id, vendorName: found?.name ?? '' } : prev)
-                  }}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                <button
+                  type="button"
+                  onClick={() => setVendorModalOpen(true)}
+                  className="flex h-9 w-full items-center rounded-md border border-input bg-background px-3 text-sm hover:bg-gray-50"
                 >
-                  <option value="">업체 선택</option>
-                  {vendors.map((v) => (
-                    <option key={v.id} value={v.id}>{v.name}</option>
-                  ))}
-                </select>
+                  {draft.vendorName || <span className="text-gray-400">업체 선택 (지도)</span>}
+                </button>
+                <VendorSelectModal
+                  open={vendorModalOpen}
+                  vendors={vendors}
+                  onSelect={(v) => {
+                    d.setDraft((prev) => prev ? { ...prev, vendorId: v.id, vendorName: v.name } : prev)
+                    setVendorModalOpen(false)
+                  }}
+                  onClose={() => setVendorModalOpen(false)}
+                />
               </Field>
             </div>
             <Field label="발주금액">
@@ -187,13 +192,102 @@ export function DeliveryInfoCard({ d, className }: SectionProps) {
         {isEditing ? (
           <>
             <Field label="배송예정">
-              <Input value={draft.deliveryAt.slice(0, 10)} onChange={(e) => set('deliveryAt', e.target.value)} />
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="date"
+                  className="flex-1"
+                  value={draft.deliveryAt.slice(0, 10)}
+                  onChange={(e) => set('deliveryAt', e.target.value)}
+                />
+                {(['금일', '익일'] as const).map((label, offset) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => {
+                      const d = new Date()
+                      d.setDate(d.getDate() + offset)
+                      const yyyy = d.getFullYear()
+                      const mm = String(d.getMonth() + 1).padStart(2, '0')
+                      const dd = String(d.getDate()).padStart(2, '0')
+                      set('deliveryAt', `${yyyy}-${mm}-${dd}`)
+                    }}
+                    className="shrink-0 rounded-md border px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </Field>
-            <Field label="주소">
-              <Input value={draft.address} onChange={(e) => set('address', e.target.value)} />
-            </Field>
-            <Field label="상세주소">
-              <Input value={draft.addressDetail} onChange={(e) => set('addressDetail', e.target.value)} />
+            <Field label="배송시간">
+              <div className="flex flex-wrap items-center gap-2">
+                {!['3시간이내', '직접입력'].includes(draft.deliveryTimeType ?? '') && (
+                  <>
+                    <select
+                      value={draft.deliveryTimeHour ?? ''}
+                      onChange={(e) => {
+                        const newHour = e.target.value
+                        set('deliveryTimeHour', newHour)
+                        if (draft.deliveryTimeType === '예식' && newHour) {
+                          const autoHour = ((Number(newHour) - 1) + 24) % 24
+                          set('messageSchedule', 'scheduled')
+                          set('scheduledMessageHour', String(autoHour))
+                          set('scheduledMessageMinute', draft.deliveryTimeMinute ?? '00')
+                        }
+                      }}
+                      className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                    >
+                      <option value="">시</option>
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={String(i)}>{i}시</option>
+                      ))}
+                    </select>
+                    <select
+                      value={draft.deliveryTimeMinute ?? '00'}
+                      onChange={(e) => {
+                        set('deliveryTimeMinute', e.target.value)
+                        if (draft.deliveryTimeType === '예식' && draft.deliveryTimeHour) {
+                          set('scheduledMessageMinute', e.target.value)
+                        }
+                      }}
+                      className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                    >
+                      {['00', '10', '20', '30', '40', '50'].map((m) => (
+                        <option key={m} value={m}>{m}분</option>
+                      ))}
+                    </select>
+                  </>
+                )}
+                <select
+                  value={draft.deliveryTimeType ?? '까지'}
+                  onChange={(e) => {
+                    const newType = e.target.value as DeliveryTimeType
+                    set('deliveryTimeType', newType)
+                    if (['3시간이내', '직접입력'].includes(newType)) {
+                      set('deliveryTimeHour', '')
+                      set('deliveryTimeMinute', '')
+                    }
+                    if (newType === '예식' && draft.deliveryTimeHour) {
+                      const autoHour = ((Number(draft.deliveryTimeHour) - 1) + 24) % 24
+                      set('messageSchedule', 'scheduled')
+                      set('scheduledMessageHour', String(autoHour))
+                      set('scheduledMessageMinute', draft.deliveryTimeMinute ?? '00')
+                    }
+                  }}
+                  className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                >
+                  {['까지', '예식', '행사', '3시간이내', '직접입력'].map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+              {draft.deliveryTimeType === '직접입력' && (
+                <Input
+                  className="mt-1.5"
+                  placeholder="직접 입력"
+                  value={draft.deliveryTimeCustom ?? ''}
+                  onChange={(e) => set('deliveryTimeCustom', e.target.value)}
+                />
+              )}
             </Field>
             <Field label="행사유형">
               <div className="flex flex-wrap gap-1.5 pt-0.5">

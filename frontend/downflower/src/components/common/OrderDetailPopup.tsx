@@ -27,7 +27,7 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
     if (typeof window === 'undefined') return { x: 60 + initialOffset * 32, y: 40 + initialOffset * 32 }
     return {
       x: Math.max(0, Math.round((window.innerWidth - 860) / 2) + initialOffset * 32),
-      y: Math.max(0, Math.round(window.innerHeight * 0.05) + initialOffset * 32),
+      y: Math.max(0, Math.round((window.innerHeight - 700) / 2) + initialOffset * 32),
     }
   })
   const posRef = useRef(pos)

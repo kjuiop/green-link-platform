@@ -26,7 +26,8 @@ public class SmsSettingsRepositoryAdapter implements SmsSettingsRepository {
                 .findFirst()
                 .map(SmsSettingsJpaEntity::toDomain)
                 .orElseGet(() -> SmsSettings.of(null, "", "온우림",
-                        DEFAULT_TEMPLATE_FUNERAL, DEFAULT_TEMPLATE_WEDDING, DEFAULT_TEMPLATE_OTHERS));
+                        DEFAULT_TEMPLATE_FUNERAL, DEFAULT_TEMPLATE_WEDDING, DEFAULT_TEMPLATE_OTHERS,
+                        "ALIGO", null, null));
     }
 
     @Override
@@ -35,7 +36,8 @@ public class SmsSettingsRepositoryAdapter implements SmsSettingsRepository {
                 .findFirst()
                 .orElseGet(SmsSettingsJpaEntity::new);
         entity.update(settings.getSenderNumber(), settings.getSenderName(),
-                settings.getTemplateFuneral(), settings.getTemplateWedding(), settings.getTemplateOthers());
+                settings.getTemplateFuneral(), settings.getTemplateWedding(), settings.getTemplateOthers(),
+                settings.getProvider(), settings.getApiKey(), settings.getUserId());
         return jpaRepository.save(entity).toDomain();
     }
 }

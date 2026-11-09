@@ -33,6 +33,7 @@ aws:
     bucket: ${S3_BUCKET}
     region: ${S3_REGION:ap-northeast-2}
 
+
 aligo:
   key: ${ALIGO_KEY:}
   userid: ${ALIGO_USERID:}

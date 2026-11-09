@@ -13,6 +13,8 @@ import com.greenlink.core.domain.phoneverification.port.PhoneVerificationReposit
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import com.greenlink.core.domain.sms.port.SmsClient;
+import com.greenlink.core.domain.sms.port.SmsClientFactory;
+import com.greenlink.core.domain.smssettings.model.SmsSettings;
 import com.greenlink.core.domain.smssettings.port.SmsSettingsRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -29,18 +31,18 @@ public class PhoneVerificationService implements
 
     private final PhoneVerificationRepository verificationRepository;
     private final AdminRepository adminRepository;
-    private final SmsClient smsClient;
+    private final SmsClientFactory smsClientFactory;
     private final SmsSettingsRepository smsSettingsRepository;
     private final PasswordEncoder passwordEncoder;
 
     public PhoneVerificationService(PhoneVerificationRepository verificationRepository,
                                     AdminRepository adminRepository,
-                                    SmsClient smsClient,
+                                    SmsClientFactory smsClientFactory,
                                     SmsSettingsRepository smsSettingsRepository,
                                     PasswordEncoder passwordEncoder) {
         this.verificationRepository = verificationRepository;
         this.adminRepository = adminRepository;
-        this.smsClient = smsClient;
+        this.smsClientFactory = smsClientFactory;
         this.smsSettingsRepository = smsSettingsRepository;
         this.passwordEncoder = passwordEncoder;
     }
@@ -51,9 +53,16 @@ public class PhoneVerificationService implements
         PhoneVerification verification = PhoneVerification.create(phone);
         verificationRepository.save(verification);
 
-        String sender = smsSettingsRepository.get().getSenderNumber();
+        SmsSettings settings = smsSettingsRepository.get();
+        SmsClient client = smsClientFactory.getByProvider(settings.getProvider());
         String msg = "[온우림] 인증번호: " + verification.getCode() + " (3분 이내 입력)";
-        SmsResult result = smsClient.send(phone, msg, null, sender, null, null, null);
+        SmsResult result;
+        if ("MESSAGEME".equalsIgnoreCase(settings.getProvider())) {
+            result = client.sendWithCredentials(settings.getApiKey(), settings.getSenderNumber(),
+                    phone, msg, null, "0", null);
+        } else {
+            result = client.send(phone, msg, null, settings.getSenderNumber(), null, null, null);
+        }
         if (!result.success()) {
             throw new BusinessException(AuthErrorCode.SMS_SEND_FAILED);
         }

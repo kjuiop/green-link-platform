@@ -13,6 +13,7 @@ import { createOrder, fetchOrderingCompanies, uploadReferencePhotos, OrderingCom
 import { fetchAllProducts } from '@/lib/api/productApi'
 import { Vendor } from '@/types/vendor'
 import { Product } from '@/types/product'
+import VendorSelectModal from '@/components/common/VendorSelectModal'
 
 function formatPhone(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 11)
@@ -26,8 +27,11 @@ export default function NewOrderPage() {
 
   // 기본정보
   const [vendorId, setVendorId] = useState('')
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
+  const [vendorModalOpen, setVendorModalOpen] = useState(false)
   const [productName, setProductName] = useState('')
-  const [quantity, setQuantity] = useState(1)
+  const [quantity, setQuantity] = useState('1')
+  const [unitPrice, setUnitPrice] = useState(0)
   const [amount, setAmount] = useState('')
   const [extraCost, setExtraCost] = useState('')
 
@@ -126,7 +130,7 @@ export default function NewOrderPage() {
         ...(isSuperAdmin && orderingCompanyId ? { orderingCompanyId: Number(orderingCompanyId) } : {}),
         ...(selectedProductId && selectedProductId !== '__direct__' ? { productId: Number(selectedProductId) } : {}),
         productName,
-        quantity,
+        quantity: Number(quantity) || 1,
         amount: Number(amount),
         extraCost: extraCost ? Number(extraCost) : undefined,
         deliveryDate,
@@ -208,19 +212,17 @@ export default function NewOrderPage() {
             )}
             <div className="space-y-1.5">
               <Label>수주업체 *</Label>
-              <select
-                value={vendorId}
-                onChange={(e) => { setVendorId(e.target.value); setErrors((prev) => ({ ...prev, vendorId: undefined })) }}
+              <button
+                type="button"
+                onClick={() => setVendorModalOpen(true)}
                 className={cn(
-                  'w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700',
+                  'w-full rounded-md border bg-white px-3 py-2 text-left text-sm focus:outline-none focus:ring-2 focus:ring-green-700',
                   errors.vendorId && 'border-red-500',
+                  !selectedVendor && 'text-gray-400',
                 )}
               >
-                <option value="">업체 선택</option>
-                {vendors.map((v) => (
-                  <option key={v.id} value={v.id}>{v.name}</option>
-                ))}
-              </select>
+                {selectedVendor ? selectedVendor.name : '업체 선택 (지도)'}
+              </button>
               {errors.vendorId && <p className="text-xs text-red-500">{errors.vendorId}</p>}
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -233,14 +235,18 @@ export default function NewOrderPage() {
                     setSelectedProductId(id)
                     if (id === '__direct__') {
                       setProductName('')
+                      setUnitPrice(0)
                       setAmount('')
                     } else if (id === '') {
                       setProductName('')
+                      setUnitPrice(0)
+                      setAmount('')
                     } else {
                       const found = products.find((p) => p.id === id)
                       if (found) {
                         setProductName(found.name)
-                        setAmount(String(found.price))
+                        setUnitPrice(found.price)
+                        setAmount(String(found.price * (Number(quantity) || 1)))
                       }
                     }
                     setErrors((prev) => ({ ...prev, productName: undefined }))
@@ -271,10 +277,18 @@ export default function NewOrderPage() {
               <div className="space-y-1.5">
                 <Label>수량 *</Label>
                 <Input
-                  type="number"
-                  min={1}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '').replace(/^0+([1-9])/, '$1')
+                    setQuantity(val)
+                    if (unitPrice > 0) setAmount(String(unitPrice * (Number(val) || 1)))
+                  }}
+                  onBlur={() => {
+                    if (!quantity || Number(quantity) < 1) setQuantity('1')
+                  }}
                 />
               </div>
             </div>
@@ -288,10 +302,9 @@ export default function NewOrderPage() {
                 className={cn(errors.amount && 'border-red-500 focus-visible:ring-red-500')}
               />
               {errors.amount && <p className="text-xs text-red-500">{errors.amount}</p>}
-              {amount && quantity > 1 && (
-                <p className="text-sm font-medium text-green-700">
-                  총 발주금액: {(Number(amount) * quantity).toLocaleString()}원
-                  <span className="ml-1.5 text-xs font-normal text-gray-400">({Number(amount).toLocaleString()} × {quantity})</span>
+              {unitPrice > 0 && Number(quantity) > 1 && (
+                <p className="text-xs text-gray-400">
+                  단가 {unitPrice.toLocaleString()}원 × {quantity}개
                 </p>
               )}
             </div>
@@ -798,6 +811,18 @@ export default function NewOrderPage() {
           {submitting ? '등록 중...' : '발주 등록'}
         </Button>
       </div>
+
+      <VendorSelectModal
+        open={vendorModalOpen}
+        vendors={vendors}
+        onSelect={(v) => {
+          setSelectedVendor(v)
+          setVendorId(v.id)
+          setErrors((prev) => ({ ...prev, vendorId: undefined }))
+          setVendorModalOpen(false)
+        }}
+        onClose={() => setVendorModalOpen(false)}
+      />
     </div>
   )
 }

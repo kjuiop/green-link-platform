@@ -5,6 +5,7 @@ import com.greenlink.core.domain.sms.port.SmsClient;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
@@ -12,6 +13,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Map;
 
 @Component
+@Qualifier("aligo")
 public class AligoSmsClient implements SmsClient {
 
     private final AligoProperties props;

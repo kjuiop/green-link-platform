@@ -6,8 +6,8 @@ import { Pagination } from '@/components/ui/Pagination'
 import { fetchOrders } from '@/lib/api/orderApi'
 import { fetchSmsMessages, resendMms, SmsMessage } from '@/lib/api/smsApi'
 import { Order } from '@/types/order'
-import Link from 'next/link'
 import { Search, RefreshCw } from 'lucide-react'
+import { openOrderWindow } from '@/lib/utils'
 
 const PAGE_SIZE = 20
 
@@ -162,9 +162,9 @@ export default function MessagesPage() {
                 <TableRow key={sms.id}>
                   <TableCell>
                     {order ? (
-                      <Link href={`/ordering/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
+                      <button type="button" onClick={() => openOrderWindow(order.id)} className="font-mono text-xs text-blue-600 hover:underline">
                         {order.orderNumber}
-                      </Link>
+                      </button>
                     ) : (
                       <span className="font-mono text-xs text-gray-400">주문 #{sms.orderId}</span>
                     )}
@@ -229,9 +229,9 @@ export default function MessagesPage() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   {order ? (
-                    <Link href={`/ordering/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
+                    <button type="button" onClick={() => openOrderWindow(order.id)} className="font-mono text-xs text-blue-600 hover:underline">
                       {order.orderNumber}
-                    </Link>
+                    </button>
                   ) : (
                     <span className="font-mono text-xs text-gray-400">주문 #{sms.orderId}</span>
                   )}

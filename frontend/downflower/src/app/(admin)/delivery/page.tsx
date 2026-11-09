@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { OrderStatusBadge } from '@/components/common/StatusBadge'
 import { fetchOrders } from '@/lib/api/orderApi'
 import { Order } from '@/types/order'
-import Link from 'next/link'
+import { openOrderWindow } from '@/lib/utils'
 
 export default function DeliveryPage() {
   const [orders, setOrders] = useState<Order[]>([])
@@ -60,9 +60,13 @@ export default function DeliveryPage() {
               orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell>
-                    <Link href={`/ordering/orders/${order.id}`} className="font-mono text-xs text-blue-600 hover:underline">
+                    <button
+                      type="button"
+                      onClick={() => openOrderWindow(order.id)}
+                      className="font-mono text-xs text-blue-600 hover:underline"
+                    >
                       {order.orderNumber}
-                    </Link>
+                    </button>
                   </TableCell>
                   <TableCell className="text-sm">{order.deliveryAt}</TableCell>
                   <TableCell className="text-sm">{order.vendorName}</TableCell>
@@ -75,12 +79,13 @@ export default function DeliveryPage() {
                     <OrderStatusBadge status={order.status} />
                   </TableCell>
                   <TableCell>
-                    <Link
-                      href={`/ordering/orders/${order.id}`}
+                    <button
+                      type="button"
+                      onClick={() => openOrderWindow(order.id)}
                       className="text-xs text-blue-600 hover:underline"
                     >
                       상세보기
-                    </Link>
+                    </button>
                   </TableCell>
                 </TableRow>
               ))

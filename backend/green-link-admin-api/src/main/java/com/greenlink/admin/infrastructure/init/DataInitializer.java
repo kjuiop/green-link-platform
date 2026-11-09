@@ -119,7 +119,7 @@ public class DataInitializer implements ApplicationRunner {
         // 설정 하위: 업체 계정관리
         menuRepository.save(Menu.create(
             "업체 계정관리",
-            "/vendors",
+            "/settings/vendors",
             3,
             settings.getId(),
             List.of(Role.SUPER_ADMIN)

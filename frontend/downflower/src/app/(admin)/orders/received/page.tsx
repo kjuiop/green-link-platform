@@ -387,7 +387,7 @@ export default function ReceivedOrdersPage() {
               className="min-w-0 flex-1 rounded-md border px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-700"
             />
           </div>
-          <div className="flex min-w-0 flex-1 gap-1.5">
+          <div className="hidden min-w-0 flex-1 gap-1.5 sm:flex">
             <select
               value={search2Field}
               onChange={(e) => { setSearch2Field(e.target.value as SearchField); setSearch2Value('') }}

@@ -2,6 +2,8 @@ package com.greenlink.core.application.sms.service;
 
 import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.sms.dto.SmsMessageResult;
+import com.greenlink.core.domain.integration.model.CompanyIntegration;
+import com.greenlink.core.domain.integration.port.CompanyIntegrationRepository;
 import com.greenlink.core.domain.sms.model.SmsResult;
 import com.greenlink.core.application.sms.usecase.GetSmsMessagesUseCase;
 import com.greenlink.core.application.sms.usecase.ResendMmsUseCase;
@@ -14,6 +16,7 @@ import com.greenlink.core.domain.sms.model.SmsMessage;
 import com.greenlink.core.domain.sms.model.SmsMessageType;
 import com.greenlink.core.domain.sms.model.SmsStatus;
 import com.greenlink.core.domain.sms.port.SmsClient;
+import com.greenlink.core.domain.sms.port.SmsClientFactory;
 import com.greenlink.core.domain.sms.port.SmsMessageRepository;
 import com.greenlink.core.domain.smssettings.model.SmsSettings;
 import com.greenlink.core.domain.smssettings.port.SmsSettingsRepository;
@@ -36,20 +39,23 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
 
     private final OrderRepository orderRepository;
     private final SmsMessageRepository smsMessageRepository;
-    private final SmsClient smsClient;
+    private final SmsClientFactory smsClientFactory;
     private final SmsSettingsRepository smsSettingsRepository;
+    private final CompanyIntegrationRepository companyIntegrationRepository;
 
     @Value("${app.portal-base-url:}")
     private String portalBaseUrl;
 
     public SmsService(OrderRepository orderRepository,
                       SmsMessageRepository smsMessageRepository,
-                      SmsClient smsClient,
-                      SmsSettingsRepository smsSettingsRepository) {
+                      SmsClientFactory smsClientFactory,
+                      SmsSettingsRepository smsSettingsRepository,
+                      CompanyIntegrationRepository companyIntegrationRepository) {
         this.orderRepository = orderRepository;
         this.smsMessageRepository = smsMessageRepository;
-        this.smsClient = smsClient;
+        this.smsClientFactory = smsClientFactory;
         this.smsSettingsRepository = smsSettingsRepository;
+        this.companyIntegrationRepository = companyIntegrationRepository;
     }
 
     @Override
@@ -70,12 +76,13 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
 
         SmsSettings settings = smsSettingsRepository.get();
         String msg = buildMessage(order, settings);
-        String sender = settings.getSenderNumber();
         String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
         String[] schedule = resolveSchedule(order);
         String rdate = schedule[0];
         String rtime = schedule[1];
+
+        CompanyConfig companyConfig = resolveCompanyConfig(order.getOrderingCompanyId(), settings);
 
         boolean ordererValid = order.isSendPhotoToOrderer() && isValidPhone(order.getOrdererPhone());
         boolean recipientValid = order.isSendPhotoToRecipient() && isValidPhone(order.getRecipientPhone());
@@ -84,10 +91,10 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
 
         for (String imageUrl : urls) {
             if (ordererValid) {
-                sendAndRecord(orderId, order.getOrdererPhone(), msg, imageUrl, sender, now, rdate, rtime);
+                sendAndRecord(orderId, order.getOrdererPhone(), msg, imageUrl, companyConfig, now, rdate, rtime);
             }
             if (recipientValid && !samePhone) {
-                sendAndRecord(orderId, order.getRecipientPhone(), msg, imageUrl, sender, now, rdate, rtime);
+                sendAndRecord(orderId, order.getRecipientPhone(), msg, imageUrl, companyConfig, now, rdate, rtime);
             }
         }
     }
@@ -104,11 +111,12 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
         SmsSettings settings = smsSettingsRepository.get();
         String msg = buildMessage(order, settings);
-        String sender = settings.getSenderNumber();
         String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
+        CompanyConfig companyConfig = resolveCompanyConfig(order.getOrderingCompanyId(), settings);
+
         for (SmsMessage m : failed) {
-            sendAndRecord(orderId, m.getReceiver(), msg, m.getImageUrl(), sender, now, null, null);
+            sendAndRecord(orderId, m.getReceiver(), msg, m.getImageUrl(), companyConfig, now, null, null);
         }
     }
 
@@ -140,13 +148,15 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
                     .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
 
             SmsSettings settings = smsSettingsRepository.get();
-            String sender = settings.getSenderNumber();
             String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             String msg = buildNotificationMessage(order, vendorName, orderingCompanyName);
 
+            CompanyConfig companyConfig = resolveCompanyConfig(order.getOrderingCompanyId(), settings);
+            SmsClient client = smsClientFactory.getByProvider(companyConfig.provider);
+
             SmsMessage smsMessage = SmsMessage.createNotification(orderId, vendorPhone, msg);
             try {
-                SmsResult result = smsClient.send(vendorPhone, msg, null, sender, null, null, title);
+                SmsResult result = dispatchSend(client, companyConfig, vendorPhone, msg, null, null, null, title);
                 if (result.success()) {
                     smsMessage.markSuccess(result.msgId(), now);
                 } else {
@@ -161,6 +171,67 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
                     .error("[발주 알림 SMS 실패] orderId={}, error={}", orderId, e.getMessage(), e);
         }
     }
+
+    private CompanyConfig resolveCompanyConfig(Long companyId, SmsSettings fallback) {
+        if (companyId != null) {
+            return companyIntegrationRepository.findByCompanyId(companyId)
+                    .map(ci -> new CompanyConfig(ci.getProvider(), ci.getApiKey(),
+                            ci.getSenderNumber() != null ? ci.getSenderNumber() : fallback.getSenderNumber()))
+                    .orElseGet(() -> new CompanyConfig(fallback.getProvider(), fallback.getApiKey(), fallback.getSenderNumber()));
+        }
+        return new CompanyConfig(fallback.getProvider(), fallback.getApiKey(), fallback.getSenderNumber());
+    }
+
+    private SmsResult dispatchSend(SmsClient client, CompanyConfig config,
+                                   String receiver, String msg, String imageUrl,
+                                   String rdate, String rtime, String title) {
+        if ("MESSAGEME".equalsIgnoreCase(config.provider)) {
+            String sendReserve = (rdate != null && !rdate.isBlank()) ? "1" : "0";
+            String sendReserveDate = formatReserveDate(rdate, rtime);
+            return client.sendWithCredentials(config.apiKey, config.senderNumber,
+                    receiver, msg, imageUrl, sendReserve, sendReserveDate);
+        }
+        return client.send(receiver, msg, imageUrl, config.senderNumber, rdate, rtime, title);
+    }
+
+    private String formatReserveDate(String rdate, String rtime) {
+        if (rdate == null || rdate.length() < 8) return null;
+        String year  = rdate.substring(0, 4);
+        String month = rdate.substring(4, 6);
+        String day   = rdate.substring(6, 8);
+        String hour  = (rtime != null && rtime.length() >= 2) ? rtime.substring(0, 2) : "00";
+        String min   = (rtime != null && rtime.length() >= 4) ? rtime.substring(2, 4) : "00";
+        return year + "|" + month + "|" + day + "|" + hour + "|" + min + "|00";
+    }
+
+    private void sendAndRecord(Long orderId, String receiver, String msg, String imageUrl,
+                               CompanyConfig companyConfig, String sentAt, String rdate, String rtime) {
+        SmsClient client = smsClientFactory.getByProvider(companyConfig.provider);
+        SmsMessage smsMessage = SmsMessage.create(orderId, receiver, msg, imageUrl);
+        try {
+            SmsResult result = dispatchSend(client, companyConfig, receiver, msg, imageUrl, rdate, rtime, null);
+            String fallbackReason = null;
+            boolean reserved = rdate != null && !rdate.isBlank();
+            if (reserved && result.rejectedByProvider() && "ALIGO".equalsIgnoreCase(companyConfig.provider)) {
+                org.slf4j.LoggerFactory.getLogger(SmsService.class)
+                        .warn("알리고 예약발송 거절 → 즉시발송 폴백 orderId={} rdate={} rtime={} reason={}", orderId, rdate, rtime, result.failReason());
+                fallbackReason = result.failReason();
+                result = client.send(receiver, msg, imageUrl, companyConfig.senderNumber, null, null, null);
+            }
+            if (result.success() && fallbackReason != null) {
+                smsMessage.markSuccessWithFallback(result.msgId(), sentAt, fallbackReason);
+            } else if (result.success()) {
+                smsMessage.markSuccess(result.msgId(), sentAt);
+            } else {
+                smsMessage.markFail(result.failReason(), sentAt);
+            }
+        } catch (Exception e) {
+            smsMessage.markFail(e.getMessage(), sentAt);
+        }
+        smsMessageRepository.save(smsMessage);
+    }
+
+    private record CompanyConfig(String provider, String apiKey, String senderNumber) {}
 
     private String buildNotificationMessage(Order order, String vendorName, String orderingCompanyName) {
         String deliveryInfo = order.getDeliveryDate() != null ? order.getDeliveryDate() : "-";
@@ -218,30 +289,8 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         }
     }
 
-    private void sendAndRecord(Long orderId, String receiver, String msg, String imageUrl, String sender, String sentAt, String rdate, String rtime) {
-        SmsMessage smsMessage = SmsMessage.create(orderId, receiver, msg, imageUrl);
-        try {
-            SmsResult result = smsClient.send(receiver, msg, imageUrl, sender, rdate, rtime, null);
-            String fallbackReason = null;
-            boolean reserved = rdate != null && !rdate.isBlank();
-            if (reserved && result.rejectedByProvider()) {
-                // 알리고 예약 최소 간격 등으로 예약이 거절되면 즉시발송으로 폴백
-                org.slf4j.LoggerFactory.getLogger(SmsService.class)
-                        .warn("알리고 예약발송 거절 → 즉시발송 폴백 orderId={} rdate={} rtime={} reason={}", orderId, rdate, rtime, result.failReason());
-                fallbackReason = result.failReason();
-                result = smsClient.send(receiver, msg, imageUrl, sender, null, null, null);
-            }
-            if (result.success() && fallbackReason != null) {
-                smsMessage.markSuccessWithFallback(result.msgId(), sentAt, fallbackReason);
-            } else if (result.success()) {
-                smsMessage.markSuccess(result.msgId(), sentAt);
-            } else {
-                smsMessage.markFail(result.failReason(), sentAt);
-            }
-        } catch (Exception e) {
-            smsMessage.markFail(e.getMessage(), sentAt);
-        }
-        smsMessageRepository.save(smsMessage);
+    private boolean isValidPhone(String phone) {
+        return phone != null && !phone.isBlank();
     }
 
     private String buildMessage(Order order, SmsSettings settings) {
@@ -253,10 +302,6 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
                 .replace("{장소}", placeName != null ? placeName : "")
                 .replace("{주문번호}", order.getId() != null ? String.valueOf(order.getId()) : "")
                 .replace("{사진링크}", "");
-    }
-
-    private boolean isValidPhone(String phone) {
-        return phone != null && !phone.isBlank();
     }
 
     private SmsMessageResult toResult(SmsMessage m) {
