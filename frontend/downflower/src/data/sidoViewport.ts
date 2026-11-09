@@ -12,7 +12,7 @@ export const SIDO_VIEWPORT: Record<string, SidoViewport> = {
   '대전광역시':     { center: [127.39, 36.35], scale: 40000 },
   '울산광역시':     { center: [129.31, 35.54], scale: 32000 },
   '세종특별자치시':  { center: [127.25, 36.48], scale: 60000 },
-  '경기도':        { center: [127.20, 37.45], scale: 13000 },
+  '경기도':        { center: [127.20, 37.20], scale: 16000 },
   '강원특별자치도':  { center: [128.20, 37.65], scale: 8000  },
   '충청북도':      { center: [127.73, 36.80], scale: 14000 },
   '충청남도':      { center: [126.80, 36.65], scale: 11000 },

@@ -273,7 +273,7 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                                 return (
                                   <Marker key={geo.rsmKey + '-label'} coordinates={centroid}>
                                     <text
-                                      fontSize={7}
+                                      fontSize={8}
                                       fontWeight="600"
                                       textAnchor="middle"
                                       dominantBaseline="central"
