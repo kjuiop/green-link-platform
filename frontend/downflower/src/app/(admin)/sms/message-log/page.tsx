@@ -7,7 +7,7 @@ import { fetchOrders } from '@/lib/api/orderApi'
 import { fetchSmsMessages, resendMms, SmsMessage } from '@/lib/api/smsApi'
 import { Order } from '@/types/order'
 import { Search, RefreshCw } from 'lucide-react'
-import { openOrderWindow } from '@/lib/utils'
+import { openOrderWindow, formatPhone } from '@/lib/utils'
 
 const PAGE_SIZE = 20
 
@@ -173,7 +173,7 @@ export default function MessagesPage() {
                   <TableCell className="text-sm">{order?.vendorName ?? '-'}</TableCell>
                   <TableCell className="text-sm">{order?.productName ?? '-'}</TableCell>
                   <TableCell className="text-sm">{order?.ordererName ?? '-'}</TableCell>
-                  <TableCell className="font-mono text-sm">{sms.receiver}</TableCell>
+                  <TableCell className="font-mono text-sm">{formatPhone(sms.receiver)}</TableCell>
                   <TableCell>
                     {sms.status === 'SUCCESS' ? (
                       <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700" title={sms.failReason ?? undefined}>
@@ -249,7 +249,7 @@ export default function MessagesPage() {
                 )}
               </div>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-xs text-gray-400">
-                <span>발송 {sms.sentAt} · {sms.receiver}</span>
+                <span>발송 {sms.sentAt} · {formatPhone(sms.receiver)}</span>
                 {sms.status === 'FAIL' && (
                   <button
                     onClick={() => handleResend(sms.orderId)}

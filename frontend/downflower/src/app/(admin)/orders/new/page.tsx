@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { cn, RIBBON_PHRASES } from '@/lib/utils'
+import { cn, RIBBON_PHRASES, formatPhone } from '@/lib/utils'
 import { fetchVendors } from '@/lib/api/vendorApi'
 import { createOrder, fetchOrderingCompanies, uploadReferencePhotos, OrderingCompany } from '@/lib/api/orderApi'
 import { fetchAllProducts } from '@/lib/api/productApi'
@@ -15,12 +15,6 @@ import { Vendor } from '@/types/vendor'
 import { Product } from '@/types/product'
 import VendorSelectModal from '@/components/common/VendorSelectModal'
 
-function formatPhone(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 11)
-  if (digits.length <= 3) return digits
-  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
-}
 
 export default function NewOrderPage() {
   const router = useRouter()

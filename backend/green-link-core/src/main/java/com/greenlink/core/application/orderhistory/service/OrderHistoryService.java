@@ -35,8 +35,9 @@ public class OrderHistoryService implements RecordOrderHistoryUseCase, GetOrderH
     @Override
     @Transactional
     public void record(Long orderId, OrderHistoryAction action, String detail) {
-        String[] actor = resolveActor();
-        orderHistoryRepository.save(OrderHistory.create(orderId, action, detail, actor[0], actor[1]));
+        ActorInfo actor = resolveActor();
+        orderHistoryRepository.save(
+                OrderHistory.create(orderId, action, detail, actor.company(), actor.name(), actor.adminId()));
     }
 
     @Override
@@ -44,27 +45,28 @@ public class OrderHistoryService implements RecordOrderHistoryUseCase, GetOrderH
         return orderHistoryRepository.findAllByOrderId(orderId).stream()
                 .map(h -> new OrderHistoryResult(
                         h.getId(), h.getOrderId(), h.getAction(), h.getDetail(),
-                        h.getActorCompany(), h.getActorName(), h.getCreatedAt()))
+                        h.getActorCompany(), h.getActorName(), h.getActorAdminId(), h.getCreatedAt()))
                 .toList();
     }
 
-    private String[] resolveActor() {
+    private record ActorInfo(String company, String name, Long adminId) {}
+
+    private ActorInfo resolveActor() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) return new String[]{null, null};
+        if (auth == null || !auth.isAuthenticated()) return new ActorInfo(null, null, null);
         try {
             Long adminId = Long.parseLong(String.valueOf(auth.getPrincipal()));
             Admin admin = adminRepository.findById(adminId).orElse(null);
-            if (admin == null) return new String[]{null, null};
-            String adminName = admin.getName();
+            if (admin == null) return new ActorInfo(null, null, null);
             String companyName = null;
             if (admin.getCompanyId() != null) {
                 companyName = companyRepository.findById(admin.getCompanyId())
                         .map(c -> c.getCompanyName())
                         .orElse(null);
             }
-            return new String[]{companyName, adminName};
+            return new ActorInfo(companyName, admin.getName(), adminId);
         } catch (NumberFormatException e) {
-            return new String[]{null, null};
+            return new ActorInfo(null, null, null);
         }
     }
 }

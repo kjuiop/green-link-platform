@@ -4,6 +4,7 @@ public record OrderResult(
         Long id,
         String orderNumber,
         Long vendorId,
+        Long vendorCompanyId,
         String vendorName,
         String vendorPhone,
         Long orderingCompanyId,
@@ -49,5 +50,7 @@ public record OrderResult(
         String receiptReceiverName,
         String receiptReceiverRelation,
         boolean isDeleted,
-        String messageSentAt
+        String messageSentAt,
+        Long createdByAdminId,
+        Long updatedByAdminId
 ) {}

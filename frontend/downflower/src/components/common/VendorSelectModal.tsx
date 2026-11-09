@@ -44,10 +44,11 @@ const MAP_FILL = { base: '#ffffff', hover: '#f0fdf4', selected: '#15803d' }
 // 레이블이 겹치는 시도의 텍스트 위치 보정 (SVG dx/dy, 단위: px)
 const SIDO_LABEL_OFFSET: Record<string, [number, number]> = {
   '서울특별시':    [-12, -8],
-  '경기도':       [ 14,  8],
+  '경기도':       [ 32,  6],
   '인천광역시':   [-18,  0],
   '세종특별자치시': [ 0, -10],
   '대전광역시':   [  0,  10],
+  '충청북도':     [  8, -8],
 }
 
 type Props = {
@@ -61,9 +62,7 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
   const [selectedSido, setSelectedSido] = useState<string | null>(null)
   const [selectedSigungu, setSelectedSigungu] = useState<string | null>(null)
   const [selectedCapability, setSelectedCapability] = useState('ALL')
-  const [hoveredSido, setHoveredSido] = useState<string | null>(null)
   const [mapLevel, setMapLevel] = useState<'national' | 'sido'>('national')
-  const [hoveredSigungu, setHoveredSigungu] = useState<string | null>(null)
 
   const sigunguList = useMemo(() => {
     if (!selectedSido) return []
@@ -91,8 +90,6 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
       setSelectedSido(null)
       setSelectedSigungu(null)
       setMapLevel('national')
-      setHoveredSido(null)
-      setHoveredSigungu(null)
     }
   }, [open])
 
@@ -106,7 +103,6 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
     setSelectedSido(null)
     setSelectedSigungu(null)
     setMapLevel('national')
-    setHoveredSigungu(null)
   }
 
   const normalizedSelectedSido = selectedSido ? (SIDO_NAME_MAP[selectedSido] ?? selectedSido) : null
@@ -143,11 +139,11 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
         </div>
 
         {/* 본문 */}
-        <div className="flex min-h-0 flex-1 overflow-hidden" style={{ minHeight: '700px' }}>
+        <div className="flex min-h-0 flex-1 overflow-hidden" style={{ minHeight: '760px' }}>
           {/* 지도 영역 */}
           <div className="flex flex-col border-r overflow-y-auto" style={{ width: '45%' }}>
             {/* PC: SVG 지도 */}
-            <div className="hidden sm:flex flex-col overflow-hidden" style={{ height: '620px', flexShrink: 0 }}>
+            <div className="hidden sm:flex flex-col overflow-hidden" style={{ height: '700px', flexShrink: 0 }}>
               {mapLevel === 'national' ? (
                 <>
                   <div className="flex-1 min-h-0 overflow-hidden">
@@ -155,7 +151,7 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                       projection="geoMercator"
                       projectionConfig={{ center: [127.5, 36], scale: 3800 }}
                       width={430}
-                      height={444}
+                      height={520}
                       style={{ width: '100%', height: '100%' }}
                     >
                       <Geographies geography={GEO_URL}>
@@ -178,11 +174,9 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                                     style={{ cursor: 'pointer', outline: 'none' }}
                                     onMouseEnter={(e) => {
                                       if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.hover)
-                                      setHoveredSido(sido)
                                     }}
                                     onMouseLeave={(e) => {
                                       if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.base)
-                                      setHoveredSido(null)
                                     }}
                                   />
                                 )
@@ -222,9 +216,6 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                       </Geographies>
                     </ComposableMap>
                   </div>
-                  <div className="border-t bg-gray-50 px-3 py-1 text-center text-xs text-gray-500" style={{ minHeight: '24px' }}>
-                    {hoveredSido ?? selectedSido ?? '시도를 선택하세요'}
-                  </div>
                 </>
               ) : (
                 <>
@@ -243,7 +234,7 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                           : { center: [127.5, 36], scale: 3800 }
                       }
                       width={430}
-                      height={420}
+                      height={500}
                       style={{ width: '100%', height: '100%' }}
                     >
                       <Geographies geography={SIGUNGU_GEO_URL}>
@@ -267,11 +258,9 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                                     style={{ cursor: 'pointer', outline: 'none' }}
                                     onMouseEnter={(e) => {
                                       if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.hover)
-                                      setHoveredSigungu(sigungu)
                                     }}
                                     onMouseLeave={(e) => {
                                       if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.base)
-                                      setHoveredSigungu(null)
                                     }}
                                   />
                                 )
@@ -284,7 +273,7 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                                 return (
                                   <Marker key={geo.rsmKey + '-label'} coordinates={centroid}>
                                     <text
-                                      fontSize={8}
+                                      fontSize={7}
                                       fontWeight="600"
                                       textAnchor="middle"
                                       dominantBaseline="central"
@@ -304,9 +293,6 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                         }}
                       </Geographies>
                     </ComposableMap>
-                  </div>
-                  <div className="border-t bg-gray-50 px-3 py-1 text-center text-xs text-gray-500" style={{ minHeight: '24px' }}>
-                    {hoveredSigungu ?? selectedSigungu ?? selectedSido ?? '구·군을 선택하세요'}
                   </div>
                 </>
               )}

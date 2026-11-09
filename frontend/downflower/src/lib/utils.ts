@@ -1,5 +1,13 @@
 export { cn } from "cn"
 
+export function formatPhone(value: string | null | undefined): string {
+  if (!value) return ''
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  if (digits.length <= 3) return digits
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
+}
+
 export const RIBBON_PHRASES = [
   '祝結婚', '축결혼', '祝華婚', '축화혼', '謹弔', '근조',
   '祝發展', '축발전', '祝開業', '축개업', '祝榮轉', '축영전',

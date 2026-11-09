@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, Send, Check } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatPhone } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -101,7 +101,7 @@ function PhotoSendDialog({
                   />
                   <span className="w-12 shrink-0 text-xs text-gray-500">주문자</span>
                   <span className="text-sm font-medium">{ordererName}</span>
-                  {ordererPhone && <span className="text-sm text-gray-400">{ordererPhone}</span>}
+                  {ordererPhone && <span className="text-sm text-gray-400">{formatPhone(ordererPhone)}</span>}
                 </label>
               )}
               {recipientName && (
@@ -114,7 +114,7 @@ function PhotoSendDialog({
                   />
                   <span className="w-12 shrink-0 text-xs text-gray-500">받는분</span>
                   <span className="text-sm font-medium">{recipientName}</span>
-                  {recipientPhone && <span className="text-sm text-gray-400">{recipientPhone}</span>}
+                  {recipientPhone && <span className="text-sm text-gray-400">{formatPhone(recipientPhone)}</span>}
                 </label>
               )}
             </div>
