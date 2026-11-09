@@ -81,9 +81,10 @@ public class OrderController {
         Long resolvedVendorId = vendorId;
         Long resolvedOrderingCompanyId = orderingCompanyId;
         Boolean resolvedDeleted = null;
+        boolean isVendor = false;
 
         if (auth != null && auth.isAuthenticated()) {
-            boolean isVendor = auth.getAuthorities().stream()
+            isVendor = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
             boolean isOrdering = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_ORDERING"));
@@ -106,12 +107,20 @@ public class OrderController {
                 deliveryDateFrom, deliveryDateTo, resolvedOrderingCompanyId,
                 receiverName, messageStatus, ribbonLeft, resolvedDeleted,
                 address, recipientName, vendorName, orderingCompanyName, sortBy, sortDir);
-        return ResponseEntity.ok(getOrdersUseCase.getOrdersPaged(condition, PageRequest.of(page, size)));
+        PageResult<OrderResult> result = getOrdersUseCase.getOrdersPaged(condition, PageRequest.of(page, size));
+        if (isVendor) {
+            List<OrderResult> masked = result.content().stream().map(OrderController::maskPhones).toList();
+            result = new PageResult<>(masked, result.page(), result.size(), result.totalElements(), result.totalPages(), result.totalAmount());
+        }
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OrderResult> getOne(@PathVariable Long id) {
-        return ResponseEntity.ok(getOrderUseCase.getOrder(id));
+    public ResponseEntity<OrderResult> getOne(@PathVariable Long id, Authentication auth) {
+        boolean isVendor = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
+        OrderResult result = getOrderUseCase.getOrder(id);
+        return ResponseEntity.ok(isVendor ? maskPhones(result) : result);
     }
 
     @PostMapping
@@ -166,8 +175,17 @@ public class OrderController {
     }
 
     @GetMapping("/{id}/history")
-    public ResponseEntity<List<OrderHistoryResult>> getHistory(@PathVariable Long id) {
-        return ResponseEntity.ok(getOrderHistoryUseCase.getHistory(id));
+    public ResponseEntity<List<OrderHistoryResult>> getHistory(@PathVariable Long id, Authentication auth) {
+        boolean isVendor = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
+        List<OrderHistoryResult> history = getOrderHistoryUseCase.getHistory(id);
+        if (isVendor) {
+            history = history.stream()
+                    .map(h -> new OrderHistoryResult(h.id(), h.orderId(), h.action(),
+                            maskPhone(h.detail()), h.actorCompany(), h.actorName(), h.createdAt()))
+                    .toList();
+        }
+        return ResponseEntity.ok(history);
     }
 
     @DeleteMapping("/{id}")
@@ -179,5 +197,30 @@ public class OrderController {
         }
         deleteOrderUseCase.deleteOrder(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private static String maskPhone(String phone) {
+        if (phone == null || phone.isBlank()) return phone;
+        return phone.replaceAll("(\\d{2,3})-(\\d{3,4})-(\\d{4})", "$1-****-$3");
+    }
+
+    private static OrderResult maskPhones(OrderResult r) {
+        return new OrderResult(
+                r.id(), r.orderNumber(), r.vendorId(), r.vendorName(), r.vendorPhone(),
+                r.orderingCompanyId(), r.orderingCompanyName(), r.orderingCompanyPhone(),
+                r.status(), r.productId(), r.productName(), r.quantity(), r.amount(),
+                r.extraCost(), r.deliveryDate(), r.deliveryTimeType(), r.deliveryTimeHour(),
+                r.deliveryTimeMinute(), r.deliveryTimeCustom(), r.address(), r.addressDetail(),
+                r.eventType(), r.placeName(), r.roomName(), r.eventInfo(),
+                r.ribbonLeft(), r.ribbonRight(), r.ribbonExtras(),
+                r.ordererName(), maskPhone(r.ordererPhone()),
+                r.recipientName(), maskPhone(r.recipientPhone()),
+                r.sendPhotoToOrderer(), r.sendPhotoToRecipient(),
+                r.messageSchedule(), r.scheduledMessageHour(), r.scheduledMessageMinute(),
+                r.adminMemo(), r.vendorMemo(), r.acceptedAt(), r.completedAt(),
+                r.createdAt(), r.messageStatus(), r.referencePhotoCount(),
+                r.hasReceipt(), r.receiptReceiverName(), r.receiptReceiverRelation(),
+                r.isDeleted(), r.messageSentAt()
+        );
     }
 }
