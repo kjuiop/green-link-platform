@@ -20,8 +20,17 @@ public class OrderJpaEntity extends BaseJpaEntity {
     @Column(name = "vendor_id")
     private Long vendorId;
 
+    @Column(name = "vendor_company_id")
+    private Long vendorCompanyId;
+
     @Column(name = "ordering_company_id")
     private Long orderingCompanyId;
+
+    @Column(name = "created_by_admin_id")
+    private Long createdByAdminId;
+
+    @Column(name = "updated_by_admin_id")
+    private Long updatedByAdminId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -133,7 +142,10 @@ public class OrderJpaEntity extends BaseJpaEntity {
         e.id = order.getId();
         e.orderNumber = order.getOrderNumber();
         e.vendorId = order.getVendorId();
+        e.vendorCompanyId = order.getVendorCompanyId();
         e.orderingCompanyId = order.getOrderingCompanyId();
+        e.createdByAdminId = order.getCreatedByAdminId();
+        e.updatedByAdminId = order.getUpdatedByAdminId();
         e.status = order.getStatus();
         e.productId = order.getProductId();
         e.productName = order.getProductName();
@@ -176,6 +188,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
                 id,
                 orderNumber,
                 vendorId,
+                vendorCompanyId,
                 orderingCompanyId,
                 status,
                 productId,
@@ -211,6 +224,8 @@ public class OrderJpaEntity extends BaseJpaEntity {
                 acceptedAt,
                 completedAt,
                 getCreatedAt() != null ? getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null,
+                createdByAdminId,
+                updatedByAdminId,
                 isDeleted
         );
     }
