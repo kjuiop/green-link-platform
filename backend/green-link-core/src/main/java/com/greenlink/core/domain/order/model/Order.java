@@ -89,6 +89,7 @@ public class Order {
         o.vendorCompanyId = vendorCompanyId;
         o.orderingCompanyId = orderingCompanyId;
         o.createdByAdminId = createdByAdminId;
+        o.updatedByAdminId = createdByAdminId;
         o.orderNumber = orderNumber;
         o.status = OrderStatus.PENDING;
         o.productId = productId;
