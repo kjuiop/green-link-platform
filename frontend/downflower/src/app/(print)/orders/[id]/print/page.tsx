@@ -164,7 +164,7 @@ export default function PrintOrderPage() {
               <td>받는 고객명</td>
               <td>{order.recipientName || order.ordererName}</td>
               <td className="left" style={{ fontWeight: 'normal' }}>
-                HP: {order.recipientPhone || order.ordererPhone}
+                {order.recipientPhone ? `HP: ${order.recipientPhone}` : ''}
               </td>
             </tr>
             <tr>
@@ -239,7 +239,7 @@ export default function PrintOrderPage() {
               <td>받는 고객명</td>
               <td>{order.recipientName || order.ordererName}</td>
               <td className="left" style={{ fontWeight: 'normal' }}>
-                HP: {order.recipientPhone || order.ordererPhone}
+                {order.recipientPhone ? `HP: ${order.recipientPhone}` : ''}
               </td>
             </tr>
             <tr>
