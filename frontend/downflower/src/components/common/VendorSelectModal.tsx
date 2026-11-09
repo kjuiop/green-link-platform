@@ -103,7 +103,6 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
     setSelectedSido(null)
     setSelectedSigungu(null)
     setMapLevel('national')
-    setHoveredSigungu(null)
   }
 
   const normalizedSelectedSido = selectedSido ? (SIDO_NAME_MAP[selectedSido] ?? selectedSido) : null
