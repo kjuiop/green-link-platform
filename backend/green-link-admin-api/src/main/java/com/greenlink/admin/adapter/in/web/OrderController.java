@@ -81,9 +81,10 @@ public class OrderController {
         Long resolvedVendorId = vendorId;
         Long resolvedOrderingCompanyId = orderingCompanyId;
         Boolean resolvedDeleted = null;
+        boolean isVendor = false;
 
         if (auth != null && auth.isAuthenticated()) {
-            boolean isVendor = auth.getAuthorities().stream()
+            isVendor = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
             boolean isOrdering = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_ORDERING"));
@@ -101,15 +102,13 @@ public class OrderController {
                 resolvedDeleted = deleted;
             }
         }
-        boolean isVendorForMask = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
         OrderSearchCondition condition = OrderSearchCondition.of(
                 status, resolvedVendorId, orderNumber, productName, ordererName,
                 deliveryDateFrom, deliveryDateTo, resolvedOrderingCompanyId,
                 receiverName, messageStatus, ribbonLeft, resolvedDeleted,
                 address, recipientName, vendorName, orderingCompanyName, sortBy, sortDir);
         PageResult<OrderResult> result = getOrdersUseCase.getOrdersPaged(condition, PageRequest.of(page, size));
-        if (isVendorForMask) {
+        if (isVendor) {
             List<OrderResult> masked = result.content().stream().map(OrderController::maskPhones).toList();
             result = new PageResult<>(masked, result.page(), result.size(), result.totalElements(), result.totalPages(), result.totalAmount());
         }
@@ -176,8 +175,17 @@ public class OrderController {
     }
 
     @GetMapping("/{id}/history")
-    public ResponseEntity<List<OrderHistoryResult>> getHistory(@PathVariable Long id) {
-        return ResponseEntity.ok(getOrderHistoryUseCase.getHistory(id));
+    public ResponseEntity<List<OrderHistoryResult>> getHistory(@PathVariable Long id, Authentication auth) {
+        boolean isVendor = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
+        List<OrderHistoryResult> history = getOrderHistoryUseCase.getHistory(id);
+        if (isVendor) {
+            history = history.stream()
+                    .map(h -> new OrderHistoryResult(h.id(), h.orderId(), h.action(),
+                            maskPhone(h.detail()), h.actorCompany(), h.actorName(), h.createdAt()))
+                    .toList();
+        }
+        return ResponseEntity.ok(history);
     }
 
     @DeleteMapping("/{id}")
