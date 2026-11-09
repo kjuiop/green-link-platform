@@ -14,7 +14,7 @@ export const SIDO_VIEWPORT: Record<string, SidoViewport> = {
   '세종특별자치시':  { center: [127.25, 36.48], scale: 60000 },
   '경기도':        { center: [127.20, 37.40], scale: 16000 },
   '강원특별자치도':  { center: [128.20, 37.65], scale: 8000  },
-  '충청북도':      { center: [127.73, 36.80], scale: 14000 },
+  '충청북도':      { center: [127.73, 36.80], scale: 17000 },
   '충청남도':      { center: [126.80, 36.65], scale: 11000 },
   '전북특별자치도':  { center: [127.15, 35.72], scale: 11000 },
   '전라남도':      { center: [126.99, 34.80], scale: 9000  },
