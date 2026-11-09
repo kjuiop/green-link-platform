@@ -9,7 +9,7 @@ import { PrintButton } from '@/components/common/PrintButton'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { ReferencePhotoSection } from '@/components/common/ReferencePhotoViewer'
 import { Pencil, X, Check, Trash2 } from 'lucide-react'
-import { cn, RIBBON_PHRASES } from '@/lib/utils'
+import { cn, RIBBON_PHRASES, formatPhone } from '@/lib/utils'
 import type { LoadedOrderDetail } from '@/components/common/useOrderDetail'
 import type { DeliveryTimeType } from '@/types/order'
 import VendorSelectModal from '@/components/common/VendorSelectModal'
@@ -474,7 +474,7 @@ export function ContactCard({ d, className }: SectionProps) {
                 <Input value={draft.ordererName} onChange={(e) => set('ordererName', e.target.value)} />
               </Field>
               <Field label="주문자 연락처">
-                <Input value={draft.ordererPhone} onChange={(e) => set('ordererPhone', e.target.value)} />
+                <Input value={draft.ordererPhone} onChange={(e) => set('ordererPhone', e.target.value)} onBlur={(e) => set('ordererPhone', formatPhone(e.target.value))} />
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -482,7 +482,7 @@ export function ContactCard({ d, className }: SectionProps) {
                 <Input placeholder="없음" value={draft.recipientName ?? ''} onChange={(e) => set('recipientName', e.target.value || undefined)} />
               </Field>
               <Field label="받는 분 연락처">
-                <Input placeholder="없음" value={draft.recipientPhone ?? ''} onChange={(e) => set('recipientPhone', e.target.value || undefined)} />
+                <Input placeholder="없음" value={draft.recipientPhone ?? ''} onChange={(e) => set('recipientPhone', e.target.value || undefined)} onBlur={(e) => set('recipientPhone', formatPhone(e.target.value) || undefined)} />
               </Field>
             </div>
             <Field label="문자 발송 대상">
@@ -536,8 +536,8 @@ export function ContactCard({ d, className }: SectionProps) {
           </>
         ) : (
           <>
-            <Row label="주문자" value={`${order.ordererName} ${order.ordererPhone}`} />
-            {order.recipientName && <Row label="받는 분" value={`${order.recipientName}${order.recipientPhone ? ` ${order.recipientPhone}` : ''}`} />}
+            <Row label="주문자" value={`${order.ordererName}${order.ordererPhone ? ` ${formatPhone(order.ordererPhone)}` : ''}`} />
+            {order.recipientName && <Row label="받는 분" value={`${order.recipientName}${order.recipientPhone ? ` ${formatPhone(order.recipientPhone)}` : ''}`} />}
             <Row label="문자 발송" value={[order.sendPhotoToOrderer ? '주문자' : '', order.sendPhotoToRecipient ? '받는 분' : ''].filter(Boolean).join(', ') || '미발송'} />
             <Row label="발송 예약시간" value={
               order.messageSchedule === 'scheduled' && order.scheduledMessageHour
@@ -692,7 +692,7 @@ export function SmsHistoryCard({ d, className }: SectionProps) {
             {smsMessages.map((msg) => (
               <div key={msg.id} className="space-y-1.5 rounded-md border bg-gray-50 px-3 py-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{msg.receiver}</span>
+                  <span className="text-sm font-medium">{formatPhone(msg.receiver)}</span>
                   {msg.status === 'SUCCESS'
                     ? <span className="text-xs text-green-600">✓ 발송성공</span>
                     : <span className="text-xs text-red-500">✕ 발송실패</span>}

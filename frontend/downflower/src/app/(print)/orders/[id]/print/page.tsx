@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { fetchOrder, updateOrderStatus } from '@/lib/api/orderApi'
+import { formatPhone } from '@/lib/utils'
 import { Order } from '@/types/order'
 
 function buildDeliveryAddress(order: Order): string {
@@ -164,7 +165,7 @@ export default function PrintOrderPage() {
               <td>받는 고객명</td>
               <td>{order.recipientName || order.ordererName}</td>
               <td className="left" style={{ fontWeight: 'normal' }}>
-                {order.recipientPhone ? `HP: ${order.recipientPhone}` : ''}
+                {order.recipientPhone ? `HP: ${formatPhone(order.recipientPhone)}` : ''}
               </td>
             </tr>
             <tr>
@@ -239,7 +240,7 @@ export default function PrintOrderPage() {
               <td>받는 고객명</td>
               <td>{order.recipientName || order.ordererName}</td>
               <td className="left" style={{ fontWeight: 'normal' }}>
-                {order.recipientPhone ? `HP: ${order.recipientPhone}` : ''}
+                {order.recipientPhone ? `HP: ${formatPhone(order.recipientPhone)}` : ''}
               </td>
             </tr>
             <tr>

@@ -201,7 +201,7 @@ public class OrderController {
 
     private static String maskPhone(String phone) {
         if (phone == null || phone.isBlank()) return phone;
-        return phone.replaceAll("(\\d{2,3})-(\\d{3,4})-(\\d{4})", "$1-****-$3");
+        return phone.replaceAll("(\\d{2,3})-?(\\d{3,4})-?(\\d{4})", "$1-****-$3");
     }
 
     private static OrderResult maskPhones(OrderResult r) {
