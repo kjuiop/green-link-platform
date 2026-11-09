@@ -62,9 +62,7 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
   const [selectedSido, setSelectedSido] = useState<string | null>(null)
   const [selectedSigungu, setSelectedSigungu] = useState<string | null>(null)
   const [selectedCapability, setSelectedCapability] = useState('ALL')
-  const [hoveredSido, setHoveredSido] = useState<string | null>(null)
   const [mapLevel, setMapLevel] = useState<'national' | 'sido'>('national')
-  const [hoveredSigungu, setHoveredSigungu] = useState<string | null>(null)
 
   const sigunguList = useMemo(() => {
     if (!selectedSido) return []
@@ -92,8 +90,6 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
       setSelectedSido(null)
       setSelectedSigungu(null)
       setMapLevel('national')
-      setHoveredSido(null)
-      setHoveredSigungu(null)
     }
   }, [open])
 
@@ -179,11 +175,9 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                                     style={{ cursor: 'pointer', outline: 'none' }}
                                     onMouseEnter={(e) => {
                                       if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.hover)
-                                      setHoveredSido(sido)
                                     }}
                                     onMouseLeave={(e) => {
                                       if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.base)
-                                      setHoveredSido(null)
                                     }}
                                   />
                                 )
@@ -265,11 +259,9 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                                     style={{ cursor: 'pointer', outline: 'none' }}
                                     onMouseEnter={(e) => {
                                       if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.hover)
-                                      setHoveredSigungu(sigungu)
                                     }}
                                     onMouseLeave={(e) => {
                                       if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.base)
-                                      setHoveredSigungu(null)
                                     }}
                                   />
                                 )
