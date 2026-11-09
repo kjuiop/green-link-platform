@@ -9,5 +9,6 @@ public record OrderHistoryResult(
         String detail,
         String actorCompany,
         String actorName,
+        Long actorAdminId,
         String createdAt
 ) {}

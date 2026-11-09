@@ -97,8 +97,13 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 + "-"
                 + String.format("%04d", System.nanoTime() % 10000);
 
+        Long vendorCompanyId = cmd.vendorId() != null
+                ? adminRepository.findById(cmd.vendorId()).map(Admin::getCompanyId).orElse(null)
+                : null;
+
         Order order = Order.create(
                 cmd.vendorId(),
+                vendorCompanyId,
                 cmd.orderingCompanyId(),
                 orderNumber,
                 cmd.productId(),
@@ -130,7 +135,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 cmd.scheduledMessageHour(),
                 cmd.scheduledMessageMinute(),
                 cmd.adminMemo(),
-                cmd.vendorMemo()
+                cmd.vendorMemo(),
+                resolveCurrentAdminId()
         );
 
         Order saved = orderRepository.save(order);
@@ -248,6 +254,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 order.getId(),
                 order.getOrderNumber(),
                 order.getVendorId(),
+                order.getVendorCompanyId(),
                 vendorName,
                 vendorPhone,
                 order.getOrderingCompanyId(),
@@ -293,7 +300,9 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 receipt != null ? receipt.getReceiverName() : null,
                 receipt != null ? receipt.getReceiverRelation() : null,
                 order.isDeleted(),
-                messageSentAt
+                messageSentAt,
+                order.getCreatedByAdminId(),
+                order.getUpdatedByAdminId()
         );
     }
 
@@ -337,8 +346,13 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Long previousVendorId = order.getVendorId();
         String changeDetail = buildChangeDetail(order, cmd);
 
+        Long newVendorCompanyId = cmd.vendorId() != null
+                ? adminRepository.findById(cmd.vendorId()).map(Admin::getCompanyId).orElse(null)
+                : null;
+
         order.updateInfo(
                 cmd.vendorId(),
+                newVendorCompanyId,
                 cmd.productId(),
                 cmd.productName(),
                 cmd.quantity(),
@@ -368,7 +382,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 cmd.scheduledMessageHour(),
                 cmd.scheduledMessageMinute(),
                 cmd.adminMemo(),
-                cmd.vendorMemo()
+                cmd.vendorMemo(),
+                resolveCurrentAdminId()
         );
 
         Order saved = orderRepository.save(order);
@@ -460,6 +475,17 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.STATUS_CHANGED,
                 "상태 변경: " + STATUS_LABEL.getOrDefault(saved.getStatus(), saved.getStatus().name()));
         return toResult(saved);
+    }
+
+    private Long resolveCurrentAdminId() {
+        org.springframework.security.core.Authentication auth =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) return null;
+        try {
+            return Long.parseLong(String.valueOf(auth.getPrincipal()));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private static String kstNow() {

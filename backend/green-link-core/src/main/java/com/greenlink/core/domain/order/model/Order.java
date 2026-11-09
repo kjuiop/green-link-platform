@@ -5,6 +5,7 @@ public class Order {
     private Long id;
     private String orderNumber;
     private Long vendorId;
+    private Long vendorCompanyId;
     private Long orderingCompanyId;
     private OrderStatus status;
     private Long productId;
@@ -40,12 +41,15 @@ public class Order {
     private String acceptedAt;
     private String completedAt;
     private String createdAt;
+    private Long createdByAdminId;
+    private Long updatedByAdminId;
     private boolean isDeleted;
 
     private Order() {}
 
     public static Order create(
             Long vendorId,
+            Long vendorCompanyId,
             Long orderingCompanyId,
             String orderNumber,
             Long productId,
@@ -77,11 +81,14 @@ public class Order {
             String scheduledMessageHour,
             String scheduledMessageMinute,
             String adminMemo,
-            String vendorMemo
+            String vendorMemo,
+            Long createdByAdminId
     ) {
         Order o = new Order();
         o.vendorId = vendorId;
+        o.vendorCompanyId = vendorCompanyId;
         o.orderingCompanyId = orderingCompanyId;
+        o.createdByAdminId = createdByAdminId;
         o.orderNumber = orderNumber;
         o.status = OrderStatus.PENDING;
         o.productId = productId;
@@ -121,6 +128,7 @@ public class Order {
             Long id,
             String orderNumber,
             Long vendorId,
+            Long vendorCompanyId,
             Long orderingCompanyId,
             OrderStatus status,
             Long productId,
@@ -156,13 +164,18 @@ public class Order {
             String acceptedAt,
             String completedAt,
             String createdAt,
+            Long createdByAdminId,
+            Long updatedByAdminId,
             boolean isDeleted
     ) {
         Order o = new Order();
         o.id = id;
         o.orderNumber = orderNumber;
         o.vendorId = vendorId;
+        o.vendorCompanyId = vendorCompanyId;
         o.orderingCompanyId = orderingCompanyId;
+        o.createdByAdminId = createdByAdminId;
+        o.updatedByAdminId = updatedByAdminId;
         o.status = status;
         o.productId = productId;
         o.productName = productName;
@@ -244,6 +257,7 @@ public class Order {
 
     public void updateInfo(
             Long vendorId,
+            Long vendorCompanyId,
             Long productId,
             String productName,
             int quantity,
@@ -273,9 +287,12 @@ public class Order {
             String scheduledMessageHour,
             String scheduledMessageMinute,
             String adminMemo,
-            String vendorMemo
+            String vendorMemo,
+            Long updatedByAdminId
     ) {
         this.vendorId = vendorId;
+        this.vendorCompanyId = vendorCompanyId;
+        this.updatedByAdminId = updatedByAdminId;
         this.productId = productId;
         this.productName = productName;
         this.quantity = quantity;
@@ -311,6 +328,7 @@ public class Order {
     public Long getId() { return id; }
     public String getOrderNumber() { return orderNumber; }
     public Long getVendorId() { return vendorId; }
+    public Long getVendorCompanyId() { return vendorCompanyId; }
     public Long getOrderingCompanyId() { return orderingCompanyId; }
     public OrderStatus getStatus() { return status; }
     public Long getProductId() { return productId; }
@@ -346,5 +364,7 @@ public class Order {
     public String getAcceptedAt() { return acceptedAt; }
     public String getCompletedAt() { return completedAt; }
     public String getCreatedAt() { return createdAt; }
+    public Long getCreatedByAdminId() { return createdByAdminId; }
+    public Long getUpdatedByAdminId() { return updatedByAdminId; }
     public boolean isDeleted() { return isDeleted; }
 }

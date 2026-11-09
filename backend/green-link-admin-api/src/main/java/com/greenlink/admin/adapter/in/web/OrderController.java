@@ -182,7 +182,7 @@ public class OrderController {
         if (isVendor) {
             history = history.stream()
                     .map(h -> new OrderHistoryResult(h.id(), h.orderId(), h.action(),
-                            maskPhone(h.detail()), h.actorCompany(), h.actorName(), h.createdAt()))
+                            maskPhone(h.detail()), h.actorCompany(), h.actorName(), h.actorAdminId(), h.createdAt()))
                     .toList();
         }
         return ResponseEntity.ok(history);
@@ -206,7 +206,7 @@ public class OrderController {
 
     private static OrderResult maskPhones(OrderResult r) {
         return new OrderResult(
-                r.id(), r.orderNumber(), r.vendorId(), r.vendorName(), r.vendorPhone(),
+                r.id(), r.orderNumber(), r.vendorId(), r.vendorCompanyId(), r.vendorName(), r.vendorPhone(),
                 r.orderingCompanyId(), r.orderingCompanyName(), r.orderingCompanyPhone(),
                 r.status(), r.productId(), r.productName(), r.quantity(), r.amount(),
                 r.extraCost(), r.deliveryDate(), r.deliveryTimeType(), r.deliveryTimeHour(),
@@ -220,7 +220,8 @@ public class OrderController {
                 r.adminMemo(), r.vendorMemo(), r.acceptedAt(), r.completedAt(),
                 r.createdAt(), r.messageStatus(), r.referencePhotoCount(),
                 r.hasReceipt(), r.receiptReceiverName(), r.receiptReceiverRelation(),
-                r.isDeleted(), r.messageSentAt()
+                r.isDeleted(), r.messageSentAt(),
+                r.createdByAdminId(), r.updatedByAdminId()
         );
     }
 }
