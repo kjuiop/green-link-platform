@@ -214,7 +214,7 @@ public class OrderController {
                 r.eventType(), r.placeName(), r.roomName(), r.eventInfo(),
                 r.ribbonLeft(), r.ribbonRight(), r.ribbonExtras(),
                 r.ordererName(), maskPhone(r.ordererPhone()),
-                r.recipientName(), maskPhone(r.recipientPhone()),
+                r.recipientName(), r.recipientPhone(),
                 r.sendPhotoToOrderer(), r.sendPhotoToRecipient(),
                 r.messageSchedule(), r.scheduledMessageHour(), r.scheduledMessageMinute(),
                 r.adminMemo(), r.vendorMemo(), r.acceptedAt(), r.completedAt(),
