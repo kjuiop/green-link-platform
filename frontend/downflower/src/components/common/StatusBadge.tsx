@@ -131,7 +131,13 @@ export function AcceptOrderButton({ onAccept }: { onAccept: () => Promise<void> 
       onClick={async (e) => {
         e.stopPropagation()
         setLoading(true)
-        try { await onAccept() } finally { setLoading(false) }
+        try {
+          await onAccept()
+        } catch {
+          alert('수주 승인에 실패했습니다. 다시 시도해 주세요.')
+        } finally {
+          setLoading(false)
+        }
       }}
       className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-green-300 bg-green-50 px-3 text-sm font-medium text-green-700 hover:bg-green-100 disabled:cursor-wait disabled:opacity-60"
     >
@@ -150,7 +156,13 @@ export function RejectOrderButton({ onReject }: { onReject: () => Promise<void> 
       onClick={async (e) => {
         e.stopPropagation()
         setLoading(true)
-        try { await onReject() } finally { setLoading(false) }
+        try {
+          await onReject()
+        } catch {
+          alert('수주 거절에 실패했습니다. 다시 시도해 주세요.')
+        } finally {
+          setLoading(false)
+        }
       }}
       className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-red-300 bg-red-50 px-3 text-sm font-medium text-red-700 hover:bg-red-100 disabled:cursor-wait disabled:opacity-60"
     >
