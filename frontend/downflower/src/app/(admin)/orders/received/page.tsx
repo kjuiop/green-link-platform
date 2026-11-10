@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { AcceptOrderBadge, AcceptOrderButton, RejectOrderButton } from '@/components/common/StatusBadge'
+import { AcceptOrderBadge, AcceptOrderButton, RejectOrderButton, OrderStatusBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
 import { PageResult } from '@/types/page'
@@ -635,16 +635,7 @@ export default function ReceivedOrdersPage() {
                     )}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <AcceptOrderBadge
-                        status={order.status}
-                        variant="admin"
-                        onAccept={async () => {
-                          await updateOrderStatus(order.id, 'accept')
-                          loadOrders(buildServerParams(), page)
-                        }}
-                      />
-                    </div>
+                    <OrderStatusBadge status={order.status} />
                     <div onClick={(e) => e.stopPropagation()}>
                       <ClickableMessageBadge
                         status={order.messageStatus}
