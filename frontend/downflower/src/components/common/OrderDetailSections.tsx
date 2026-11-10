@@ -569,7 +569,12 @@ export function MemoCard({ d, className }: SectionProps) {
         ) : (
           <>
             {order.adminMemo && <Row label="관리자 메모" value={order.adminMemo} />}
-            {order.vendorMemo && <Row label="업체 전달사항" value={order.vendorMemo} />}
+            {order.vendorMemo && (
+              <div>
+                <p className="mb-1 text-xs text-gray-500">특이사항</p>
+                <p className="break-all text-base font-bold text-red-600">{order.vendorMemo}</p>
+              </div>
+            )}
             {!order.adminMemo && !order.vendorMemo && <p className="text-gray-400">메모 없음</p>}
           </>
         )}

@@ -865,7 +865,7 @@ function PhotoViewerDialog({ open, onClose, photos, orderNumber }: ViewerProps) 
             <button
               type="button"
               onClick={handleDownloadCurrent}
-              className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+              className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 whitespace-nowrap"
             >
               <Download className="h-3.5 w-3.5" />
               현재 사진
@@ -873,7 +873,7 @@ function PhotoViewerDialog({ open, onClose, photos, orderNumber }: ViewerProps) 
             <button
               type="button"
               onClick={handleDownloadAll}
-              className="inline-flex items-center gap-1.5 rounded-md border border-green-600 px-2.5 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50"
+              className="inline-flex items-center gap-1.5 rounded-md border border-green-600 px-2.5 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50 whitespace-nowrap"
             >
               <Download className="h-3.5 w-3.5" />
               전체 다운로드

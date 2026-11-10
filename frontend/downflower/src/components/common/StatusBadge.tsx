@@ -18,7 +18,7 @@ const orderStatusConfig: Record<OrderStatus, { label: string; className: string 
   '발주대기': { label: '미확인', className: 'bg-red-100 text-red-700 border-red-300 font-bold animate-blink' },
   '수주완료': { label: '수주완료', className: 'bg-blue-100 text-blue-800 border-blue-200' },
   '배송완료': { label: '배송완료', className: 'bg-green-100 text-green-800 border-green-200' },
-  '수주거절': { label: '수주거절', className: 'bg-red-100 text-red-800 border-red-200' },
+  '수주거절': { label: '수주거절', className: 'bg-red-100 text-red-800 border-red-200 font-bold animate-blink' },
   '주문취소': { label: '주문취소', className: 'bg-gray-100 text-gray-600 border-gray-200' },
 }
 
@@ -118,6 +118,56 @@ export function AcceptOrderBadge({
         </AlertDialogContent>
       </AlertDialog>
     </>
+  )
+}
+
+export function AcceptOrderButton({ onAccept }: { onAccept: () => Promise<void> }) {
+  const [loading, setLoading] = useState(false)
+
+  return (
+    <button
+      type="button"
+      disabled={loading}
+      onClick={async (e) => {
+        e.stopPropagation()
+        setLoading(true)
+        try {
+          await onAccept()
+        } catch {
+          alert('수주 승인에 실패했습니다. 다시 시도해 주세요.')
+        } finally {
+          setLoading(false)
+        }
+      }}
+      className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-green-300 bg-green-50 px-3 text-sm font-medium text-green-700 hover:bg-green-100 disabled:cursor-wait disabled:opacity-60"
+    >
+      {loading ? '처리 중…' : '수주승인'}
+    </button>
+  )
+}
+
+export function RejectOrderButton({ onReject }: { onReject: () => Promise<void> }) {
+  const [loading, setLoading] = useState(false)
+
+  return (
+    <button
+      type="button"
+      disabled={loading}
+      onClick={async (e) => {
+        e.stopPropagation()
+        setLoading(true)
+        try {
+          await onReject()
+        } catch {
+          alert('수주 거절에 실패했습니다. 다시 시도해 주세요.')
+        } finally {
+          setLoading(false)
+        }
+      }}
+      className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-red-300 bg-red-50 px-3 text-sm font-medium text-red-700 hover:bg-red-100 disabled:cursor-wait disabled:opacity-60"
+    >
+      {loading ? '처리 중…' : '수주거절'}
+    </button>
   )
 }
 
