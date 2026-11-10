@@ -21,7 +21,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 
@@ -93,7 +92,7 @@ public class OrderQueryRepository {
     }
 
     private OrderSpecifier<Integer> priorityGroup(QOrderJpaEntity order) {
-        LocalDateTime threeHoursAgo = LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(3);
+        LocalDateTime threeHoursAgo = LocalDateTime.now().minusHours(3);
         return new CaseBuilder()
                 .when(order.status.eq(OrderStatus.PENDING)).then(1)
                 .when(order.status.eq(OrderStatus.REJECTED)).then(2)

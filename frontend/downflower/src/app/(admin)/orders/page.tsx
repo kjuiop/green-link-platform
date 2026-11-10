@@ -183,12 +183,15 @@ export default function OrdersPage() {
   useEffect(() => { loadOrders(buildServerParams(initRange.from, initRange.to)) }, [])
   useOrderUpdatedListener(() => loadOrders(buildServerParams(), page))
 
+  const buildServerParamsRef = useRef(buildServerParams)
+  buildServerParamsRef.current = buildServerParams
+
   const isUserInteracting = useRef(false)
   useEffect(() => {
     const timer = setInterval(() => {
       if (isUserInteracting.current) return
       if (document.visibilityState !== 'visible') return
-      loadOrders(buildServerParams(), page)
+      loadOrders(buildServerParamsRef.current(), page)
     }, 90_000)
     return () => clearInterval(timer)
   }, [page])
