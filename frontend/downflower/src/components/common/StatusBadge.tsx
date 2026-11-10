@@ -18,7 +18,7 @@ const orderStatusConfig: Record<OrderStatus, { label: string; className: string 
   '발주대기': { label: '미확인', className: 'bg-red-100 text-red-700 border-red-300 font-bold animate-blink' },
   '수주완료': { label: '수주완료', className: 'bg-blue-100 text-blue-800 border-blue-200' },
   '배송완료': { label: '배송완료', className: 'bg-green-100 text-green-800 border-green-200' },
-  '수주거절': { label: '수주거절', className: 'bg-red-100 text-red-800 border-red-200' },
+  '수주거절': { label: '수주거절', className: 'bg-red-100 text-red-800 border-red-200 font-bold animate-blink' },
   '주문취소': { label: '주문취소', className: 'bg-gray-100 text-gray-600 border-gray-200' },
 }
 
