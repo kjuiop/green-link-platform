@@ -669,9 +669,9 @@ export default function ReceivedOrdersPage() {
                   <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
                 </div>
               </button>
-              {!order.isDeleted && (order.status === '발주대기' || order.status === '수주완료' || order.status === '배송완료') && (
+              {!order.isDeleted && (order.status === '발주대기' || order.status === '수주거절' || order.status === '수주완료' || order.status === '배송완료') && (
                 <div className="mt-3 border-t pt-3" onClick={(e) => e.stopPropagation()}>
-                  {order.status === '발주대기' && (
+                  {(order.status === '발주대기' || order.status === '수주거절') && (
                     <div className="flex gap-2">
                       <AcceptOrderButton
                         onAccept={async () => {
@@ -679,12 +679,14 @@ export default function ReceivedOrdersPage() {
                           loadOrders(buildServerParams(), page)
                         }}
                       />
-                      <RejectOrderButton
-                        onReject={async () => {
-                          await updateOrderStatus(order.id, 'reject')
-                          loadOrders(buildServerParams(), page)
-                        }}
-                      />
+                      {order.status === '발주대기' && (
+                        <RejectOrderButton
+                          onReject={async () => {
+                            await updateOrderStatus(order.id, 'reject')
+                            loadOrders(buildServerParams(), page)
+                          }}
+                        />
+                      )}
                     </div>
                   )}
                   {(order.status === '수주완료' || order.status === '배송완료') && (

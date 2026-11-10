@@ -216,8 +216,8 @@ public class Order {
     }
 
     public void accept(String acceptedAt) {
-        if (this.status != OrderStatus.PENDING) {
-            throw new IllegalStateException("발주대기 상태에서만 수주승인이 가능합니다. 현재 상태: " + this.status);
+        if (this.status != OrderStatus.PENDING && this.status != OrderStatus.REJECTED) {
+            throw new IllegalStateException("발주대기 또는 수주거절 상태에서만 수주승인이 가능합니다. 현재 상태: " + this.status);
         }
         this.status = OrderStatus.ACCEPTED;
         this.acceptedAt = acceptedAt;
