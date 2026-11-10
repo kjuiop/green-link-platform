@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { AcceptOrderBadge } from '@/components/common/StatusBadge'
+import { AcceptOrderBadge, AcceptOrderButton, RejectOrderButton, OrderStatusBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
 import { PageResult } from '@/types/page'
@@ -635,16 +635,7 @@ export default function ReceivedOrdersPage() {
                     )}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <AcceptOrderBadge
-                        status={order.status}
-                        variant="admin"
-                        onAccept={async () => {
-                          await updateOrderStatus(order.id, 'accept')
-                          loadOrders(buildServerParams(), page)
-                        }}
-                      />
-                    </div>
+                    <OrderStatusBadge status={order.status} />
                     <div onClick={(e) => e.stopPropagation()}>
                       <ClickableMessageBadge
                         status={order.messageStatus}
@@ -678,18 +669,36 @@ export default function ReceivedOrdersPage() {
                   <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
                 </div>
               </button>
-              {!order.isDeleted && (
-                <div className="mt-3 border-t pt-3">
-                  <ReceiptConfirmButton
-                    layout="card"
-                    showPhotoButton={order.status === '배송완료'}
-                    orderId={String(order.id)}
-                    orderNumber={order.orderNumber}
-                    senderName={order.ribbonLeft}
-                    recipientName={order.recipientName}
-                    initialHasReceipt={order.hasReceipt}
-                    onDeliveryComplete={() => loadOrders(buildServerParams(), page)}
-                  />
+              {!order.isDeleted && (order.status === '발주대기' || order.status === '수주완료' || order.status === '배송완료') && (
+                <div className="mt-3 border-t pt-3" onClick={(e) => e.stopPropagation()}>
+                  {order.status === '발주대기' && (
+                    <div className="flex gap-2">
+                      <AcceptOrderButton
+                        onAccept={async () => {
+                          await updateOrderStatus(order.id, 'accept')
+                          loadOrders(buildServerParams(), page)
+                        }}
+                      />
+                      <RejectOrderButton
+                        onReject={async () => {
+                          await updateOrderStatus(order.id, 'reject')
+                          loadOrders(buildServerParams(), page)
+                        }}
+                      />
+                    </div>
+                  )}
+                  {(order.status === '수주완료' || order.status === '배송완료') && (
+                    <ReceiptConfirmButton
+                      layout="card"
+                      showPhotoButton={order.status === '배송완료'}
+                      orderId={String(order.id)}
+                      orderNumber={order.orderNumber}
+                      senderName={order.ribbonLeft}
+                      recipientName={order.recipientName}
+                      initialHasReceipt={order.hasReceipt}
+                      onDeliveryComplete={() => loadOrders(buildServerParams(), page)}
+                    />
+                  )}
                 </div>
               )}
             </div>
