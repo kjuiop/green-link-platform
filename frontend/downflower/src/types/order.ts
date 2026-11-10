@@ -49,6 +49,7 @@ export interface Order {
   deliveryPhotos?: string[]
   status: OrderStatus
   messageStatus: MessageStatus
+  createdAt?: string
   acceptedAt?: string | null
   completedAt?: string
   isDeleted?: boolean

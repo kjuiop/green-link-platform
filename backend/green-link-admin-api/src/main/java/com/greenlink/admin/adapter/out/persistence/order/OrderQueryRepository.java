@@ -20,6 +20,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
@@ -87,13 +88,17 @@ public class OrderQueryRepository {
                 )
             };
         }
-        return new OrderSpecifier[]{pendingFirst(order), order.createdAt.desc()};
+        return new OrderSpecifier[]{priorityGroup(order), order.createdAt.desc()};
     }
 
-    private OrderSpecifier<Integer> pendingFirst(QOrderJpaEntity order) {
+    private OrderSpecifier<Integer> priorityGroup(QOrderJpaEntity order) {
+        LocalDateTime threeHoursAgo = LocalDateTime.now().minusHours(3);
         return new CaseBuilder()
-                .when(order.status.eq(OrderStatus.PENDING)).then(0)
-                .otherwise(1)
+                .when(order.status.eq(OrderStatus.PENDING)).then(1)
+                .when(order.status.eq(OrderStatus.REJECTED)).then(2)
+                .when(order.status.eq(OrderStatus.ACCEPTED)
+                        .and(order.createdAt.before(threeHoursAgo))).then(3)
+                .otherwise(4)
                 .asc();
     }
 

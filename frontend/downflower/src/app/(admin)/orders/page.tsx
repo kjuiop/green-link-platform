@@ -72,6 +72,13 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '수주거절', value: '수주거절' },
 ]
 
+function isDelayed(order: Order): boolean {
+  if (order.status !== '수주완료') return false
+  if (!order.createdAt) return false
+  const created = new Date(order.createdAt.replace(' ', 'T'))
+  return Date.now() - created.getTime() > 3 * 60 * 60 * 1000
+}
+
 const PAGE_SIZE_OPTIONS = [10, 50, 100, 200, 300, 500]
 const YEAR_OPTIONS = [new Date().getFullYear(), new Date().getFullYear() - 1]
 
@@ -127,6 +134,7 @@ export default function OrdersPage() {
   const nextZ = useRef(1000)
 
   function openPopup(orderId: string) {
+    isUserInteracting.current = true
     setPopups((prev) => {
       const existing = prev.find((p) => p.id === orderId)
       if (existing) {
@@ -137,7 +145,11 @@ export default function OrdersPage() {
   }
 
   function closePopup(orderId: string) {
-    setPopups((prev) => prev.filter((p) => p.id !== orderId))
+    setPopups((prev) => {
+      const next = prev.filter((p) => p.id !== orderId)
+      if (next.length === 0) isUserInteracting.current = false
+      return next
+    })
   }
 
   function focusPopup(orderId: string) {
@@ -170,6 +182,19 @@ export default function OrdersPage() {
 
   useEffect(() => { loadOrders(buildServerParams(initRange.from, initRange.to)) }, [])
   useOrderUpdatedListener(() => loadOrders(buildServerParams(), page))
+
+  const buildServerParamsRef = useRef(buildServerParams)
+  buildServerParamsRef.current = buildServerParams
+
+  const isUserInteracting = useRef(false)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (isUserInteracting.current) return
+      if (document.visibilityState !== 'visible') return
+      loadOrders(buildServerParamsRef.current(), page)
+    }, 90_000)
+    return () => clearInterval(timer)
+  }, [page])
 
   function selectMonth(year: number, month: number) {
     setSelectedYear(year)
@@ -587,14 +612,21 @@ export default function OrdersPage() {
                     <div className="text-sm font-medium text-blue-600">{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원</div>
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <AcceptOrderBadge
-                      status={order.status}
-                      variant="admin"
-                      onAccept={async () => {
-                        await updateOrderStatus(order.id, 'accept')
-                        loadOrders(buildServerParams(), page)
-                      }}
-                    />
+                    <div className="flex items-center gap-1">
+                      <AcceptOrderBadge
+                        status={order.status}
+                        variant="admin"
+                        onAccept={async () => {
+                          await updateOrderStatus(order.id, 'accept')
+                          loadOrders(buildServerParams(), page)
+                        }}
+                      />
+                      {isDelayed(order) && (
+                        <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-xs font-semibold text-orange-700">
+                          지연
+                        </span>
+                      )}
+                    </div>
                     {order.acceptedAt && (
                       <div className="mt-0.5 text-[10px] text-gray-400">{order.acceptedAt.slice(0, 10)} {order.acceptedAt.slice(11, 16)}</div>
                     )}
