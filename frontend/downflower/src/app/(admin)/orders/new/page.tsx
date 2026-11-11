@@ -81,6 +81,7 @@ export default function NewOrderPage() {
     deliveryDate?: string
     deliveryHour?: string
     amount?: string
+    venueName?: string
     recipientName?: string
     ribbonLeft?: string
     ordererPhone?: string
@@ -105,6 +106,7 @@ export default function NewOrderPage() {
     if (!deliveryDate) next.deliveryDate = '배송날짜를 입력해주세요.'
     if (!deliveryHour && deliveryTimeType !== '3시간이내' && deliveryTimeType !== '직접입력') next.deliveryHour = '배송시간을 선택해주세요.'
     if (!amount) next.amount = '발주금액을 입력해주세요.'
+    if (!venueName.trim()) next.venueName = '장소를 입력해주세요.'
     if (!recipientName.trim()) next.recipientName = '받는 분 성함을 입력해주세요.'
     if (!(ribbonLefts[0] ?? '').trim()) next.ribbonLeft = '보내는이를 입력해주세요.'
     if (!ordererPhone.trim()) next.ordererPhone = '주문자 휴대폰을 입력해주세요.'
@@ -372,8 +374,10 @@ export default function NewOrderPage() {
                       '예: 강남파이낸스센터 1층'
                     }
                     value={venueName}
-                    onChange={(e) => setVenueName(e.target.value)}
+                    onChange={(e) => { setVenueName(e.target.value); setErrors((prev) => ({ ...prev, venueName: undefined })) }}
+                    className={cn(errors.venueName && 'border-red-500 focus-visible:ring-red-500')}
                   />
+                  {errors.venueName && <p className="text-xs text-red-500">{errors.venueName}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label>받는 분</Label>
