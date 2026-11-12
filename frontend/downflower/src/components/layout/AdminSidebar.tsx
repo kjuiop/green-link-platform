@@ -42,6 +42,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/community': Newspaper,
   '/settings/settlement': Calculator,
   '/vendor/settlement': Calculator,
+  '/ordering/settlement': Calculator,
 }
 
 function isActive(pathname: string, url: string): boolean {
