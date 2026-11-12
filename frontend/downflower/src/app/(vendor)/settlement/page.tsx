@@ -1,14 +1,18 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { MOCK_ORDERS, formatKRW, MockOrder } from '@/app/(admin)/settings/settlement/_mockData'
 import { AccountInfoBanner } from '@/components/settlement/AccountInfoBanner'
+import { fetchMySettlement, SettlementOrder, SettlementType } from '@/lib/api/settlementApi'
 
 type CompanyType = 'ORDERING' | 'VENDOR' | 'BOTH'
 type SettlementTab = 'ordering' | 'vendor'
+
+function formatKRW(n: number) {
+  return n.toLocaleString('ko-KR') + '원'
+}
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -38,7 +42,7 @@ function SummaryCards({ count, orderAmount, vendorAmount }: { count: number; ord
   )
 }
 
-function OrderTable({ orders, showVendor, showOrdering }: { orders: MockOrder[]; showVendor?: boolean; showOrdering?: boolean }) {
+function OrderTable({ orders, showVendor, showOrdering }: { orders: SettlementOrder[]; showVendor?: boolean; showOrdering?: boolean }) {
   const colSpan = 6 + (showVendor ? 1 : 0) + (showOrdering ? 1 : 0)
   return (
     <div className="rounded-lg border bg-white">
@@ -65,16 +69,18 @@ function OrderTable({ orders, showVendor, showOrdering }: { orders: MockOrder[];
             </TableRow>
           ) : (
             orders.map((o) => (
-              <TableRow key={o.id}>
+              <TableRow key={o.orderId}>
                 <TableCell className="font-mono text-xs text-blue-600">{o.orderNumber}</TableCell>
-                <TableCell className="text-sm">{o.deliveredAt}</TableCell>
-                {showVendor && <TableCell className="text-sm">{o.vendorName}</TableCell>}
-                {showOrdering && <TableCell className="text-sm">{o.orderingCompanyName}</TableCell>}
+                <TableCell className="text-sm">{o.deliveredAt?.slice(0, 10)}</TableCell>
+                {showVendor && <TableCell className="text-sm">{o.counterpartCompanyName}</TableCell>}
+                {showOrdering && <TableCell className="text-sm">{o.counterpartCompanyName}</TableCell>}
                 <TableCell className="text-sm">{o.productName}</TableCell>
                 <TableCell className="text-sm">{o.placeName}</TableCell>
                 <TableCell className="text-sm">{o.ordererName}</TableCell>
                 <TableCell className="text-right text-sm">{formatKRW(o.orderAmount)}</TableCell>
-                <TableCell className="text-right text-sm font-medium text-blue-700">{formatKRW(o.vendorAmount)}</TableCell>
+                <TableCell className="text-right text-sm font-medium text-blue-700">
+                  {o.vendorAmount != null ? formatKRW(o.vendorAmount) : '-'}
+                </TableCell>
               </TableRow>
             ))
           )}
@@ -84,7 +90,7 @@ function OrderTable({ orders, showVendor, showOrdering }: { orders: MockOrder[];
         <div className="flex justify-end gap-6 border-t bg-gray-50 px-4 py-3 text-sm">
           <span className="text-gray-600">합계: <strong>{orders.length}건</strong></span>
           <span className="text-gray-600">발주금액: <strong>{formatKRW(orders.reduce((s, o) => s + o.orderAmount, 0))}</strong></span>
-          <span className="text-blue-700">지급금액: <strong>{formatKRW(orders.reduce((s, o) => s + o.vendorAmount, 0))}</strong></span>
+          <span className="text-blue-700">지급금액: <strong>{formatKRW(orders.reduce((s, o) => s + (o.vendorAmount ?? 0), 0))}</strong></span>
         </div>
       )}
     </div>
@@ -95,37 +101,48 @@ export default function MySettlementPage() {
   const [from, setFrom] = useState(firstDayOfMonth())
   const [to, setTo] = useState(today())
   const [companyType, setCompanyType] = useState<CompanyType>('BOTH')
-  const [myCompanyName, setMyCompanyName] = useState('다운플라워')
   const [tab, setTab] = useState<SettlementTab>('ordering')
+  const [orderingOrders, setOrderingOrders] = useState<SettlementOrder[]>([])
+  const [vendorOrders, setVendorOrders] = useState<SettlementOrder[]>([])
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem('companyType') as CompanyType | null
-    const name = localStorage.getItem('companyName') ?? localStorage.getItem('name') ?? '다운플라워'
-    if (stored) setCompanyType(stored)
-    setMyCompanyName(name)
-    if (stored === 'VENDOR') setTab('vendor')
+    if (stored) {
+      setCompanyType(stored)
+      if (stored === 'VENDOR') setTab('vendor')
+    }
   }, [])
 
   const showOrdering = companyType === 'ORDERING' || companyType === 'BOTH'
   const showVendor = companyType === 'VENDOR' || companyType === 'BOTH'
 
-  const orderingOrders = useMemo(() => {
-    if (!showOrdering) return []
-    return MOCK_ORDERS.filter(
-      (o) => o.orderingCompanyName === myCompanyName && o.deliveredAt >= from && o.deliveredAt <= to
-    )
-  }, [showOrdering, myCompanyName, from, to])
+  const load = useCallback(() => {
+    if (!from || !to) return
+    setLoading(true)
+    const promises: Promise<void>[] = []
+    if (showOrdering) {
+      promises.push(
+        fetchMySettlement(from, to, 'ORDERING')
+          .then(setOrderingOrders)
+          .catch(() => setOrderingOrders([]))
+      )
+    }
+    if (showVendor) {
+      promises.push(
+        fetchMySettlement(from, to, 'VENDOR')
+          .then(setVendorOrders)
+          .catch(() => setVendorOrders([]))
+      )
+    }
+    Promise.all(promises).finally(() => setLoading(false))
+  }, [from, to, showOrdering, showVendor])
 
-  const vendorOrders = useMemo(() => {
-    if (!showVendor) return []
-    return MOCK_ORDERS.filter(
-      (o) => o.vendorName === myCompanyName && o.deliveredAt >= from && o.deliveredAt <= to
-    )
-  }, [showVendor, myCompanyName, from, to])
+  useEffect(() => { load() }, [load])
 
   const currentOrders = tab === 'ordering' ? orderingOrders : vendorOrders
   const totalOrderAmount = currentOrders.reduce((s, o) => s + o.orderAmount, 0)
-  const totalVendorAmount = currentOrders.reduce((s, o) => s + o.vendorAmount, 0)
+  const totalVendorAmount = currentOrders.reduce((s, o) => s + (o.vendorAmount ?? 0), 0)
 
   return (
     <div className="space-y-4">
@@ -169,16 +186,20 @@ export default function MySettlementPage() {
       )}
 
       <SummaryCards
-        count={currentOrders.length}
-        orderAmount={totalOrderAmount}
-        vendorAmount={totalVendorAmount}
+        count={loading ? 0 : currentOrders.length}
+        orderAmount={loading ? 0 : totalOrderAmount}
+        vendorAmount={loading ? 0 : totalVendorAmount}
       />
 
-      <OrderTable
-        orders={currentOrders}
-        showVendor={tab === 'ordering'}
-        showOrdering={tab === 'vendor'}
-      />
+      {loading ? (
+        <p className="py-10 text-center text-sm text-gray-400">불러오는 중...</p>
+      ) : (
+        <OrderTable
+          orders={currentOrders}
+          showVendor={tab === 'ordering'}
+          showOrdering={tab === 'vendor'}
+        />
+      )}
     </div>
   )
 }

@@ -15,6 +15,7 @@ public record OrderResult(
         String productName,
         int quantity,
         long amount,
+        Long vendorAmount,
         Long extraCost,
         String deliveryDate,
         String deliveryTimeType,

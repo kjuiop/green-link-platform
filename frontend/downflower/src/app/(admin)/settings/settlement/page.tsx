@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
@@ -8,19 +8,17 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Search } from 'lucide-react'
-import { MOCK_ORDERS, formatKRW } from './_mockData'
+import {
+  fetchAdminSettlements,
+  completeSettlement,
+  cancelSettlement,
+  SettlementSummary,
+  SettlementType,
+} from '@/lib/api/settlementApi'
 
-type SettlementStatus = '미정산' | '정산완료'
+export const formatKRW = (n: number) => n.toLocaleString('ko-KR') + '원'
+
 type ViewTab = '수주사별' | '발주사별'
-
-interface CompanySummary {
-  companyId: string
-  companyName: string
-  count: number
-  orderAmountTotal: number
-  vendorAmountTotal: number
-  status: SettlementStatus
-}
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -37,56 +35,50 @@ export default function AdminSettlementPage() {
   const [to, setTo] = useState(today())
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState<ViewTab>('수주사별')
-  const [settledIds, setSettledIds] = useState<Set<string>>(new Set())
+  const [summaries, setSummaries] = useState<SettlementSummary[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const filteredOrders = useMemo(() => {
-    return MOCK_ORDERS.filter((o) => o.deliveredAt >= from && o.deliveredAt <= to)
-  }, [from, to])
+  const settlementType: SettlementType = tab === '수주사별' ? 'VENDOR' : 'ORDERING'
 
-  const summaries = useMemo((): CompanySummary[] => {
-    const map = new Map<string, Omit<CompanySummary, 'status'>>()
-    for (const o of filteredOrders) {
-      const key = tab === '수주사별' ? o.vendorName : o.orderingCompanyName
-      const existing = map.get(key)
-      if (existing) {
-        existing.count++
-        existing.orderAmountTotal += o.orderAmount
-        existing.vendorAmountTotal += o.vendorAmount
-      } else {
-        map.set(key, { companyId: key, companyName: key, count: 1, orderAmountTotal: o.orderAmount, vendorAmountTotal: o.vendorAmount })
-      }
-    }
-    return Array.from(map.values()).map((v) => ({
-      ...v,
-      status: settledIds.has(`${tab}:${v.companyId}`) ? '정산완료' : '미정산',
-    }))
-  }, [filteredOrders, tab, settledIds])
+  const load = useCallback(() => {
+    if (!from || !to) return
+    setLoading(true)
+    setError('')
+    fetchAdminSettlements(from, to, settlementType)
+      .then(setSummaries)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [from, to, settlementType])
 
-  const displayed = useMemo(() => {
-    if (!search.trim()) return summaries
-    return summaries.filter((v) => v.companyName.includes(search.trim()))
-  }, [summaries, search])
+  useEffect(() => { load() }, [load])
+
+  const displayed = search.trim()
+    ? summaries.filter((v) => v.companyName.includes(search.trim()))
+    : summaries
 
   const totalCount = summaries.reduce((s, v) => s + v.count, 0)
   const totalOrderAmount = summaries.reduce((s, v) => s + v.orderAmountTotal, 0)
   const totalVendorAmount = summaries.reduce((s, v) => s + v.vendorAmountTotal, 0)
-  const settledCount = summaries.filter((v) => v.status === '정산완료').length
+  const settledCount = summaries.filter((v) => v.completed).length
 
-  function goToDetail(companyName: string) {
-    const type = tab === '수주사별' ? 'vendor' : 'ordering'
+  function goToDetail(s: SettlementSummary) {
     router.push(
-      `/settings/settlement/${encodeURIComponent(companyName)}?from=${from}&to=${to}&type=${type}`
+      `/settings/settlement/${s.companyId}?from=${from}&to=${to}&type=${settlementType}&name=${encodeURIComponent(s.companyName)}`
     )
   }
 
-  function toggleSettled(companyId: string) {
-    const key = `${tab}:${companyId}`
-    setSettledIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
+  async function toggleSettled(s: SettlementSummary) {
+    try {
+      if (s.completed) {
+        await cancelSettlement(s.companyId, from, to, settlementType)
+      } else {
+        await completeSettlement(s.companyId, from, to, settlementType)
+      }
+      load()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '처리에 실패했습니다.')
+    }
   }
 
   return (
@@ -154,6 +146,9 @@ export default function AdminSettlementPage() {
         </Card>
       </div>
 
+      {/* 에러 */}
+      {error && <p className="text-sm text-red-500">{error}</p>}
+
       {/* 테이블 */}
       <div className="rounded-lg border bg-white">
         <Table>
@@ -168,7 +163,11 @@ export default function AdminSettlementPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {displayed.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-400">불러오는 중...</TableCell>
+              </TableRow>
+            ) : displayed.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-400">
                   해당 기간에 배송완료된 주문이 없습니다.
@@ -181,7 +180,7 @@ export default function AdminSettlementPage() {
                     <button
                       type="button"
                       className="font-medium text-blue-600 hover:underline"
-                      onClick={() => goToDetail(v.companyName)}
+                      onClick={() => goToDetail(v)}
                     >
                       {v.companyName}
                     </button>
@@ -193,26 +192,26 @@ export default function AdminSettlementPage() {
                     <Badge
                       variant="outline"
                       className={
-                        v.status === '정산완료'
+                        v.completed
                           ? 'border-green-200 bg-green-50 text-green-700'
                           : 'border-orange-200 bg-orange-50 text-orange-700'
                       }
                     >
-                      {v.status}
+                      {v.completed ? '정산완료' : '미정산'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center">
                     <Button
                       size="sm"
-                      variant={v.status === '정산완료' ? 'outline' : 'default'}
+                      variant={v.completed ? 'outline' : 'default'}
                       className={
-                        v.status === '정산완료'
+                        v.completed
                           ? 'h-7 border-gray-300 text-xs text-gray-500'
                           : 'h-7 bg-blue-600 text-xs hover:bg-blue-700'
                       }
-                      onClick={() => toggleSettled(v.companyId)}
+                      onClick={() => toggleSettled(v)}
                     >
-                      {v.status === '정산완료' ? '완료취소' : '정산완료'}
+                      {v.completed ? '완료취소' : '정산완료'}
                     </Button>
                   </TableCell>
                 </TableRow>
