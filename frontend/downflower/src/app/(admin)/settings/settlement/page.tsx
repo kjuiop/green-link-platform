@@ -186,13 +186,17 @@ export default function AdminSettlementPage() {
               displayed.map((v) => (
                 <TableRow key={v.companyId} className="hover:bg-gray-50">
                   <TableCell>
-                    <button
-                      type="button"
-                      className="font-medium text-blue-600 hover:underline"
-                      onClick={() => goToDetail(v)}
-                    >
-                      {v.companyName}
-                    </button>
+                    {tab !== '전체' ? (
+                      <button
+                        type="button"
+                        className="font-medium text-blue-600 hover:underline"
+                        onClick={() => goToDetail(v)}
+                      >
+                        {v.companyName}
+                      </button>
+                    ) : (
+                      <span className="font-medium">{v.companyName}</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm text-gray-500">{companyTypeLabel(v.companyType)}</TableCell>
                   <TableCell className="text-right text-sm">{v.count}건</TableCell>
