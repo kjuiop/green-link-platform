@@ -10,7 +10,7 @@ import { Pagination } from '@/components/ui/Pagination'
 import { Vendor, VendorStatus, CompanyType, RegionDto } from '@/types/vendor'
 import RegionSelector from '@/components/vendor/RegionSelector'
 import { PageResult } from '@/types/page'
-import { fetchVendorsPaged, createVendor, updateVendor, updateVendorStatus, deleteVendor } from '@/lib/api/vendorApi'
+import { fetchVendorsPaged, createVendor, updateVendor, updateVendorStatus, deleteVendor, uploadVendorDocument, changeVendorPassword } from '@/lib/api/vendorApi'
 import { Search } from 'lucide-react'
 
 const PAGE_SIZE = 20
@@ -82,6 +82,10 @@ export default function VendorsPage() {
 
   const [modalRegions, setModalRegions] = useState<RegionDto[]>([])
   const [modalCapabilities, setModalCapabilities] = useState<string[]>([])
+  const [newPassword, setNewPassword] = useState('')
+  const [businessRegUrl, setBusinessRegUrl] = useState<string | null>(null)
+  const [bankBookUrl, setBankBookUrl] = useState<string | null>(null)
+  const [docUploading, setDocUploading] = useState<'businessReg' | 'bankBook' | null>(null)
 
   const load = useCallback((status: FilterStatus, p: number) => {
     setLoading(true)
@@ -170,6 +174,9 @@ export default function VendorsPage() {
     setModalRegions([])
     setModalCapabilities([])
     setModalError('')
+    setNewPassword('')
+    setBusinessRegUrl(null)
+    setBankBookUrl(null)
     setModalOpen(true)
   }
 
@@ -192,7 +199,25 @@ export default function VendorsPage() {
     setModalRegions(vendor.regions ?? [])
     setModalCapabilities(vendor.capabilities ?? [])
     setModalError('')
+    setNewPassword('')
+    setBusinessRegUrl(vendor.businessRegUrl ?? null)
+    setBankBookUrl(vendor.bankBookUrl ?? null)
     setModalOpen(true)
+  }
+
+  const handleDocUpload = async (type: 'businessReg' | 'bankBook', file: File) => {
+    if (!editTarget) return
+    setDocUploading(type)
+    setModalError('')
+    try {
+      const result = await uploadVendorDocument(editTarget.id, type, file)
+      if (type === 'businessReg') setBusinessRegUrl(result.businessRegUrl ?? null)
+      else setBankBookUrl(result.bankBookUrl ?? null)
+    } catch (e: unknown) {
+      setModalError(e instanceof Error ? e.message : '문서 업로드에 실패했습니다.')
+    } finally {
+      setDocUploading(null)
+    }
   }
 
   const handleSave = async () => {
@@ -232,6 +257,9 @@ export default function VendorsPage() {
           password: form.password,
           companyType: form.companyType,
         })
+      }
+      if (editTarget && newPassword.trim()) {
+        await changeVendorPassword(editTarget.id, newPassword.trim())
       }
       load(appliedStatus, editTarget ? page : 0)
       if (!editTarget) setPage(0)
@@ -470,108 +498,171 @@ export default function VendorsPage() {
 
       {/* 등록/수정 모달 */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col p-0">
+          <DialogHeader className="shrink-0 border-b px-6 py-4">
             <DialogTitle>{editTarget ? `${editTarget.name} 수정` : '업체 등록'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>업체명 *</Label>
-              <Input placeholder="업체명" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>거래유형</Label>
-              <select
-                value={form.companyType}
-                onChange={(e) => setForm((f) => ({ ...f, companyType: e.target.value as CompanyType }))}
-                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-              >
-                <option value="VENDOR">수주</option>
-                <option value="ORDERING">발주</option>
-                <option value="BOTH">발주+수주</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>사업자번호</Label>
-              <Input placeholder="000-00-00000" value={form.businessNumber} onChange={(e) => setForm((f) => ({ ...f, businessNumber: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>팩스번호</Label>
-              <Input placeholder="02-0000-0000" value={form.faxNumber} onChange={(e) => setForm((f) => ({ ...f, faxNumber: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>업체 연락처</Label>
-              <Input placeholder="02-0000-0000 / 010-0000-0000" inputMode="numeric" value={form.companyPhone} onChange={(e) => setForm((f) => ({ ...f, companyPhone: formatPhone(e.target.value) }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>담당자명 *</Label>
-              <Input placeholder="담당자 성함" value={form.managerName} onChange={(e) => setForm((f) => ({ ...f, managerName: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>담당자 연락처 *</Label>
-              <Input placeholder="010-0000-0000" inputMode="numeric" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: formatPhone(e.target.value) }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>이메일</Label>
-              <Input type="email" placeholder="example@email.com" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>주소</Label>
-              <Input placeholder="업체 주소" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>상세주소</Label>
-              <Input placeholder="건물명, 동/호수 등" value={form.detailAddress} onChange={(e) => setForm((f) => ({ ...f, detailAddress: e.target.value }))} />
-            </div>
-            {(form.companyType === 'VENDOR' || form.companyType === 'BOTH') && (
-              <>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">서비스 지역</Label>
-                  <RegionSelector selected={modalRegions} onChange={setModalRegions} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">가능상품</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {CAPABILITY_OPTIONS.map((opt) => {
-                      const active = modalCapabilities.includes(opt.value)
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() =>
-                            setModalCapabilities((prev) =>
-                              active ? prev.filter((v) => v !== opt.value) : [...prev, opt.value]
-                            )
-                          }
-                          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                            active
-                              ? 'border-green-700 bg-green-700 text-white'
-                              : 'border-gray-300 bg-white text-gray-600 hover:border-green-500'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
-            <div className="space-y-1.5">
-              <Label>아이디 *</Label>
-              <Input placeholder="영문·숫자 조합 6자 이상" value={form.loginId} onChange={(e) => setForm((f) => ({ ...f, loginId: e.target.value }))} disabled={!!editTarget} />
-            </div>
-            {!editTarget && (
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* 업체명 */}
               <div className="space-y-1.5">
-                <Label>초기 비밀번호 *</Label>
-                <Input type="password" placeholder="8자 이상" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} />
+                <Label>업체명 *</Label>
+                <Input placeholder="업체명" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
               </div>
-            )}
+              {/* 거래유형 */}
+              <div className="space-y-1.5">
+                <Label>거래유형</Label>
+                <select
+                  value={form.companyType}
+                  onChange={(e) => setForm((f) => ({ ...f, companyType: e.target.value as CompanyType }))}
+                  className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                >
+                  <option value="VENDOR">수주</option>
+                  <option value="ORDERING">발주</option>
+                  <option value="BOTH">발주+수주</option>
+                </select>
+              </div>
+              {/* 사업자번호 */}
+              <div className="space-y-1.5">
+                <Label>사업자번호</Label>
+                <Input placeholder="000-00-00000" value={form.businessNumber} onChange={(e) => setForm((f) => ({ ...f, businessNumber: e.target.value }))} />
+              </div>
+              {/* 팩스번호 */}
+              <div className="space-y-1.5">
+                <Label>팩스번호</Label>
+                <Input placeholder="02-0000-0000" value={form.faxNumber} onChange={(e) => setForm((f) => ({ ...f, faxNumber: e.target.value }))} />
+              </div>
+              {/* 업체 연락처 */}
+              <div className="space-y-1.5">
+                <Label>업체 연락처</Label>
+                <Input placeholder="02-0000-0000 / 010-0000-0000" inputMode="numeric" value={form.companyPhone} onChange={(e) => setForm((f) => ({ ...f, companyPhone: formatPhone(e.target.value) }))} />
+              </div>
+              {/* 이메일 */}
+              <div className="space-y-1.5">
+                <Label>이메일</Label>
+                <Input type="email" placeholder="example@email.com" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+              </div>
+              {/* 담당자명 */}
+              <div className="space-y-1.5">
+                <Label>담당자명 *</Label>
+                <Input placeholder="담당자 성함" value={form.managerName} onChange={(e) => setForm((f) => ({ ...f, managerName: e.target.value }))} />
+              </div>
+              {/* 담당자 연락처 */}
+              <div className="space-y-1.5">
+                <Label>담당자 연락처 *</Label>
+                <Input placeholder="010-0000-0000" inputMode="numeric" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: formatPhone(e.target.value) }))} />
+              </div>
+              {/* 주소 (full width) */}
+              <div className="col-span-1 space-y-1.5 sm:col-span-2">
+                <Label>주소</Label>
+                <Input placeholder="업체 주소" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
+              </div>
+              {/* 상세주소 (full width) */}
+              <div className="col-span-1 space-y-1.5 sm:col-span-2">
+                <Label>상세주소</Label>
+                <Input placeholder="건물명, 동/호수 등" value={form.detailAddress} onChange={(e) => setForm((f) => ({ ...f, detailAddress: e.target.value }))} />
+              </div>
+              {/* 아이디 */}
+              <div className="space-y-1.5">
+                <Label>아이디 *</Label>
+                <Input placeholder="영문·숫자 조합 6자 이상" value={form.loginId} onChange={(e) => setForm((f) => ({ ...f, loginId: e.target.value }))} disabled={!!editTarget} />
+              </div>
+              {/* 비밀번호 */}
+              <div className="space-y-1.5">
+                {editTarget ? (
+                  <>
+                    <Label>비밀번호 변경 <span className="text-xs font-normal text-gray-400">(변경 시에만 입력)</span></Label>
+                    <Input type="password" placeholder="새 비밀번호" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                  </>
+                ) : (
+                  <>
+                    <Label>초기 비밀번호 *</Label>
+                    <Input type="password" placeholder="8자 이상" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} />
+                  </>
+                )}
+              </div>
+              {/* 사업자등록증·통장사본 (수정 모드에서만) */}
+              {editTarget && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label>사업자등록증</Label>
+                    <Input
+                      type="file"
+                      accept="image/*,.pdf"
+                      disabled={docUploading !== null}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleDocUpload('businessReg', f) }}
+                      className="text-sm"
+                    />
+                    {docUploading === 'businessReg' && <p className="text-xs text-gray-400">업로드 중...</p>}
+                    {businessRegUrl && docUploading !== 'businessReg' && (
+                      businessRegUrl.toLowerCase().endsWith('.pdf') ? (
+                        <a href={businessRegUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline">PDF 보기</a>
+                      ) : (
+                        <img src={businessRegUrl} alt="사업자등록증" className="mt-1 h-20 rounded border object-cover" />
+                      )
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>통장사본</Label>
+                    <Input
+                      type="file"
+                      accept="image/*,.pdf"
+                      disabled={docUploading !== null}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleDocUpload('bankBook', f) }}
+                      className="text-sm"
+                    />
+                    {docUploading === 'bankBook' && <p className="text-xs text-gray-400">업로드 중...</p>}
+                    {bankBookUrl && docUploading !== 'bankBook' && (
+                      bankBookUrl.toLowerCase().endsWith('.pdf') ? (
+                        <a href={bankBookUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline">PDF 보기</a>
+                      ) : (
+                        <img src={bankBookUrl} alt="통장사본" className="mt-1 h-20 rounded border object-cover" />
+                      )
+                    )}
+                  </div>
+                </>
+              )}
+              {/* 서비스 지역·가능상품 (full width) */}
+              {(form.companyType === 'VENDOR' || form.companyType === 'BOTH') && (
+                <>
+                  <div className="col-span-1 space-y-1.5 sm:col-span-2">
+                    <Label className="text-xs">서비스 지역</Label>
+                    <RegionSelector selected={modalRegions} onChange={setModalRegions} />
+                  </div>
+                  <div className="col-span-1 space-y-1.5 sm:col-span-2">
+                    <Label className="text-xs">가능상품</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {CAPABILITY_OPTIONS.map((opt) => {
+                        const active = modalCapabilities.includes(opt.value)
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() =>
+                              setModalCapabilities((prev) =>
+                                active ? prev.filter((v) => v !== opt.value) : [...prev, opt.value]
+                              )
+                            }
+                            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                              active
+                                ? 'border-green-700 bg-green-700 text-white'
+                                : 'border-gray-300 bg-white text-gray-600 hover:border-green-500'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
             {modalError && (
-              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{modalError}</p>
+              <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{modalError}</p>
             )}
           </div>
-          <DialogFooter className="gap-2">
+          <DialogFooter className="shrink-0 gap-2 border-t px-6 py-4">
             {editTarget && (
               <Button
                 variant="outline"

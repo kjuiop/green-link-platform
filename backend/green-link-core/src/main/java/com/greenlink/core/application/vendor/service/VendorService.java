@@ -9,13 +9,16 @@ import com.greenlink.core.application.vendor.dto.VendorSignupCommand;
 import com.greenlink.core.application.vendor.dto.VendorSignupCommand.RegionInput;
 import com.greenlink.core.domain.company.model.CompanyCapability;
 import com.greenlink.core.domain.company.model.CompanyRegion;
+import com.greenlink.core.application.vendor.usecase.ChangeVendorPasswordUseCase;
 import com.greenlink.core.application.vendor.usecase.CreateVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.DeleteVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.GetVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.GetVendorsUseCase;
 import com.greenlink.core.application.vendor.usecase.UpdateVendorStatusUseCase;
 import com.greenlink.core.application.vendor.usecase.UpdateVendorUseCase;
+import com.greenlink.core.application.vendor.usecase.UploadVendorDocumentUseCase;
 import com.greenlink.core.application.vendor.usecase.VendorSignupUseCase;
+import com.greenlink.core.domain.company.port.DocumentStorage;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.Company;
@@ -41,18 +44,22 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
         CreateVendorUseCase, UpdateVendorUseCase, UpdateVendorStatusUseCase,
-        DeleteVendorUseCase, VendorSignupUseCase {
+        DeleteVendorUseCase, VendorSignupUseCase, UploadVendorDocumentUseCase,
+        ChangeVendorPasswordUseCase {
 
     private final AdminRepository adminRepository;
     private final CompanyRepository companyRepository;
     private final PasswordEncoder passwordEncoder;
+    private final DocumentStorage documentStorage;
 
     public VendorService(AdminRepository adminRepository,
                          CompanyRepository companyRepository,
-                         PasswordEncoder passwordEncoder) {
+                         PasswordEncoder passwordEncoder,
+                         DocumentStorage documentStorage) {
         this.adminRepository = adminRepository;
         this.companyRepository = companyRepository;
         this.passwordEncoder = passwordEncoder;
+        this.documentStorage = documentStorage;
     }
 
     @Override
@@ -307,6 +314,34 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
         }
     }
 
+    @Override
+    @Transactional
+    public UploadVendorDocumentUseCase.Result uploadDocument(Long vendorId, String docType,
+            String fileName, byte[] content, String contentType) {
+        Admin admin = adminRepository.findById(vendorId)
+            .filter(Admin::isVendor)
+            .orElseThrow(() -> new BusinessException(VendorErrorCode.VENDOR_NOT_FOUND));
+        Company company = companyRepository.findById(admin.getCompanyId())
+            .orElseThrow(() -> new BusinessException(VendorErrorCode.VENDOR_NOT_FOUND));
+
+        DocumentStorage.UploadResult uploaded = documentStorage.store(
+                company.getId(), docType, fileName, content, contentType);
+        company.updateDocumentUrl(docType, uploaded.url());
+        companyRepository.save(company);
+
+        return new UploadVendorDocumentUseCase.Result(company.getBusinessRegUrl(), company.getBankBookUrl());
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(Long vendorId, String newPassword) {
+        Admin admin = adminRepository.findById(vendorId)
+            .filter(Admin::isVendor)
+            .orElseThrow(() -> new BusinessException(VendorErrorCode.VENDOR_NOT_FOUND));
+        admin.changePassword(passwordEncoder.encode(newPassword));
+        adminRepository.save(admin);
+    }
+
     private VendorResult toResult(Admin admin, Company company) {
         List<RegionDto> regions = List.of();
         List<String> capabilities = List.of();
@@ -334,7 +369,9 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             admin.getCreatedAt(),
             company != null && company.getType() != null ? company.getType().name() : null,
             regions,
-            capabilities
+            capabilities,
+            company != null ? company.getBusinessRegUrl() : null,
+            company != null ? company.getBankBookUrl() : null
         );
     }
 }

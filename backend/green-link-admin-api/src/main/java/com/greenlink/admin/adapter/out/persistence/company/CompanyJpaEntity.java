@@ -46,6 +46,12 @@ public class CompanyJpaEntity extends BaseJpaEntity {
     @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
     private boolean displayYn = true;
 
+    @Column(length = 500)
+    private String businessRegUrl;
+
+    @Column(length = 500)
+    private String bankBookUrl;
+
     protected CompanyJpaEntity() {}
 
     public static CompanyJpaEntity from(Company company) {
@@ -62,10 +68,13 @@ public class CompanyJpaEntity extends BaseJpaEntity {
         e.type = company.getType();
         e.status = company.getStatus();
         e.displayYn = company.isDisplayYn();
+        e.businessRegUrl = company.getBusinessRegUrl();
+        e.bankBookUrl = company.getBankBookUrl();
         return e;
     }
 
     public Company toDomain() {
-        return Company.of(id, businessNo, companyName, ceoName, phone, faxNumber, address, detailAddress, type, status, displayYn);
+        return Company.of(id, businessNo, companyName, ceoName, phone, faxNumber,
+                address, detailAddress, type, status, displayYn, businessRegUrl, bankBookUrl);
     }
 }

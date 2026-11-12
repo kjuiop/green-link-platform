@@ -1,6 +1,6 @@
 import { Vendor, RegionDto } from '@/types/vendor'
 import { PageResult } from '@/types/page'
-import { authHeaders, fetchWithAuth } from './fetchWithAuth'
+import { authHeaders, authBearerHeader, fetchWithAuth } from './fetchWithAuth'
 
 type BackendVendor = {
   id: number
@@ -19,6 +19,8 @@ type BackendVendor = {
   companyType?: string
   regions?: RegionDto[]
   capabilities?: string[]
+  businessRegUrl?: string
+  bankBookUrl?: string
 }
 
 type CreateVendorPayload = {
@@ -69,6 +71,8 @@ function toFrontend(v: BackendVendor): Vendor {
     companyType: (v.companyType as Vendor['companyType']) ?? undefined,
     regions: v.regions ?? [],
     capabilities: v.capabilities ?? [],
+    businessRegUrl: v.businessRegUrl ?? undefined,
+    bankBookUrl: v.bankBookUrl ?? undefined,
   }
 }
 
@@ -143,5 +147,36 @@ export async function deleteVendor(id: string): Promise<void> {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error(data.message ?? '업체 삭제에 실패했습니다.')
+  }
+}
+
+export async function uploadVendorDocument(
+  vendorId: string,
+  docType: 'businessReg' | 'bankBook',
+  file: File
+): Promise<{ businessRegUrl: string | null; bankBookUrl: string | null }> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await fetchWithAuth(`/api/vendors/${vendorId}/documents?type=${docType}`, {
+    method: 'POST',
+    headers: authBearerHeader(),
+    body: formData,
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message ?? '문서 업로드에 실패했습니다.')
+  }
+  return res.json()
+}
+
+export async function changeVendorPassword(vendorId: string, newPassword: string): Promise<void> {
+  const res = await fetchWithAuth(`/api/vendors/${vendorId}/password`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ newPassword }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message ?? '비밀번호 변경에 실패했습니다.')
   }
 }
