@@ -40,7 +40,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/products': Package,
   '/settings/vendors': Users,
   '/community': Newspaper,
-  '/settlement': Calculator,
+  '/settings/settlement': Calculator,
   '/vendor/settlement': Calculator,
 }
 
