@@ -83,7 +83,7 @@ public class SettlementQueryRepository implements SettlementQueryPort {
                 .orderBy(o.completedAt.asc())
                 .fetch()
                 .stream()
-                .map(e -> toRaw(e.toDomain(), e.toDomain().getOrderingCompanyId()))
+                .map(e -> { Order o2 = e.toDomain(); return toRaw(o2, o2.getOrderingCompanyId()); })
                 .toList();
     }
 
@@ -100,7 +100,7 @@ public class SettlementQueryRepository implements SettlementQueryPort {
                 .orderBy(o.completedAt.asc())
                 .fetch()
                 .stream()
-                .map(e -> toRaw(e.toDomain(), e.toDomain().getVendorCompanyId()))
+                .map(e -> { Order o2 = e.toDomain(); return toRaw(o2, o2.getVendorCompanyId()); })
                 .toList();
     }
 

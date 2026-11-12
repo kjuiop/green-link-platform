@@ -18,6 +18,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -51,12 +52,11 @@ public class SettlementService implements
         Map<Long, String> nameMap = companyRepository.findAllByIdIn(companyIds).stream()
                 .collect(Collectors.toMap(Company::getId, Company::getCompanyName));
 
-        List<Long> settledIds = settlementRepository
-                .findAllByCompanyIdsAndTypeAndPeriod(companyIds, query.type(), query.fromDate(), query.toDate())
-                .stream().map(Settlement::getCompanyId).toList();
-        Map<Long, String> completedAtMap = settlementRepository
-                .findAllByCompanyIdsAndTypeAndPeriod(companyIds, query.type(), query.fromDate(), query.toDate())
-                .stream().collect(Collectors.toMap(Settlement::getCompanyId, Settlement::getCompletedAt, (a, b) -> a));
+        List<Settlement> settled = settlementRepository
+                .findAllByCompanyIdsAndTypeAndPeriod(companyIds, query.type(), query.fromDate(), query.toDate());
+        Set<Long> settledIds = settled.stream().map(Settlement::getCompanyId).collect(Collectors.toSet());
+        Map<Long, String> completedAtMap = settled.stream()
+                .collect(Collectors.toMap(Settlement::getCompanyId, Settlement::getCompletedAt, (a, b) -> a));
 
         return raws.stream()
                 .map(r -> new SettlementSummaryResult(

@@ -7,6 +7,7 @@ import com.greenlink.core.application.settlement.usecase.*;
 import com.greenlink.core.domain.settlement.model.SettlementType;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -103,7 +104,9 @@ public class SettlementController {
             @RequestParam String toDate,
             @RequestParam SettlementType type,
             Authentication auth) {
-        Long companyId = (Long) auth.getDetails();
+        if (!(auth.getDetails() instanceof Long companyId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         return ResponseEntity.ok(getMySettlementUseCase.getMySettlement(companyId, type, fromDate, toDate));
     }
 }
