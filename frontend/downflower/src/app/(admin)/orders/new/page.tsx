@@ -27,6 +27,7 @@ export default function NewOrderPage() {
   const [quantity, setQuantity] = useState('1')
   const [unitPrice, setUnitPrice] = useState(0)
   const [amount, setAmount] = useState('')
+  const [vendorAmount, setVendorAmount] = useState('')
   const [extraCost, setExtraCost] = useState('')
 
   // 배송정보
@@ -128,6 +129,7 @@ export default function NewOrderPage() {
         productName,
         quantity: Number(quantity) || 1,
         amount: Number(amount),
+        vendorAmount: vendorAmount ? Number(vendorAmount) : undefined,
         extraCost: extraCost ? Number(extraCost) : undefined,
         deliveryDate,
         deliveryTimeType,
@@ -333,6 +335,16 @@ export default function NewOrderPage() {
               ) : (
                 <p className="text-xs text-gray-400">기본 발주금액 외 추가로 발생한 비용</p>
               )}
+            </div>
+            <div className="space-y-1.5">
+              <Label>정산금액</Label>
+              <Input
+                type="number"
+                placeholder="0"
+                value={vendorAmount}
+                onChange={(e) => setVendorAmount(e.target.value)}
+              />
+              <p className="text-xs text-gray-400">수주업체에 지급할 금액 (미입력 시 발주금액 기준)</p>
             </div>
           </CardContent>
         </Card>
