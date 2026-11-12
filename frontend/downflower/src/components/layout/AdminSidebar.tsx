@@ -16,6 +16,7 @@ import {
   Menu,
   Package,
   Newspaper,
+  Calculator,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -39,6 +40,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/products': Package,
   '/settings/vendors': Users,
   '/community': Newspaper,
+  '/settlement': Calculator,
+  '/vendor/settlement': Calculator,
 }
 
 function isActive(pathname: string, url: string): boolean {
