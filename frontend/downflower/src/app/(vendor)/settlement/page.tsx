@@ -4,37 +4,11 @@ import { useState, useMemo, useEffect } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { MOCK_ORDERS, formatKRW, MockOrder } from '@/app/(admin)/settings/settlement/_mockData'
+import { AccountInfoBanner } from '@/components/settlement/AccountInfoBanner'
 
 type CompanyType = 'ORDERING' | 'VENDOR' | 'BOTH'
 type SettlementTab = 'ordering' | 'vendor'
-
-interface MockOrder {
-  id: string
-  orderNumber: string
-  orderingCompanyName: string
-  vendorName: string
-  productName: string
-  placeName: string
-  ordererName: string
-  deliveredAt: string
-  orderAmount: number
-  vendorAmount: number
-}
-
-const MOCK_ORDERS: MockOrder[] = [
-  { id: '1',  orderNumber: 'DN-20261101-001', orderingCompanyName: '다운플라워', vendorName: '꽃향기',    productName: '축하화환 대',  placeName: '강남구청',      ordererName: '김민준', deliveredAt: '2026-11-01', orderAmount: 150000, vendorAmount: 120000 },
-  { id: '2',  orderNumber: 'DN-20261102-002', orderingCompanyName: '다운플라워', vendorName: '꽃향기',    productName: '근조화환 중',  placeName: '강남구청',      ordererName: '이서연', deliveredAt: '2026-11-02', orderAmount: 100000, vendorAmount: 80000  },
-  { id: '3',  orderNumber: 'DN-20261103-003', orderingCompanyName: '다운플라워', vendorName: '꽃향기',    productName: '동양란',        placeName: '서초 웨딩홀',   ordererName: '박도윤', deliveredAt: '2026-11-03', orderAmount: 80000,  vendorAmount: 65000  },
-  { id: '4',  orderNumber: 'DN-20261104-004', orderingCompanyName: '다운플라워', vendorName: '한강꽃집',  productName: '근조화환 대',  placeName: '용산 장례식장', ordererName: '최지아', deliveredAt: '2026-11-01', orderAmount: 200000, vendorAmount: 160000 },
-  { id: '5',  orderNumber: 'DN-20261105-005', orderingCompanyName: '다운플라워', vendorName: '한강꽃집',  productName: '축하화환 중',  placeName: '여의도 증권사', ordererName: '윤준서', deliveredAt: '2026-11-02', orderAmount: 120000, vendorAmount: 96000  },
-  { id: '6',  orderNumber: 'DN-20261106-006', orderingCompanyName: '그린플라워', vendorName: '다운플라워', productName: '서양란',       placeName: '마포 사무실',   ordererName: '임채원', deliveredAt: '2026-11-05', orderAmount: 85000,  vendorAmount: 68000  },
-  { id: '7',  orderNumber: 'DN-20261107-007', orderingCompanyName: '그린플라워', vendorName: '다운플라워', productName: '근조화환 중',  placeName: '중구 장례식장', ordererName: '한지호', deliveredAt: '2026-11-02', orderAmount: 110000, vendorAmount: 88000  },
-  { id: '8',  orderNumber: 'DN-20261108-008', orderingCompanyName: '블룸코리아', vendorName: '다운플라워', productName: '쌀화환',       placeName: '송파 웨딩홀',   ordererName: '오서준', deliveredAt: '2026-11-05', orderAmount: 130000, vendorAmount: 104000 },
-]
-
-function formatKRW(amount: number) {
-  return amount.toLocaleString('ko-KR') + '원'
-}
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -156,6 +130,8 @@ export default function MySettlementPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">정산내역</h1>
+
+      <AccountInfoBanner />
 
       {/* 기간 필터 */}
       <div className="flex flex-wrap items-end gap-2 rounded-lg border bg-white p-4">

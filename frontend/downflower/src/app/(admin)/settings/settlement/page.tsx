@@ -1,29 +1,17 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Search } from 'lucide-react'
+import { MOCK_ORDERS, formatKRW } from './_mockData'
 
 type SettlementStatus = '미정산' | '정산완료'
 type ViewTab = '수주사별' | '발주사별'
-
-interface MockOrder {
-  id: string
-  orderNumber: string
-  orderingCompanyName: string
-  vendorName: string
-  productName: string
-  placeName: string
-  ordererName: string
-  deliveredAt: string
-  orderAmount: number
-  vendorAmount: number
-}
 
 interface CompanySummary {
   companyId: string
@@ -32,25 +20,6 @@ interface CompanySummary {
   orderAmountTotal: number
   vendorAmountTotal: number
   status: SettlementStatus
-}
-
-const MOCK_ORDERS: MockOrder[] = [
-  { id: '1',  orderNumber: 'DN-20261101-001', orderingCompanyName: '다운플라워',  vendorName: '꽃향기',    productName: '축하화환 대',  placeName: '강남구청',      ordererName: '김민준', deliveredAt: '2026-11-01', orderAmount: 150000, vendorAmount: 120000 },
-  { id: '2',  orderNumber: 'DN-20261102-002', orderingCompanyName: '다운플라워',  vendorName: '꽃향기',    productName: '근조화환 중',  placeName: '강남구청',      ordererName: '이서연', deliveredAt: '2026-11-02', orderAmount: 100000, vendorAmount: 80000  },
-  { id: '3',  orderNumber: 'DN-20261103-003', orderingCompanyName: '다운플라워',  vendorName: '꽃향기',    productName: '동양란',        placeName: '서초 웨딩홀',   ordererName: '박도윤', deliveredAt: '2026-11-03', orderAmount: 80000,  vendorAmount: 65000  },
-  { id: '4',  orderNumber: 'DN-20261104-004', orderingCompanyName: '다운플라워',  vendorName: '꽃향기',    productName: '축하화환 소',  placeName: '마포 사무실',   ordererName: '정시우', deliveredAt: '2026-11-04', orderAmount: 90000,  vendorAmount: 72000  },
-  { id: '5',  orderNumber: 'DN-20261101-005', orderingCompanyName: '그린플라워',  vendorName: '한강꽃집',  productName: '근조화환 대',  placeName: '용산 장례식장', ordererName: '최지아', deliveredAt: '2026-11-01', orderAmount: 200000, vendorAmount: 160000 },
-  { id: '6',  orderNumber: 'DN-20261102-006', orderingCompanyName: '그린플라워',  vendorName: '한강꽃집',  productName: '축하화환 중',  placeName: '여의도 증권사', ordererName: '윤준서', deliveredAt: '2026-11-02', orderAmount: 120000, vendorAmount: 96000  },
-  { id: '7',  orderNumber: 'DN-20261103-007', orderingCompanyName: '그린플라워',  vendorName: '한강꽃집',  productName: '서양란',        placeName: '마포 사무실',   ordererName: '임채원', deliveredAt: '2026-11-05', orderAmount: 85000,  vendorAmount: 68000  },
-  { id: '8',  orderNumber: 'DN-20261104-008', orderingCompanyName: '다운플라워',  vendorName: '남산꽃원',  productName: '근조화환 중',  placeName: '중구 장례식장', ordererName: '한지호', deliveredAt: '2026-11-02', orderAmount: 110000, vendorAmount: 88000  },
-  { id: '9',  orderNumber: 'DN-20261105-009', orderingCompanyName: '블룸코리아', vendorName: '남산꽃원',  productName: '쌀화환',        placeName: '송파 웨딩홀',   ordererName: '오서준', deliveredAt: '2026-11-05', orderAmount: 130000, vendorAmount: 104000 },
-  { id: '10', orderNumber: 'DN-20261106-010', orderingCompanyName: '블룸코리아', vendorName: '남산꽃원',  productName: '축하화환 대',  placeName: '강동 사무실',   ordererName: '신예은', deliveredAt: '2026-11-06', orderAmount: 150000, vendorAmount: 120000 },
-  { id: '11', orderNumber: 'DN-20261101-011', orderingCompanyName: '블룸코리아', vendorName: '부산꽃향기', productName: '근조화환 대', placeName: '부산 장례식장', ordererName: '권민서', deliveredAt: '2026-11-01', orderAmount: 180000, vendorAmount: 144000 },
-  { id: '12', orderNumber: 'DN-20261103-012', orderingCompanyName: '그린플라워',  vendorName: '부산꽃향기', productName: '축하화환 중', placeName: '해운대 웨딩홀', ordererName: '황지민', deliveredAt: '2026-11-03', orderAmount: 120000, vendorAmount: 96000  },
-]
-
-function formatKRW(amount: number) {
-  return amount.toLocaleString('ko-KR') + '원'
 }
 
 function today() {
@@ -63,11 +32,11 @@ function firstDayOfMonth() {
 }
 
 export default function AdminSettlementPage() {
+  const router = useRouter()
   const [from, setFrom] = useState(firstDayOfMonth())
   const [to, setTo] = useState(today())
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState<ViewTab>('수주사별')
-  const [selected, setSelected] = useState<CompanySummary | null>(null)
   const [settledIds, setSettledIds] = useState<Set<string>>(new Set())
 
   const filteredOrders = useMemo(() => {
@@ -98,17 +67,17 @@ export default function AdminSettlementPage() {
     return summaries.filter((v) => v.companyName.includes(search.trim()))
   }, [summaries, search])
 
-  const selectedOrders = useMemo(() => {
-    if (!selected) return []
-    return filteredOrders.filter((o) =>
-      tab === '수주사별' ? o.vendorName === selected.companyName : o.orderingCompanyName === selected.companyName
-    )
-  }, [selected, filteredOrders, tab])
-
   const totalCount = summaries.reduce((s, v) => s + v.count, 0)
   const totalOrderAmount = summaries.reduce((s, v) => s + v.orderAmountTotal, 0)
   const totalVendorAmount = summaries.reduce((s, v) => s + v.vendorAmountTotal, 0)
   const settledCount = summaries.filter((v) => v.status === '정산완료').length
+
+  function goToDetail(companyName: string) {
+    const type = tab === '수주사별' ? 'vendor' : 'ordering'
+    router.push(
+      `/settings/settlement/${encodeURIComponent(companyName)}?from=${from}&to=${to}&type=${type}`
+    )
+  }
 
   function toggleSettled(companyId: string) {
     const key = `${tab}:${companyId}`
@@ -151,7 +120,7 @@ export default function AdminSettlementPage() {
         {(['수주사별', '발주사별'] as ViewTab[]).map((t) => (
           <button
             key={t}
-            onClick={() => { setTab(t); setSearch(''); setSelected(null) }}
+            onClick={() => { setTab(t); setSearch('') }}
             className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
               tab === t ? 'bg-green-600 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
@@ -207,12 +176,12 @@ export default function AdminSettlementPage() {
               </TableRow>
             ) : (
               displayed.map((v) => (
-                <TableRow key={v.companyId} className="cursor-pointer hover:bg-gray-50">
+                <TableRow key={v.companyId} className="hover:bg-gray-50">
                   <TableCell>
                     <button
                       type="button"
                       className="font-medium text-blue-600 hover:underline"
-                      onClick={() => setSelected(v)}
+                      onClick={() => goToDetail(v.companyName)}
                     >
                       {v.companyName}
                     </button>
@@ -252,59 +221,6 @@ export default function AdminSettlementPage() {
           </TableBody>
         </Table>
       </div>
-
-      {/* 주문 상세 모달 */}
-      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col p-0">
-          <DialogHeader className="px-6 pt-5">
-            <DialogTitle>
-              {selected?.companyName} — 주문 상세{' '}
-              <span className="text-sm font-normal text-gray-500">({from} ~ {to})</span>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-6 pb-6">
-            {selected && (
-              <>
-                <div className="mb-4 flex gap-6 rounded-lg bg-gray-50 px-4 py-3 text-sm">
-                  <span>건수: <strong>{selected.count}건</strong></span>
-                  <span>발주금액: <strong>{formatKRW(selected.orderAmountTotal)}</strong></span>
-                  <span>지급금액: <strong className="text-blue-700">{formatKRW(selected.vendorAmountTotal)}</strong></span>
-                </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>주문번호</TableHead>
-                      <TableHead>배송일</TableHead>
-                      <TableHead>{tab === '수주사별' ? '발주사' : '수주사'}</TableHead>
-                      <TableHead>상품명</TableHead>
-                      <TableHead>주문자</TableHead>
-                      <TableHead className="text-right">발주금액</TableHead>
-                      <TableHead className="text-right">지급금액</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedOrders.map((o) => (
-                      <TableRow key={o.id}>
-                        <TableCell className="font-mono text-xs text-blue-600">{o.orderNumber}</TableCell>
-                        <TableCell className="text-sm">{o.deliveredAt}</TableCell>
-                        <TableCell className="text-sm">
-                          {tab === '수주사별' ? o.orderingCompanyName : o.vendorName}
-                        </TableCell>
-                        <TableCell className="text-sm">{o.productName}</TableCell>
-                        <TableCell className="text-sm">{o.ordererName}</TableCell>
-                        <TableCell className="text-right text-sm">{formatKRW(o.orderAmount)}</TableCell>
-                        <TableCell className="text-right text-sm font-medium text-blue-700">
-                          {formatKRW(o.vendorAmount)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
