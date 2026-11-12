@@ -10,6 +10,7 @@ import com.greenlink.core.application.vendor.dto.VendorSignupCommand.RegionInput
 import com.greenlink.core.domain.company.model.CompanyCapability;
 import com.greenlink.core.domain.company.model.CompanyRegion;
 import com.greenlink.core.application.vendor.usecase.ChangeVendorPasswordUseCase;
+import org.springframework.transaction.annotation.Propagation;
 import com.greenlink.core.application.vendor.usecase.CreateVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.DeleteVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.GetVendorUseCase;
@@ -315,7 +316,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public UploadVendorDocumentUseCase.Result uploadDocument(Long vendorId, String docType,
             String fileName, byte[] content, String contentType) {
         Admin admin = adminRepository.findById(vendorId)
@@ -324,8 +325,11 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
         Company company = companyRepository.findById(admin.getCompanyId())
             .orElseThrow(() -> new BusinessException(VendorErrorCode.VENDOR_NOT_FOUND));
 
+        // S3 업로드: 외부 API 호출을 트랜잭션 밖에서 수행
         DocumentStorage.UploadResult uploaded = documentStorage.store(
                 company.getId(), docType, fileName, content, contentType);
+
+        // DB 저장: companyRepository.save()의 자체 @Transactional로 처리
         company.updateDocumentUrl(docType, uploaded.url());
         companyRepository.save(company);
 

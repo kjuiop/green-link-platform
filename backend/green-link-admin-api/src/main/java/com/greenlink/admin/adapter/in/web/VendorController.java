@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/vendors")
@@ -35,6 +36,8 @@ public class VendorController {
     private final UpdateVendorUseCase updateVendorUseCase;
     private final UpdateVendorStatusUseCase updateVendorStatusUseCase;
     private final DeleteVendorUseCase deleteVendorUseCase;
+    private static final Set<String> ALLOWED_DOC_TYPES = Set.of("businessReg", "bankBook");
+
     private final UploadVendorDocumentUseCase uploadVendorDocumentUseCase;
     private final ChangeVendorPasswordUseCase changeVendorPasswordUseCase;
 
@@ -98,6 +101,9 @@ public class VendorController {
             @PathVariable Long id,
             @RequestParam("type") String docType,
             @RequestParam("file") MultipartFile file) throws IOException {
+        if (!ALLOWED_DOC_TYPES.contains(docType)) {
+            throw new IllegalArgumentException("지원하지 않는 문서 유형입니다: " + docType);
+        }
         return ResponseEntity.ok(
                 uploadVendorDocumentUseCase.uploadDocument(
                         id, docType, file.getOriginalFilename(), file.getBytes(), file.getContentType()));
