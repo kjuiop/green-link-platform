@@ -209,7 +209,7 @@ public class OrderController {
                 r.id(), r.orderNumber(), r.vendorId(), r.vendorCompanyId(), r.vendorName(), r.vendorPhone(),
                 r.orderingCompanyId(), r.orderingCompanyName(), r.orderingCompanyPhone(),
                 r.status(), r.productId(), r.productName(), r.quantity(), r.amount(),
-                r.extraCost(), r.deliveryDate(), r.deliveryTimeType(), r.deliveryTimeHour(),
+                r.vendorAmount(), r.extraCost(), r.deliveryDate(), r.deliveryTimeType(), r.deliveryTimeHour(),
                 r.deliveryTimeMinute(), r.deliveryTimeCustom(), r.address(), r.addressDetail(),
                 r.eventType(), r.placeName(), r.roomName(), r.eventInfo(),
                 r.ribbonLeft(), r.ribbonRight(), r.ribbonExtras(),

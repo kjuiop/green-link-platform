@@ -25,6 +25,7 @@ type BackendOrder = {
   productName: string
   quantity: number
   amount: number
+  vendorAmount: number | null
   extraCost: number | null
   deliveryDate: string
   deliveryTimeType: string | null
@@ -69,6 +70,7 @@ export type CreateOrderPayload = {
   productName: string
   quantity: number
   amount: number
+  vendorAmount?: number
   extraCost?: number
   deliveryDate: string
   deliveryTimeType: string
@@ -115,6 +117,7 @@ function toFrontend(o: BackendOrder): Order {
     productName: o.productName,
     quantity: o.quantity,
     amount: o.amount,
+    vendorAmount: o.vendorAmount ?? undefined,
     extraCost: o.extraCost ?? undefined,
     deliveryType: '일반',
     deliveryAt: o.deliveryDate ?? '',

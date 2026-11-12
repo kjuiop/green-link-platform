@@ -18,6 +18,7 @@ export interface Order {
   productName: string
   quantity: number
   amount: number
+  vendorAmount?: number
   deliveryType: DeliveryType
   deliveryDeadline?: string
   deliveryAt: string

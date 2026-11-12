@@ -168,12 +168,22 @@ export function BasicInfoCard({ d, className }: SectionProps) {
                 </p>
               ) : null}
             </Field>
+            <Field label="정산금액">
+              <Input
+                type="number" placeholder="0"
+                value={draft.vendorAmount ?? ''}
+                onChange={(e) => set('vendorAmount', e.target.value ? Number(e.target.value) : undefined)}
+              />
+            </Field>
           </>
         ) : (
           <>
             <Row label="상품명" value={order.productName} />
             <Row label="수량" value={`${order.quantity}개`} />
             <Row label="발주금액" value={order.extraCost ? `${(order.amount + order.extraCost).toLocaleString()}원 (기본 ${order.amount.toLocaleString()} + 추가 ${order.extraCost.toLocaleString()})` : `${order.amount.toLocaleString()}원`} />
+            {order.vendorAmount != null && (
+              <Row label="정산금액" value={`${order.vendorAmount.toLocaleString()}원`} />
+            )}
             <Row label="수주업체" value={order.vendorName} />
             <Row label="발주일시" value={order.orderedAt} />
           </>

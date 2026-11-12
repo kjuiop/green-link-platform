@@ -23,4 +23,6 @@ export interface Vendor {
   companyType?: CompanyType
   regions?: RegionDto[]
   capabilities?: string[]
+  businessRegUrl?: string
+  bankBookUrl?: string
 }

@@ -12,6 +12,7 @@ public class Order {
     private String productName;
     private int quantity;
     private long amount;
+    private Long vendorAmount;
     private Long extraCost;
     private String deliveryDate;
     private String deliveryTimeType;
@@ -56,6 +57,7 @@ public class Order {
             String productName,
             int quantity,
             long amount,
+            Long vendorAmount,
             Long extraCost,
             String deliveryDate,
             String deliveryTimeType,
@@ -96,6 +98,7 @@ public class Order {
         o.productName = productName;
         o.quantity = quantity;
         o.amount = amount;
+        o.vendorAmount = vendorAmount;
         o.extraCost = extraCost;
         o.deliveryDate = deliveryDate;
         o.deliveryTimeType = deliveryTimeType;
@@ -136,6 +139,7 @@ public class Order {
             String productName,
             int quantity,
             long amount,
+            Long vendorAmount,
             Long extraCost,
             String deliveryDate,
             String deliveryTimeType,
@@ -182,6 +186,7 @@ public class Order {
         o.productName = productName;
         o.quantity = quantity;
         o.amount = amount;
+        o.vendorAmount = vendorAmount;
         o.extraCost = extraCost;
         o.deliveryDate = deliveryDate;
         o.deliveryTimeType = deliveryTimeType;
@@ -263,6 +268,7 @@ public class Order {
             String productName,
             int quantity,
             long amount,
+            Long vendorAmount,
             Long extraCost,
             String deliveryDate,
             String deliveryTimeType,
@@ -298,6 +304,7 @@ public class Order {
         this.productName = productName;
         this.quantity = quantity;
         this.amount = amount;
+        this.vendorAmount = vendorAmount;
         this.extraCost = extraCost;
         this.deliveryDate = deliveryDate;
         this.deliveryTimeType = deliveryTimeType;
@@ -336,6 +343,7 @@ public class Order {
     public String getProductName() { return productName; }
     public int getQuantity() { return quantity; }
     public long getAmount() { return amount; }
+    public Long getVendorAmount() { return vendorAmount; }
     public Long getExtraCost() { return extraCost; }
     public String getDeliveryDate() { return deliveryDate; }
     public String getDeliveryTimeType() { return deliveryTimeType; }

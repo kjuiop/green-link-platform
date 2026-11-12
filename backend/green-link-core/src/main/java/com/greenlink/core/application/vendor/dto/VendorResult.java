@@ -18,7 +18,9 @@ public record VendorResult(
     String createdAt,
     String companyType,
     List<RegionDto> regions,
-    List<String> capabilities
+    List<String> capabilities,
+    String businessRegUrl,
+    String bankBookUrl
 ) {
     public record RegionDto(String sido, String sigungu) {}
 }

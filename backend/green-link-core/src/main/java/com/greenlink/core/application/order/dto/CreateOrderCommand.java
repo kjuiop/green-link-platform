@@ -7,6 +7,7 @@ public record CreateOrderCommand(
         String productName,
         int quantity,
         long amount,
+        Long vendorAmount,
         Long extraCost,
         String deliveryDate,
         String deliveryTimeType,
