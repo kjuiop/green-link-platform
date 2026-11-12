@@ -151,7 +151,7 @@ export default function AdminSettlementPage() {
         {(['수주사별', '발주사별'] as ViewTab[]).map((t) => (
           <button
             key={t}
-            onClick={() => { setTab(t); setSearch('') }}
+            onClick={() => { setTab(t); setSearch(''); setSelected(null) }}
             className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
               tab === t ? 'bg-green-600 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
