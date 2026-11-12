@@ -76,7 +76,7 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
       if (v.status !== 'ACTIVE') return false
       const regionMatch = normalizedSido
         ? (v.regions ?? []).some(
-            (r) => r.sido === normalizedSido && (!selectedSigungu || r.sigungu === selectedSigungu)
+            (r) => r.sido === normalizedSido && (!selectedSigungu || r.sigungu === '전체' || r.sigungu === selectedSigungu)
           )
         : true
       const capMatch =
