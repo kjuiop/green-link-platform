@@ -1,10 +1,11 @@
 import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
-export type SettlementType = 'VENDOR' | 'ORDERING'
+export type SettlementType = 'VENDOR' | 'ORDERING' | 'ALL'
 
 export interface SettlementSummary {
   companyId: number
   companyName: string
+  companyType: string
   count: number
   orderAmountTotal: number
   vendorAmountTotal: number

@@ -18,7 +18,7 @@ import {
 
 export const formatKRW = (n: number) => n.toLocaleString('ko-KR') + '원'
 
-type ViewTab = '수주사별' | '발주사별'
+type ViewTab = '전체' | '수주사별' | '발주사별'
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -29,17 +29,25 @@ function firstDayOfMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
 }
 
+function companyTypeLabel(t: string) {
+  if (t === 'VENDOR') return '수주사'
+  if (t === 'ORDERING') return '발주사'
+  if (t === 'BOTH') return '둘다'
+  return t
+}
+
 export default function AdminSettlementPage() {
   const router = useRouter()
   const [from, setFrom] = useState(firstDayOfMonth())
   const [to, setTo] = useState(today())
   const [search, setSearch] = useState('')
-  const [tab, setTab] = useState<ViewTab>('수주사별')
+  const [tab, setTab] = useState<ViewTab>('전체')
   const [summaries, setSummaries] = useState<SettlementSummary[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const settlementType: SettlementType = tab === '수주사별' ? 'VENDOR' : 'ORDERING'
+  const tabToType: Record<ViewTab, SettlementType> = { '전체': 'ALL', '수주사별': 'VENDOR', '발주사별': 'ORDERING' }
+  const settlementType = tabToType[tab]
 
   const load = useCallback(() => {
     if (!from || !to) return
@@ -109,7 +117,7 @@ export default function AdminSettlementPage() {
 
       {/* 탭 */}
       <div className="flex gap-1 rounded-lg border bg-white p-1 w-fit">
-        {(['수주사별', '발주사별'] as ViewTab[]).map((t) => (
+        {(['전체', '수주사별', '발주사별'] as ViewTab[]).map((t) => (
           <button
             key={t}
             onClick={() => { setTab(t); setSearch('') }}
@@ -154,22 +162,23 @@ export default function AdminSettlementPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{tab === '수주사별' ? '수주사' : '발주사'}</TableHead>
+              <TableHead>업체명</TableHead>
+              <TableHead>유형</TableHead>
               <TableHead className="text-right">배송완료</TableHead>
               <TableHead className="text-right">발주금액</TableHead>
               <TableHead className="text-right">지급금액</TableHead>
-              <TableHead className="text-center">상태</TableHead>
-              <TableHead className="text-center">처리</TableHead>
+              {tab !== '전체' && <TableHead className="text-center">상태</TableHead>}
+              {tab !== '전체' && <TableHead className="text-center">처리</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-400">불러오는 중...</TableCell>
+                <TableCell colSpan={tab !== '전체' ? 7 : 5} className="py-10 text-center text-sm text-gray-400">불러오는 중...</TableCell>
               </TableRow>
             ) : displayed.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={tab !== '전체' ? 7 : 5} className="py-10 text-center text-sm text-gray-400">
                   해당 기간에 배송완료된 주문이 없습니다.
                 </TableCell>
               </TableRow>
@@ -185,35 +194,40 @@ export default function AdminSettlementPage() {
                       {v.companyName}
                     </button>
                   </TableCell>
+                  <TableCell className="text-sm text-gray-500">{companyTypeLabel(v.companyType)}</TableCell>
                   <TableCell className="text-right text-sm">{v.count}건</TableCell>
                   <TableCell className="text-right text-sm">{formatKRW(v.orderAmountTotal)}</TableCell>
                   <TableCell className="text-right text-sm font-medium text-blue-700">{formatKRW(v.vendorAmountTotal)}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge
-                      variant="outline"
-                      className={
-                        v.completed
-                          ? 'border-green-200 bg-green-50 text-green-700'
-                          : 'border-orange-200 bg-orange-50 text-orange-700'
-                      }
-                    >
-                      {v.completed ? '정산완료' : '미정산'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Button
-                      size="sm"
-                      variant={v.completed ? 'outline' : 'default'}
-                      className={
-                        v.completed
-                          ? 'h-7 border-gray-300 text-xs text-gray-500'
-                          : 'h-7 bg-blue-600 text-xs hover:bg-blue-700'
-                      }
-                      onClick={() => toggleSettled(v)}
-                    >
-                      {v.completed ? '완료취소' : '정산완료'}
-                    </Button>
-                  </TableCell>
+                  {tab !== '전체' && (
+                    <TableCell className="text-center">
+                      <Badge
+                        variant="outline"
+                        className={
+                          v.completed
+                            ? 'border-green-200 bg-green-50 text-green-700'
+                            : 'border-orange-200 bg-orange-50 text-orange-700'
+                        }
+                      >
+                        {v.completed ? '정산완료' : '미정산'}
+                      </Badge>
+                    </TableCell>
+                  )}
+                  {tab !== '전체' && (
+                    <TableCell className="text-center">
+                      <Button
+                        size="sm"
+                        variant={v.completed ? 'outline' : 'default'}
+                        className={
+                          v.completed
+                            ? 'h-7 border-gray-300 text-xs text-gray-500'
+                            : 'h-7 bg-blue-600 text-xs hover:bg-blue-700'
+                        }
+                        onClick={() => toggleSettled(v)}
+                      >
+                        {v.completed ? '완료취소' : '정산완료'}
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}

@@ -16,9 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,30 +47,64 @@ public class SettlementService implements
 
     @Override
     public List<SettlementSummaryResult> getAdminSettlements(AdminSettlementQuery query) {
-        List<SettlementQueryPort.CompanySettlementRaw> raws = query.type() == SettlementType.VENDOR
-                ? settlementQueryPort.sumByVendorCompany(query.fromDate(), query.toDate())
-                : settlementQueryPort.sumByOrderingCompany(query.fromDate(), query.toDate());
+        List<SettlementQueryPort.CompanySettlementRaw> raws;
+
+        if (query.type() == SettlementType.ALL) {
+            List<SettlementQueryPort.CompanySettlementRaw> vendorRaws =
+                    settlementQueryPort.sumByVendorCompany(query.fromDate(), query.toDate());
+            List<SettlementQueryPort.CompanySettlementRaw> orderingRaws =
+                    settlementQueryPort.sumByOrderingCompany(query.fromDate(), query.toDate());
+            Map<Long, SettlementQueryPort.CompanySettlementRaw> merged = new LinkedHashMap<>();
+            for (var r : vendorRaws) merged.put(r.companyId(), r);
+            for (var r : orderingRaws) {
+                merged.merge(r.companyId(), r, (a, b) -> new SettlementQueryPort.CompanySettlementRaw(
+                        a.companyId(),
+                        a.count() + b.count(),
+                        a.orderAmountSum() + b.orderAmountSum(),
+                        a.vendorAmountSum() + b.vendorAmountSum()
+                ));
+            }
+            raws = new ArrayList<>(merged.values());
+        } else {
+            raws = query.type() == SettlementType.VENDOR
+                    ? settlementQueryPort.sumByVendorCompany(query.fromDate(), query.toDate())
+                    : settlementQueryPort.sumByOrderingCompany(query.fromDate(), query.toDate());
+        }
 
         List<Long> companyIds = raws.stream().map(SettlementQueryPort.CompanySettlementRaw::companyId).toList();
-        Map<Long, String> nameMap = companyRepository.findAllByIdIn(companyIds).stream()
-                .collect(Collectors.toMap(Company::getId, Company::getCompanyName));
+        Map<Long, Company> companyMap = companyRepository.findAllByIdIn(companyIds).stream()
+                .collect(Collectors.toMap(Company::getId, Function.identity()));
 
-        List<Settlement> settled = settlementRepository
-                .findAllByCompanyIdsAndTypeAndPeriod(companyIds, query.type(), query.fromDate(), query.toDate());
-        Set<Long> settledIds = settled.stream().map(Settlement::getCompanyId).collect(Collectors.toSet());
-        Map<Long, String> completedAtMap = settled.stream()
-                .collect(Collectors.toMap(Settlement::getCompanyId, Settlement::getCompletedAt, (a, b) -> a));
+        Set<Long> settledIds;
+        Map<Long, String> completedAtMap;
+        if (query.type() == SettlementType.ALL) {
+            settledIds = Set.of();
+            completedAtMap = Map.of();
+        } else {
+            List<Settlement> settled = settlementRepository
+                    .findAllByCompanyIdsAndTypeAndPeriod(companyIds, query.type(), query.fromDate(), query.toDate());
+            settledIds = settled.stream().map(Settlement::getCompanyId).collect(Collectors.toSet());
+            completedAtMap = settled.stream()
+                    .collect(Collectors.toMap(Settlement::getCompanyId, Settlement::getCompletedAt, (a, b) -> a));
+        }
+
+        final Set<Long> finalSettledIds = settledIds;
+        final Map<Long, String> finalCompletedAtMap = completedAtMap;
 
         return raws.stream()
-                .map(r -> new SettlementSummaryResult(
-                        r.companyId(),
-                        nameMap.getOrDefault(r.companyId(), ""),
-                        (int) r.count(),
-                        r.orderAmountSum(),
-                        r.vendorAmountSum(),
-                        settledIds.contains(r.companyId()),
-                        completedAtMap.get(r.companyId())
-                ))
+                .map(r -> {
+                    Company company = companyMap.get(r.companyId());
+                    return new SettlementSummaryResult(
+                            r.companyId(),
+                            company != null ? company.getCompanyName() : "",
+                            company != null ? company.getType().name() : "",
+                            (int) r.count(),
+                            r.orderAmountSum(),
+                            r.vendorAmountSum(),
+                            finalSettledIds.contains(r.companyId()),
+                            finalCompletedAtMap.get(r.companyId())
+                    );
+                })
                 .toList();
     }
 
