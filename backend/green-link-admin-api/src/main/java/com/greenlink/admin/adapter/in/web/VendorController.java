@@ -1,23 +1,30 @@
 package com.greenlink.admin.adapter.in.web;
 
+import com.greenlink.admin.adapter.in.web.dto.ChangeVendorPasswordRequest;
 import com.greenlink.admin.adapter.in.web.dto.CreateVendorRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateVendorRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateVendorStatusRequest;
 import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.vendor.dto.VendorResult;
+import com.greenlink.core.application.vendor.usecase.ChangeVendorPasswordUseCase;
 import com.greenlink.core.application.vendor.usecase.CreateVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.DeleteVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.GetVendorUseCase;
 import com.greenlink.core.application.vendor.usecase.GetVendorsUseCase;
 import com.greenlink.core.application.vendor.usecase.UpdateVendorStatusUseCase;
 import com.greenlink.core.application.vendor.usecase.UpdateVendorUseCase;
+import com.greenlink.core.application.vendor.usecase.UploadVendorDocumentUseCase;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/vendors")
@@ -29,19 +36,27 @@ public class VendorController {
     private final UpdateVendorUseCase updateVendorUseCase;
     private final UpdateVendorStatusUseCase updateVendorStatusUseCase;
     private final DeleteVendorUseCase deleteVendorUseCase;
+    private static final Set<String> ALLOWED_DOC_TYPES = Set.of("businessReg", "bankBook");
+
+    private final UploadVendorDocumentUseCase uploadVendorDocumentUseCase;
+    private final ChangeVendorPasswordUseCase changeVendorPasswordUseCase;
 
     public VendorController(GetVendorsUseCase getVendorsUseCase,
                             GetVendorUseCase getVendorUseCase,
                             CreateVendorUseCase createVendorUseCase,
                             UpdateVendorUseCase updateVendorUseCase,
                             UpdateVendorStatusUseCase updateVendorStatusUseCase,
-                            DeleteVendorUseCase deleteVendorUseCase) {
+                            DeleteVendorUseCase deleteVendorUseCase,
+                            UploadVendorDocumentUseCase uploadVendorDocumentUseCase,
+                            ChangeVendorPasswordUseCase changeVendorPasswordUseCase) {
         this.getVendorsUseCase = getVendorsUseCase;
         this.getVendorUseCase = getVendorUseCase;
         this.createVendorUseCase = createVendorUseCase;
         this.updateVendorUseCase = updateVendorUseCase;
         this.updateVendorStatusUseCase = updateVendorStatusUseCase;
         this.deleteVendorUseCase = deleteVendorUseCase;
+        this.uploadVendorDocumentUseCase = uploadVendorDocumentUseCase;
+        this.changeVendorPasswordUseCase = changeVendorPasswordUseCase;
     }
 
     @GetMapping
@@ -78,6 +93,26 @@ public class VendorController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         deleteVendorUseCase.deleteVendor(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/{id}/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<UploadVendorDocumentUseCase.Result> uploadDocument(
+            @PathVariable Long id,
+            @RequestParam("type") String docType,
+            @RequestParam("file") MultipartFile file) throws IOException {
+        if (!ALLOWED_DOC_TYPES.contains(docType)) {
+            throw new IllegalArgumentException("지원하지 않는 문서 유형입니다: " + docType);
+        }
+        return ResponseEntity.ok(
+                uploadVendorDocumentUseCase.uploadDocument(
+                        id, docType, file.getOriginalFilename(), file.getBytes(), file.getContentType()));
+    }
+
+    @PutMapping("/{id}/password")
+    public ResponseEntity<Void> changePassword(@PathVariable Long id,
+                                               @RequestBody @Valid ChangeVendorPasswordRequest req) {
+        changeVendorPasswordUseCase.changePassword(id, req.newPassword());
         return ResponseEntity.noContent().build();
     }
 }
