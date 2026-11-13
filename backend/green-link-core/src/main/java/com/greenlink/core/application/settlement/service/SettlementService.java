@@ -180,7 +180,8 @@ public class SettlementService implements
                         r.ordererName(),
                         r.completedAt(),
                         r.orderAmount(),
-                        r.vendorAmount()
+                        r.vendorAmount(),
+                        r.extraCost()
                 ))
                 .toList();
     }
@@ -238,7 +239,8 @@ public class SettlementService implements
                         r.ordererName(),
                         r.completedAt(),
                         r.orderAmount(),
-                        r.vendorAmount()
+                        r.vendorAmount(),
+                        r.extraCost()
                 ))
                 .toList();
     }

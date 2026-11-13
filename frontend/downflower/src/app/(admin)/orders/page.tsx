@@ -171,17 +171,27 @@ export default function OrdersPage() {
     return params
   }
 
-  function loadOrders(params: OrderSearchParams = {}, p = 0, size = pageSize) {
-    setLoading(true)
-    setLoadError('')
+  // silent: 자동 새로고침 등 백그라운드 갱신 — 로딩 표시 없이 데이터만 교체해 깜빡임 방지
+  function loadOrders(params: OrderSearchParams = {}, p = 0, size = pageSize, opts: { silent?: boolean } = {}) {
+    const silent = opts.silent ?? false
+    if (!silent) {
+      setLoading(true)
+      setLoadError('')
+    }
     fetchOrdersPaged(params, p, size)
-      .then(setResult)
-      .catch((err) => setLoadError(err instanceof Error ? err.message : '목록을 불러오지 못했습니다.'))
-      .finally(() => setLoading(false))
+      .then((r) => {
+        setResult(r)
+        if (silent) setLoadError('')
+      })
+      .catch((err) => {
+        // 백그라운드 갱신 실패 시 기존 목록 유지
+        if (!silent) setLoadError(err instanceof Error ? err.message : '목록을 불러오지 못했습니다.')
+      })
+      .finally(() => { if (!silent) setLoading(false) })
   }
 
   useEffect(() => { loadOrders(buildServerParams(initRange.from, initRange.to)) }, [])
-  useOrderUpdatedListener(() => loadOrders(buildServerParams(), page))
+  useOrderUpdatedListener(() => loadOrders(buildServerParams(), page, pageSize, { silent: true }))
 
   const buildServerParamsRef = useRef(buildServerParams)
   buildServerParamsRef.current = buildServerParams
@@ -194,7 +204,7 @@ export default function OrdersPage() {
     const timer = setInterval(() => {
       if (isUserInteracting.current) return
       if (document.visibilityState !== 'visible') return
-      loadOrdersRef.current(buildServerParamsRef.current(), page)
+      loadOrdersRef.current(buildServerParamsRef.current(), page, undefined, { silent: true })
     }, 90_000)
     return () => clearInterval(timer)
   }, [page])
@@ -536,7 +546,10 @@ export default function OrdersPage() {
               <TableHead className="w-64"><div>보내는이</div><div className="font-normal text-gray-400">배송지</div></TableHead>
               <TableHead>수량</TableHead>
               <TableHead><div>상품명</div><div className="font-normal text-gray-400">발주금액</div></TableHead>
-              <TableHead>배송현황</TableHead>
+              <TableHead>
+                <div>배송현황</div>
+                <div className="text-[10px] font-normal text-gray-400">주문승인시간</div>
+              </TableHead>
               <TableHead>
                 {canSeeMsgTime ? (
                   <button
