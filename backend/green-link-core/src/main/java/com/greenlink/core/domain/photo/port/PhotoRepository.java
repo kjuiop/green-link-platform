@@ -21,4 +21,6 @@ public interface PhotoRepository {
     boolean existsByOrderIdAndPhotoType(Long orderId, PhotoType photoType);
 
     List<Photo> findSelectedByOrderId(Long orderId);
+
+    List<Photo> findRecentByVendorId(Long vendorId, int limit);
 }

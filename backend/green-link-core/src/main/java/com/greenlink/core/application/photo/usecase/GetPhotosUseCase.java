@@ -9,4 +9,6 @@ public interface GetPhotosUseCase {
     List<PhotoResult> getAllPhotos();
 
     List<PhotoResult> getPhotosByOrder(Long orderId);
+
+    List<PhotoResult> getRecentPhotosByVendor(Long vendorId, int limit);
 }

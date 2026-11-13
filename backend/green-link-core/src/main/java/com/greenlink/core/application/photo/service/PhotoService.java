@@ -67,6 +67,12 @@ public class PhotoService implements UploadPhotoUseCase, SelectPhotoUseCase, Get
         return photoRepository.findAllByOrderId(orderId).stream().map(this::toResult).toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<PhotoResult> getRecentPhotosByVendor(Long vendorId, int limit) {
+        return photoRepository.findRecentByVendorId(vendorId, limit).stream().map(this::toResult).toList();
+    }
+
     private PhotoResult toResult(Photo photo) {
         return new PhotoResult(
                 photo.getId(),
