@@ -96,7 +96,7 @@ public class OrderQueryRepository {
         LocalDateTime now = LocalDateTime.now();
         String nowStr = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
         String threeHoursAgoStr = now.minusHours(3)
-                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
 
         QPhotoJpaEntity photo = QPhotoJpaEntity.photoJpaEntity;
 
