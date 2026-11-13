@@ -45,6 +45,7 @@ export default function SettlementDetailPage() {
   const totalExtraCost = orders.reduce((s, o) => s + (o.extraCost ?? 0), 0)
   const totalOrderAmount = totalBaseAmount + totalExtraCost
   const totalVendorAmount = orders.reduce((s, o) => s + (o.vendorAmount ?? 0), 0)
+  const isVendor = type === 'VENDOR'
 
   async function downloadExcel() {
     const url = getSettlementExcelUrl(companyId, from, to, type)
@@ -89,15 +90,31 @@ export default function SettlementDetailPage() {
           <p className="text-xs text-gray-500">배송완료 건수</p>
           <p className="mt-1 text-2xl font-bold">{orders.length}건</p>
         </div>
-        <div className="border-l pl-8">
-          <p className="text-xs text-gray-500">발주금액 합계</p>
-          <p className="mt-1 text-xl font-bold text-gray-800">{formatKRW(totalOrderAmount)}</p>
-          <p className="mt-0.5 text-xs text-gray-400">주문 {formatKRW(totalBaseAmount)} + 추가 {formatKRW(totalExtraCost)}</p>
-        </div>
-        <div className="border-l pl-8">
-          <p className="text-xs text-blue-600">지급금액 합계</p>
-          <p className="mt-1 text-xl font-bold text-blue-700">{formatKRW(totalVendorAmount)}</p>
-        </div>
+        {isVendor ? (
+          <>
+            <div className="border-l pl-8">
+              <p className="text-xs text-blue-600">수주금액 합계</p>
+              <p className="mt-1 text-xl font-bold text-blue-700">{formatKRW(totalVendorAmount)}</p>
+            </div>
+            <div className="border-l pl-8">
+              <p className="text-xs text-gray-500">발주금액 합계</p>
+              <p className="mt-1 text-xl font-bold text-gray-800">{formatKRW(totalOrderAmount)}</p>
+              <p className="mt-0.5 text-xs text-gray-400">주문 {formatKRW(totalBaseAmount)} + 추가 {formatKRW(totalExtraCost)}</p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="border-l pl-8">
+              <p className="text-xs text-gray-500">발주금액 합계</p>
+              <p className="mt-1 text-xl font-bold text-gray-800">{formatKRW(totalOrderAmount)}</p>
+              <p className="mt-0.5 text-xs text-gray-400">주문 {formatKRW(totalBaseAmount)} + 추가 {formatKRW(totalExtraCost)}</p>
+            </div>
+            <div className="border-l pl-8">
+              <p className="text-xs text-blue-600">지급금액 합계</p>
+              <p className="mt-1 text-xl font-bold text-blue-700">{formatKRW(totalVendorAmount)}</p>
+            </div>
+          </>
+        )}
       </div>
 
       {error && <p className="text-sm text-red-500">{error}</p>}
@@ -116,7 +133,7 @@ export default function SettlementDetailPage() {
               <TableHead className="text-right">주문금액</TableHead>
               <TableHead className="text-right">추가비용</TableHead>
               <TableHead className="text-right">발주금액</TableHead>
-              <TableHead className="text-right">지급금액</TableHead>
+              <TableHead className="text-right">{isVendor ? '수주금액' : '지급금액'}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -153,8 +170,17 @@ export default function SettlementDetailPage() {
         {orders.length > 0 && (
           <div className="flex justify-end gap-6 border-t bg-gray-50 px-4 py-3 text-sm">
             <span className="text-gray-600">합계: <strong>{orders.length}건</strong></span>
-            <span className="text-gray-600">발주금액: <strong>{formatKRW(totalOrderAmount)}</strong></span>
-            <span className="text-blue-700">지급금액: <strong>{formatKRW(totalVendorAmount)}</strong></span>
+            {isVendor ? (
+              <>
+                <span className="text-blue-700">수주금액: <strong>{formatKRW(totalVendorAmount)}</strong></span>
+                <span className="text-gray-600">발주금액: <strong>{formatKRW(totalOrderAmount)}</strong></span>
+              </>
+            ) : (
+              <>
+                <span className="text-gray-600">발주금액: <strong>{formatKRW(totalOrderAmount)}</strong></span>
+                <span className="text-blue-700">지급금액: <strong>{formatKRW(totalVendorAmount)}</strong></span>
+              </>
+            )}
           </div>
         )}
       </div>
