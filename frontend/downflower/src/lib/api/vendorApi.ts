@@ -169,6 +169,19 @@ export async function uploadVendorDocument(
   return res.json()
 }
 
+export type VendorRecentPhoto = {
+  id: number
+  photoUrl: string
+  uploadedAt: string | null
+}
+
+export async function fetchVendorRecentPhotos(vendorId: string, limit = 5): Promise<VendorRecentPhoto[]> {
+  const res = await fetchWithAuth(`/api/vendors/${vendorId}/recent-photos?limit=${limit}`, { headers: authHeaders() })
+  if (!res.ok) return []
+  const data: Array<{ id: number; photoUrl: string; uploadedAt: string | null }> = await res.json()
+  return data.map((p) => ({ id: p.id, photoUrl: p.photoUrl, uploadedAt: p.uploadedAt }))
+}
+
 export async function changeVendorPassword(vendorId: string, newPassword: string): Promise<void> {
   const res = await fetchWithAuth(`/api/vendors/${vendorId}/password`, {
     method: 'PUT',

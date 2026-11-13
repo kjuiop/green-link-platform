@@ -14,6 +14,7 @@ import { Pagination } from '@/components/ui/Pagination'
 import { Plus, Download } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
 import { OrderDetailPopup } from '@/components/common/OrderDetailPopup'
+import VendorInfoPopup from '@/components/vendor/VendorInfoPopup'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
 type DeletedFilter = '정상' | '삭제' | '전체'
@@ -132,6 +133,7 @@ export default function OrdersPage() {
 
   const [popups, setPopups] = useState<Array<{ id: string; zIndex: number }>>([])
   const nextZ = useRef(1000)
+  const [vendorPopupId, setVendorPopupId] = useState<string | null>(null)
 
   function openPopup(orderId: string) {
     isUserInteracting.current = true
@@ -592,7 +594,17 @@ export default function OrdersPage() {
                   <TableCell className="max-w-[11rem] whitespace-normal">
                     <div className="break-all text-sm">{order.orderingCompanyName || '—'}</div>
                     <div className="break-all text-xs text-gray-500">{order.ordererName || '—'}</div>
-                    <div className="break-all text-sm text-gray-400">{order.vendorName || '—'}</div>
+                    {order.vendorId ? (
+                      <button
+                        type="button"
+                        className="break-all text-left text-sm text-blue-600 hover:underline"
+                        onClick={(e) => { e.stopPropagation(); setVendorPopupId(String(order.vendorId)) }}
+                      >
+                        {order.vendorName || '—'}
+                      </button>
+                    ) : (
+                      <div className="break-all text-sm text-gray-400">{order.vendorName || '—'}</div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm">
@@ -705,7 +717,20 @@ export default function OrdersPage() {
                       {order.ribbonLeft || order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}
                     </div>
                     {order.vendorName && (
-                      <div className="mt-0.5 text-xs text-gray-400">수주사 {order.vendorName}</div>
+                      <div className="mt-0.5 text-xs text-gray-400">
+                        수주사{' '}
+                        {order.vendorId ? (
+                          <button
+                            type="button"
+                            className="text-blue-600 hover:underline"
+                            onClick={(e) => { e.stopPropagation(); setVendorPopupId(String(order.vendorId)) }}
+                          >
+                            {order.vendorName}
+                          </button>
+                        ) : (
+                          order.vendorName
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
@@ -761,6 +786,7 @@ export default function OrdersPage() {
           onUpdated={() => loadOrders(buildServerParams(), page)}
         />
       ))}
+      <VendorInfoPopup vendorId={vendorPopupId} onClose={() => setVendorPopupId(null)} />
     </div>
   )
 }
