@@ -69,6 +69,7 @@ export default function AdminSettlementPage() {
   const totalOrderAmount = summaries.reduce((s, v) => s + v.orderAmountTotal, 0)
   const totalVendorAmount = summaries.reduce((s, v) => s + v.vendorAmountTotal, 0)
   const settledCount = summaries.filter((v) => v.completed).length
+  const isVendorTab = tab === '수주사별'
 
   function goToDetail(s: SettlementSummary, typeOverride?: SettlementType) {
     const type = typeOverride ?? settlementType
@@ -141,14 +142,29 @@ export default function AdminSettlementPage() {
           <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-gray-500">배송완료 건수</CardTitle></CardHeader>
           <CardContent className="pb-3"><p className="text-2xl font-bold">{totalCount}</p></CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-gray-500">발주금액 합계</CardTitle></CardHeader>
-          <CardContent className="pb-3"><p className="text-xl font-bold text-gray-800">{formatKRW(totalOrderAmount)}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-blue-600">지급금액 합계</CardTitle></CardHeader>
-          <CardContent className="pb-3"><p className="text-xl font-bold text-blue-700">{formatKRW(totalVendorAmount)}</p></CardContent>
-        </Card>
+        {isVendorTab ? (
+          <>
+            <Card>
+              <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-blue-600">수주금액 합계</CardTitle></CardHeader>
+              <CardContent className="pb-3"><p className="text-xl font-bold text-blue-700">{formatKRW(totalVendorAmount)}</p></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-gray-500">발주금액 합계</CardTitle></CardHeader>
+              <CardContent className="pb-3"><p className="text-xl font-bold text-gray-800">{formatKRW(totalOrderAmount)}</p></CardContent>
+            </Card>
+          </>
+        ) : (
+          <>
+            <Card>
+              <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-gray-500">발주금액 합계</CardTitle></CardHeader>
+              <CardContent className="pb-3"><p className="text-xl font-bold text-gray-800">{formatKRW(totalOrderAmount)}</p></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-blue-600">지급금액 합계</CardTitle></CardHeader>
+              <CardContent className="pb-3"><p className="text-xl font-bold text-blue-700">{formatKRW(totalVendorAmount)}</p></CardContent>
+            </Card>
+          </>
+        )}
         <Card>
           <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-green-600">정산완료</CardTitle></CardHeader>
           <CardContent className="pb-3">
@@ -178,8 +194,17 @@ export default function AdminSettlementPage() {
                 <TableHead>업체명</TableHead>
                 <TableHead>유형</TableHead>
                 <TableHead className="text-right">배송완료</TableHead>
-                <TableHead className="text-right">발주금액</TableHead>
-                <TableHead className="text-right">지급금액</TableHead>
+                {isVendorTab ? (
+                  <>
+                    <TableHead className="text-right">수주금액</TableHead>
+                    <TableHead className="text-right">발주금액</TableHead>
+                  </>
+                ) : (
+                  <>
+                    <TableHead className="text-right">발주금액</TableHead>
+                    <TableHead className="text-right">지급금액</TableHead>
+                  </>
+                )}
                 {tab !== '전체' && <TableHead className="text-center">상태</TableHead>}
                 {tab !== '전체' && <TableHead className="text-center">처리</TableHead>}
               </TableRow>
@@ -232,8 +257,17 @@ export default function AdminSettlementPage() {
                   </TableCell>
                   <TableCell className="text-sm text-gray-500">{companyTypeLabel(v.companyType)}</TableCell>
                   <TableCell className="text-right text-sm">{v.count}건</TableCell>
-                  <TableCell className="text-right text-sm">{formatKRW(v.orderAmountTotal)}</TableCell>
-                  <TableCell className="text-right text-sm font-medium text-blue-700">{formatKRW(v.vendorAmountTotal)}</TableCell>
+                  {isVendorTab ? (
+                    <>
+                      <TableCell className="text-right text-sm font-medium text-blue-700">{formatKRW(v.vendorAmountTotal)}</TableCell>
+                      <TableCell className="text-right text-sm text-gray-700">{formatKRW(v.orderAmountTotal)}</TableCell>
+                    </>
+                  ) : (
+                    <>
+                      <TableCell className="text-right text-sm">{formatKRW(v.orderAmountTotal)}</TableCell>
+                      <TableCell className="text-right text-sm font-medium text-blue-700">{formatKRW(v.vendorAmountTotal)}</TableCell>
+                    </>
+                  )}
                   {tab !== '전체' && (
                     <TableCell className="text-center">
                       <Badge
