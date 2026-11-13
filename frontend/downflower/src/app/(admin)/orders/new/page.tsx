@@ -78,6 +78,7 @@ export default function NewOrderPage() {
   // 제출 상태
   const [errors, setErrors] = useState<{
     vendorId?: string
+    orderingCompanyId?: string
     productName?: string
     deliveryDate?: string
     deliveryHour?: string
@@ -103,6 +104,7 @@ export default function NewOrderPage() {
   async function handleSubmit() {
     const next: typeof errors = {}
     if (!vendorId) next.vendorId = '수주업체를 선택해주세요.'
+    if (isSuperAdmin && !orderingCompanyId) next.orderingCompanyId = '발주업체를 선택해주세요.'
     if (!productName.trim()) next.productName = '상품명을 입력해주세요.'
     if (!deliveryDate) next.deliveryDate = '배송날짜를 입력해주세요.'
     if (!deliveryHour && deliveryTimeType !== '3시간이내' && deliveryTimeType !== '직접입력') next.deliveryHour = '배송시간을 선택해주세요.'
@@ -195,17 +197,18 @@ export default function NewOrderPage() {
             </div>
             {isSuperAdmin && (
               <div className="space-y-1.5">
-                <Label>발주업체</Label>
+                <Label>발주업체 *</Label>
                 <select
                   value={orderingCompanyId}
                   onChange={(e) => setOrderingCompanyId(e.target.value)}
-                  className="w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                  className={`w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700 ${errors.orderingCompanyId ? 'border-red-500' : ''}`}
                 >
-                  <option value="">선택 안함</option>
+                  <option value="">선택하세요</option>
                   {orderingCompanies.map((c) => (
                     <option key={c.id} value={String(c.id)}>{c.companyName}</option>
                   ))}
                 </select>
+                {errors.orderingCompanyId && <p className="text-xs text-red-500">{errors.orderingCompanyId}</p>}
               </div>
             )}
             <div className="space-y-1.5">
