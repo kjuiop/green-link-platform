@@ -24,6 +24,7 @@ type BackendVendor = {
   bankName?: string
   accountNumber?: string
   accountHolder?: string
+  businessStatus?: string
 }
 
 type CreateVendorPayload = {
@@ -57,6 +58,7 @@ type UpdateVendorPayload = {
   bankName?: string
   accountNumber?: string
   accountHolder?: string
+  businessStatus?: string
 }
 
 function toFrontend(v: BackendVendor): Vendor {
@@ -82,6 +84,7 @@ function toFrontend(v: BackendVendor): Vendor {
     bankName: v.bankName ?? undefined,
     accountNumber: v.accountNumber ?? undefined,
     accountHolder: v.accountHolder ?? undefined,
+    businessStatus: (v.businessStatus as Vendor['businessStatus']) ?? 'OPEN',
   }
 }
 

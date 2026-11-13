@@ -6,17 +6,33 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { fetchVendor } from '@/lib/api/vendorApi'
+import { updateMyBusinessStatus } from '@/lib/api/memberApi'
 import { Vendor } from '@/types/vendor'
 
 export default function VendorAccountPage() {
   const [vendor, setVendor] = useState<Vendor | null>(null)
   const [loading, setLoading] = useState(true)
+  const [toggling, setToggling] = useState(false)
 
   useEffect(() => {
     const vendorId = typeof window !== 'undefined' ? localStorage.getItem('vendorId') : null
     if (!vendorId) { setLoading(false); return }
     fetchVendor(vendorId).then(setVendor).catch(() => {}).finally(() => setLoading(false))
   }, [])
+
+  async function handleToggleBusinessStatus() {
+    if (!vendor) return
+    const next = vendor.businessStatus === 'OPEN' ? 'CLOSED' : 'OPEN'
+    setToggling(true)
+    try {
+      await updateMyBusinessStatus(next)
+      setVendor({ ...vendor, businessStatus: next })
+    } catch {
+      alert('영업상태 변경에 실패했습니다.')
+    } finally {
+      setToggling(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -66,6 +82,31 @@ export default function VendorAccountPage() {
               <Label>주소</Label>
               <Input defaultValue={vendor.address} readOnly />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">영업상태</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className={`rounded-full px-3 py-1 text-sm font-semibold ${
+                vendor.businessStatus === 'OPEN'
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-gray-100 text-gray-500'
+              }`}>
+                {vendor.businessStatus === 'OPEN' ? '영업중' : '휴무중'}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleToggleBusinessStatus}
+              disabled={toggling}
+            >
+              {vendor.businessStatus === 'OPEN' ? '휴무중으로 변경' : '영업중으로 변경'}
+            </Button>
           </CardContent>
         </Card>
 
