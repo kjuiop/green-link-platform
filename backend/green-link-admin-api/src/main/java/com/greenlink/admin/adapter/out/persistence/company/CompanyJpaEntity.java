@@ -52,6 +52,15 @@ public class CompanyJpaEntity extends BaseJpaEntity {
     @Column(length = 500)
     private String bankBookUrl;
 
+    @Column(length = 50)
+    private String bankName;
+
+    @Column(length = 50)
+    private String accountNumber;
+
+    @Column(length = 50)
+    private String accountHolder;
+
     protected CompanyJpaEntity() {}
 
     public static CompanyJpaEntity from(Company company) {
@@ -70,11 +79,15 @@ public class CompanyJpaEntity extends BaseJpaEntity {
         e.displayYn = company.isDisplayYn();
         e.businessRegUrl = company.getBusinessRegUrl();
         e.bankBookUrl = company.getBankBookUrl();
+        e.bankName = company.getBankName();
+        e.accountNumber = company.getAccountNumber();
+        e.accountHolder = company.getAccountHolder();
         return e;
     }
 
     public Company toDomain() {
         return Company.of(id, businessNo, companyName, ceoName, phone, faxNumber,
-                address, detailAddress, type, status, displayYn, businessRegUrl, bankBookUrl);
+                address, detailAddress, type, status, displayYn, businessRegUrl, bankBookUrl,
+                bankName, accountNumber, accountHolder);
     }
 }

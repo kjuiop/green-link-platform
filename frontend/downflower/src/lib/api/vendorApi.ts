@@ -21,6 +21,9 @@ type BackendVendor = {
   capabilities?: string[]
   businessRegUrl?: string
   bankBookUrl?: string
+  bankName?: string
+  accountNumber?: string
+  accountHolder?: string
 }
 
 type CreateVendorPayload = {
@@ -51,6 +54,9 @@ type UpdateVendorPayload = {
   companyType?: string
   regions?: RegionDto[]
   capabilities?: string[]
+  bankName?: string
+  accountNumber?: string
+  accountHolder?: string
 }
 
 function toFrontend(v: BackendVendor): Vendor {
@@ -73,6 +79,9 @@ function toFrontend(v: BackendVendor): Vendor {
     capabilities: v.capabilities ?? [],
     businessRegUrl: v.businessRegUrl ?? undefined,
     bankBookUrl: v.bankBookUrl ?? undefined,
+    bankName: v.bankName ?? undefined,
+    accountNumber: v.accountNumber ?? undefined,
+    accountHolder: v.accountHolder ?? undefined,
   }
 }
 
