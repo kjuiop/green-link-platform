@@ -76,19 +76,22 @@ public class OrderController {
             @RequestParam(required = false) String orderingCompanyName,
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) String sortDir,
+            @RequestParam(required = false) String completedAtFrom,
+            @RequestParam(required = false) String completedAtTo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Long resolvedVendorId = vendorId;
         Long resolvedOrderingCompanyId = orderingCompanyId;
         Boolean resolvedDeleted = null;
         boolean isVendor = false;
+        boolean isSuperAdmin = false;
 
         if (auth != null && auth.isAuthenticated()) {
             isVendor = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
             boolean isOrdering = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_ORDERING"));
-            boolean isSuperAdmin = auth.getAuthorities().stream()
+            isSuperAdmin = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
             if (isVendor) {
                 resolvedVendorId = Long.parseLong(String.valueOf(auth.getPrincipal()));
@@ -102,11 +105,14 @@ public class OrderController {
                 resolvedDeleted = deleted;
             }
         }
+        String resolvedCompletedAtFrom = isSuperAdmin ? completedAtFrom : null;
+        String resolvedCompletedAtTo = isSuperAdmin ? completedAtTo : null;
         OrderSearchCondition condition = OrderSearchCondition.of(
                 status, resolvedVendorId, orderNumber, productName, ordererName,
                 deliveryDateFrom, deliveryDateTo, resolvedOrderingCompanyId,
                 receiverName, messageStatus, ribbonLeft, resolvedDeleted,
-                address, recipientName, vendorName, orderingCompanyName, sortBy, sortDir);
+                address, recipientName, vendorName, orderingCompanyName, sortBy, sortDir,
+                resolvedCompletedAtFrom, resolvedCompletedAtTo);
         PageResult<OrderResult> result = getOrdersUseCase.getOrdersPaged(condition, PageRequest.of(page, size));
         if (isVendor) {
             List<OrderResult> masked = result.content().stream().map(OrderController::maskPhones).toList();
