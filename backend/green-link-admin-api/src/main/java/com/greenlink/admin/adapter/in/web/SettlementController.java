@@ -1,6 +1,7 @@
 package com.greenlink.admin.adapter.in.web;
 
 import com.greenlink.core.application.settlement.dto.AdminSettlementQuery;
+import com.greenlink.core.application.settlement.dto.MySettlementResult;
 import com.greenlink.core.application.settlement.dto.SettlementOrderResult;
 import com.greenlink.core.application.settlement.dto.SettlementSummaryResult;
 import com.greenlink.core.application.settlement.usecase.*;
@@ -99,14 +100,13 @@ public class SettlementController {
     }
 
     @GetMapping("/api/settlements/my")
-    public ResponseEntity<List<SettlementOrderResult>> getMySettlement(
+    public ResponseEntity<MySettlementResult> getMySettlement(
             @RequestParam String fromDate,
             @RequestParam String toDate,
-            @RequestParam SettlementType type,
             Authentication auth) {
         if (!(auth.getDetails() instanceof Long companyId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        return ResponseEntity.ok(getMySettlementUseCase.getMySettlement(companyId, type, fromDate, toDate));
+        return ResponseEntity.ok(getMySettlementUseCase.getMySettlement(companyId, fromDate, toDate));
     }
 }
