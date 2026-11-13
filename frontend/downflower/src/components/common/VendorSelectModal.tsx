@@ -244,6 +244,14 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                           // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           const filtered = geographies.filter((geo: any) => geo.properties.sido === normalizedSelectedSido)
                           const labeledCities = new Set<string>()
+                          const cityCentroids = new Map<string, [number, number][]>()
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          filtered.forEach((geo: any) => {
+                            const city = toCityName((geo.properties as { name?: string })?.name ?? '')
+                            const list = cityCentroids.get(city) ?? []
+                            list.push(geoCentroid(geo))
+                            cityCentroids.set(city, list)
+                          })
                           return (
                             <>
                               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -274,7 +282,11 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                                 if (labeledCities.has(sigungu)) return null
                                 labeledCities.add(sigungu)
                                 const isSelected = selectedSigungu === sigungu
-                                const centroid = geoCentroid(geo)
+                                const points = cityCentroids.get(sigungu) ?? []
+                                const centroid: [number, number] = [
+                                  points.reduce((s, p) => s + p[0], 0) / points.length,
+                                  points.reduce((s, p) => s + p[1], 0) / points.length,
+                                ]
                                 return (
                                   <Marker key={geo.rsmKey + '-label'} coordinates={centroid}>
                                     <text
