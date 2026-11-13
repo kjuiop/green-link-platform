@@ -186,12 +186,15 @@ export default function OrdersPage() {
   const buildServerParamsRef = useRef(buildServerParams)
   buildServerParamsRef.current = buildServerParams
 
+  const loadOrdersRef = useRef(loadOrders)
+  loadOrdersRef.current = loadOrders
+
   const isUserInteracting = useRef(false)
   useEffect(() => {
     const timer = setInterval(() => {
       if (isUserInteracting.current) return
       if (document.visibilityState !== 'visible') return
-      loadOrders(buildServerParamsRef.current(), page)
+      loadOrdersRef.current(buildServerParamsRef.current(), page)
     }, 90_000)
     return () => clearInterval(timer)
   }, [page])
