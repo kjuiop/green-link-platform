@@ -50,7 +50,7 @@ public class MemberSummaryService implements GetMemberSummaryUseCase, GetMyAccou
                     dateFrom, dateTo,
                     companyId,
                     null, null, null, null, null, null, null, null, null, null,
-                    null
+                    null, null, null
             );
             orderingAmount = orderRepository.sumAmount(orderingCondition);
         }
@@ -62,7 +62,8 @@ public class MemberSummaryService implements GetMemberSummaryUseCase, GetMyAccou
                     dateFrom, dateTo,
                     null,
                     null, null, null, null, null, null, null, null, null, null,
-                    companyId
+                    companyId,
+                    null, null
             );
             vendorAmount = orderRepository.sumAmount(vendorCondition);
         }
