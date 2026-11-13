@@ -2,6 +2,7 @@ package com.greenlink.admin.adapter.out.persistence.order;
 
 import com.greenlink.admin.adapter.out.persistence.admin.QAdminJpaEntity;
 import com.greenlink.admin.adapter.out.persistence.company.QCompanyJpaEntity;
+import com.greenlink.admin.adapter.out.persistence.photo.QPhotoJpaEntity;
 import com.greenlink.admin.adapter.out.persistence.receipt.QReceiptConfirmationJpaEntity;
 import com.greenlink.admin.adapter.out.persistence.sms.QSmsMessageJpaEntity;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
@@ -92,12 +93,56 @@ public class OrderQueryRepository {
     }
 
     private OrderSpecifier<Integer> priorityGroup(QOrderJpaEntity order) {
-        LocalDateTime threeHoursAgo = LocalDateTime.now().minusHours(3);
+        LocalDateTime now = LocalDateTime.now();
+        String nowStr = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        String threeHoursAgoStr = now.minusHours(3)
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+        QPhotoJpaEntity photo = QPhotoJpaEntity.photoJpaEntity;
+
+        // 결혼식 지연: 예약발송 시각 경과 + 현장사진 없음
+        com.querydsl.core.types.dsl.StringExpression weddingDeadline =
+                com.querydsl.core.types.dsl.Expressions.stringTemplate(
+                    "CONCAT({0}, ' ', LPAD({1}, 2, '0'), ':', LPAD({2}, 2, '0'))",
+                    order.deliveryDate, order.scheduledMessageHour, order.scheduledMessageMinute);
+
+        com.querydsl.core.types.dsl.BooleanExpression noSitePhoto =
+                JPAExpressions.selectOne()
+                    .from(photo)
+                    .where(photo.orderId.eq(order.id)
+                        .and(photo.photoType.eq(com.greenlink.core.domain.photo.model.PhotoType.SITE)))
+                    .notExists();
+
+        com.querydsl.core.types.dsl.BooleanExpression isWeddingDelayed =
+                order.status.eq(OrderStatus.ACCEPTED)
+                    .and(order.eventType.eq("결혼식"))
+                    .and(order.messageSchedule.eq("scheduled"))
+                    .and(weddingDeadline.loe(nowStr))
+                    .and(noSitePhoto);
+
+        // 장례식·기타 지연
+        com.querydsl.core.types.dsl.StringExpression nonWeddingDeadline =
+                com.querydsl.core.types.dsl.Expressions.stringTemplate(
+                    "CONCAT({0}, ' ', LPAD({1}, 2, '0'), ':', LPAD({2}, 2, '0'))",
+                    order.deliveryDate, order.deliveryTimeHour, order.deliveryTimeMinute);
+
+        com.querydsl.core.types.dsl.BooleanExpression isNonWeddingDelayed =
+                order.status.eq(OrderStatus.ACCEPTED)
+                    .and(order.eventType.ne("결혼식"))
+                    .and(
+                        order.deliveryTimeType.eq("3시간이내")
+                            .and(order.acceptedAt.loe(threeHoursAgoStr))
+                        .or(
+                            order.deliveryTimeType.ne("3시간이내")
+                                .and(order.deliveryTimeType.ne("직접입력"))
+                                .and(nonWeddingDeadline.loe(nowStr))
+                        )
+                    );
+
         return new CaseBuilder()
                 .when(order.status.eq(OrderStatus.PENDING)).then(1)
                 .when(order.status.eq(OrderStatus.REJECTED)).then(2)
-                .when(order.status.eq(OrderStatus.ACCEPTED)
-                        .and(order.createdAt.before(threeHoursAgo))).then(3)
+                .when(isWeddingDelayed.or(isNonWeddingDelayed)).then(3)
                 .otherwise(4)
                 .asc();
     }

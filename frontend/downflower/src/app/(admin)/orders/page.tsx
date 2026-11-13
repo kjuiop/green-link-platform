@@ -74,13 +74,6 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '수주거절', value: '수주거절' },
 ]
 
-function isDelayed(order: Order): boolean {
-  if (order.status !== '수주완료') return false
-  if (!order.createdAt) return false
-  const created = new Date(order.createdAt.replace(' ', 'T'))
-  return Date.now() - created.getTime() > 3 * 60 * 60 * 1000
-}
-
 const PAGE_SIZE_OPTIONS = [10, 50, 100, 200, 300, 500]
 const YEAR_OPTIONS = [new Date().getFullYear(), new Date().getFullYear() - 1]
 
@@ -634,8 +627,8 @@ export default function OrdersPage() {
                           loadOrders(buildServerParams(), page)
                         }}
                       />
-                      {isDelayed(order) && (
-                        <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-xs font-semibold text-orange-700">
+                      {order.isDelayed && (
+                        <span className="animate-pulse rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-600">
                           지연
                         </span>
                       )}

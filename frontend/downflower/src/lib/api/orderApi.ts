@@ -61,6 +61,7 @@ type BackendOrder = {
   receiptReceiverRelation: string | null
   isDeleted: boolean
   messageSentAt: string | null
+  isDelayed: boolean
 }
 
 export type CreateOrderPayload = {
@@ -154,6 +155,7 @@ function toFrontend(o: BackendOrder): Order {
     hasReceipt: o.hasReceipt,
     receiptReceiverName: o.receiptReceiverName ?? undefined,
     receiptReceiverRelation: o.receiptReceiverRelation ?? undefined,
+    isDelayed: o.isDelayed ?? false,
   }
 }
 

@@ -3,8 +3,10 @@ package com.greenlink.core.domain.photo.port;
 import com.greenlink.core.domain.photo.model.Photo;
 import com.greenlink.core.domain.photo.model.PhotoType;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface PhotoRepository {
 
@@ -19,6 +21,8 @@ public interface PhotoRepository {
     boolean existsByOrderId(Long orderId);
 
     boolean existsByOrderIdAndPhotoType(Long orderId, PhotoType photoType);
+
+    Set<Long> findOrderIdsWithSitePhotoIn(Collection<Long> orderIds);
 
     List<Photo> findSelectedByOrderId(Long orderId);
 

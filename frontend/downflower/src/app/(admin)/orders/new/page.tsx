@@ -87,6 +87,7 @@ export default function NewOrderPage() {
     recipientName?: string
     ribbonLeft?: string
     ordererPhone?: string
+    messageSchedule?: string
   }>({})
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -113,6 +114,7 @@ export default function NewOrderPage() {
     if (!recipientName.trim()) next.recipientName = '받는 분 성함을 입력해주세요.'
     if (!(ribbonLefts[0] ?? '').trim()) next.ribbonLeft = '보내는이를 입력해주세요.'
     if (!ordererPhone.trim()) next.ordererPhone = '주문자 휴대폰을 입력해주세요.'
+    if (selectedEventType === '결혼식' && messageSchedule !== 'scheduled') next.messageSchedule = '결혼식 주문은 사진 예약발송 시각을 반드시 설정해주세요.'
     setErrors(next)
     if (Object.keys(next).length > 0) return
 
@@ -743,6 +745,7 @@ export default function NewOrderPage() {
                     )}
                   </label>
                 </div>
+                {errors.messageSchedule && <p className="mt-1 text-xs text-red-500">{errors.messageSchedule}</p>}
               </div>
             </CardContent>
           </Card>

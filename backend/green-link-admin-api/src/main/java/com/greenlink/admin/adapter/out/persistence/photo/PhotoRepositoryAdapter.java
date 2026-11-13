@@ -6,8 +6,11 @@ import com.greenlink.core.domain.photo.port.PhotoRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 public class PhotoRepositoryAdapter implements PhotoRepository {
@@ -50,6 +53,12 @@ public class PhotoRepositoryAdapter implements PhotoRepository {
     @Override
     public boolean existsByOrderIdAndPhotoType(Long orderId, PhotoType photoType) {
         return jpaRepository.existsByOrderIdAndPhotoType(orderId, photoType);
+    }
+
+    @Override
+    public Set<Long> findOrderIdsWithSitePhotoIn(Collection<Long> orderIds) {
+        if (orderIds.isEmpty()) return Set.of();
+        return new HashSet<>(jpaRepository.findOrderIdsWithPhotoType(orderIds, PhotoType.SITE));
     }
 
     @Override
