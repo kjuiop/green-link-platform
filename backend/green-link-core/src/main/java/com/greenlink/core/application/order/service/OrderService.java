@@ -306,8 +306,44 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 order.isDeleted(),
                 messageSentAt,
                 order.getCreatedByAdminId(),
-                order.getUpdatedByAdminId()
+                order.getUpdatedByAdminId(),
+                calcIsDelayed(order)
         );
+    }
+
+    private boolean calcIsDelayed(Order order) {
+        if (order.getStatus() != OrderStatus.ACCEPTED) return false;
+        LocalDateTime now = LocalDateTime.now();
+
+        if ("결혼식".equals(order.getEventType())) {
+            if (!"scheduled".equals(order.getMessageSchedule())) return false;
+            LocalDateTime deadline = parseDeadline(order.getDeliveryDate(),
+                    order.getScheduledMessageHour(), order.getScheduledMessageMinute());
+            if (deadline == null || now.isBefore(deadline)) return false;
+            return !photoRepository.existsByOrderIdAndPhotoType(order.getId(), com.greenlink.core.domain.photo.model.PhotoType.SITE);
+        } else {
+            if ("3시간이내".equals(order.getDeliveryTimeType())) {
+                if (order.getAcceptedAt() == null) return false;
+                LocalDateTime accepted = LocalDateTime.parse(order.getAcceptedAt(),
+                        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                return now.isAfter(accepted.plusHours(3));
+            }
+            if ("직접입력".equals(order.getDeliveryTimeType())) return false;
+            LocalDateTime deadline = parseDeadline(order.getDeliveryDate(),
+                    order.getDeliveryTimeHour(), order.getDeliveryTimeMinute());
+            return deadline != null && now.isAfter(deadline);
+        }
+    }
+
+    private LocalDateTime parseDeadline(String date, String hour, String minute) {
+        if (date == null || hour == null || minute == null) return null;
+        try {
+            return LocalDateTime.parse(
+                date + " " + String.format("%02d", Integer.parseInt(hour))
+                     + ":" + String.format("%02d", Integer.parseInt(minute)),
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+            );
+        } catch (Exception e) { return null; }
     }
 
     private Map<Long, ReceiptConfirmation> buildReceiptMap(List<Long> orderIds) {

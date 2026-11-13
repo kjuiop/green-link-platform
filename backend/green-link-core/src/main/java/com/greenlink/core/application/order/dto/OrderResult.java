@@ -53,5 +53,6 @@ public record OrderResult(
         boolean isDeleted,
         String messageSentAt,
         Long createdByAdminId,
-        Long updatedByAdminId
+        Long updatedByAdminId,
+        boolean isDelayed
 ) {}
