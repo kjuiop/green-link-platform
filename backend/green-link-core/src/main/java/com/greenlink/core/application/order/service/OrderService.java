@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -192,12 +193,13 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Map<Long, MessageInfo> msgInfoMap = buildMessageInfoMap(orderIds);
         Map<Long, Long> refCountMap = orderIds.isEmpty() ? Map.of() : referencePhotoRepository.countByOrderIds(orderIds);
         Map<Long, ReceiptConfirmation> receiptMap = buildReceiptMap(orderIds);
+        Set<Long> sitePhotoOrderIds = photoRepository.findOrderIdsWithSitePhotoIn(orderIds);
         Page<OrderResult> resultPage = page.map(o -> {
             VendorInfo v = infoMap.get(o.getVendorId());
             OrderingInfo oi = o.getOrderingCompanyId() != null ? orderingInfoMap.get(o.getOrderingCompanyId()) : null;
             int refCount = refCountMap.getOrDefault(o.getId(), 0L).intValue();
             MessageInfo mi = msgInfoMap.getOrDefault(o.getId(), new MessageInfo("NONE", null));
-            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, mi.status(), mi.sentAt(), refCount, receiptMap.get(o.getId()));
+            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, mi.status(), mi.sentAt(), refCount, receiptMap.get(o.getId()), sitePhotoOrderIds);
         });
         long totalAmount = orderRepository.sumAmount(condition);
         return PageResult.of(resultPage, totalAmount);
@@ -253,6 +255,10 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     }
 
     private OrderResult toResult(Order order, String vendorName, String vendorPhone, String orderingCompanyName, String orderingCompanyPhone, String messageStatus, String messageSentAt, int referencePhotoCount, ReceiptConfirmation receipt) {
+        return toResult(order, vendorName, vendorPhone, orderingCompanyName, orderingCompanyPhone, messageStatus, messageSentAt, referencePhotoCount, receipt, null);
+    }
+
+    private OrderResult toResult(Order order, String vendorName, String vendorPhone, String orderingCompanyName, String orderingCompanyPhone, String messageStatus, String messageSentAt, int referencePhotoCount, ReceiptConfirmation receipt, Set<Long> sitePhotoOrderIds) {
         return new OrderResult(
                 order.getId(),
                 order.getOrderNumber(),
@@ -307,11 +313,15 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 messageSentAt,
                 order.getCreatedByAdminId(),
                 order.getUpdatedByAdminId(),
-                calcIsDelayed(order)
+                calcIsDelayed(order, sitePhotoOrderIds)
         );
     }
 
     private boolean calcIsDelayed(Order order) {
+        return calcIsDelayed(order, null);
+    }
+
+    private boolean calcIsDelayed(Order order, Set<Long> sitePhotoOrderIds) {
         if (order.getStatus() != OrderStatus.ACCEPTED) return false;
         LocalDateTime now = LocalDateTime.now();
 
@@ -320,7 +330,10 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
             LocalDateTime deadline = parseDeadline(order.getDeliveryDate(),
                     order.getScheduledMessageHour(), order.getScheduledMessageMinute());
             if (deadline == null || now.isBefore(deadline)) return false;
-            return !photoRepository.existsByOrderIdAndPhotoType(order.getId(), com.greenlink.core.domain.photo.model.PhotoType.SITE);
+            boolean hasSitePhoto = sitePhotoOrderIds != null
+                    ? sitePhotoOrderIds.contains(order.getId())
+                    : photoRepository.existsByOrderIdAndPhotoType(order.getId(), com.greenlink.core.domain.photo.model.PhotoType.SITE);
+            return !hasSitePhoto;
         } else {
             if ("3시간이내".equals(order.getDeliveryTimeType())) {
                 if (order.getAcceptedAt() == null) return false;
