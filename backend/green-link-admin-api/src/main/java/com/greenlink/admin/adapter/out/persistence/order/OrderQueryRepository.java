@@ -226,6 +226,12 @@ public class OrderQueryRepository {
                             .where(admin.companyId.eq(condition.vendorCompanyId()))
             ));
         }
+        if (condition.completedAtFrom() != null && !condition.completedAtFrom().isBlank()) {
+            where.and(order.completedAt.goe(condition.completedAtFrom()));
+        }
+        if (condition.completedAtTo() != null && !condition.completedAtTo().isBlank()) {
+            where.and(order.completedAt.loe(condition.completedAtTo() + " 23:59:59"));
+        }
         if (condition.messageStatus() != null && !condition.messageStatus().isBlank()) {
             QSmsMessageJpaEntity sms = QSmsMessageJpaEntity.smsMessageJpaEntity;
             switch (condition.messageStatus()) {

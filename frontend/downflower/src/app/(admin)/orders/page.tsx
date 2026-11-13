@@ -118,6 +118,8 @@ export default function OrdersPage() {
   const [applied1Value, setApplied1Value] = useState('')
   const [applied2Field, setApplied2Field] = useState<SearchField>('수주사명')
   const [applied2Value, setApplied2Value] = useState('')
+  const [completedAtFrom, setCompletedAtFrom] = useState('')
+  const [completedAtTo, setCompletedAtTo] = useState('')
 
   const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null
   const isSuperAdmin = role === 'SUPER_ADMIN'
@@ -164,6 +166,8 @@ export default function OrdersPage() {
     if (key2 && search2Value) params[key2] = search2Value
     if (isSuperAdmin && deletedFilter === '삭제') params.deleted = true
     if (msgTimeSortDir) { params.sortBy = 'messageSentAt'; params.sortDir = msgTimeSortDir }
+    if (isSuperAdmin && completedAtFrom) params.completedAtFrom = completedAtFrom
+    if (isSuperAdmin && completedAtTo) params.completedAtTo = completedAtTo
     return params
   }
 
@@ -236,6 +240,7 @@ export default function OrdersPage() {
     setApplied1Field('주문번호'); setApplied1Value('')
     setApplied2Field('수주사명'); setApplied2Value('')
     setMsgTimeSortDir(null)
+    setCompletedAtFrom(''); setCompletedAtTo('')
     setPage(0)
     setSelectedIds(new Set())
     loadOrders({ deliveryDateFrom: r.from, deliveryDateTo: r.to }, 0)
@@ -397,6 +402,26 @@ export default function OrdersPage() {
             </select>
           )}
         </div>
+
+        {/* 배송완료 일시 (슈퍼관리자 전용) */}
+        {isSuperAdmin && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="w-14 shrink-0 text-xs font-medium text-gray-500">완료일시</span>
+            <input
+              type="date"
+              value={completedAtFrom}
+              onChange={(e) => setCompletedAtFrom(e.target.value)}
+              className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+            />
+            <span className="text-sm text-gray-400">~</span>
+            <input
+              type="date"
+              value={completedAtTo}
+              onChange={(e) => setCompletedAtTo(e.target.value)}
+              className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+            />
+          </div>
+        )}
 
         {/* 검색 조건 2쌍 (모바일: 1쌍, sm 이상: 2쌍) */}
         <div className="mt-2 flex flex-wrap gap-2">
