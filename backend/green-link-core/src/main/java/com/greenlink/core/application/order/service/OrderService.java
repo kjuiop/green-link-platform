@@ -43,6 +43,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
@@ -337,9 +338,11 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         } else {
             if ("3시간이내".equals(order.getDeliveryTimeType())) {
                 if (order.getAcceptedAt() == null) return false;
-                LocalDateTime accepted = LocalDateTime.parse(order.getAcceptedAt(),
-                        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                return now.isAfter(accepted.plusHours(3));
+                try {
+                    return now.isAfter(LocalDateTime.parse(order.getAcceptedAt()).plusHours(3));
+                } catch (DateTimeParseException e) {
+                    return false;
+                }
             }
             if ("직접입력".equals(order.getDeliveryTimeType())) return false;
             LocalDateTime deadline = parseDeadline(order.getDeliveryDate(),
