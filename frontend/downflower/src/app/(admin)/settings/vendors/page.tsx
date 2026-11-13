@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Pagination } from '@/components/ui/Pagination'
-import { Vendor, VendorStatus, CompanyType, RegionDto } from '@/types/vendor'
+import { Vendor, VendorStatus, CompanyType, BusinessStatus, RegionDto } from '@/types/vendor'
 import RegionSelector from '@/components/vendor/RegionSelector'
 import { PageResult } from '@/types/page'
 import { fetchVendorsPaged, createVendor, updateVendor, updateVendorStatus, deleteVendor, uploadVendorDocument, changeVendorPassword } from '@/lib/api/vendorApi'
@@ -49,6 +49,7 @@ const COMPANY_TYPE_LABELS: Record<CompanyType, string> = {
 const emptyForm = {
   name: '', businessNumber: '', faxNumber: '', companyPhone: '', managerName: '', phone: '',
   email: '', address: '', detailAddress: '', loginId: '', password: '', companyType: 'VENDOR' as CompanyType,
+  bankName: '', accountNumber: '', accountHolder: '', businessStatus: 'OPEN' as BusinessStatus,
 }
 
 function formatPhone(value: string) {
@@ -195,6 +196,10 @@ export default function VendorsPage() {
       loginId: vendor.loginId,
       password: '',
       companyType: vendor.companyType ?? 'VENDOR',
+      bankName: vendor.bankName ?? '',
+      accountNumber: vendor.accountNumber ?? '',
+      accountHolder: vendor.accountHolder ?? '',
+      businessStatus: vendor.businessStatus ?? 'OPEN',
     })
     setModalRegions(vendor.regions ?? [])
     setModalCapabilities(vendor.capabilities ?? [])
@@ -241,6 +246,10 @@ export default function VendorsPage() {
           companyType: form.companyType,
           regions: modalRegions,
           capabilities: modalCapabilities,
+          bankName: form.bankName || undefined,
+          accountNumber: form.accountNumber || undefined,
+          accountHolder: form.accountHolder || undefined,
+          businessStatus: form.businessStatus,
         })
       } else {
         await createVendor({
@@ -365,19 +374,20 @@ export default function VendorsPage() {
               <TableHead>연락처</TableHead>
               <TableHead>주소</TableHead>
               <TableHead>아이디</TableHead>
+              <TableHead>영업상태</TableHead>
               <TableHead>상태</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -404,6 +414,15 @@ export default function VendorsPage() {
                   <TableCell className="text-sm">{vendor.phone}</TableCell>
                   <TableCell className="text-sm">{vendor.address}</TableCell>
                   <TableCell className="font-mono text-xs text-gray-500">{vendor.loginId}</TableCell>
+                  <TableCell>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      vendor.businessStatus === 'CLOSED'
+                        ? 'bg-gray-100 text-gray-500'
+                        : 'bg-green-100 text-green-700'
+                    }`}>
+                      {vendor.businessStatus === 'CLOSED' ? '휴무중' : '영업중'}
+                    </span>
+                  </TableCell>
                   <TableCell>
                     <select
                       value={staged[vendor.id] ?? vendor.status}
@@ -478,8 +497,15 @@ export default function VendorsPage() {
                 )}
                 {vendor.address && <div className="truncate">{vendor.address}</div>}
                 <div className="font-mono text-gray-400">{vendor.loginId}</div>
-                <div className={`font-medium ${vendor.status === 'ACTIVE' ? 'text-green-600' : vendor.status === 'PENDING' ? 'text-yellow-600' : 'text-red-500'}`}>
-                  {STATUS_LABELS[vendor.status]}
+                <div className="flex items-center gap-2">
+                  <span className={`font-medium ${vendor.status === 'ACTIVE' ? 'text-green-600' : vendor.status === 'PENDING' ? 'text-yellow-600' : 'text-red-500'}`}>
+                    {STATUS_LABELS[vendor.status]}
+                  </span>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    vendor.businessStatus === 'CLOSED' ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'
+                  }`}>
+                    {vendor.businessStatus === 'CLOSED' ? '휴무중' : '영업중'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -619,6 +645,49 @@ export default function VendorsPage() {
                         <img src={bankBookUrl} alt="통장사본" className="mt-1 h-20 rounded border object-cover" />
                       )
                     )}
+                  </div>
+                </>
+              )}
+              {/* 계좌 정보 (수정 모드에서만) */}
+              {editTarget && (
+                <>
+                  <div className="col-span-1 space-y-1.5 sm:col-span-2">
+                    <p className="text-sm font-medium text-gray-700">계좌 정보</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>은행명</Label>
+                    <Input
+                      placeholder="농협, 국민, 신한 등"
+                      value={form.bankName}
+                      onChange={(e) => setForm((f) => ({ ...f, bankName: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>계좌번호</Label>
+                    <Input
+                      placeholder="000-0000-0000-00"
+                      value={form.accountNumber}
+                      onChange={(e) => setForm((f) => ({ ...f, accountNumber: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>예금주</Label>
+                    <Input
+                      placeholder="예금주 성명"
+                      value={form.accountHolder}
+                      onChange={(e) => setForm((f) => ({ ...f, accountHolder: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>영업상태</Label>
+                    <select
+                      value={form.businessStatus}
+                      onChange={(e) => setForm((f) => ({ ...f, businessStatus: e.target.value as BusinessStatus }))}
+                      className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                    >
+                      <option value="OPEN">영업중</option>
+                      <option value="CLOSED">휴무중</option>
+                    </select>
                   </div>
                 </>
               )}

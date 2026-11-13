@@ -1,5 +1,6 @@
 export type VendorStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING'
 export type CompanyType = 'ORDERING' | 'VENDOR' | 'BOTH'
+export type BusinessStatus = 'OPEN' | 'CLOSED'
 
 export interface RegionDto {
   sido: string
@@ -25,4 +26,8 @@ export interface Vendor {
   capabilities?: string[]
   businessRegUrl?: string
   bankBookUrl?: string
+  bankName?: string
+  accountNumber?: string
+  accountHolder?: string
+  businessStatus?: BusinessStatus
 }

@@ -18,12 +18,17 @@ public record UpdateVendorRequest(
     String email,
     String companyType,
     List<RegionInput> regions,
-    List<String> capabilities
+    List<String> capabilities,
+    String bankName,
+    String accountNumber,
+    String accountHolder,
+    String businessStatus
 ) {
     public UpdateVendorCommand toCommand() {
         return new UpdateVendorCommand(
             companyName, businessNo, faxNumber, companyPhone, address, detailAddress,
-            managerName, phone, email, companyType, regions, capabilities
+            managerName, phone, email, companyType, regions, capabilities,
+            bankName, accountNumber, accountHolder, businessStatus
         );
     }
 }

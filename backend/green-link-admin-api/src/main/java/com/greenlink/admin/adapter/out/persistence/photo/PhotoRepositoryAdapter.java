@@ -3,10 +3,14 @@ package com.greenlink.admin.adapter.out.persistence.photo;
 import com.greenlink.core.domain.photo.model.Photo;
 import com.greenlink.core.domain.photo.model.PhotoType;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 public class PhotoRepositoryAdapter implements PhotoRepository {
@@ -52,8 +56,21 @@ public class PhotoRepositoryAdapter implements PhotoRepository {
     }
 
     @Override
+    public Set<Long> findOrderIdsWithSitePhotoIn(Collection<Long> orderIds) {
+        if (orderIds.isEmpty()) return Set.of();
+        return new HashSet<>(jpaRepository.findOrderIdsWithPhotoType(orderIds, PhotoType.SITE));
+    }
+
+    @Override
     public List<Photo> findSelectedByOrderId(Long orderId) {
         return jpaRepository.findByOrderIdAndIsSendToCustomerTrue(orderId).stream()
+                .map(PhotoJpaEntity::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<Photo> findRecentByVendorId(Long vendorId, int limit) {
+        return jpaRepository.findRecentByVendorId(vendorId, PageRequest.of(0, limit)).stream()
                 .map(PhotoJpaEntity::toDomain)
                 .toList();
     }

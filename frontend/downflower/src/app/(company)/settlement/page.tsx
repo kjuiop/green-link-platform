@@ -5,10 +5,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccountInfoBanner } from '@/components/settlement/AccountInfoBanner'
-import { fetchMySettlement, SettlementOrder, SettlementType } from '@/lib/api/settlementApi'
+import { fetchMySettlement, SettlementOrder, totalAmountOf } from '@/lib/api/settlementApi'
 
-type CompanyType = 'ORDERING' | 'VENDOR' | 'BOTH'
-type SettlementTab = 'ordering' | 'vendor'
+type SettlementTab = 'vendor' | 'ordering'
 
 function formatKRW(n: number) {
   return n.toLocaleString('ko-KR') + '원'
@@ -21,6 +20,50 @@ function today() {
 function firstDayOfMonth() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+}
+
+function DiffCards({
+  vendorOrders,
+  orderingOrders,
+}: {
+  vendorOrders: SettlementOrder[]
+  orderingOrders: SettlementOrder[]
+}) {
+  const vendorSum = vendorOrders.reduce((s, o) => s + (o.vendorAmount ?? 0), 0)
+  const orderingSum = orderingOrders.reduce((s, o) => s + totalAmountOf(o), 0)
+  const diff = vendorSum - orderingSum
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      <Card>
+        <CardHeader className="pb-1 pt-3">
+          <CardTitle className="text-xs font-medium text-blue-600">수주금액 합계</CardTitle>
+        </CardHeader>
+        <CardContent className="pb-3">
+          <p className="text-xl font-bold text-blue-700">{formatKRW(vendorSum)}</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-1 pt-3">
+          <CardTitle className="text-xs font-medium text-gray-500">발주금액 합계</CardTitle>
+        </CardHeader>
+        <CardContent className="pb-3">
+          <p className="text-xl font-bold text-gray-800">{formatKRW(orderingSum)}</p>
+        </CardContent>
+      </Card>
+      <Card className={diff < 0 ? 'border-red-200' : 'border-green-200'}>
+        <CardHeader className="pb-1 pt-3">
+          <CardTitle className={`text-xs font-medium ${diff < 0 ? 'text-red-600' : 'text-green-600'}`}>
+            차액 (수주−발주)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pb-3">
+          <p className={`text-xl font-bold ${diff < 0 ? 'text-red-600' : 'text-green-700'}`}>
+            {diff < 0 ? '-' : '+'}{formatKRW(Math.abs(diff))}
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
 
 function SummaryCards({ count, mainAmount, mainLabel }: { count: number; mainAmount: number; mainLabel: string }) {
@@ -38,8 +81,7 @@ function SummaryCards({ count, mainAmount, mainLabel }: { count: number; mainAmo
   )
 }
 
-function OrderTable({ orders, type }: { orders: SettlementOrder[]; type: SettlementType }) {
-  const isVendor = type === 'VENDOR'
+function OrderTable({ orders, isVendor }: { orders: SettlementOrder[]; isVendor: boolean }) {
   return (
     <div className="rounded-lg border bg-white">
       <Table>
@@ -76,7 +118,7 @@ function OrderTable({ orders, type }: { orders: SettlementOrder[]; type: Settlem
                 <TableCell className="text-right text-sm font-medium text-blue-700">
                   {isVendor
                     ? (o.vendorAmount != null ? formatKRW(o.vendorAmount) : '-')
-                    : formatKRW(o.orderAmount)
+                    : formatKRW(totalAmountOf(o))
                   }
                 </TableCell>
               </TableRow>
@@ -89,7 +131,7 @@ function OrderTable({ orders, type }: { orders: SettlementOrder[]; type: Settlem
           <span className="text-gray-600">합계: <strong>{orders.length}건</strong></span>
           {isVendor
             ? <span className="text-blue-700">수주금액: <strong>{formatKRW(orders.reduce((s, o) => s + (o.vendorAmount ?? 0), 0))}</strong></span>
-            : <span className="text-blue-700">발주금액: <strong>{formatKRW(orders.reduce((s, o) => s + o.orderAmount, 0))}</strong></span>
+            : <span className="text-blue-700">발주금액: <strong>{formatKRW(orders.reduce((s, o) => s + totalAmountOf(o), 0))}</strong></span>
           }
         </div>
       )}
@@ -100,39 +142,36 @@ function OrderTable({ orders, type }: { orders: SettlementOrder[]; type: Settlem
 export default function MySettlementPage() {
   const [from, setFrom] = useState(firstDayOfMonth())
   const [to, setTo] = useState(today())
-  const [companyType, setCompanyType] = useState<CompanyType>('VENDOR')
+  const [companyType, setCompanyType] = useState<'VENDOR' | 'ORDERING' | 'BOTH'>('VENDOR')
   const [tab, setTab] = useState<SettlementTab>('vendor')
-  const [orders, setOrders] = useState<SettlementOrder[]>([])
+  const [vendorOrders, setVendorOrders] = useState<SettlementOrder[]>([])
+  const [orderingOrders, setOrderingOrders] = useState<SettlementOrder[]>([])
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    const stored = localStorage.getItem('companyType') as CompanyType | null
-    if (stored) {
-      setCompanyType(stored)
-      if (stored === 'ORDERING') setTab('ordering')
-    }
-  }, [])
-
-  const activeType: SettlementType = tab === 'ordering' ? 'ORDERING' : 'VENDOR'
+  const [error, setError] = useState('')
 
   const load = useCallback(() => {
     if (!from || !to) return
     setLoading(true)
-    const type: SettlementType = companyType === 'ORDERING' ? 'ORDERING'
-      : companyType === 'VENDOR' ? 'VENDOR'
-      : activeType
-    fetchMySettlement(from, to, type)
-      .then(setOrders)
-      .catch(() => setOrders([]))
+    setError('')
+    fetchMySettlement(from, to)
+      .then((result) => {
+        setCompanyType(result.companyType)
+        setVendorOrders(result.vendorOrders)
+        setOrderingOrders(result.orderingOrders)
+        if (result.companyType === 'ORDERING') setTab('ordering')
+      })
+      .catch(() => setError('정산 내역을 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
-  }, [from, to, companyType, activeType])
+  }, [from, to])
 
   useEffect(() => { load() }, [load])
 
-  const mainAmount = activeType === 'VENDOR'
-    ? orders.reduce((s, o) => s + (o.vendorAmount ?? 0), 0)
-    : orders.reduce((s, o) => s + o.orderAmount, 0)
-  const mainLabel = activeType === 'VENDOR' ? '수주금액' : '발주금액'
+  const activeOrders = tab === 'vendor' ? vendorOrders : orderingOrders
+  const isVendorTab = tab === 'vendor'
+  const mainAmount = isVendorTab
+    ? vendorOrders.reduce((s, o) => s + (o.vendorAmount ?? 0), 0)
+    : orderingOrders.reduce((s, o) => s + totalAmountOf(o), 0)
+  const mainLabel = isVendorTab ? '수주금액' : '발주금액'
 
   return (
     <div className="space-y-4">
@@ -153,17 +192,16 @@ export default function MySettlementPage() {
         </div>
       </div>
 
-      {/* BOTH일 때만 탭 표시 */}
+      {error && <p className="text-sm text-red-500">{error}</p>}
+
+      {/* BOTH일 때 차액 카드 */}
+      {!loading && companyType === 'BOTH' && (
+        <DiffCards vendorOrders={vendorOrders} orderingOrders={orderingOrders} />
+      )}
+
+      {/* BOTH일 때 탭 */}
       {companyType === 'BOTH' && (
         <div className="flex gap-1 rounded-lg border bg-white p-1 w-fit">
-          <button
-            onClick={() => setTab('ordering')}
-            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-              tab === 'ordering' ? 'bg-green-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            발주 정산
-          </button>
           <button
             onClick={() => setTab('vendor')}
             className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
@@ -172,19 +210,30 @@ export default function MySettlementPage() {
           >
             수주 정산
           </button>
+          <button
+            onClick={() => setTab('ordering')}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+              tab === 'ordering' ? 'bg-green-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            발주 정산
+          </button>
         </div>
       )}
 
-      <SummaryCards
-        count={loading ? 0 : orders.length}
-        mainAmount={loading ? 0 : mainAmount}
-        mainLabel={mainLabel}
-      />
+      {/* 단일 타입 요약 카드 */}
+      {companyType !== 'BOTH' && (
+        <SummaryCards
+          count={loading ? 0 : activeOrders.length}
+          mainAmount={loading ? 0 : mainAmount}
+          mainLabel={mainLabel}
+        />
+      )}
 
       {loading ? (
         <p className="py-10 text-center text-sm text-gray-400">불러오는 중...</p>
       ) : (
-        <OrderTable orders={orders} type={activeType} />
+        <OrderTable orders={activeOrders} isVendor={isVendorTab} />
       )}
     </div>
   )

@@ -20,7 +20,11 @@ public record VendorResult(
     List<RegionDto> regions,
     List<String> capabilities,
     String businessRegUrl,
-    String bankBookUrl
+    String bankBookUrl,
+    String bankName,
+    String accountNumber,
+    String accountHolder,
+    String businessStatus
 ) {
     public record RegionDto(String sido, String sigungu) {}
 }

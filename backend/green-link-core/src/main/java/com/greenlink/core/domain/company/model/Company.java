@@ -17,6 +17,10 @@ public class Company {
     private boolean displayYn;
     private String businessRegUrl;
     private String bankBookUrl;
+    private String bankName;
+    private String accountNumber;
+    private String accountHolder;
+    private BusinessStatus businessStatus = BusinessStatus.OPEN;
     private List<CompanyRegion> regions = List.of();
     private List<CompanyCapability> capabilities = List.of();
 
@@ -36,6 +40,7 @@ public class Company {
         c.type = type;
         c.status = CompanyStatus.ACTIVE;
         c.displayYn = true;
+        c.businessStatus = BusinessStatus.OPEN;
         return c;
     }
 
@@ -43,7 +48,9 @@ public class Company {
                               String ceoName, String phone, String faxNumber,
                               String address, String detailAddress,
                               CompanyType type, CompanyStatus status, boolean displayYn,
-                              String businessRegUrl, String bankBookUrl) {
+                              String businessRegUrl, String bankBookUrl,
+                              String bankName, String accountNumber, String accountHolder,
+                              BusinessStatus businessStatus) {
         Company c = new Company();
         c.id = id;
         c.businessNo = businessNo;
@@ -58,6 +65,10 @@ public class Company {
         c.displayYn = displayYn;
         c.businessRegUrl = businessRegUrl;
         c.bankBookUrl = bankBookUrl;
+        c.bankName = bankName;
+        c.accountNumber = accountNumber;
+        c.accountHolder = accountHolder;
+        c.businessStatus = businessStatus != null ? businessStatus : BusinessStatus.OPEN;
         return c;
     }
 
@@ -87,6 +98,16 @@ public class Company {
         else if ("bankBook".equals(docType)) this.bankBookUrl = url;
     }
 
+    public void updateBankAccount(String bankName, String accountNumber, String accountHolder) {
+        this.bankName = (bankName != null && !bankName.isBlank()) ? bankName : null;
+        this.accountNumber = (accountNumber != null && !accountNumber.isBlank()) ? accountNumber : null;
+        this.accountHolder = (accountHolder != null && !accountHolder.isBlank()) ? accountHolder : null;
+    }
+
+    public void updateBusinessStatus(BusinessStatus status) {
+        this.businessStatus = status;
+    }
+
     public Long getId() { return id; }
     public String getBusinessNo() { return businessNo; }
     public String getCompanyName() { return companyName; }
@@ -100,6 +121,10 @@ public class Company {
     public boolean isDisplayYn() { return displayYn; }
     public String getBusinessRegUrl() { return businessRegUrl; }
     public String getBankBookUrl() { return bankBookUrl; }
+    public String getBankName() { return bankName; }
+    public String getAccountNumber() { return accountNumber; }
+    public String getAccountHolder() { return accountHolder; }
+    public BusinessStatus getBusinessStatus() { return businessStatus; }
     public List<CompanyRegion> getRegions() { return regions; }
     public List<CompanyCapability> getCapabilities() { return capabilities; }
 }

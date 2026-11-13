@@ -14,6 +14,8 @@ import { Pagination } from '@/components/ui/Pagination'
 import { Plus, Download } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
 import { OrderDetailPopup } from '@/components/common/OrderDetailPopup'
+import VendorInfoPopup from '@/components/vendor/VendorInfoPopup'
+import { highlightGrade } from '@/lib/utils/productName'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
 type DeletedFilter = '정상' | '삭제' | '전체'
@@ -72,13 +74,6 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '수주거절', value: '수주거절' },
 ]
 
-function isDelayed(order: Order): boolean {
-  if (order.status !== '수주완료') return false
-  if (!order.createdAt) return false
-  const created = new Date(order.createdAt.replace(' ', 'T'))
-  return Date.now() - created.getTime() > 3 * 60 * 60 * 1000
-}
-
 const PAGE_SIZE_OPTIONS = [10, 50, 100, 200, 300, 500]
 const YEAR_OPTIONS = [new Date().getFullYear(), new Date().getFullYear() - 1]
 
@@ -123,6 +118,8 @@ export default function OrdersPage() {
   const [applied1Value, setApplied1Value] = useState('')
   const [applied2Field, setApplied2Field] = useState<SearchField>('수주사명')
   const [applied2Value, setApplied2Value] = useState('')
+  const [completedAtFrom, setCompletedAtFrom] = useState('')
+  const [completedAtTo, setCompletedAtTo] = useState('')
 
   const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null
   const isSuperAdmin = role === 'SUPER_ADMIN'
@@ -132,6 +129,7 @@ export default function OrdersPage() {
 
   const [popups, setPopups] = useState<Array<{ id: string; zIndex: number }>>([])
   const nextZ = useRef(1000)
+  const [vendorPopupId, setVendorPopupId] = useState<string | null>(null)
 
   function openPopup(orderId: string) {
     isUserInteracting.current = true
@@ -168,31 +166,46 @@ export default function OrdersPage() {
     if (key2 && search2Value) params[key2] = search2Value
     if (isSuperAdmin && deletedFilter === '삭제') params.deleted = true
     if (msgTimeSortDir) { params.sortBy = 'messageSentAt'; params.sortDir = msgTimeSortDir }
+    if (isSuperAdmin && completedAtFrom) params.completedAtFrom = completedAtFrom
+    if (isSuperAdmin && completedAtTo) params.completedAtTo = completedAtTo
     return params
   }
 
-  function loadOrders(params: OrderSearchParams = {}, p = 0, size = pageSize) {
-    setLoading(true)
-    setLoadError('')
+  // silent: 자동 새로고침 등 백그라운드 갱신 — 로딩 표시 없이 데이터만 교체해 깜빡임 방지
+  function loadOrders(params: OrderSearchParams = {}, p = 0, size = pageSize, opts: { silent?: boolean } = {}) {
+    const silent = opts.silent ?? false
+    if (!silent) {
+      setLoading(true)
+      setLoadError('')
+    }
     fetchOrdersPaged(params, p, size)
-      .then(setResult)
-      .catch((err) => setLoadError(err instanceof Error ? err.message : '목록을 불러오지 못했습니다.'))
-      .finally(() => setLoading(false))
+      .then((r) => {
+        setResult(r)
+        if (silent) setLoadError('')
+      })
+      .catch((err) => {
+        // 백그라운드 갱신 실패 시 기존 목록 유지
+        if (!silent) setLoadError(err instanceof Error ? err.message : '목록을 불러오지 못했습니다.')
+      })
+      .finally(() => { if (!silent) setLoading(false) })
   }
 
   useEffect(() => { loadOrders(buildServerParams(initRange.from, initRange.to)) }, [])
-  useOrderUpdatedListener(() => loadOrders(buildServerParams(), page))
+  useOrderUpdatedListener(() => loadOrders(buildServerParams(), page, pageSize, { silent: true }))
 
   const buildServerParamsRef = useRef(buildServerParams)
   buildServerParamsRef.current = buildServerParams
+
+  const loadOrdersRef = useRef(loadOrders)
+  loadOrdersRef.current = loadOrders
 
   const isUserInteracting = useRef(false)
   useEffect(() => {
     const timer = setInterval(() => {
       if (isUserInteracting.current) return
       if (document.visibilityState !== 'visible') return
-      loadOrders(buildServerParamsRef.current(), page)
-    }, 90_000)
+      loadOrdersRef.current(buildServerParamsRef.current(), page, undefined, { silent: true })
+    }, 300_000)
     return () => clearInterval(timer)
   }, [page])
 
@@ -240,6 +253,7 @@ export default function OrdersPage() {
     setApplied1Field('주문번호'); setApplied1Value('')
     setApplied2Field('수주사명'); setApplied2Value('')
     setMsgTimeSortDir(null)
+    setCompletedAtFrom(''); setCompletedAtTo('')
     setPage(0)
     setSelectedIds(new Set())
     loadOrders({ deliveryDateFrom: r.from, deliveryDateTo: r.to }, 0)
@@ -402,6 +416,26 @@ export default function OrdersPage() {
           )}
         </div>
 
+        {/* 배송완료 일시 (슈퍼관리자 전용) */}
+        {isSuperAdmin && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="w-14 shrink-0 text-xs font-medium text-gray-500">완료일시</span>
+            <input
+              type="date"
+              value={completedAtFrom}
+              onChange={(e) => setCompletedAtFrom(e.target.value)}
+              className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+            />
+            <span className="text-sm text-gray-400">~</span>
+            <input
+              type="date"
+              value={completedAtTo}
+              onChange={(e) => setCompletedAtTo(e.target.value)}
+              className="rounded-md border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+            />
+          </div>
+        )}
+
         {/* 검색 조건 2쌍 (모바일: 1쌍, sm 이상: 2쌍) */}
         <div className="mt-2 flex flex-wrap gap-2">
           <div className="flex min-w-0 flex-1 gap-1.5">
@@ -512,7 +546,10 @@ export default function OrdersPage() {
               <TableHead className="w-64"><div>보내는이</div><div className="font-normal text-gray-400">배송지</div></TableHead>
               <TableHead>수량</TableHead>
               <TableHead><div>상품명</div><div className="font-normal text-gray-400">발주금액</div></TableHead>
-              <TableHead>배송현황</TableHead>
+              <TableHead>
+                <div>배송현황</div>
+                <div className="text-[10px] font-normal text-gray-400">주문승인시간</div>
+              </TableHead>
               <TableHead>
                 {canSeeMsgTime ? (
                   <button
@@ -592,11 +629,21 @@ export default function OrdersPage() {
                   <TableCell className="max-w-[11rem] whitespace-normal">
                     <div className="break-all text-sm">{order.orderingCompanyName || '—'}</div>
                     <div className="break-all text-xs text-gray-500">{order.ordererName || '—'}</div>
-                    <div className="break-all text-sm text-gray-400">{order.vendorName || '—'}</div>
+                    {order.vendorId ? (
+                      <button
+                        type="button"
+                        className="break-all text-left text-sm text-blue-600 hover:underline"
+                        onClick={(e) => { e.stopPropagation(); setVendorPopupId(String(order.vendorId)) }}
+                      >
+                        {order.vendorName || '—'}
+                      </button>
+                    ) : (
+                      <div className="break-all text-sm text-gray-400">{order.vendorName || '—'}</div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm">
-                      <span>{order.productName}</span>
+                      <span>{highlightGrade(order.productName)}</span>
                       <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
                     </div>
                     {order.recipientName && <div className="text-sm text-gray-400">{order.recipientName}</div>}
@@ -607,7 +654,7 @@ export default function OrdersPage() {
                   </TableCell>
                   <TableCell className="text-sm">{order.quantity}</TableCell>
                   <TableCell>
-                    <div className="text-xs text-gray-600">{order.productName}</div>
+                    <div className="text-xs text-gray-600">{highlightGrade(order.productName)}</div>
                     <div className="text-xs text-gray-400">{order.amount.toLocaleString()}원</div>
                     <div className="text-sm font-medium text-blue-600">{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원</div>
                   </TableCell>
@@ -621,8 +668,8 @@ export default function OrdersPage() {
                           loadOrders(buildServerParams(), page)
                         }}
                       />
-                      {isDelayed(order) && (
-                        <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-xs font-semibold text-orange-700">
+                      {order.isDelayed && (
+                        <span className="animate-pulse rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-600">
                           지연
                         </span>
                       )}
@@ -700,12 +747,25 @@ export default function OrdersPage() {
                         <span className="rounded bg-red-100 px-1 py-0.5 text-[10px] font-medium text-red-600">삭제</span>
                       )}
                     </div>
-                    <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
+                    <div className="mt-1 truncate text-sm font-medium">{highlightGrade(order.productName)}</div>
                     <div className="mt-0.5 text-xs text-gray-500">
                       {order.ribbonLeft || order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}
                     </div>
                     {order.vendorName && (
-                      <div className="mt-0.5 text-xs text-gray-400">수주사 {order.vendorName}</div>
+                      <div className="mt-0.5 text-xs text-gray-400">
+                        수주사{' '}
+                        {order.vendorId ? (
+                          <button
+                            type="button"
+                            className="text-blue-600 hover:underline"
+                            onClick={(e) => { e.stopPropagation(); setVendorPopupId(String(order.vendorId)) }}
+                          >
+                            {order.vendorName}
+                          </button>
+                        ) : (
+                          order.vendorName
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
@@ -761,6 +821,7 @@ export default function OrdersPage() {
           onUpdated={() => loadOrders(buildServerParams(), page)}
         />
       ))}
+      <VendorInfoPopup vendorId={vendorPopupId} onClose={() => setVendorPopupId(null)} />
     </div>
   )
 }

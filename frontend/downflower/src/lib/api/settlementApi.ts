@@ -1,6 +1,12 @@
 import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
-export type SettlementType = 'VENDOR' | 'ORDERING' | 'ALL'
+export type SettlementType = 'VENDOR' | 'ORDERING' | 'ALL' | 'BOTH'
+
+export interface MySettlementResult {
+  companyType: 'VENDOR' | 'ORDERING' | 'BOTH'
+  vendorOrders: SettlementOrder[]
+  orderingOrders: SettlementOrder[]
+}
 
 export interface SettlementSummary {
   companyId: number
@@ -22,7 +28,13 @@ export interface SettlementOrder {
   ordererName: string
   deliveredAt: string
   orderAmount: number
+  extraCost: number | null
   vendorAmount: number | null
+}
+
+/** 발주금액 = 주문금액 + 추가비용 */
+export function totalAmountOf(o: Pick<SettlementOrder, 'orderAmount' | 'extraCost'>): number {
+  return o.orderAmount + (o.extraCost ?? 0)
 }
 
 export async function fetchAdminSettlements(
@@ -88,10 +100,9 @@ export function getSettlementExcelUrl(
 
 export async function fetchMySettlement(
   fromDate: string,
-  toDate: string,
-  type: SettlementType
-): Promise<SettlementOrder[]> {
-  const params = new URLSearchParams({ fromDate, toDate, type })
+  toDate: string
+): Promise<MySettlementResult> {
+  const params = new URLSearchParams({ fromDate, toDate })
   const res = await fetchWithAuth(`/api/settlements/my?${params}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('내 정산내역 조회에 실패했습니다.')
   return res.json()

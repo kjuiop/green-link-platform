@@ -19,7 +19,9 @@ public record OrderSearchCondition(
         String orderingCompanyName,
         String sortBy,
         String sortDir,
-        Long vendorCompanyId
+        Long vendorCompanyId,
+        String completedAtFrom,
+        String completedAtTo
 ) {
     public static OrderSearchCondition of(
             String status,
@@ -30,7 +32,7 @@ public record OrderSearchCondition(
             String deliveryDateFrom,
             String deliveryDateTo
     ) {
-        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, null, null, null, null, null, null, null, null, null, null, null, null);
+        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public static OrderSearchCondition of(
@@ -43,7 +45,7 @@ public record OrderSearchCondition(
             String deliveryDateTo,
             Long orderingCompanyId
     ) {
-        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, orderingCompanyId, null, null, null, null, null, null, null, null, null, null, null);
+        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, orderingCompanyId, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public static OrderSearchCondition of(
@@ -59,7 +61,7 @@ public record OrderSearchCondition(
             String messageStatus,
             String ribbonLeft
     ) {
-        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, orderingCompanyId, receiverName, messageStatus, ribbonLeft, null, null, null, null, null, null, null, null);
+        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, orderingCompanyId, receiverName, messageStatus, ribbonLeft, null, null, null, null, null, null, null, null, null, null);
     }
 
     public static OrderSearchCondition of(
@@ -76,7 +78,7 @@ public record OrderSearchCondition(
             String ribbonLeft,
             Boolean deleted
     ) {
-        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, orderingCompanyId, receiverName, messageStatus, ribbonLeft, deleted, null, null, null, null, null, null, null);
+        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, orderingCompanyId, receiverName, messageStatus, ribbonLeft, deleted, null, null, null, null, null, null, null, null, null);
     }
 
     public static OrderSearchCondition of(
@@ -99,6 +101,31 @@ public record OrderSearchCondition(
             String sortBy,
             String sortDir
     ) {
-        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, orderingCompanyId, receiverName, messageStatus, ribbonLeft, deleted, address, recipientName, vendorName, orderingCompanyName, sortBy, sortDir, null);
+        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, orderingCompanyId, receiverName, messageStatus, ribbonLeft, deleted, address, recipientName, vendorName, orderingCompanyName, sortBy, sortDir, null, null, null);
+    }
+
+    public static OrderSearchCondition of(
+            String status,
+            Long vendorId,
+            String orderNumber,
+            String productName,
+            String ordererName,
+            String deliveryDateFrom,
+            String deliveryDateTo,
+            Long orderingCompanyId,
+            String receiverName,
+            String messageStatus,
+            String ribbonLeft,
+            Boolean deleted,
+            String address,
+            String recipientName,
+            String vendorName,
+            String orderingCompanyName,
+            String sortBy,
+            String sortDir,
+            String completedAtFrom,
+            String completedAtTo
+    ) {
+        return new OrderSearchCondition(status, vendorId, orderNumber, productName, ordererName, deliveryDateFrom, deliveryDateTo, orderingCompanyId, receiverName, messageStatus, ribbonLeft, deleted, address, recipientName, vendorName, orderingCompanyName, sortBy, sortDir, null, completedAtFrom, completedAtTo);
     }
 }

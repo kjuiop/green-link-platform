@@ -5,6 +5,8 @@ import com.greenlink.admin.adapter.in.web.dto.CreateVendorRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateVendorRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateVendorStatusRequest;
 import com.greenlink.core.application.common.dto.PageResult;
+import com.greenlink.core.application.photo.dto.PhotoResult;
+import com.greenlink.core.application.photo.usecase.GetPhotosUseCase;
 import com.greenlink.core.application.vendor.dto.VendorResult;
 import com.greenlink.core.application.vendor.usecase.ChangeVendorPasswordUseCase;
 import com.greenlink.core.application.vendor.usecase.CreateVendorUseCase;
@@ -36,6 +38,7 @@ public class VendorController {
     private final UpdateVendorUseCase updateVendorUseCase;
     private final UpdateVendorStatusUseCase updateVendorStatusUseCase;
     private final DeleteVendorUseCase deleteVendorUseCase;
+    private final GetPhotosUseCase getPhotosUseCase;
     private static final Set<String> ALLOWED_DOC_TYPES = Set.of("businessReg", "bankBook");
 
     private final UploadVendorDocumentUseCase uploadVendorDocumentUseCase;
@@ -47,6 +50,7 @@ public class VendorController {
                             UpdateVendorUseCase updateVendorUseCase,
                             UpdateVendorStatusUseCase updateVendorStatusUseCase,
                             DeleteVendorUseCase deleteVendorUseCase,
+                            GetPhotosUseCase getPhotosUseCase,
                             UploadVendorDocumentUseCase uploadVendorDocumentUseCase,
                             ChangeVendorPasswordUseCase changeVendorPasswordUseCase) {
         this.getVendorsUseCase = getVendorsUseCase;
@@ -55,6 +59,7 @@ public class VendorController {
         this.updateVendorUseCase = updateVendorUseCase;
         this.updateVendorStatusUseCase = updateVendorStatusUseCase;
         this.deleteVendorUseCase = deleteVendorUseCase;
+        this.getPhotosUseCase = getPhotosUseCase;
         this.uploadVendorDocumentUseCase = uploadVendorDocumentUseCase;
         this.changeVendorPasswordUseCase = changeVendorPasswordUseCase;
     }
@@ -114,5 +119,12 @@ public class VendorController {
                                                @RequestBody @Valid ChangeVendorPasswordRequest req) {
         changeVendorPasswordUseCase.changePassword(id, req.newPassword());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{vendorId}/recent-photos")
+    public ResponseEntity<List<PhotoResult>> getRecentPhotos(
+            @PathVariable Long vendorId,
+            @RequestParam(defaultValue = "5") int limit) {
+        return ResponseEntity.ok(getPhotosUseCase.getRecentPhotosByVendor(vendorId, limit));
     }
 }

@@ -59,4 +59,5 @@ export interface Order {
   receiptReceiverName?: string
   receiptReceiverRelation?: string
   messageSentAt?: string
+  isDelayed?: boolean
 }

@@ -18,7 +18,7 @@ import {
 
 export const formatKRW = (n: number) => n.toLocaleString('ko-KR') + '원'
 
-type ViewTab = '전체' | '수주사별' | '발주사별'
+type ViewTab = '전체' | '수주사별' | '발주사별' | '수발주사별'
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -46,7 +46,7 @@ export default function AdminSettlementPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const tabToType: Record<ViewTab, SettlementType> = { '전체': 'ALL', '수주사별': 'VENDOR', '발주사별': 'ORDERING' }
+  const tabToType: Record<ViewTab, SettlementType> = { '전체': 'ALL', '수주사별': 'VENDOR', '발주사별': 'ORDERING', '수발주사별': 'BOTH' }
   const settlementType = tabToType[tab]
 
   const load = useCallback(() => {
@@ -70,10 +70,15 @@ export default function AdminSettlementPage() {
   const totalVendorAmount = summaries.reduce((s, v) => s + v.vendorAmountTotal, 0)
   const settledCount = summaries.filter((v) => v.completed).length
 
-  function goToDetail(s: SettlementSummary) {
+  function goToDetail(s: SettlementSummary, typeOverride?: SettlementType) {
+    const type = typeOverride ?? settlementType
     router.push(
-      `/settings/settlement/${s.companyId}?from=${from}&to=${to}&type=${settlementType}&name=${encodeURIComponent(s.companyName)}`
+      `/settings/settlement/${s.companyId}?from=${from}&to=${to}&type=${type}&name=${encodeURIComponent(s.companyName)}`
     )
+  }
+
+  function resolveTypeForCompany(companyType: string): SettlementType {
+    return companyType === 'ORDERING' ? 'ORDERING' : 'VENDOR'
   }
 
   async function toggleSettled(s: SettlementSummary) {
@@ -117,7 +122,7 @@ export default function AdminSettlementPage() {
 
       {/* 탭 */}
       <div className="flex gap-1 rounded-lg border bg-white p-1 w-fit">
-        {(['전체', '수주사별', '발주사별'] as ViewTab[]).map((t) => (
+        {(['전체', '수주사별', '발주사별', '수발주사별'] as ViewTab[]).map((t) => (
           <button
             key={t}
             onClick={() => { setTab(t); setSearch('') }}
@@ -161,42 +166,69 @@ export default function AdminSettlementPage() {
       <div className="rounded-lg border bg-white">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>업체명</TableHead>
-              <TableHead>유형</TableHead>
-              <TableHead className="text-right">배송완료</TableHead>
-              <TableHead className="text-right">발주금액</TableHead>
-              <TableHead className="text-right">지급금액</TableHead>
-              {tab !== '전체' && <TableHead className="text-center">상태</TableHead>}
-              {tab !== '전체' && <TableHead className="text-center">처리</TableHead>}
-            </TableRow>
+            {tab === '수발주사별' ? (
+              <TableRow>
+                <TableHead>업체명</TableHead>
+                <TableHead className="text-right">수주금액</TableHead>
+                <TableHead className="text-right">발주금액</TableHead>
+                <TableHead className="text-right">차액 (수주−발주)</TableHead>
+              </TableRow>
+            ) : (
+              <TableRow>
+                <TableHead>업체명</TableHead>
+                <TableHead>유형</TableHead>
+                <TableHead className="text-right">배송완료</TableHead>
+                <TableHead className="text-right">발주금액</TableHead>
+                <TableHead className="text-right">지급금액</TableHead>
+                {tab !== '전체' && <TableHead className="text-center">상태</TableHead>}
+                {tab !== '전체' && <TableHead className="text-center">처리</TableHead>}
+              </TableRow>
+            )}
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={tab !== '전체' ? 7 : 5} className="py-10 text-center text-sm text-gray-400">불러오는 중...</TableCell>
+                <TableCell colSpan={tab === '수발주사별' ? 4 : tab !== '전체' ? 7 : 5} className="py-10 text-center text-sm text-gray-400">불러오는 중...</TableCell>
               </TableRow>
             ) : displayed.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={tab !== '전체' ? 7 : 5} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={tab === '수발주사별' ? 4 : tab !== '전체' ? 7 : 5} className="py-10 text-center text-sm text-gray-400">
                   해당 기간에 배송완료된 주문이 없습니다.
                 </TableCell>
               </TableRow>
+            ) : tab === '수발주사별' ? (
+              displayed.map((v) => {
+                const diff = v.vendorAmountTotal - v.orderAmountTotal
+                return (
+                  <TableRow key={v.companyId} className="hover:bg-gray-50">
+                    <TableCell>
+                      <button
+                        type="button"
+                        className="font-medium text-blue-600 hover:underline"
+                        onClick={() => goToDetail(v, 'VENDOR')}
+                      >
+                        {v.companyName}
+                      </button>
+                    </TableCell>
+                    <TableCell className="text-right text-sm font-medium text-blue-700">{formatKRW(v.vendorAmountTotal)}</TableCell>
+                    <TableCell className="text-right text-sm text-gray-700">{formatKRW(v.orderAmountTotal)}</TableCell>
+                    <TableCell className={`text-right text-sm font-semibold ${diff < 0 ? 'text-red-600' : 'text-green-700'}`}>
+                      {diff < 0 ? '-' : '+'}{formatKRW(Math.abs(diff))}
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             ) : (
               displayed.map((v) => (
                 <TableRow key={v.companyId} className="hover:bg-gray-50">
                   <TableCell>
-                    {tab !== '전체' ? (
-                      <button
-                        type="button"
-                        className="font-medium text-blue-600 hover:underline"
-                        onClick={() => goToDetail(v)}
-                      >
-                        {v.companyName}
-                      </button>
-                    ) : (
-                      <span className="font-medium">{v.companyName}</span>
-                    )}
+                    <button
+                      type="button"
+                      className="font-medium text-blue-600 hover:underline"
+                      onClick={() => goToDetail(v, tab === '전체' ? resolveTypeForCompany(v.companyType) : undefined)}
+                    >
+                      {v.companyName}
+                    </button>
                   </TableCell>
                   <TableCell className="text-sm text-gray-500">{companyTypeLabel(v.companyType)}</TableCell>
                   <TableCell className="text-right text-sm">{v.count}건</TableCell>

@@ -9,5 +9,11 @@ public record SettlementOrderResult(
         String ordererName,
         String deliveredAt,
         long orderAmount,
-        Long vendorAmount
-) {}
+        Long vendorAmount,
+        Long extraCost
+) {
+    /** 발주금액 = 주문금액 + 추가비용 */
+    public long totalAmount() {
+        return orderAmount + (extraCost != null ? extraCost : 0L);
+    }
+}

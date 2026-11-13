@@ -61,6 +61,7 @@ type BackendOrder = {
   receiptReceiverRelation: string | null
   isDeleted: boolean
   messageSentAt: string | null
+  isDelayed: boolean
 }
 
 export type CreateOrderPayload = {
@@ -154,6 +155,7 @@ function toFrontend(o: BackendOrder): Order {
     hasReceipt: o.hasReceipt,
     receiptReceiverName: o.receiptReceiverName ?? undefined,
     receiptReceiverRelation: o.receiptReceiverRelation ?? undefined,
+    isDelayed: o.isDelayed ?? false,
   }
 }
 
@@ -188,6 +190,8 @@ export type OrderSearchParams = {
   orderingCompanyName?: string
   sortBy?: string
   sortDir?: string
+  completedAtFrom?: string
+  completedAtTo?: string
 }
 
 function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: number): string {
@@ -210,6 +214,8 @@ function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: numbe
   if (params?.orderingCompanyName) query.set('orderingCompanyName', params.orderingCompanyName)
   if (params?.sortBy) query.set('sortBy', params.sortBy)
   if (params?.sortDir) query.set('sortDir', params.sortDir)
+  if (params?.completedAtFrom) query.set('completedAtFrom', params.completedAtFrom)
+  if (params?.completedAtTo) query.set('completedAtTo', params.completedAtTo)
   if (page !== undefined) query.set('page', String(page))
   if (size !== undefined) query.set('size', String(size))
   return query.toString()

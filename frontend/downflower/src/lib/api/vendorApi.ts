@@ -21,6 +21,10 @@ type BackendVendor = {
   capabilities?: string[]
   businessRegUrl?: string
   bankBookUrl?: string
+  bankName?: string
+  accountNumber?: string
+  accountHolder?: string
+  businessStatus?: string
 }
 
 type CreateVendorPayload = {
@@ -51,6 +55,10 @@ type UpdateVendorPayload = {
   companyType?: string
   regions?: RegionDto[]
   capabilities?: string[]
+  bankName?: string
+  accountNumber?: string
+  accountHolder?: string
+  businessStatus?: string
 }
 
 function toFrontend(v: BackendVendor): Vendor {
@@ -73,6 +81,10 @@ function toFrontend(v: BackendVendor): Vendor {
     capabilities: v.capabilities ?? [],
     businessRegUrl: v.businessRegUrl ?? undefined,
     bankBookUrl: v.bankBookUrl ?? undefined,
+    bankName: v.bankName ?? undefined,
+    accountNumber: v.accountNumber ?? undefined,
+    accountHolder: v.accountHolder ?? undefined,
+    businessStatus: (v.businessStatus as Vendor['businessStatus']) ?? 'OPEN',
   }
 }
 
@@ -167,6 +179,19 @@ export async function uploadVendorDocument(
     throw new Error(data.message ?? '문서 업로드에 실패했습니다.')
   }
   return res.json()
+}
+
+export type VendorRecentPhoto = {
+  id: number
+  photoUrl: string
+  uploadedAt: string | null
+}
+
+export async function fetchVendorRecentPhotos(vendorId: string, limit = 5): Promise<VendorRecentPhoto[]> {
+  const res = await fetchWithAuth(`/api/vendors/${vendorId}/recent-photos?limit=${limit}`, { headers: authHeaders() })
+  if (!res.ok) return []
+  const data: Array<{ id: number; photoUrl: string; uploadedAt: string | null }> = await res.json()
+  return data.map((p) => ({ id: p.id, photoUrl: p.photoUrl, uploadedAt: p.uploadedAt }))
 }
 
 export async function changeVendorPassword(vendorId: string, newPassword: string): Promise<void> {

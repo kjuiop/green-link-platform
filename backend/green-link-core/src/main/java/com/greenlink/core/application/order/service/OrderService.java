@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -192,12 +193,13 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Map<Long, MessageInfo> msgInfoMap = buildMessageInfoMap(orderIds);
         Map<Long, Long> refCountMap = orderIds.isEmpty() ? Map.of() : referencePhotoRepository.countByOrderIds(orderIds);
         Map<Long, ReceiptConfirmation> receiptMap = buildReceiptMap(orderIds);
+        Set<Long> sitePhotoOrderIds = photoRepository.findOrderIdsWithSitePhotoIn(orderIds);
         Page<OrderResult> resultPage = page.map(o -> {
             VendorInfo v = infoMap.get(o.getVendorId());
             OrderingInfo oi = o.getOrderingCompanyId() != null ? orderingInfoMap.get(o.getOrderingCompanyId()) : null;
             int refCount = refCountMap.getOrDefault(o.getId(), 0L).intValue();
             MessageInfo mi = msgInfoMap.getOrDefault(o.getId(), new MessageInfo("NONE", null));
-            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, mi.status(), mi.sentAt(), refCount, receiptMap.get(o.getId()));
+            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, mi.status(), mi.sentAt(), refCount, receiptMap.get(o.getId()), sitePhotoOrderIds);
         });
         long totalAmount = orderRepository.sumAmount(condition);
         return PageResult.of(resultPage, totalAmount);
@@ -253,6 +255,10 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     }
 
     private OrderResult toResult(Order order, String vendorName, String vendorPhone, String orderingCompanyName, String orderingCompanyPhone, String messageStatus, String messageSentAt, int referencePhotoCount, ReceiptConfirmation receipt) {
+        return toResult(order, vendorName, vendorPhone, orderingCompanyName, orderingCompanyPhone, messageStatus, messageSentAt, referencePhotoCount, receipt, null);
+    }
+
+    private OrderResult toResult(Order order, String vendorName, String vendorPhone, String orderingCompanyName, String orderingCompanyPhone, String messageStatus, String messageSentAt, int referencePhotoCount, ReceiptConfirmation receipt, Set<Long> sitePhotoOrderIds) {
         return new OrderResult(
                 order.getId(),
                 order.getOrderNumber(),
@@ -306,8 +312,51 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 order.isDeleted(),
                 messageSentAt,
                 order.getCreatedByAdminId(),
-                order.getUpdatedByAdminId()
+                order.getUpdatedByAdminId(),
+                calcIsDelayed(order, sitePhotoOrderIds)
         );
+    }
+
+    private boolean calcIsDelayed(Order order) {
+        return calcIsDelayed(order, null);
+    }
+
+    private boolean calcIsDelayed(Order order, Set<Long> sitePhotoOrderIds) {
+        if (order.getStatus() != OrderStatus.ACCEPTED) return false;
+        LocalDateTime now = LocalDateTime.now();
+
+        if ("결혼식".equals(order.getEventType())) {
+            if (!"scheduled".equals(order.getMessageSchedule())) return false;
+            LocalDateTime deadline = parseDeadline(order.getDeliveryDate(),
+                    order.getScheduledMessageHour(), order.getScheduledMessageMinute());
+            if (deadline == null || now.isBefore(deadline)) return false;
+            boolean hasSitePhoto = sitePhotoOrderIds != null
+                    ? sitePhotoOrderIds.contains(order.getId())
+                    : photoRepository.existsByOrderIdAndPhotoType(order.getId(), com.greenlink.core.domain.photo.model.PhotoType.SITE);
+            return !hasSitePhoto;
+        } else {
+            if ("3시간이내".equals(order.getDeliveryTimeType())) {
+                if (order.getAcceptedAt() == null) return false;
+                LocalDateTime accepted = LocalDateTime.parse(order.getAcceptedAt(),
+                        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                return now.isAfter(accepted.plusHours(3));
+            }
+            if ("직접입력".equals(order.getDeliveryTimeType())) return false;
+            LocalDateTime deadline = parseDeadline(order.getDeliveryDate(),
+                    order.getDeliveryTimeHour(), order.getDeliveryTimeMinute());
+            return deadline != null && now.isAfter(deadline);
+        }
+    }
+
+    private LocalDateTime parseDeadline(String date, String hour, String minute) {
+        if (date == null || hour == null || minute == null) return null;
+        try {
+            return LocalDateTime.parse(
+                date + " " + String.format("%02d", Integer.parseInt(hour))
+                     + ":" + String.format("%02d", Integer.parseInt(minute)),
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+            );
+        } catch (Exception e) { return null; }
     }
 
     private Map<Long, ReceiptConfirmation> buildReceiptMap(List<Long> orderIds) {

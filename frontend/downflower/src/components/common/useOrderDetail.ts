@@ -81,6 +81,10 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
       setSaveError('수주업체를 선택해 주세요.')
       return
     }
+    if (draft.eventType === '결혼식' && draft.messageSchedule !== 'scheduled') {
+      setSaveError('결혼식 주문은 사진 예약발송 시각을 반드시 설정해주세요.')
+      return
+    }
     setSaving(true)
     setSaveError(null)
     try {

@@ -16,5 +16,9 @@ public record UpdateVendorCommand(
     String email,
     String companyType,
     List<RegionInput> regions,
-    List<String> capabilities
+    List<String> capabilities,
+    String bankName,
+    String accountNumber,
+    String accountHolder,
+    String businessStatus
 ) {}
