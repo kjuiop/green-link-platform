@@ -15,6 +15,7 @@ import { Plus, Download } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
 import { OrderDetailPopup } from '@/components/common/OrderDetailPopup'
 import VendorInfoPopup from '@/components/vendor/VendorInfoPopup'
+import { highlightGrade } from '@/lib/utils/productName'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
 type DeletedFilter = '정상' | '삭제' | '전체'
@@ -608,7 +609,7 @@ export default function OrdersPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm">
-                      <span>{order.productName}</span>
+                      <span>{highlightGrade(order.productName)}</span>
                       <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
                     </div>
                     {order.recipientName && <div className="text-sm text-gray-400">{order.recipientName}</div>}
@@ -619,7 +620,7 @@ export default function OrdersPage() {
                   </TableCell>
                   <TableCell className="text-sm">{order.quantity}</TableCell>
                   <TableCell>
-                    <div className="text-xs text-gray-600">{order.productName}</div>
+                    <div className="text-xs text-gray-600">{highlightGrade(order.productName)}</div>
                     <div className="text-xs text-gray-400">{order.amount.toLocaleString()}원</div>
                     <div className="text-sm font-medium text-blue-600">{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원</div>
                   </TableCell>
@@ -712,7 +713,7 @@ export default function OrdersPage() {
                         <span className="rounded bg-red-100 px-1 py-0.5 text-[10px] font-medium text-red-600">삭제</span>
                       )}
                     </div>
-                    <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
+                    <div className="mt-1 truncate text-sm font-medium">{highlightGrade(order.productName)}</div>
                     <div className="mt-0.5 text-xs text-gray-500">
                       {order.ribbonLeft || order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}
                     </div>
