@@ -206,7 +206,8 @@ public class SettlementService implements
 
     @Override
     public MySettlementResult getMySettlement(Long companyId, String fromDate, String toDate) {
-        Company company = companyRepository.findById(companyId).orElseThrow();
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new IllegalStateException("Company not found: " + companyId));
         CompanyType type = company.getType();
 
         List<SettlementOrderResult> vendorOrders = type == CompanyType.VENDOR || type == CompanyType.BOTH

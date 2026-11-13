@@ -147,10 +147,12 @@ export default function MySettlementPage() {
   const [vendorOrders, setVendorOrders] = useState<SettlementOrder[]>([])
   const [orderingOrders, setOrderingOrders] = useState<SettlementOrder[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const load = useCallback(() => {
     if (!from || !to) return
     setLoading(true)
+    setError('')
     fetchMySettlement(from, to)
       .then((result) => {
         setCompanyType(result.companyType)
@@ -158,7 +160,7 @@ export default function MySettlementPage() {
         setOrderingOrders(result.orderingOrders)
         if (result.companyType === 'ORDERING') setTab('ordering')
       })
-      .catch(() => {})
+      .catch(() => setError('정산 내역을 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
   }, [from, to])
 
@@ -189,6 +191,8 @@ export default function MySettlementPage() {
           <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-36" />
         </div>
       </div>
+
+      {error && <p className="text-sm text-red-500">{error}</p>}
 
       {/* BOTH일 때 차액 카드 */}
       {!loading && companyType === 'BOTH' && (
