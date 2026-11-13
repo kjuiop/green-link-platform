@@ -205,7 +205,7 @@ export default function OrdersPage() {
       if (isUserInteracting.current) return
       if (document.visibilityState !== 'visible') return
       loadOrdersRef.current(buildServerParamsRef.current(), page, undefined, { silent: true })
-    }, 90_000)
+    }, 300_000)
     return () => clearInterval(timer)
   }, [page])
 
