@@ -1,6 +1,7 @@
 package com.greenlink.admin.adapter.out.persistence.company;
 
 import com.greenlink.admin.adapter.out.persistence.BaseJpaEntity;
+import com.greenlink.core.domain.company.model.BusinessStatus;
 import com.greenlink.core.domain.company.model.Company;
 import com.greenlink.core.domain.company.model.CompanyStatus;
 import com.greenlink.core.domain.company.model.CompanyType;
@@ -61,6 +62,10 @@ public class CompanyJpaEntity extends BaseJpaEntity {
     @Column(length = 50)
     private String accountHolder;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(20) DEFAULT 'OPEN'")
+    private BusinessStatus businessStatus = BusinessStatus.OPEN;
+
     protected CompanyJpaEntity() {}
 
     public static CompanyJpaEntity from(Company company) {
@@ -82,12 +87,13 @@ public class CompanyJpaEntity extends BaseJpaEntity {
         e.bankName = company.getBankName();
         e.accountNumber = company.getAccountNumber();
         e.accountHolder = company.getAccountHolder();
+        e.businessStatus = company.getBusinessStatus() != null ? company.getBusinessStatus() : BusinessStatus.OPEN;
         return e;
     }
 
     public Company toDomain() {
         return Company.of(id, businessNo, companyName, ceoName, phone, faxNumber,
                 address, detailAddress, type, status, displayYn, businessRegUrl, bankBookUrl,
-                bankName, accountNumber, accountHolder);
+                bankName, accountNumber, accountHolder, businessStatus);
     }
 }

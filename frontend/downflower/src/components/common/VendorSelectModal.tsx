@@ -349,31 +349,44 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                   {selectedSido ? '해당 지역에 등록된 업체가 없습니다.' : '지도에서 지역을 선택하세요.'}
                 </p>
               ) : (
-                filteredVendors.map((v) => (
-                  <button
-                    key={v.id}
-                    onClick={() => onSelect(v)}
-                    className="w-full rounded-lg border bg-white p-3 text-left hover:border-green-500 hover:bg-green-50 transition-colors"
-                  >
-                    <p className="text-sm font-medium">{v.name}</p>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {(v.capabilities ?? []).map((cap) => (
-                        <span key={cap} className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
-                          {CAP_LABEL[cap] ?? cap}
-                        </span>
-                      ))}
-                    </div>
-                    {(v.regions ?? []).length > 0 && (
-                      <p className="mt-1 text-xs text-gray-400">
-                        {(v.regions ?? [])
-                          .slice(0, 3)
-                          .map((r) => `${r.sido.replace(/(특별자치시|특별자치도|광역시|특별시|자치시|자치도|시|도)$/, '')} ${r.sigungu}`)
-                          .join(' · ')}
-                        {(v.regions ?? []).length > 3 && ` 외 ${(v.regions ?? []).length - 3}곳`}
-                      </p>
-                    )}
-                  </button>
-                ))
+                filteredVendors.map((v) => {
+                  const isClosed = v.businessStatus === 'CLOSED'
+                  return (
+                    <button
+                      key={v.id}
+                      onClick={() => !isClosed && onSelect(v)}
+                      disabled={isClosed}
+                      className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                        isClosed
+                          ? 'cursor-not-allowed bg-gray-50 opacity-60'
+                          : 'bg-white hover:border-green-500 hover:bg-green-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">{v.name}</p>
+                        {isClosed && (
+                          <span className="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-500">휴무중</span>
+                        )}
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {(v.capabilities ?? []).map((cap) => (
+                          <span key={cap} className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
+                            {CAP_LABEL[cap] ?? cap}
+                          </span>
+                        ))}
+                      </div>
+                      {(v.regions ?? []).length > 0 && (
+                        <p className="mt-1 text-xs text-gray-400">
+                          {(v.regions ?? [])
+                            .slice(0, 3)
+                            .map((r) => `${r.sido.replace(/(특별자치시|특별자치도|광역시|특별시|자치시|자치도|시|도)$/, '')} ${r.sigungu}`)
+                            .join(' · ')}
+                          {(v.regions ?? []).length > 3 && ` 외 ${(v.regions ?? []).length - 3}곳`}
+                        </p>
+                      )}
+                    </button>
+                  )
+                })
               )}
             </div>
           </div>

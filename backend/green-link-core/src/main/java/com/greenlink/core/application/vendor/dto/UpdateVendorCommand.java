@@ -19,5 +19,6 @@ public record UpdateVendorCommand(
     List<String> capabilities,
     String bankName,
     String accountNumber,
-    String accountHolder
+    String accountHolder,
+    String businessStatus
 ) {}

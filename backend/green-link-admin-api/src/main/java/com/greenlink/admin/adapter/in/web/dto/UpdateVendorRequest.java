@@ -21,13 +21,14 @@ public record UpdateVendorRequest(
     List<String> capabilities,
     String bankName,
     String accountNumber,
-    String accountHolder
+    String accountHolder,
+    String businessStatus
 ) {
     public UpdateVendorCommand toCommand() {
         return new UpdateVendorCommand(
             companyName, businessNo, faxNumber, companyPhone, address, detailAddress,
             managerName, phone, email, companyType, regions, capabilities,
-            bankName, accountNumber, accountHolder
+            bankName, accountNumber, accountHolder, businessStatus
         );
     }
 }

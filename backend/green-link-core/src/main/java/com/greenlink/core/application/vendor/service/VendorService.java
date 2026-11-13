@@ -7,6 +7,7 @@ import com.greenlink.core.application.vendor.dto.VendorResult;
 import com.greenlink.core.application.vendor.dto.VendorResult.RegionDto;
 import com.greenlink.core.application.vendor.dto.VendorSignupCommand;
 import com.greenlink.core.application.vendor.dto.VendorSignupCommand.RegionInput;
+import com.greenlink.core.domain.company.model.BusinessStatus;
 import com.greenlink.core.domain.company.model.CompanyCapability;
 import com.greenlink.core.domain.company.model.CompanyRegion;
 import com.greenlink.core.application.vendor.usecase.ChangeVendorPasswordUseCase;
@@ -179,6 +180,11 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
                 company.updateType(parseCompanyType(cmd.companyType()));
             }
             company.updateBankAccount(cmd.bankName(), cmd.accountNumber(), cmd.accountHolder());
+            if (cmd.businessStatus() != null && !cmd.businessStatus().isBlank()) {
+                try {
+                    company.updateBusinessStatus(BusinessStatus.valueOf(cmd.businessStatus().toUpperCase()));
+                } catch (IllegalArgumentException ignored) {}
+            }
             Company savedCompany = companyRepository.save(company);
 
             if (cmd.regions() != null) {
@@ -379,7 +385,8 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             company != null ? company.getBankBookUrl() : null,
             company != null ? company.getBankName() : null,
             company != null ? company.getAccountNumber() : null,
-            company != null ? company.getAccountHolder() : null
+            company != null ? company.getAccountHolder() : null,
+            company != null && company.getBusinessStatus() != null ? company.getBusinessStatus().name() : BusinessStatus.OPEN.name()
         );
     }
 }

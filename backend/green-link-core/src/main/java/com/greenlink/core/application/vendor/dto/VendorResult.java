@@ -23,7 +23,8 @@ public record VendorResult(
     String bankBookUrl,
     String bankName,
     String accountNumber,
-    String accountHolder
+    String accountHolder,
+    String businessStatus
 ) {
     public record RegionDto(String sido, String sigungu) {}
 }
