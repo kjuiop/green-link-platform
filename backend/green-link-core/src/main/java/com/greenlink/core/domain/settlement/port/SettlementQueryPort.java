@@ -20,6 +20,7 @@ public interface SettlementQueryPort {
             String ordererName,
             String completedAt,
             long orderAmount,
-            Long vendorAmount
+            Long vendorAmount,
+            Long extraCost
     ) {}
 }

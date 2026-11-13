@@ -28,7 +28,13 @@ export interface SettlementOrder {
   ordererName: string
   deliveredAt: string
   orderAmount: number
+  extraCost: number | null
   vendorAmount: number | null
+}
+
+/** 발주금액 = 주문금액 + 추가비용 */
+export function totalAmountOf(o: Pick<SettlementOrder, 'orderAmount' | 'extraCost'>): number {
+  return o.orderAmount + (o.extraCost ?? 0)
 }
 
 export async function fetchAdminSettlements(

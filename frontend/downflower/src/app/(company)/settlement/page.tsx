@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccountInfoBanner } from '@/components/settlement/AccountInfoBanner'
-import { fetchMySettlement, SettlementOrder } from '@/lib/api/settlementApi'
+import { fetchMySettlement, SettlementOrder, totalAmountOf } from '@/lib/api/settlementApi'
 
 type SettlementTab = 'vendor' | 'ordering'
 
@@ -30,7 +30,7 @@ function DiffCards({
   orderingOrders: SettlementOrder[]
 }) {
   const vendorSum = vendorOrders.reduce((s, o) => s + (o.vendorAmount ?? 0), 0)
-  const orderingSum = orderingOrders.reduce((s, o) => s + o.orderAmount, 0)
+  const orderingSum = orderingOrders.reduce((s, o) => s + totalAmountOf(o), 0)
   const diff = vendorSum - orderingSum
   return (
     <div className="grid grid-cols-3 gap-3">
@@ -118,7 +118,7 @@ function OrderTable({ orders, isVendor }: { orders: SettlementOrder[]; isVendor:
                 <TableCell className="text-right text-sm font-medium text-blue-700">
                   {isVendor
                     ? (o.vendorAmount != null ? formatKRW(o.vendorAmount) : '-')
-                    : formatKRW(o.orderAmount)
+                    : formatKRW(totalAmountOf(o))
                   }
                 </TableCell>
               </TableRow>
@@ -131,7 +131,7 @@ function OrderTable({ orders, isVendor }: { orders: SettlementOrder[]; isVendor:
           <span className="text-gray-600">합계: <strong>{orders.length}건</strong></span>
           {isVendor
             ? <span className="text-blue-700">수주금액: <strong>{formatKRW(orders.reduce((s, o) => s + (o.vendorAmount ?? 0), 0))}</strong></span>
-            : <span className="text-blue-700">발주금액: <strong>{formatKRW(orders.reduce((s, o) => s + o.orderAmount, 0))}</strong></span>
+            : <span className="text-blue-700">발주금액: <strong>{formatKRW(orders.reduce((s, o) => s + totalAmountOf(o), 0))}</strong></span>
           }
         </div>
       )}
@@ -170,7 +170,7 @@ export default function MySettlementPage() {
   const isVendorTab = tab === 'vendor'
   const mainAmount = isVendorTab
     ? vendorOrders.reduce((s, o) => s + (o.vendorAmount ?? 0), 0)
-    : orderingOrders.reduce((s, o) => s + o.orderAmount, 0)
+    : orderingOrders.reduce((s, o) => s + totalAmountOf(o), 0)
   const mainLabel = isVendorTab ? '수주금액' : '발주금액'
 
   return (
