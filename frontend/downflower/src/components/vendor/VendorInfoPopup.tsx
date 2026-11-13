@@ -30,6 +30,7 @@ export default function VendorInfoPopup({ vendorId, onClose }: Props) {
     if (!vendorId) {
       setVendor(null)
       setPhotos([])
+      setExpandedPhoto(null)
       return
     }
     setLoading(true)
@@ -59,14 +60,14 @@ export default function VendorInfoPopup({ vendorId, onClose }: Props) {
             <div className="space-y-5 text-sm">
               {/* 기본정보 */}
               <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-                <InfoRow label="대표자명" value={vendor.name} />
+                <InfoRow label="업체명" value={vendor.name} />
                 <InfoRow label="업체 연락처" value={vendor.companyPhone} />
                 <InfoRow label="담당자명" value={vendor.managerName} />
                 <InfoRow label="담당자 연락처" value={vendor.phone} />
                 <InfoRow label="주소" value={[vendor.address, vendor.detailAddress].filter(Boolean).join(' ')} className="col-span-2" />
                 <InfoRow
                   label="서비스 지역"
-                  value={vendor.regions?.map((r) => r.sigunguName ?? r.sidoName).join(', ')}
+                  value={vendor.regions?.map((r) => r.sigungu ?? r.sido).join(', ')}
                   className="col-span-2"
                 />
                 <InfoRow
