@@ -41,6 +41,8 @@ const SIDO_NAME_MAP: Record<string, string> = {
 
 const MAP_FILL = { base: '#ffffff', hover: '#f0fdf4', selected: '#15803d' }
 
+const toCityName = (name: string) => name.replace(/^(.+?시)(.+구)$/, '$1')
+
 // 레이블이 겹치는 시도의 텍스트 위치 보정 (SVG dx/dy, 단위: px)
 const SIDO_LABEL_OFFSET: Record<string, [number, number]> = {
   '서울특별시':    [-12, -8],
@@ -241,11 +243,12 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                         {({ geographies }) => {
                           // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           const filtered = geographies.filter((geo: any) => geo.properties.sido === normalizedSelectedSido)
+                          const labeledCities = new Set<string>()
                           return (
                             <>
                               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                               {filtered.map((geo: any) => {
-                                const sigungu = (geo.properties as { name?: string })?.name ?? ''
+                                const sigungu = toCityName((geo.properties as { name?: string })?.name ?? '')
                                 const isSelected = selectedSigungu === sigungu
                                 return (
                                   <Geography
@@ -267,7 +270,9 @@ export default function VendorSelectModal({ open, vendors, onSelect, onClose }: 
                               })}
                               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                               {filtered.map((geo: any) => {
-                                const sigungu = (geo.properties as { name?: string })?.name ?? ''
+                                const sigungu = toCityName((geo.properties as { name?: string })?.name ?? '')
+                                if (labeledCities.has(sigungu)) return null
+                                labeledCities.add(sigungu)
                                 const isSelected = selectedSigungu === sigungu
                                 const centroid = geoCentroid(geo)
                                 return (
