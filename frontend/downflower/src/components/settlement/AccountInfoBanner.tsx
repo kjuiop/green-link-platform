@@ -5,10 +5,16 @@ import { fetchMyAccount, CompanyAccount } from '@/lib/api/memberApi'
 
 export function AccountInfoBanner() {
   const [account, setAccount] = useState<CompanyAccount | null>(null)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    fetchMyAccount().then(setAccount).catch(() => {})
+    fetchMyAccount()
+      .then(setAccount)
+      .catch(() => {})
+      .finally(() => setLoaded(true))
   }, [])
+
+  if (!loaded) return null
 
   const hasAccount = account?.bankName && account?.accountNumber
 
