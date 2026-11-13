@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { PrintButton } from '@/components/common/PrintButton'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { ReferencePhotoSection } from '@/components/common/ReferencePhotoViewer'
+import { highlightGrade } from '@/lib/utils/productName'
 import { Pencil, X, Check, Trash2 } from 'lucide-react'
 import { cn, RIBBON_PHRASES, formatPhone } from '@/lib/utils'
 import type { LoadedOrderDetail } from '@/components/common/useOrderDetail'
@@ -32,7 +33,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value: string | React.ReactNode }) {
   return (
     <div className="flex gap-2">
       <span className="w-24 flex-shrink-0 text-gray-500">{label}</span>
@@ -178,7 +179,7 @@ export function BasicInfoCard({ d, className }: SectionProps) {
           </>
         ) : (
           <>
-            <Row label="상품명" value={order.productName} />
+            <Row label="상품명" value={highlightGrade(order.productName)} />
             <Row label="수량" value={`${order.quantity}개`} />
             <Row label="발주금액" value={order.extraCost ? `${(order.amount + order.extraCost).toLocaleString()}원 (기본 ${order.amount.toLocaleString()} + 추가 ${order.extraCost.toLocaleString()})` : `${order.amount.toLocaleString()}원`} />
             {order.vendorAmount != null && (
