@@ -25,4 +25,7 @@ export interface Vendor {
   capabilities?: string[]
   businessRegUrl?: string
   bankBookUrl?: string
+  bankName?: string
+  accountNumber?: string
+  accountHolder?: string
 }

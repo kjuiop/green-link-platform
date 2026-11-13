@@ -1,7 +1,9 @@
 package com.greenlink.core.application.member.service;
 
+import com.greenlink.core.application.member.dto.CompanyAccountResult;
 import com.greenlink.core.application.member.dto.MemberSummaryResult;
 import com.greenlink.core.application.member.usecase.GetMemberSummaryUseCase;
+import com.greenlink.core.application.member.usecase.GetMyAccountUseCase;
 import com.greenlink.core.domain.company.model.Company;
 import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
@@ -18,7 +20,7 @@ import java.time.ZoneId;
 
 @Service
 @Transactional(readOnly = true)
-public class MemberSummaryService implements GetMemberSummaryUseCase {
+public class MemberSummaryService implements GetMemberSummaryUseCase, GetMyAccountUseCase {
 
     private final CompanyRepository companyRepository;
     private final OrderRepository orderRepository;
@@ -64,5 +66,12 @@ public class MemberSummaryService implements GetMemberSummaryUseCase {
         }
 
         return new MemberSummaryResult(type.name(), orderingAmount, vendorAmount, null);
+    }
+
+    @Override
+    public CompanyAccountResult getMyAccount(Long companyId) {
+        return companyRepository.findById(companyId)
+                .map(c -> new CompanyAccountResult(c.getBankName(), c.getAccountNumber(), c.getAccountHolder()))
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.COMPANY_NOT_FOUND));
     }
 }

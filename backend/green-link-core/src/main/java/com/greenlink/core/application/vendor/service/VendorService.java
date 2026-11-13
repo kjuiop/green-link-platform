@@ -178,6 +178,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             if (cmd.companyType() != null && !cmd.companyType().isBlank()) {
                 company.updateType(parseCompanyType(cmd.companyType()));
             }
+            company.updateBankAccount(cmd.bankName(), cmd.accountNumber(), cmd.accountHolder());
             Company savedCompany = companyRepository.save(company);
 
             if (cmd.regions() != null) {
@@ -375,7 +376,10 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             regions,
             capabilities,
             company != null ? company.getBusinessRegUrl() : null,
-            company != null ? company.getBankBookUrl() : null
+            company != null ? company.getBankBookUrl() : null,
+            company != null ? company.getBankName() : null,
+            company != null ? company.getAccountNumber() : null,
+            company != null ? company.getAccountHolder() : null
         );
     }
 }

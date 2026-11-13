@@ -49,6 +49,7 @@ const COMPANY_TYPE_LABELS: Record<CompanyType, string> = {
 const emptyForm = {
   name: '', businessNumber: '', faxNumber: '', companyPhone: '', managerName: '', phone: '',
   email: '', address: '', detailAddress: '', loginId: '', password: '', companyType: 'VENDOR' as CompanyType,
+  bankName: '', accountNumber: '', accountHolder: '',
 }
 
 function formatPhone(value: string) {
@@ -195,6 +196,9 @@ export default function VendorsPage() {
       loginId: vendor.loginId,
       password: '',
       companyType: vendor.companyType ?? 'VENDOR',
+      bankName: vendor.bankName ?? '',
+      accountNumber: vendor.accountNumber ?? '',
+      accountHolder: vendor.accountHolder ?? '',
     })
     setModalRegions(vendor.regions ?? [])
     setModalCapabilities(vendor.capabilities ?? [])
@@ -241,6 +245,9 @@ export default function VendorsPage() {
           companyType: form.companyType,
           regions: modalRegions,
           capabilities: modalCapabilities,
+          bankName: form.bankName || undefined,
+          accountNumber: form.accountNumber || undefined,
+          accountHolder: form.accountHolder || undefined,
         })
       } else {
         await createVendor({
@@ -619,6 +626,38 @@ export default function VendorsPage() {
                         <img src={bankBookUrl} alt="통장사본" className="mt-1 h-20 rounded border object-cover" />
                       )
                     )}
+                  </div>
+                </>
+              )}
+              {/* 계좌 정보 (수정 모드에서만) */}
+              {editTarget && (
+                <>
+                  <div className="col-span-1 space-y-1.5 sm:col-span-2">
+                    <p className="text-sm font-medium text-gray-700">계좌 정보</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>은행명</Label>
+                    <Input
+                      placeholder="농협, 국민, 신한 등"
+                      value={form.bankName}
+                      onChange={(e) => setForm((f) => ({ ...f, bankName: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>계좌번호</Label>
+                    <Input
+                      placeholder="000-0000-0000-00"
+                      value={form.accountNumber}
+                      onChange={(e) => setForm((f) => ({ ...f, accountNumber: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>예금주</Label>
+                    <Input
+                      placeholder="예금주 성명"
+                      value={form.accountHolder}
+                      onChange={(e) => setForm((f) => ({ ...f, accountHolder: e.target.value }))}
+                    />
                   </div>
                 </>
               )}
