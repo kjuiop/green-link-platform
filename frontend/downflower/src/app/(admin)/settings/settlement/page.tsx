@@ -70,10 +70,15 @@ export default function AdminSettlementPage() {
   const totalVendorAmount = summaries.reduce((s, v) => s + v.vendorAmountTotal, 0)
   const settledCount = summaries.filter((v) => v.completed).length
 
-  function goToDetail(s: SettlementSummary) {
+  function goToDetail(s: SettlementSummary, typeOverride?: SettlementType) {
+    const type = typeOverride ?? settlementType
     router.push(
-      `/settings/settlement/${s.companyId}?from=${from}&to=${to}&type=${settlementType}&name=${encodeURIComponent(s.companyName)}`
+      `/settings/settlement/${s.companyId}?from=${from}&to=${to}&type=${type}&name=${encodeURIComponent(s.companyName)}`
     )
+  }
+
+  function resolveTypeForCompany(companyType: string): SettlementType {
+    return companyType === 'ORDERING' ? 'ORDERING' : 'VENDOR'
   }
 
   async function toggleSettled(s: SettlementSummary) {
@@ -186,17 +191,13 @@ export default function AdminSettlementPage() {
               displayed.map((v) => (
                 <TableRow key={v.companyId} className="hover:bg-gray-50">
                   <TableCell>
-                    {tab !== '전체' ? (
-                      <button
-                        type="button"
-                        className="font-medium text-blue-600 hover:underline"
-                        onClick={() => goToDetail(v)}
-                      >
-                        {v.companyName}
-                      </button>
-                    ) : (
-                      <span className="font-medium">{v.companyName}</span>
-                    )}
+                    <button
+                      type="button"
+                      className="font-medium text-blue-600 hover:underline"
+                      onClick={() => goToDetail(v, tab === '전체' ? resolveTypeForCompany(v.companyType) : undefined)}
+                    >
+                      {v.companyName}
+                    </button>
                   </TableCell>
                   <TableCell className="text-sm text-gray-500">{companyTypeLabel(v.companyType)}</TableCell>
                   <TableCell className="text-right text-sm">{v.count}건</TableCell>
