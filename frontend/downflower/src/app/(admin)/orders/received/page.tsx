@@ -14,6 +14,7 @@ import { Download } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { OrderDetailPopup } from '@/components/common/OrderDetailPopup'
+import { highlightGrade } from '@/lib/utils/productName'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
 type DeletedFilter = '정상' | '삭제' | '전체'
@@ -124,10 +125,14 @@ export default function ReceivedOrdersPage() {
   const isSuperAdmin = role === 'SUPER_ADMIN'
   const canSeeMsgTime = isSuperAdmin || role === 'ORDERING'
 
+  const [msgTimeSortDir, setMsgTimeSortDir] = useState<'asc' | 'desc' | null>(null)
+
   const [popups, setPopups] = useState<Array<{ id: string; zIndex: number }>>([])
   const nextZ = useRef(1000)
+  const isUserInteracting = useRef(false)
 
   function openPopup(orderId: string) {
+    isUserInteracting.current = true
     setPopups((prev) => {
       const existing = prev.find((p) => p.id === orderId)
       if (existing) {
@@ -138,7 +143,11 @@ export default function ReceivedOrdersPage() {
   }
 
   function closePopup(orderId: string) {
-    setPopups((prev) => prev.filter((p) => p.id !== orderId))
+    setPopups((prev) => {
+      const next = prev.filter((p) => p.id !== orderId)
+      if (next.length === 0) isUserInteracting.current = false
+      return next
+    })
   }
 
   function focusPopup(orderId: string) {
@@ -158,20 +167,36 @@ export default function ReceivedOrdersPage() {
     if (isSuperAdmin && deletedFilter === '삭제') params.deleted = true
     if (isSuperAdmin && completedAtFrom) params.completedAtFrom = completedAtFrom
     if (isSuperAdmin && completedAtTo) params.completedAtTo = completedAtTo
+    if (msgTimeSortDir) { params.sortBy = 'messageSentAt'; params.sortDir = msgTimeSortDir }
     return params
   }
 
-  function loadOrders(params: OrderSearchParams = {}, p = 0, size = pageSize) {
-    setLoading(true)
-    setLoadError(null)
+  function loadOrders(params: OrderSearchParams = {}, p = 0, size = pageSize, opts: { silent?: boolean } = {}) {
+    const silent = opts.silent ?? false
+    if (!silent) { setLoading(true); setLoadError(null) }
     fetchOrdersPaged(params, p, size)
-      .then(setResult)
-      .catch(() => setLoadError('수주 목록을 불러오지 못했습니다.'))
-      .finally(() => setLoading(false))
+      .then((r) => { setResult(r); if (silent) setLoadError(null) })
+      .catch(() => { if (!silent) setLoadError('수주 목록을 불러오지 못했습니다.') })
+      .finally(() => { if (!silent) setLoading(false) })
   }
 
   useEffect(() => { loadOrders(buildServerParams(initRange.from, initRange.to)) }, [])
-  useOrderUpdatedListener(() => loadOrders(buildServerParams(), page))
+  useOrderUpdatedListener(() => loadOrders(buildServerParams(), page, pageSize, { silent: true }))
+
+  const buildServerParamsRef = useRef(buildServerParams)
+  buildServerParamsRef.current = buildServerParams
+
+  const loadOrdersRef = useRef(loadOrders)
+  loadOrdersRef.current = loadOrders
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (isUserInteracting.current) return
+      if (document.visibilityState !== 'visible') return
+      loadOrdersRef.current(buildServerParamsRef.current(), page, undefined, { silent: true })
+    }, 300_000)
+    return () => clearInterval(timer)
+  }, [page])
 
   function selectMonth(year: number, month: number) {
     setSelectedYear(year)
@@ -217,6 +242,7 @@ export default function ReceivedOrdersPage() {
     setApplied1Field('주문번호'); setApplied1Value('')
     setApplied2Field('수주사명'); setApplied2Value('')
     setCompletedAtFrom(''); setCompletedAtTo('')
+    setMsgTimeSortDir(null)
     setPage(0)
     setSelectedIds(new Set())
     loadOrders({ deliveryDateFrom: r.from, deliveryDateTo: r.to }, 0)
@@ -447,9 +473,19 @@ export default function ReceivedOrdersPage() {
       {/* 검색 결과 요약 + 엑셀 다운로드 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 text-sm">
-          <span className="text-gray-500">건수 <strong className="text-gray-900">{result?.totalElements ?? 0}</strong>건</span>
-          <span className="text-gray-300">|</span>
-          <span className="text-gray-500">수주금액 <strong className="text-gray-900">{filtered.reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+          {selectedIds.size > 0 ? (
+            <>
+              <span className="text-gray-500">건수 <strong className="text-green-700">{selectedIds.size}</strong>건</span>
+              <span className="text-gray-300">|</span>
+              <span className="text-gray-500">수주금액 <strong className="text-green-700">{filtered.filter((o) => selectedIds.has(o.id)).reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+            </>
+          ) : (
+            <>
+              <span className="text-gray-500">건수 <strong className="text-gray-900">{result?.totalElements ?? 0}</strong>건</span>
+              <span className="text-gray-300">|</span>
+              <span className="text-gray-500">수주금액 <strong className="text-gray-900">{filtered.reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -493,8 +529,28 @@ export default function ReceivedOrdersPage() {
               <TableHead className="w-64"><div>보내는이</div><div className="font-normal text-gray-400">배송지</div></TableHead>
               <TableHead>수량</TableHead>
               <TableHead>수주금액</TableHead>
-              <TableHead>배송현황</TableHead>
-              <TableHead>문자현황</TableHead>
+              <TableHead>
+                <div>배송현황</div>
+                <div className="text-[10px] font-normal text-gray-400">주문승인시간</div>
+              </TableHead>
+              <TableHead>
+                {canSeeMsgTime ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = msgTimeSortDir === 'desc' ? 'asc' : 'desc'
+                      setMsgTimeSortDir(next)
+                      setPage(0)
+                      setSelectedIds(new Set())
+                      loadOrders({ ...buildServerParams(), sortBy: 'messageSentAt', sortDir: next }, 0)
+                    }}
+                    className="flex items-center gap-0.5 hover:text-green-700"
+                  >
+                    문자발송
+                    <span className="text-[10px]">{msgTimeSortDir === 'asc' ? '↑' : msgTimeSortDir === 'desc' ? '↓' : '↕'}</span>
+                  </button>
+                ) : '문자발송'}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -560,7 +616,7 @@ export default function ReceivedOrdersPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm">
-                      <span>{order.productName}</span>
+                      <span>{highlightGrade(order.productName)}</span>
                       <ReferencePhotoIcon orderId={order.id} count={order.referencePhotoCount ?? 0} />
                     </div>
                     {order.recipientName && <div className="text-sm text-gray-400">{order.recipientName}</div>}
@@ -572,16 +628,23 @@ export default function ReceivedOrdersPage() {
                   <TableCell className="text-sm">{order.quantity}</TableCell>
                   <TableCell className="text-sm">{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원</TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <AcceptOrderBadge
-                      status={order.status}
-                      variant="admin"
-                      onAccept={async () => {
-                        await updateOrderStatus(order.id, 'accept')
-                        loadOrders(buildServerParams(), page)
-                      }}
-                    />
+                    <div className="flex items-center gap-1">
+                      <AcceptOrderBadge
+                        status={order.status}
+                        variant="admin"
+                        onAccept={async () => {
+                          await updateOrderStatus(order.id, 'accept')
+                          loadOrders(buildServerParams(), page)
+                        }}
+                      />
+                      {order.isDelayed && (
+                        <span className="animate-pulse rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-600">
+                          지연
+                        </span>
+                      )}
+                    </div>
                     {order.acceptedAt && (
-                      <div className="mt-0.5 text-[10px] text-gray-400">{order.acceptedAt.slice(0, 10)}</div>
+                      <div className="mt-0.5 text-[10px] text-gray-400">{order.acceptedAt.slice(0, 10)} {order.acceptedAt.slice(11, 16)}</div>
                     )}
                   </TableCell>
                   <TableCell>
@@ -651,7 +714,7 @@ export default function ReceivedOrdersPage() {
                         <span className="rounded bg-red-100 px-1 py-0.5 text-[10px] font-medium text-red-600">삭제</span>
                       )}
                     </div>
-                    <div className="mt-1 truncate text-sm font-medium">{order.productName}</div>
+                    <div className="mt-1 truncate text-sm font-medium">{highlightGrade(order.productName)}</div>
                     <div className="mt-0.5 text-xs text-gray-500">
                       {order.ribbonLeft || order.ordererName}{order.recipientName ? ` / ${order.recipientName}` : ''}
                     </div>
@@ -660,7 +723,14 @@ export default function ReceivedOrdersPage() {
                     )}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <OrderStatusBadge status={order.status} />
+                    <div className="flex items-center gap-1">
+                      <OrderStatusBadge status={order.status} />
+                      {order.isDelayed && (
+                        <span className="animate-pulse rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-600">
+                          지연
+                        </span>
+                      )}
+                    </div>
                     <div onClick={(e) => e.stopPropagation()}>
                       <ClickableMessageBadge
                         status={order.messageStatus}
