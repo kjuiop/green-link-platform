@@ -1,5 +1,7 @@
 package com.greenlink.core.application.order.dto;
 
+import java.util.List;
+
 public record OrderResult(
         Long id,
         String orderNumber,
@@ -17,6 +19,8 @@ public record OrderResult(
         long amount,
         Long vendorAmount,
         Long extraCost,
+        long totalAmount,
+        List<OrderItemResult> items,
         String deliveryDate,
         String deliveryTimeType,
         String deliveryTimeHour,

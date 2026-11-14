@@ -1,13 +1,16 @@
 package com.greenlink.core.application.order.service;
 
 import com.greenlink.core.application.order.dto.CreateOrderCommand;
+import com.greenlink.core.application.order.dto.OrderItemCommand;
 import com.greenlink.core.application.order.dto.OrderResult;
+import com.greenlink.core.application.order.dto.UpdateOrderCommand;
 import com.greenlink.core.application.orderhistory.usecase.RecordOrderHistoryUseCase;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.order.model.Order;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.domain.order.model.OrderStatus;
+import com.greenlink.core.domain.order.port.OrderItemRepository;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
@@ -31,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
@@ -39,6 +43,7 @@ import static org.mockito.Mockito.verify;
 class OrderServiceTest {
 
     @Mock OrderRepository orderRepository;
+    @Mock OrderItemRepository orderItemRepository;
     @Mock PhotoRepository photoRepository;
     @Mock ReceiptConfirmationRepository receiptConfirmationRepository;
     @Mock RecordOrderHistoryUseCase recordOrderHistoryUseCase;
@@ -52,7 +57,7 @@ class OrderServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new OrderService(orderRepository, photoRepository,
+        service = new OrderService(orderRepository, orderItemRepository, photoRepository,
                 receiptConfirmationRepository, recordOrderHistoryUseCase,
                 adminRepository, companyRepository,
                 smsMessageRepository, referencePhotoRepository, eventPublisher);
@@ -61,9 +66,10 @@ class OrderServiceTest {
     private CreateOrderCommand sampleCommand() {
         return new CreateOrderCommand(
                 1L, null, null, "장미꽃다발", 1, 50000L, null,
+                null, null,
                 "2026-10-23", "FIXED", "14", "00", null,
                 "서울시 강남구", "101호", "생일", "그랜드볼룸", "A홀", null,
-                "축하합니다", "홍길동", "홍길동", "010-1234-5678",
+                "축하합니다", "홍길동", null, "홍길동", "010-1234-5678",
                 "김영희", "010-9876-5432", true, true,
                 "SCHEDULED", "13", "00", null, null
         );
@@ -71,13 +77,13 @@ class OrderServiceTest {
 
     private Order savedOrder(Long id, OrderStatus status) {
         return Order.of(
-                id, "DF-20261022-0001", 1L, null, status, null,
-                "장미꽃다발", 1, 50000L, null,
+                id, "DF-20261022-0001", 1L, null, null, status,
+                null, "장미꽃다발", 1, 50000L, null, null, 50000L,
                 "2026-10-23", "FIXED", "14", "00", null,
                 "서울시 강남구", "101호", "생일", "그랜드볼룸", "A홀", null,
-                "축하합니다", "홍길동", "홍길동", "010-1234-5678",
+                "축하합니다", "홍길동", null, "홍길동", "010-1234-5678",
                 "김영희", "010-9876-5432", true, true,
-                "SCHEDULED", "13", "00", null, null, null, null, "2026-10-22T10:00:00", false
+                "SCHEDULED", "13", "00", null, null, null, null, "2026-10-22T10:00:00", null, null, false
         );
     }
 
@@ -89,12 +95,43 @@ class OrderServiceTest {
         given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
         given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
         given(receiptConfirmationRepository.findByOrderId(any())).willReturn(Optional.empty());
+        given(orderItemRepository.findAllByOrderId(any())).willReturn(List.of());
 
         OrderResult result = service.createOrder(sampleCommand());
 
         assertThat(result.id()).isEqualTo(1L);
         assertThat(result.status()).isEqualTo("PENDING");
         verify(recordOrderHistoryUseCase).record(eq(1L), eq(OrderHistoryAction.CREATED), any());
+    }
+
+    @Test
+    void createOrder_withItems_savesItemsAndSetsRepresentativeName() {
+        List<OrderItemCommand> items = List.of(
+                new OrderItemCommand(null, "장미꽃다발", 50000L, 1),
+                new OrderItemCommand(null, "축하화환", 70000L, 2)
+        );
+        CreateOrderCommand cmd = new CreateOrderCommand(
+                1L, null, null, null, 0, 0L, items,
+                null, null,
+                "2026-10-23", "FIXED", "14", "00", null,
+                "서울시 강남구", "101호", "생일", "그랜드볼룸", "A홀", null,
+                "축하합니다", "홍길동", null, "홍길동", "010-1234-5678",
+                "김영희", "010-9876-5432", true, true,
+                "SCHEDULED", "13", "00", null, null
+        );
+        given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
+        given(adminRepository.findById(anyLong())).willReturn(Optional.empty());
+        given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
+        given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
+        given(receiptConfirmationRepository.findByOrderId(any())).willReturn(Optional.empty());
+        given(orderItemRepository.findAllByOrderId(any())).willReturn(List.of());
+
+        OrderResult result = service.createOrder(cmd);
+
+        assertThat(result.productName()).isEqualTo("장미꽃다발 외 1건");
+        assertThat(result.amount()).isEqualTo(190000L);
+        assertThat(result.totalAmount()).isEqualTo(190000L);
+        verify(orderItemRepository).replaceAll(any(), argThat(list -> list.size() == 2));
     }
 
     @Test
@@ -116,6 +153,7 @@ class OrderServiceTest {
         given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
         given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
         given(receiptConfirmationRepository.findByOrderId(any())).willReturn(Optional.empty());
+        given(orderItemRepository.findAllByOrderId(any())).willReturn(List.of());
 
         OrderResult result = service.updateOrderStatus(1L, "accept");
 
@@ -132,6 +170,7 @@ class OrderServiceTest {
         given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
         given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
         given(receiptConfirmationRepository.findByOrderId(any())).willReturn(Optional.empty());
+        given(orderItemRepository.findAllByOrderId(any())).willReturn(List.of());
 
         OrderResult result = service.updateOrderStatus(1L, "reject");
 
@@ -147,6 +186,7 @@ class OrderServiceTest {
         given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
         given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
         given(receiptConfirmationRepository.findByOrderId(any())).willReturn(Optional.empty());
+        given(orderItemRepository.findAllByOrderId(any())).willReturn(List.of());
 
         OrderResult result = service.updateOrderStatus(1L, "cancel");
 
@@ -175,6 +215,7 @@ class OrderServiceTest {
         given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
         given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
         given(receiptConfirmationRepository.findByOrderId(any())).willReturn(Optional.empty());
+        given(orderItemRepository.findAllByOrderId(any())).willReturn(List.of());
 
         OrderResult result = service.updateOrderStatus(1L, "complete");
 
@@ -194,6 +235,36 @@ class OrderServiceTest {
     }
 
     @Test
+    void updateOrder_withNewItems_replacesItemsAndRecordsHistory() {
+        Order pending = savedOrder(1L, OrderStatus.PENDING);
+        given(orderRepository.findById(1L)).willReturn(Optional.of(pending));
+        given(orderItemRepository.findAllByOrderId(any())).willReturn(List.of());
+        given(adminRepository.findById(anyLong())).willReturn(Optional.empty());
+        given(orderRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+        given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
+        given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
+        given(receiptConfirmationRepository.findByOrderId(any())).willReturn(Optional.empty());
+
+        UpdateOrderCommand cmd = new UpdateOrderCommand(
+                1L, null, "장미꽃다발", 1, 50000L,
+                List.of(new OrderItemCommand(null, "수정된상품", 30000L, 2)),
+                null, null,
+                "2026-10-23", "FIXED", "14", "00", null,
+                "서울시 강남구", "101호", "생일", "그랜드볼룸", "A홀", null,
+                "축하합니다", "홍길동", null, "홍길동", "010-1234-5678",
+                "김영희", "010-9876-5432", true, true,
+                "SCHEDULED", "13", "00", null, null
+        );
+
+        OrderResult result = service.updateOrder(1L, cmd);
+
+        assertThat(result.productName()).isEqualTo("수정된상품");
+        verify(orderItemRepository).replaceAll(eq(1L), argThat(list -> list.size() == 1));
+        verify(recordOrderHistoryUseCase).record(eq(1L), eq(OrderHistoryAction.UPDATED),
+                argThat(detail -> detail.contains("상품")));
+    }
+
+    @Test
     void getOrders_returnsResultList() {
         Order o = savedOrder(1L, OrderStatus.PENDING);
         given(orderRepository.search(any(OrderSearchCondition.class))).willReturn(List.of(o));
@@ -201,10 +272,13 @@ class OrderServiceTest {
         given(smsMessageRepository.findAllByOrderIdIn(any())).willReturn(List.of());
         given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
         given(receiptConfirmationRepository.findAllByOrderIds(any())).willReturn(List.of());
+        given(orderItemRepository.findAllByOrderIds(any())).willReturn(Map.of());
 
         List<OrderResult> results = service.getOrders(OrderSearchCondition.of(null, null, null, null, null, null, null));
 
         assertThat(results).hasSize(1);
         assertThat(results.get(0).id()).isEqualTo(1L);
+        assertThat(results.get(0).items()).hasSize(1);
+        assertThat(results.get(0).items().get(0).productName()).isEqualTo("장미꽃다발");
     }
 }
