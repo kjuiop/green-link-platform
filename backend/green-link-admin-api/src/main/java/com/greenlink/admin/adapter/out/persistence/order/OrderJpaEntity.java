@@ -54,6 +54,9 @@ public class OrderJpaEntity extends BaseJpaEntity {
     @Column
     private Long extraCost;
 
+    @Column(name = "total_amount")
+    private Long totalAmount;
+
     @Column(nullable = false, length = 16)
     private String deliveryDate;
 
@@ -156,6 +159,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
         e.amount = order.getAmount();
         e.vendorAmount = order.getVendorAmount();
         e.extraCost = order.getExtraCost();
+        e.totalAmount = order.getTotalAmount();
         e.deliveryDate = order.getDeliveryDate();
         e.deliveryTimeType = order.getDeliveryTimeType();
         e.deliveryTimeHour = order.getDeliveryTimeHour();
@@ -201,6 +205,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
                 amount,
                 vendorAmount,
                 extraCost,
+                totalAmount,
                 deliveryDate,
                 deliveryTimeType,
                 deliveryTimeHour,

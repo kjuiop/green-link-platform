@@ -1,15 +1,19 @@
 package com.greenlink.admin.adapter.in.web.dto;
 
 import com.greenlink.core.application.order.dto.UpdateOrderCommand;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+
+import java.util.List;
 
 public record UpdateOrderRequest(
         @NotNull Long vendorId,
         Long productId,
-        @NotBlank String productName,
-        @NotNull Integer quantity,
-        @NotNull Long amount,
+        String productName,
+        Integer quantity,
+        Long amount,
+        @Valid List<OrderItemRequest> items,
         Long vendorAmount,
         Long extraCost,
         @NotBlank String deliveryDate,
@@ -43,8 +47,9 @@ public record UpdateOrderRequest(
                 vendorId,
                 productId,
                 productName,
-                quantity,
-                amount,
+                quantity != null ? quantity : 0,
+                amount != null ? amount : 0L,
+                OrderItemRequest.toCommands(items),
                 vendorAmount,
                 extraCost,
                 deliveryDate,

@@ -1,11 +1,14 @@
 package com.greenlink.core.application.order.dto;
 
+import java.util.List;
+
 public record UpdateOrderCommand(
         Long vendorId,
         Long productId,
         String productName,
         int quantity,
         long amount,
+        List<OrderItemCommand> items,
         Long vendorAmount,
         Long extraCost,
         String deliveryDate,

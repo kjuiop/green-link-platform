@@ -1,5 +1,7 @@
 package com.greenlink.core.domain.order.model;
 
+import java.util.List;
+
 public class Order {
 
     private Long id;
@@ -14,6 +16,7 @@ public class Order {
     private long amount;
     private Long vendorAmount;
     private Long extraCost;
+    private long totalAmount;
     private String deliveryDate;
     private String deliveryTimeType;
     private String deliveryTimeHour;
@@ -53,10 +56,7 @@ public class Order {
             Long vendorCompanyId,
             Long orderingCompanyId,
             String orderNumber,
-            Long productId,
-            String productName,
-            int quantity,
-            long amount,
+            List<OrderItem> items,
             Long vendorAmount,
             Long extraCost,
             String deliveryDate,
@@ -94,12 +94,8 @@ public class Order {
         o.updatedByAdminId = createdByAdminId;
         o.orderNumber = orderNumber;
         o.status = OrderStatus.PENDING;
-        o.productId = productId;
-        o.productName = productName;
-        o.quantity = quantity;
-        o.amount = amount;
         o.vendorAmount = vendorAmount;
-        o.extraCost = extraCost;
+        o.applyItems(items, extraCost);
         o.deliveryDate = deliveryDate;
         o.deliveryTimeType = deliveryTimeType;
         o.deliveryTimeHour = deliveryTimeHour;
@@ -141,6 +137,7 @@ public class Order {
             long amount,
             Long vendorAmount,
             Long extraCost,
+            Long totalAmount,
             String deliveryDate,
             String deliveryTimeType,
             String deliveryTimeHour,
@@ -188,6 +185,7 @@ public class Order {
         o.amount = amount;
         o.vendorAmount = vendorAmount;
         o.extraCost = extraCost;
+        o.totalAmount = totalAmount != null ? totalAmount : amount + (extraCost != null ? extraCost : 0L);
         o.deliveryDate = deliveryDate;
         o.deliveryTimeType = deliveryTimeType;
         o.deliveryTimeHour = deliveryTimeHour;
@@ -257,6 +255,27 @@ public class Order {
         this.status = OrderStatus.PENDING;
     }
 
+    private void applyItems(List<OrderItem> items, Long extraCost) {
+        if (items == null || items.isEmpty()) {
+            throw new IllegalArgumentException("주문 상품은 1개 이상이어야 합니다.");
+        }
+        OrderItem first = items.get(0);
+        boolean single = items.size() == 1;
+        this.productId = single ? first.getProductId() : null;
+        this.productName = single ? first.getProductName() : representativeName(first.getProductName(), items.size() - 1);
+        this.quantity = items.stream().mapToInt(OrderItem::getQuantity).sum();
+        this.amount = items.stream().mapToLong(OrderItem::getAmount).sum();
+        this.extraCost = extraCost;
+        this.totalAmount = this.amount + (extraCost != null ? extraCost : 0L);
+    }
+
+    private static String representativeName(String firstName, int others) {
+        String suffix = " 외 " + others + "건";
+        int max = 100 - suffix.length();
+        String head = firstName.length() > max ? firstName.substring(0, max) : firstName;
+        return head + suffix;
+    }
+
     public void softDelete() {
         this.isDeleted = true;
     }
@@ -264,10 +283,7 @@ public class Order {
     public void updateInfo(
             Long vendorId,
             Long vendorCompanyId,
-            Long productId,
-            String productName,
-            int quantity,
-            long amount,
+            List<OrderItem> items,
             Long vendorAmount,
             Long extraCost,
             String deliveryDate,
@@ -300,12 +316,8 @@ public class Order {
         this.vendorId = vendorId;
         this.vendorCompanyId = vendorCompanyId;
         this.updatedByAdminId = updatedByAdminId;
-        this.productId = productId;
-        this.productName = productName;
-        this.quantity = quantity;
-        this.amount = amount;
         this.vendorAmount = vendorAmount;
-        this.extraCost = extraCost;
+        applyItems(items, extraCost);
         this.deliveryDate = deliveryDate;
         this.deliveryTimeType = deliveryTimeType;
         this.deliveryTimeHour = deliveryTimeHour;
@@ -345,6 +357,7 @@ public class Order {
     public long getAmount() { return amount; }
     public Long getVendorAmount() { return vendorAmount; }
     public Long getExtraCost() { return extraCost; }
+    public long getTotalAmount() { return totalAmount; }
     public String getDeliveryDate() { return deliveryDate; }
     public String getDeliveryTimeType() { return deliveryTimeType; }
     public String getDeliveryTimeHour() { return deliveryTimeHour; }

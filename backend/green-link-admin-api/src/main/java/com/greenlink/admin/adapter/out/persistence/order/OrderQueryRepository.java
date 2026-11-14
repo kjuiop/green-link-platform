@@ -164,7 +164,10 @@ public class OrderQueryRepository {
             where.and(order.orderNumber.containsIgnoreCase(condition.orderNumber()));
         }
         if (condition.productName() != null && !condition.productName().isBlank()) {
-            where.and(order.productName.containsIgnoreCase(condition.productName()));
+            QOrderItemJpaEntity item = QOrderItemJpaEntity.orderItemJpaEntity;
+            where.and(JPAExpressions.selectOne().from(item)
+                    .where(item.orderId.eq(order.id), item.productName.containsIgnoreCase(condition.productName()))
+                    .exists());
         }
         if (condition.ordererName() != null && !condition.ordererName().isBlank()) {
             where.and(order.ordererName.containsIgnoreCase(condition.ordererName()));
