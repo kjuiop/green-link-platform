@@ -100,7 +100,7 @@ public class OrderExcelService implements ExportOrderExcelUseCase {
         row.createCell(6).setCellValue(nullToEmpty(order.getProductName()));
         row.createCell(7).setCellValue(fullAddress.trim());
         row.createCell(8).setCellValue(order.getQuantity());
-        row.createCell(9).setCellValue(order.getAmount());
+        row.createCell(9).setCellValue(order.getTotalAmount());
         row.createCell(10).setCellValue(statusToKorean(order.getStatus()));
         row.createCell(11).setCellValue(receipt != null ? nullToEmpty(receipt.getReceiverName()) : "");
         row.createCell(12).setCellValue(receipt != null ? nullToEmpty(receipt.getReceiverRelation()) : "");

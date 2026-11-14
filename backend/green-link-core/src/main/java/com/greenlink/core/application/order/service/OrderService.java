@@ -2,6 +2,8 @@ package com.greenlink.core.application.order.service;
 
 import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.order.dto.CreateOrderCommand;
+import com.greenlink.core.application.order.dto.OrderItemCommand;
+import com.greenlink.core.application.order.dto.OrderItemResult;
 import com.greenlink.core.application.order.dto.OrderResult;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.application.order.dto.UpdateOrderCommand;
@@ -17,7 +19,9 @@ import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.Company;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.order.model.Order;
+import com.greenlink.core.domain.order.model.OrderItem;
 import com.greenlink.core.domain.order.model.OrderStatus;
+import com.greenlink.core.domain.order.port.OrderItemRepository;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
@@ -66,6 +70,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     );
 
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
     private final PhotoRepository photoRepository;
     private final ReceiptConfirmationRepository receiptConfirmationRepository;
     private final RecordOrderHistoryUseCase recordOrderHistoryUseCase;
@@ -75,7 +80,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     private final ReferencePhotoRepository referencePhotoRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    public OrderService(OrderRepository orderRepository, PhotoRepository photoRepository,
+    public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository, PhotoRepository photoRepository,
                         ReceiptConfirmationRepository receiptConfirmationRepository,
                         RecordOrderHistoryUseCase recordOrderHistoryUseCase,
                         AdminRepository adminRepository, CompanyRepository companyRepository,
@@ -83,6 +88,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                         ReferencePhotoRepository referencePhotoRepository,
                         ApplicationEventPublisher eventPublisher) {
         this.orderRepository = orderRepository;
+        this.orderItemRepository = orderItemRepository;
         this.photoRepository = photoRepository;
         this.receiptConfirmationRepository = receiptConfirmationRepository;
         this.recordOrderHistoryUseCase = recordOrderHistoryUseCase;
@@ -105,15 +111,14 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 ? adminRepository.findById(cmd.vendorId()).map(Admin::getCompanyId).orElse(null)
                 : null;
 
+        List<OrderItem> items = resolveItems(cmd.items(), cmd.productId(), cmd.productName(), cmd.quantity(), cmd.amount());
+
         Order order = Order.create(
                 cmd.vendorId(),
                 vendorCompanyId,
                 cmd.orderingCompanyId(),
                 orderNumber,
-                cmd.productId(),
-                cmd.productName(),
-                cmd.quantity(),
-                cmd.amount(),
+                items,
                 cmd.vendorAmount(),
                 cmd.extraCost(),
                 cmd.deliveryDate(),
@@ -145,6 +150,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         );
 
         Order saved = orderRepository.save(order);
+        orderItemRepository.replaceAll(saved.getId(), items);
         recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.CREATED,
                 "발주 등록: " + saved.getOrderNumber());
 
@@ -174,13 +180,14 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Map<Long, MessageInfo> msgInfoMap = buildMessageInfoMap(orderIds);
         Map<Long, Long> refCountMap = orderIds.isEmpty() ? Map.of() : referencePhotoRepository.countByOrderIds(orderIds);
         Map<Long, ReceiptConfirmation> receiptMap = buildReceiptMap(orderIds);
+        Map<Long, List<OrderItem>> itemsMap = orderIds.isEmpty() ? Map.of() : orderItemRepository.findAllByOrderIds(orderIds);
         return orders.stream()
                 .map(o -> {
                     VendorInfo v = infoMap.get(o.getVendorId());
                     OrderingInfo oi = o.getOrderingCompanyId() != null ? orderingInfoMap.get(o.getOrderingCompanyId()) : null;
                     int refCount = refCountMap.getOrDefault(o.getId(), 0L).intValue();
                     MessageInfo mi = msgInfoMap.getOrDefault(o.getId(), new MessageInfo("NONE", null));
-                    return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, mi.status(), mi.sentAt(), refCount, receiptMap.get(o.getId()));
+                    return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, mi.status(), mi.sentAt(), refCount, receiptMap.get(o.getId()), itemsMap.get(o.getId()));
                 })
                 .toList();
     }
@@ -194,13 +201,14 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Map<Long, MessageInfo> msgInfoMap = buildMessageInfoMap(orderIds);
         Map<Long, Long> refCountMap = orderIds.isEmpty() ? Map.of() : referencePhotoRepository.countByOrderIds(orderIds);
         Map<Long, ReceiptConfirmation> receiptMap = buildReceiptMap(orderIds);
+        Map<Long, List<OrderItem>> itemsMap = orderIds.isEmpty() ? Map.of() : orderItemRepository.findAllByOrderIds(orderIds);
         Set<Long> sitePhotoOrderIds = photoRepository.findOrderIdsWithSitePhotoIn(orderIds);
         Page<OrderResult> resultPage = page.map(o -> {
             VendorInfo v = infoMap.get(o.getVendorId());
             OrderingInfo oi = o.getOrderingCompanyId() != null ? orderingInfoMap.get(o.getOrderingCompanyId()) : null;
             int refCount = refCountMap.getOrDefault(o.getId(), 0L).intValue();
             MessageInfo mi = msgInfoMap.getOrDefault(o.getId(), new MessageInfo("NONE", null));
-            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, mi.status(), mi.sentAt(), refCount, receiptMap.get(o.getId()), sitePhotoOrderIds);
+            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, mi.status(), mi.sentAt(), refCount, receiptMap.get(o.getId()), itemsMap.get(o.getId()), sitePhotoOrderIds);
         });
         long totalAmount = orderRepository.sumAmount(condition);
         return PageResult.of(resultPage, totalAmount);
@@ -255,11 +263,14 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         return companyRepository.findById(orderingCompanyId).map(Company::getPhone).orElse(null);
     }
 
-    private OrderResult toResult(Order order, String vendorName, String vendorPhone, String orderingCompanyName, String orderingCompanyPhone, String messageStatus, String messageSentAt, int referencePhotoCount, ReceiptConfirmation receipt) {
-        return toResult(order, vendorName, vendorPhone, orderingCompanyName, orderingCompanyPhone, messageStatus, messageSentAt, referencePhotoCount, receipt, null);
+    private OrderResult toResult(Order order, String vendorName, String vendorPhone, String orderingCompanyName, String orderingCompanyPhone, String messageStatus, String messageSentAt, int referencePhotoCount, ReceiptConfirmation receipt, List<OrderItem> items) {
+        return toResult(order, vendorName, vendorPhone, orderingCompanyName, orderingCompanyPhone, messageStatus, messageSentAt, referencePhotoCount, receipt, items, null);
     }
 
-    private OrderResult toResult(Order order, String vendorName, String vendorPhone, String orderingCompanyName, String orderingCompanyPhone, String messageStatus, String messageSentAt, int referencePhotoCount, ReceiptConfirmation receipt, Set<Long> sitePhotoOrderIds) {
+    private OrderResult toResult(Order order, String vendorName, String vendorPhone, String orderingCompanyName, String orderingCompanyPhone, String messageStatus, String messageSentAt, int referencePhotoCount, ReceiptConfirmation receipt, List<OrderItem> items, Set<Long> sitePhotoOrderIds) {
+        List<OrderItemResult> itemResults = withLegacyFallback(order, items).stream()
+                .map(i -> new OrderItemResult(i.getId(), i.getProductId(), i.getProductName(), i.getUnitPrice(), i.getQuantity(), i.getAmount()))
+                .toList();
         return new OrderResult(
                 order.getId(),
                 order.getOrderNumber(),
@@ -277,6 +288,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 order.getAmount(),
                 order.getVendorAmount(),
                 order.getExtraCost(),
+                order.getTotalAmount(),
+                itemResults,
                 order.getDeliveryDate(),
                 order.getDeliveryTimeType(),
                 order.getDeliveryTimeHour(),
@@ -400,7 +413,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
 
         Long previousVendorId = order.getVendorId();
-        String changeDetail = buildChangeDetail(order, cmd);
+        List<OrderItem> items = resolveItems(cmd.items(), cmd.productId(), cmd.productName(), cmd.quantity(), cmd.amount());
+        String changeDetail = buildChangeDetail(order, loadItems(order), items, cmd);
 
         Long newVendorCompanyId = cmd.vendorId() != null
                 ? adminRepository.findById(cmd.vendorId()).map(Admin::getCompanyId).orElse(null)
@@ -409,10 +423,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         order.updateInfo(
                 cmd.vendorId(),
                 newVendorCompanyId,
-                cmd.productId(),
-                cmd.productName(),
-                cmd.quantity(),
-                cmd.amount(),
+                items,
                 cmd.vendorAmount(),
                 cmd.extraCost(),
                 cmd.deliveryDate(),
@@ -444,6 +455,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         );
 
         Order saved = orderRepository.save(order);
+        orderItemRepository.replaceAll(saved.getId(), items);
         recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.UPDATED, changeDetail);
 
         if (!Objects.equals(previousVendorId, cmd.vendorId())) {
@@ -463,13 +475,14 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         return toResult(saved);
     }
 
-    private String buildChangeDetail(Order before, UpdateOrderCommand after) {
+    private String buildChangeDetail(Order before, List<OrderItem> beforeItems, List<OrderItem> afterItems, UpdateOrderCommand after) {
         List<String> lines = new ArrayList<>();
         diff(lines, "수주업체", str(before.getVendorId()), str(after.vendorId()));
-        diff(lines, "상품명", before.getProductName(), after.productName());
-        diff(lines, "수량", str(before.getQuantity()), str(after.quantity()));
-        diff(lines, "금액", str(before.getAmount()), str(after.amount()));
+        diff(lines, "상품", describeItems(beforeItems), describeItems(afterItems));
+        diff(lines, "상품금액", str(before.getAmount()), str(afterItems.stream().mapToLong(OrderItem::getAmount).sum()));
         diff(lines, "추가비용", str(before.getExtraCost()), str(after.extraCost()));
+        diff(lines, "발주금액", str(before.getTotalAmount()),
+                str(afterItems.stream().mapToLong(OrderItem::getAmount).sum() + (after.extraCost() != null ? after.extraCost() : 0L)));
         diff(lines, "배송예정일", before.getDeliveryDate(), after.deliveryDate());
         diff(lines, "배송시간유형", before.getDeliveryTimeType(), after.deliveryTimeType());
         diff(lines, "배송시간", deliveryTime(before.getDeliveryTimeHour(), before.getDeliveryTimeMinute(), before.getDeliveryTimeCustom()),
@@ -488,6 +501,39 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         diff(lines, "전달사항", before.getVendorMemo(), after.vendorMemo());
         diff(lines, "관리자메모", before.getAdminMemo(), after.adminMemo());
         return lines.isEmpty() ? "변경 사항 없음" : String.join("\n", lines);
+    }
+
+    private List<OrderItem> resolveItems(List<OrderItemCommand> commands, Long productId, String productName, int quantity, long amount) {
+        if (commands != null && !commands.isEmpty()) {
+            return commands.stream()
+                    .map(c -> OrderItem.create(c.productId(), c.productName(), c.unitPrice(), c.quantity()))
+                    .toList();
+        }
+        if (productName == null || productName.isBlank()) {
+            throw new IllegalArgumentException("주문 상품은 1개 이상이어야 합니다.");
+        }
+        if (quantity < 1) {
+            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
+        }
+        if (amount < 0) {
+            throw new IllegalArgumentException("금액은 0 이상이어야 합니다.");
+        }
+        return List.of(OrderItem.fromLegacy(null, productId, productName, quantity, amount));
+    }
+
+    private List<OrderItem> loadItems(Order order) {
+        return withLegacyFallback(order, orderItemRepository.findAllByOrderId(order.getId()));
+    }
+
+    private static List<OrderItem> withLegacyFallback(Order order, List<OrderItem> items) {
+        if (items != null && !items.isEmpty()) return items;
+        return List.of(OrderItem.fromLegacy(order.getId(), order.getProductId(), order.getProductName(), order.getQuantity(), order.getAmount()));
+    }
+
+    private static String describeItems(List<OrderItem> items) {
+        return items.stream()
+                .map(i -> i.getProductName() + " " + i.getUnitPrice() + "x" + i.getQuantity())
+                .collect(Collectors.joining(", "));
     }
 
     private static void diff(List<String> lines, String label, String before, String after) {
@@ -608,6 +654,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 messageStatus,
                 messageSentAt,
                 refCount,
-                receipt);
+                receipt,
+                orderItemRepository.findAllByOrderId(order.getId()));
     }
 }

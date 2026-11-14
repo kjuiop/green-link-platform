@@ -1,5 +1,7 @@
 package com.greenlink.core.application.order.dto;
 
+import java.util.List;
+
 public record CreateOrderCommand(
         Long vendorId,
         Long orderingCompanyId,
@@ -7,6 +9,7 @@ public record CreateOrderCommand(
         String productName,
         int quantity,
         long amount,
+        List<OrderItemCommand> items,
         Long vendorAmount,
         Long extraCost,
         String deliveryDate,
