@@ -20,6 +20,7 @@ public class OrderItemRepositoryAdapter implements OrderItemRepository {
 
     @Override
     public List<OrderItem> findAllByOrderId(Long orderId) {
+        if (orderId == null) return List.of();
         return findAllByOrderIds(List.of(orderId)).getOrDefault(orderId, List.of());
     }
 
