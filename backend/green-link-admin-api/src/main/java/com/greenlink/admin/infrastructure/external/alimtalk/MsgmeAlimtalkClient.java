@@ -16,10 +16,11 @@ public class MsgmeAlimtalkClient implements AlimtalkClient {
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Override
-    public AlimtalkSendResult send(String apiKey, String templateCode, String variable,
-                                   String callback, String dstaddr) {
+    public AlimtalkSendResult send(String apiKey, String senderKey, String templateCode,
+                                   String variable, String callback, String dstaddr) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("api_key", apiKey);
+        body.add("senderkey", senderKey);
         body.add("template_code", templateCode);
         body.add("variable", variable);
         body.add("callback", callback != null ? callback.replace("-", "") : "");

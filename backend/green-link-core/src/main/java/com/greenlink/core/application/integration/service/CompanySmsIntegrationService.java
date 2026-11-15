@@ -33,7 +33,7 @@ public class CompanySmsIntegrationService implements GetCompanySmsIntegrationUse
                 .orElseGet(() -> CompanyIntegration.create(command.companyId(), command.provider(), command.apiKey(), command.senderNumber()));
         integration.update(command.provider(), command.apiKey(), command.senderNumber());
         integration.updateAlimtalk(command.alimtalkEnabled(), command.alimtalkTemplateFuneral(),
-                command.alimtalkTemplateWedding(), command.alimtalkTemplateEtc());
+                command.alimtalkTemplateWedding(), command.alimtalkTemplateEtc(), command.alimtalkSenderKey());
         return toResult(repository.save(integration));
     }
 
@@ -41,7 +41,7 @@ public class CompanySmsIntegrationService implements GetCompanySmsIntegrationUse
         return new CompanySmsIntegrationResult(
                 ci.getId(), ci.getCompanyId(), ci.getProvider(), ci.getApiKey(), ci.getSenderNumber(),
                 ci.isAlimtalkEnabled(), ci.getAlimtalkTemplateFuneral(),
-                ci.getAlimtalkTemplateWedding(), ci.getAlimtalkTemplateEtc()
+                ci.getAlimtalkTemplateWedding(), ci.getAlimtalkTemplateEtc(), ci.getAlimtalkSenderKey()
         );
     }
 }

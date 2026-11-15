@@ -35,6 +35,7 @@ export type CompanySmsIntegration = {
   alimtalkTemplateFuneral: string | null
   alimtalkTemplateWedding: string | null
   alimtalkTemplateEtc: string | null
+  alimtalkSenderKey: string | null
 }
 
 export async function fetchCompanySmsIntegration(companyId: number): Promise<CompanySmsIntegration | null> {
@@ -52,6 +53,7 @@ export type SaveCompanySmsIntegrationData = {
   alimtalkTemplateFuneral: string
   alimtalkTemplateWedding: string
   alimtalkTemplateEtc: string
+  alimtalkSenderKey: string
 }
 
 export async function saveCompanySmsIntegration(

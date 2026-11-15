@@ -29,13 +29,15 @@ public class CompanyIntegrationRepositoryAdapter implements CompanyIntegrationRe
             entity = existing.get();
             entity.update(integration.getProvider(), integration.getApiKey(), integration.getSenderNumber());
             entity.updateAlimtalk(integration.isAlimtalkEnabled(), integration.getAlimtalkTemplateFuneral(),
-                    integration.getAlimtalkTemplateWedding(), integration.getAlimtalkTemplateEtc());
+                    integration.getAlimtalkTemplateWedding(), integration.getAlimtalkTemplateEtc(),
+                    integration.getAlimtalkSenderKey());
         } else {
             entity = CompanyIntegrationJpaEntity.createNew(
                     integration.getCompanyId(), integration.getProvider(),
                     integration.getApiKey(), integration.getSenderNumber());
             entity.updateAlimtalk(integration.isAlimtalkEnabled(), integration.getAlimtalkTemplateFuneral(),
-                    integration.getAlimtalkTemplateWedding(), integration.getAlimtalkTemplateEtc());
+                    integration.getAlimtalkTemplateWedding(), integration.getAlimtalkTemplateEtc(),
+                    integration.getAlimtalkSenderKey());
         }
         return jpaRepository.save(entity).toDomain();
     }
