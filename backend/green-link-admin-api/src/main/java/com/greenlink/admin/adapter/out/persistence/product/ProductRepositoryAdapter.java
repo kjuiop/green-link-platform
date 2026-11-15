@@ -36,7 +36,7 @@ public class ProductRepositoryAdapter implements ProductRepository {
 
     @Override
     public List<Product> findAll() {
-        return jpaRepository.findAll(Sort.by("name").ascending())
+        return jpaRepository.findAll(Sort.by("sortOrder").ascending())
                 .stream().map(ProductJpaEntity::toDomain).toList();
     }
 

@@ -7,9 +7,10 @@ import jakarta.validation.constraints.NotBlank;
 public record UpdateProductRequest(
         @NotBlank String name,
         @Min(0) long price,
-        String memo
+        String memo,
+        int sortOrder
 ) {
     public UpdateProductCommand toCommand() {
-        return new UpdateProductCommand(name, price, memo);
+        return new UpdateProductCommand(name, price, memo, sortOrder);
     }
 }
