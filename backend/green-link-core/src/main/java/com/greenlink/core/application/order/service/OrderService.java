@@ -2,6 +2,7 @@ package com.greenlink.core.application.order.service;
 
 import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.order.dto.CreateOrderCommand;
+import com.greenlink.core.application.order.dto.DeliveryShareResult;
 import com.greenlink.core.application.order.dto.OrderItemCommand;
 import com.greenlink.core.application.order.dto.OrderItemResult;
 import com.greenlink.core.application.order.dto.OrderResult;
@@ -9,6 +10,7 @@ import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.application.order.dto.UpdateOrderCommand;
 import com.greenlink.core.application.order.usecase.CreateOrderUseCase;
 import com.greenlink.core.application.order.usecase.DeleteOrderUseCase;
+import com.greenlink.core.application.order.usecase.GetDeliveryShareUseCase;
 import com.greenlink.core.application.order.usecase.GetOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
@@ -53,13 +55,15 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
 public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
-        GetOrdersUseCase, UpdateOrderUseCase, UpdateOrderStatusUseCase, DeleteOrderUseCase {
+        GetOrdersUseCase, UpdateOrderUseCase, UpdateOrderStatusUseCase, DeleteOrderUseCase,
+        GetDeliveryShareUseCase {
 
     private static final Map<OrderStatus, String> STATUS_LABEL = Map.of(
             OrderStatus.PENDING,   "발주대기",
@@ -327,7 +331,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 messageSentAt,
                 order.getCreatedByAdminId(),
                 order.getUpdatedByAdminId(),
-                calcIsDelayed(order, sitePhotoOrderIds)
+                calcIsDelayed(order, sitePhotoOrderIds),
+                order.getPhotoToken()
         );
     }
 
@@ -578,6 +583,21 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.STATUS_CHANGED,
                 "상태 변경: " + STATUS_LABEL.getOrDefault(saved.getStatus(), saved.getStatus().name()));
         return toResult(saved);
+    }
+
+    @Override
+    public Optional<DeliveryShareResult> getDeliveryShare(String photoToken) {
+        return orderRepository.findByPhotoToken(photoToken).map(order -> {
+            List<String> photoUrls = photoRepository.findSelectedByOrderId(order.getId()).stream()
+                    .map(com.greenlink.core.domain.photo.model.Photo::getPhotoUrl)
+                    .toList();
+            return new DeliveryShareResult(
+                    order.getRecipientName(),
+                    order.getPlaceName(),
+                    order.getCompletedAt(),
+                    photoUrls
+            );
+        });
     }
 
     private Long resolveCurrentAdminId() {

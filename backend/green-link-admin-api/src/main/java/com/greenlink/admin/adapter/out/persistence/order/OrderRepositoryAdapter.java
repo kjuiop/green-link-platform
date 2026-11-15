@@ -27,6 +27,11 @@ public class OrderRepositoryAdapter implements OrderRepository {
     }
 
     @Override
+    public Optional<Order> findByPhotoToken(String photoToken) {
+        return jpaRepository.findByPhotoToken(photoToken).map(OrderJpaEntity::toDomain);
+    }
+
+    @Override
     public List<Order> findAllByIds(List<Long> ids) {
         return jpaRepository.findAllById(ids).stream()
                 .map(OrderJpaEntity::toDomain)

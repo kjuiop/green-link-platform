@@ -228,7 +228,7 @@ public class OrderController {
                 r.hasReceipt(), r.receiptReceiverName(), r.receiptReceiverRelation(),
                 r.isDeleted(), r.messageSentAt(),
                 r.createdByAdminId(), r.updatedByAdminId(),
-                r.isDelayed()
+                r.isDelayed(), r.photoToken()
         );
     }
 }

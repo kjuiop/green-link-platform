@@ -141,6 +141,9 @@ public class OrderJpaEntity extends BaseJpaEntity {
     @Column(nullable = false)
     private boolean isDeleted;
 
+    @Column(name = "photo_token", length = 36, unique = true)
+    private String photoToken;
+
     protected OrderJpaEntity() {}
 
     public static OrderJpaEntity from(Order order) {
@@ -188,6 +191,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
         e.acceptedAt = order.getAcceptedAt();
         e.completedAt = order.getCompletedAt();
         e.isDeleted = order.isDeleted();
+        e.photoToken = order.getPhotoToken();
         return e;
     }
 
@@ -236,7 +240,8 @@ public class OrderJpaEntity extends BaseJpaEntity {
                 getCreatedAt() != null ? getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null,
                 createdByAdminId,
                 updatedByAdminId,
-                isDeleted
+                isDeleted,
+                photoToken
         );
     }
 }

@@ -45,6 +45,7 @@ public class Order {
     private String acceptedAt;
     private String completedAt;
     private String createdAt;
+    private String photoToken;
     private Long createdByAdminId;
     private Long updatedByAdminId;
     private boolean isDeleted;
@@ -168,7 +169,8 @@ public class Order {
             String createdAt,
             Long createdByAdminId,
             Long updatedByAdminId,
-            boolean isDeleted
+            boolean isDeleted,
+            String photoToken
     ) {
         Order o = new Order();
         o.id = id;
@@ -215,6 +217,7 @@ public class Order {
         o.completedAt = completedAt;
         o.createdAt = createdAt;
         o.isDeleted = isDeleted;
+        o.photoToken = photoToken;
         return o;
     }
 
@@ -246,6 +249,9 @@ public class Order {
         }
         this.status = OrderStatus.DELIVERED;
         this.completedAt = completedAt;
+        if (this.photoToken == null) {
+            this.photoToken = java.util.UUID.randomUUID().toString();
+        }
     }
 
     public void resetToPending() {
@@ -389,4 +395,5 @@ public class Order {
     public Long getCreatedByAdminId() { return createdByAdminId; }
     public Long getUpdatedByAdminId() { return updatedByAdminId; }
     public boolean isDeleted() { return isDeleted; }
+    public String getPhotoToken() { return photoToken; }
 }
