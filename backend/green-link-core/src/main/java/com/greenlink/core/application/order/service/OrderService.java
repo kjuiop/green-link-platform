@@ -327,7 +327,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 messageSentAt,
                 order.getCreatedByAdminId(),
                 order.getUpdatedByAdminId(),
-                calcIsDelayed(order, sitePhotoOrderIds)
+                calcIsDelayed(order, sitePhotoOrderIds),
+                order.getPhotoToken()
         );
     }
 
