@@ -14,6 +14,7 @@ import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
 import com.greenlink.core.application.orderhistory.usecase.GetOrderHistoryUseCase;
+import com.greenlink.core.application.sms.usecase.SendDeliveryAlimtalkUseCase;
 import com.greenlink.core.application.sms.usecase.SendDeliveryMmsUseCase;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;
@@ -36,6 +37,7 @@ public class OrderController {
     private final DeleteOrderUseCase deleteOrderUseCase;
     private final GetOrderHistoryUseCase getOrderHistoryUseCase;
     private final SendDeliveryMmsUseCase sendDeliveryMmsUseCase;
+    private final SendDeliveryAlimtalkUseCase sendDeliveryAlimtalkUseCase;
 
     public OrderController(GetOrdersUseCase getOrdersUseCase,
                            GetOrderUseCase getOrderUseCase,
@@ -44,7 +46,8 @@ public class OrderController {
                            UpdateOrderStatusUseCase updateOrderStatusUseCase,
                            DeleteOrderUseCase deleteOrderUseCase,
                            GetOrderHistoryUseCase getOrderHistoryUseCase,
-                           SendDeliveryMmsUseCase sendDeliveryMmsUseCase) {
+                           SendDeliveryMmsUseCase sendDeliveryMmsUseCase,
+                           SendDeliveryAlimtalkUseCase sendDeliveryAlimtalkUseCase) {
         this.getOrdersUseCase = getOrdersUseCase;
         this.getOrderUseCase = getOrderUseCase;
         this.createOrderUseCase = createOrderUseCase;
@@ -53,6 +56,7 @@ public class OrderController {
         this.deleteOrderUseCase = deleteOrderUseCase;
         this.getOrderHistoryUseCase = getOrderHistoryUseCase;
         this.sendDeliveryMmsUseCase = sendDeliveryMmsUseCase;
+        this.sendDeliveryAlimtalkUseCase = sendDeliveryAlimtalkUseCase;
     }
 
     @GetMapping
@@ -176,6 +180,11 @@ public class OrderController {
             } catch (Exception ignored) {
                 // MMS 발송 실패는 배송완료 처리를 막지 않음
             }
+            try {
+                sendDeliveryAlimtalkUseCase.send(id);
+            } catch (Exception ignored) {
+                // 알림톡 발송 실패는 배송완료 처리를 막지 않음
+            }
         }
         return ResponseEntity.ok(result);
     }
@@ -228,7 +237,7 @@ public class OrderController {
                 r.hasReceipt(), r.receiptReceiverName(), r.receiptReceiverRelation(),
                 r.isDeleted(), r.messageSentAt(),
                 r.createdByAdminId(), r.updatedByAdminId(),
-                r.isDelayed()
+                r.isDelayed(), r.photoToken()
         );
     }
 }

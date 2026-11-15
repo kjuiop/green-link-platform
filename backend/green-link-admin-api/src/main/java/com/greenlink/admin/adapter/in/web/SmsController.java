@@ -32,7 +32,12 @@ public class SmsController {
     }
 
     @GetMapping("/api/messages/order/{orderId}")
-    public ResponseEntity<List<SmsMessageResult>> getByOrder(@PathVariable Long orderId) {
+    public ResponseEntity<List<SmsMessageResult>> getByOrder(
+            @PathVariable Long orderId,
+            @RequestParam(required = false) String channel) {
+        if (channel != null && !channel.isBlank()) {
+            return ResponseEntity.ok(getSmsMessagesUseCase.getMessagesByOrderAndChannel(orderId, channel));
+        }
         return ResponseEntity.ok(getSmsMessagesUseCase.getMessagesByOrder(orderId));
     }
 

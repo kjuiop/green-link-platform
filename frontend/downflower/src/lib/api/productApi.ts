@@ -8,6 +8,7 @@ type BackendProduct = {
   price: number
   memo: string | null
   createdAt: string
+  sortOrder: number
 }
 
 function toFrontend(p: BackendProduct): Product {
@@ -17,6 +18,7 @@ function toFrontend(p: BackendProduct): Product {
     price: p.price,
     memo: p.memo ?? undefined,
     createdAt: p.createdAt ?? '',
+    sortOrder: p.sortOrder ?? 0,
   }
 }
 
@@ -39,7 +41,7 @@ export async function createProduct(req: CreateProductRequest): Promise<Product>
   const res = await fetchWithAuth('/api/products', {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ name: req.name, price: req.price, memo: req.memo }),
+    body: JSON.stringify({ name: req.name, price: req.price, memo: req.memo, sortOrder: req.sortOrder }),
   })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
@@ -52,7 +54,7 @@ export async function updateProduct(id: string, req: UpdateProductRequest): Prom
   const res = await fetchWithAuth(`/api/products/${id}`, {
     method: 'PUT',
     headers: authHeaders(),
-    body: JSON.stringify({ name: req.name, price: req.price, memo: req.memo }),
+    body: JSON.stringify({ name: req.name, price: req.price, memo: req.memo, sortOrder: req.sortOrder }),
   })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))

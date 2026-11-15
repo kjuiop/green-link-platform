@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import {
   CompanySmsIntegration,
   SmsProvider,
+  SaveCompanySmsIntegrationData,
   fetchCompanies,
   fetchCompanySmsIntegration,
   saveCompanySmsIntegration,
@@ -28,6 +29,11 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
   const [provider, setProvider] = useState<SmsProvider>(initialIntegration?.provider ?? 'MESSAGEME')
   const [apiKey, setApiKey] = useState(initialIntegration?.apiKey ?? '')
   const [senderNumber, setSenderNumber] = useState(initialIntegration?.senderNumber ?? '')
+  const [alimtalkEnabled, setAlimtalkEnabled] = useState(initialIntegration?.alimtalkEnabled ?? false)
+  const [alimtalkTemplateFuneral, setAlimtalkTemplateFuneral] = useState(initialIntegration?.alimtalkTemplateFuneral ?? '')
+  const [alimtalkTemplateWedding, setAlimtalkTemplateWedding] = useState(initialIntegration?.alimtalkTemplateWedding ?? '')
+  const [alimtalkTemplateEtc, setAlimtalkTemplateEtc] = useState(initialIntegration?.alimtalkTemplateEtc ?? '')
+  const [alimtalkSenderKey, setAlimtalkSenderKey] = useState(initialIntegration?.alimtalkSenderKey ?? '')
   const [saving, setSaving] = useState(false)
   const [saveResult, setSaveResult] = useState<'idle' | 'success' | 'error'>('idle')
 
@@ -35,7 +41,15 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
     setSaving(true)
     setSaveResult('idle')
     try {
-      await saveCompanySmsIntegration(companyId, { provider, apiKey, senderNumber })
+      const data: SaveCompanySmsIntegrationData = {
+        provider, apiKey, senderNumber,
+        alimtalkEnabled,
+        alimtalkTemplateFuneral,
+        alimtalkTemplateWedding,
+        alimtalkTemplateEtc,
+        alimtalkSenderKey,
+      }
+      await saveCompanySmsIntegration(companyId, data)
       setSaveResult('success')
       setTimeout(() => setSaveResult('idle'), 2000)
     } catch {
@@ -47,43 +61,129 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
 
   return (
     <Card>
-      <CardContent className="space-y-4 pt-6">
-        <div className="space-y-1.5">
-          <Label>SMS 제공사</Label>
-          <div className="flex gap-3">
-            {PROVIDERS.map(({ value, label }) => (
-              <label key={value} className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="radio"
-                  name={`provider-${companyId}`}
-                  value={value}
-                  checked={provider === value}
-                  onChange={() => setProvider(value)}
-                  className="accent-green-700"
-                />
-                <span className="text-sm">{label}</span>
-              </label>
-            ))}
+      <CardContent className="space-y-6 pt-6">
+        {/* SMS 설정 */}
+        <div className="space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">문자(SMS) 설정</p>
+          <div className="space-y-1.5">
+            <Label>SMS 제공사</Label>
+            <div className="flex gap-3">
+              {PROVIDERS.map(({ value, label }) => (
+                <label key={value} className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="radio"
+                    name={`provider-${companyId}`}
+                    value={value}
+                    checked={provider === value}
+                    onChange={() => setProvider(value)}
+                    className="accent-green-700"
+                  />
+                  <span className="text-sm">{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>API Key</Label>
+              <Input
+                placeholder="API Key 입력"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>발신번호</Label>
+              <Input
+                placeholder="010-0000-0000"
+                value={senderNumber}
+                onChange={(e) => setSenderNumber(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label>API Key</Label>
-            <Input
-              placeholder="API Key 입력"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
+        {/* 알림톡 설정 */}
+        <div className="space-y-4 border-t pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">카카오 알림톡 설정</p>
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={alimtalkEnabled}
+              onChange={(e) => setAlimtalkEnabled(e.target.checked)}
+              className="accent-green-700"
             />
-          </div>
-          <div className="space-y-1.5">
-            <Label>발신번호</Label>
-            <Input
-              placeholder="010-0000-0000"
-              value={senderNumber}
-              onChange={(e) => setSenderNumber(e.target.value)}
-            />
-          </div>
+            <span className="text-sm">알림톡 발송 활성화</span>
+          </label>
+          {alimtalkEnabled && (
+            <div className="space-y-3">
+              <p className="text-xs text-gray-400">
+                메시지미에 등록된 알림톡 전송키와 템플릿 코드를 입력하세요. 발송 실패 시 SMS로 자동 전환됩니다.
+              </p>
+
+              <div className="space-y-1.5">
+                <Label>전송키 (Sender Key)</Label>
+                <Input
+                  placeholder="카카오채널 전송키 입력"
+                  value={alimtalkSenderKey}
+                  onChange={(e) => setAlimtalkSenderKey(e.target.value)}
+                />
+              </div>
+
+              {/* 템플릿 문구 예시 */}
+              <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800 space-y-3">
+                <p className="font-semibold">📌 발송 문구 예시</p>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-blue-600">장례식</p>
+                  <div className="rounded bg-blue-100 p-2 leading-relaxed text-blue-700 whitespace-pre-line">{`안녕하세요, 온우림입니다.
+홍길동님께 근조 화환 배송이 완료되었습니다.
+
+■ 주문번호: 20241115-001
+■ 받는 분: 홍길동
+■ 장례식장: 서울추모공원
+
+배송 사진을 아래 버튼에서 확인하실 수 있습니다.`}</div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-blue-600">결혼식</p>
+                  <div className="rounded bg-blue-100 p-2 leading-relaxed text-blue-700 whitespace-pre-line">{`안녕하세요, 온우림입니다.
+홍길동님께 축하 화환 배송이 완료되었습니다.
+
+■ 주문번호: 20241115-001
+■ 받는 분: 홍길동
+■ 예식장: 강남웨딩홀
+
+배송 사진을 아래 버튼에서 확인하실 수 있습니다.`}</div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>장례식 템플릿 코드</Label>
+                <Input
+                  placeholder="order_delivered_funeral"
+                  value={alimtalkTemplateFuneral}
+                  onChange={(e) => setAlimtalkTemplateFuneral(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>결혼식 템플릿 코드</Label>
+                <Input
+                  placeholder="order_delivered_wedding"
+                  value={alimtalkTemplateWedding}
+                  onChange={(e) => setAlimtalkTemplateWedding(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>기타 템플릿 코드</Label>
+                <Input
+                  placeholder="order_delivered_etc"
+                  value={alimtalkTemplateEtc}
+                  onChange={(e) => setAlimtalkTemplateEtc(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {saveResult === 'error' && (

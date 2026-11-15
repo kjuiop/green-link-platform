@@ -9,6 +9,9 @@ export type SmsMessage = {
   failReason: string | null
   aligoMsgId: string | null
   sentAt: string
+  channel: 'SMS' | 'ALIMTALK'
+  templateCode: string | null
+  isReplaced: boolean
 }
 
 export async function fetchSmsMessages(): Promise<SmsMessage[]> {
@@ -26,6 +29,14 @@ export async function fetchSmsMessagesPaged(page = 0, size = 20): Promise<PageRe
 
 export async function fetchSmsMessagesByOrder(orderId: number): Promise<SmsMessage[]> {
   const res = await fetchWithAuth(`/api/messages/order/${orderId}`, { headers: authHeaders() })
+  if (!res.ok) throw new Error('발송내역을 불러오지 못했습니다.')
+  return res.json()
+}
+
+export async function fetchSettingsSmsMessages(companyId?: number): Promise<SmsMessage[]> {
+  const qs = new URLSearchParams()
+  if (companyId !== undefined) qs.set('companyId', String(companyId))
+  const res = await fetchWithAuth(`/api/settings/messages?${qs}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('발송내역을 불러오지 못했습니다.')
   return res.json()
 }

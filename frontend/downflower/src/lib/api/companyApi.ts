@@ -31,6 +31,11 @@ export type CompanySmsIntegration = {
   provider: SmsProvider
   apiKey: string | null
   senderNumber: string | null
+  alimtalkEnabled: boolean
+  alimtalkTemplateFuneral: string | null
+  alimtalkTemplateWedding: string | null
+  alimtalkTemplateEtc: string | null
+  alimtalkSenderKey: string | null
 }
 
 export async function fetchCompanySmsIntegration(companyId: number): Promise<CompanySmsIntegration | null> {
@@ -40,9 +45,20 @@ export async function fetchCompanySmsIntegration(companyId: number): Promise<Com
   return res.json()
 }
 
+export type SaveCompanySmsIntegrationData = {
+  provider: SmsProvider
+  apiKey: string
+  senderNumber: string
+  alimtalkEnabled: boolean
+  alimtalkTemplateFuneral: string
+  alimtalkTemplateWedding: string
+  alimtalkTemplateEtc: string
+  alimtalkSenderKey: string
+}
+
 export async function saveCompanySmsIntegration(
   companyId: number,
-  data: { provider: SmsProvider; apiKey: string; senderNumber: string },
+  data: SaveCompanySmsIntegrationData,
 ): Promise<CompanySmsIntegration> {
   const res = await fetchWithAuth(`/api/companies/${companyId}/integrations/sms`, {
     method: 'PUT',

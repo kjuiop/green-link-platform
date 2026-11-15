@@ -4,6 +4,7 @@ public class SmsMessage {
 
     private Long id;
     private Long orderId;
+    private Long companyId;
     private String receiver;
     private String message;
     private SmsStatus status;
@@ -12,6 +13,9 @@ public class SmsMessage {
     private String sentAt;
     private String imageUrl;
     private SmsMessageType type;
+    private MessageChannel channel = MessageChannel.SMS;
+    private String templateCode;
+    private boolean isReplaced = false;
 
     private SmsMessage() {}
 
@@ -23,6 +27,7 @@ public class SmsMessage {
         m.status = SmsStatus.FAIL;
         m.imageUrl = imageUrl;
         m.type = SmsMessageType.DELIVERY;
+        m.channel = MessageChannel.SMS;
         return m;
     }
 
@@ -33,16 +38,32 @@ public class SmsMessage {
         m.message = message;
         m.status = SmsStatus.FAIL;
         m.type = SmsMessageType.ORDER_NOTIFY;
+        m.channel = MessageChannel.SMS;
         return m;
     }
 
-    public static SmsMessage of(Long id, Long orderId, String receiver,
+    public static SmsMessage createAlimtalk(Long orderId, String receiver, String templateCode) {
+        SmsMessage m = new SmsMessage();
+        m.orderId = orderId;
+        m.receiver = receiver;
+        m.channel = MessageChannel.ALIMTALK;
+        m.templateCode = templateCode;
+        m.type = SmsMessageType.DELIVERY;
+        m.status = SmsStatus.FAIL;
+        return m;
+    }
+
+    public void setCompanyId(Long companyId) { this.companyId = companyId; }
+
+    public static SmsMessage of(Long id, Long orderId, Long companyId, String receiver,
                                  String message, SmsStatus status, String failReason,
                                  String aligoMsgId, String sentAt, String imageUrl,
-                                 SmsMessageType type) {
+                                 SmsMessageType type, MessageChannel channel,
+                                 String templateCode, boolean isReplaced) {
         SmsMessage m = new SmsMessage();
         m.id = id;
         m.orderId = orderId;
+        m.companyId = companyId;
         m.receiver = receiver;
         m.message = message;
         m.status = status;
@@ -51,6 +72,9 @@ public class SmsMessage {
         m.sentAt = sentAt;
         m.imageUrl = imageUrl;
         m.type = type != null ? type : SmsMessageType.DELIVERY;
+        m.channel = channel != null ? channel : MessageChannel.SMS;
+        m.templateCode = templateCode;
+        m.isReplaced = isReplaced;
         return m;
     }
 
@@ -71,8 +95,15 @@ public class SmsMessage {
         this.sentAt = sentAt;
     }
 
+    public void markAlimtalkSuccess(String sentAt, boolean replaced) {
+        this.status = SmsStatus.SUCCESS;
+        this.sentAt = sentAt;
+        this.isReplaced = replaced;
+    }
+
     public Long getId() { return id; }
     public Long getOrderId() { return orderId; }
+    public Long getCompanyId() { return companyId; }
     public String getReceiver() { return receiver; }
     public String getMessage() { return message; }
     public SmsStatus getStatus() { return status; }
@@ -81,4 +112,7 @@ public class SmsMessage {
     public String getSentAt() { return sentAt; }
     public String getImageUrl() { return imageUrl; }
     public SmsMessageType getType() { return type; }
+    public MessageChannel getChannel() { return channel; }
+    public String getTemplateCode() { return templateCode; }
+    public boolean isReplaced() { return isReplaced; }
 }

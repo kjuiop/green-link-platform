@@ -62,6 +62,7 @@ type BackendOrder = {
   isDeleted: boolean
   messageSentAt: string | null
   isDelayed: boolean
+  photoToken: string | null
 }
 
 export type CreateOrderPayload = {
@@ -156,6 +157,7 @@ function toFrontend(o: BackendOrder): Order {
     receiptReceiverName: o.receiptReceiverName ?? undefined,
     receiptReceiverRelation: o.receiptReceiverRelation ?? undefined,
     isDelayed: o.isDelayed ?? false,
+    photoToken: o.photoToken ?? undefined,
   }
 }
 
@@ -412,11 +414,20 @@ export type SmsMessageResult = {
   aligoMsgId: string | null
   sentAt: string | null
   imageUrl: string | null
+  channel: 'SMS' | 'ALIMTALK'
+  templateCode: string | null
+  isReplaced: boolean
 }
 
 export async function fetchSmsMessages(orderId: string): Promise<SmsMessageResult[]> {
-  const res = await fetchWithAuth(`/api/messages/order/${orderId}`, { headers: authHeaders() })
+  const res = await fetchWithAuth(`/api/messages/order/${orderId}?channel=SMS`, { headers: authHeaders() })
   if (!res.ok) throw new Error('발송 내역을 불러오지 못했습니다.')
+  return res.json()
+}
+
+export async function fetchAlimtalkMessages(orderId: string): Promise<SmsMessageResult[]> {
+  const res = await fetchWithAuth(`/api/messages/order/${orderId}?channel=ALIMTALK`, { headers: authHeaders() })
+  if (!res.ok) throw new Error('알림톡 내역을 불러오지 못했습니다.')
   return res.json()
 }
 

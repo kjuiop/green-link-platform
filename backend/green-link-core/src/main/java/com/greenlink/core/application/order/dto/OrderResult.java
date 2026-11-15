@@ -58,5 +58,6 @@ public record OrderResult(
         String messageSentAt,
         Long createdByAdminId,
         Long updatedByAdminId,
-        boolean isDelayed
+        boolean isDelayed,
+        String photoToken
 ) {}
