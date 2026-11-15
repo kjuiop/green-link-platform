@@ -33,7 +33,8 @@ public class CompanyIntegrationController {
         SaveCompanySmsIntegrationCommand cmd = new SaveCompanySmsIntegrationCommand(
                 companyId, command.provider(), command.apiKey(), command.senderNumber(),
                 command.alimtalkEnabled(), command.alimtalkTemplateFuneral(),
-                command.alimtalkTemplateWedding(), command.alimtalkTemplateEtc());
+                command.alimtalkTemplateWedding(), command.alimtalkTemplateEtc(),
+                command.alimtalkSenderKey());
         return ResponseEntity.ok(saveUseCase.save(cmd));
     }
 }

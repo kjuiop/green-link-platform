@@ -11,6 +11,7 @@ public class CompanyIntegration {
     private String alimtalkTemplateFuneral;
     private String alimtalkTemplateWedding;
     private String alimtalkTemplateEtc;
+    private String alimtalkSenderKey;
 
     private CompanyIntegration() {}
 
@@ -25,7 +26,8 @@ public class CompanyIntegration {
 
     public static CompanyIntegration of(Long id, Long companyId, String provider, String apiKey, String senderNumber,
                                         boolean alimtalkEnabled, String alimtalkTemplateFuneral,
-                                        String alimtalkTemplateWedding, String alimtalkTemplateEtc) {
+                                        String alimtalkTemplateWedding, String alimtalkTemplateEtc,
+                                        String alimtalkSenderKey) {
         CompanyIntegration ci = new CompanyIntegration();
         ci.id = id;
         ci.companyId = companyId;
@@ -36,6 +38,7 @@ public class CompanyIntegration {
         ci.alimtalkTemplateFuneral = alimtalkTemplateFuneral;
         ci.alimtalkTemplateWedding = alimtalkTemplateWedding;
         ci.alimtalkTemplateEtc = alimtalkTemplateEtc;
+        ci.alimtalkSenderKey = alimtalkSenderKey;
         return ci;
     }
 
@@ -45,11 +48,13 @@ public class CompanyIntegration {
         this.senderNumber = senderNumber;
     }
 
-    public void updateAlimtalk(boolean enabled, String templateFuneral, String templateWedding, String templateEtc) {
+    public void updateAlimtalk(boolean enabled, String templateFuneral, String templateWedding,
+                               String templateEtc, String senderKey) {
         this.alimtalkEnabled = enabled;
         this.alimtalkTemplateFuneral = templateFuneral;
         this.alimtalkTemplateWedding = templateWedding;
         this.alimtalkTemplateEtc = templateEtc;
+        this.alimtalkSenderKey = senderKey;
     }
 
     public String resolveAlimtalkTemplate(String eventType) {
@@ -67,4 +72,5 @@ public class CompanyIntegration {
     public String getAlimtalkTemplateFuneral() { return alimtalkTemplateFuneral; }
     public String getAlimtalkTemplateWedding() { return alimtalkTemplateWedding; }
     public String getAlimtalkTemplateEtc() { return alimtalkTemplateEtc; }
+    public String getAlimtalkSenderKey() { return alimtalkSenderKey; }
 }

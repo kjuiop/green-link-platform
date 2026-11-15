@@ -33,6 +33,7 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
   const [alimtalkTemplateFuneral, setAlimtalkTemplateFuneral] = useState(initialIntegration?.alimtalkTemplateFuneral ?? '')
   const [alimtalkTemplateWedding, setAlimtalkTemplateWedding] = useState(initialIntegration?.alimtalkTemplateWedding ?? '')
   const [alimtalkTemplateEtc, setAlimtalkTemplateEtc] = useState(initialIntegration?.alimtalkTemplateEtc ?? '')
+  const [alimtalkSenderKey, setAlimtalkSenderKey] = useState(initialIntegration?.alimtalkSenderKey ?? '')
   const [saving, setSaving] = useState(false)
   const [saveResult, setSaveResult] = useState<'idle' | 'success' | 'error'>('idle')
 
@@ -46,6 +47,7 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
         alimtalkTemplateFuneral,
         alimtalkTemplateWedding,
         alimtalkTemplateEtc,
+        alimtalkSenderKey,
       }
       await saveCompanySmsIntegration(companyId, data)
       setSaveResult('success')
@@ -117,8 +119,17 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
           {alimtalkEnabled && (
             <div className="space-y-3">
               <p className="text-xs text-gray-400">
-                메시지미에 등록된 알림톡 템플릿 코드를 입력하세요. 발송 실패 시 SMS로 자동 전환됩니다.
+                메시지미에 등록된 알림톡 전송키와 템플릿 코드를 입력하세요. 발송 실패 시 SMS로 자동 전환됩니다.
               </p>
+
+              <div className="space-y-1.5">
+                <Label>전송키 (Sender Key)</Label>
+                <Input
+                  placeholder="카카오채널 전송키 입력"
+                  value={alimtalkSenderKey}
+                  onChange={(e) => setAlimtalkSenderKey(e.target.value)}
+                />
+              </div>
 
               {/* 템플릿 문구 예시 */}
               <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800 space-y-3">

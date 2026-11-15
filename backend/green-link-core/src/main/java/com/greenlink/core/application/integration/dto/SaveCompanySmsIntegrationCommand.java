@@ -8,5 +8,6 @@ public record SaveCompanySmsIntegrationCommand(
         boolean alimtalkEnabled,
         String alimtalkTemplateFuneral,
         String alimtalkTemplateWedding,
-        String alimtalkTemplateEtc
+        String alimtalkTemplateEtc,
+        String alimtalkSenderKey
 ) {}

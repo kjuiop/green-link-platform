@@ -57,6 +57,7 @@ public class AlimtalkService implements SendDeliveryAlimtalkUseCase {
 
         if (ci == null || !ci.isAlimtalkEnabled()) return;
         if (ci.getApiKey() == null || ci.getApiKey().isBlank()) return;
+        if (ci.getAlimtalkSenderKey() == null || ci.getAlimtalkSenderKey().isBlank()) return;
 
         String templateCode = ci.resolveAlimtalkTemplate(order.getEventType());
         if (templateCode == null || templateCode.isBlank()) return;
@@ -69,7 +70,8 @@ public class AlimtalkService implements SendDeliveryAlimtalkUseCase {
             msg.setCompanyId(order.getOrderingCompanyId());
             try {
                 AlimtalkClient.AlimtalkSendResult result = alimtalkClient.send(
-                        ci.getApiKey(), templateCode, variable, ci.getSenderNumber(), receiver);
+                        ci.getApiKey(), ci.getAlimtalkSenderKey(), templateCode,
+                        variable, ci.getSenderNumber(), receiver);
                 if (result.success()) {
                     msg.markAlimtalkSuccess(now, result.replaced());
                 } else {
