@@ -150,7 +150,7 @@ public class SettlementService implements
                     "BOTH",
                     (int)(v.count() + o.count()),
                     o.orderAmountSum(),   // 발주 지급액
-                    v.vendorAmountSum(),  // 수주 수령액
+                    v.orderAmountSum(),   // 수주 수령액
                     false,
                     null
             );
