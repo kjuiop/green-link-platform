@@ -143,7 +143,8 @@ public class OrderQueryRepository {
                 .when(order.status.eq(OrderStatus.PENDING)).then(1)
                 .when(order.status.eq(OrderStatus.REJECTED)).then(2)
                 .when(isWeddingDelayed.or(isNonWeddingDelayed)).then(3)
-                .otherwise(4)
+                .when(order.status.eq(OrderStatus.ACCEPTED)).then(4)
+                .otherwise(5)
                 .asc();
     }
 
