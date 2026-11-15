@@ -9,7 +9,7 @@ import {
   OrderActionButtons, SaveErrorBanner,
   BasicInfoCard, DeliveryInfoCard, RibbonCard, ContactCard, MemoCard,
   ReferenceImageCard, DeliveryPhotosCard, ReceiptConfirmationCard,
-  SmsHistoryCard, HistoryCard, CompleteDialog, DeleteDialog,
+  SmsHistoryCard, AlimtalkHistoryCard, HistoryCard, CompleteDialog, DeleteDialog,
 } from '@/components/common/OrderDetailSections'
 
 const WINDOW_OVERLAY = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
@@ -69,6 +69,7 @@ export default function OrderPopupWindowPage() {
               <DeliveryPhotosCard d={loaded} />
               <ReceiptConfirmationCard d={loaded} className="sm:col-span-2" />
               <SmsHistoryCard d={loaded} className="sm:col-span-2" />
+              <AlimtalkHistoryCard d={loaded} className="sm:col-span-2" />
               <HistoryCard d={loaded} className="sm:col-span-2" />
             </div>
           </div>

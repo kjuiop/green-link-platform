@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import {
   fetchOrder, updateOrder, updateOrderStatus, deleteOrder,
   fetchOrderHistory, fetchReceiptConfirmation,
-  fetchSmsMessages, resendMms,
+  fetchSmsMessages, fetchAlimtalkMessages, resendMms,
   OrderHistoryItem, ReceiptConfirmationResult, SmsMessageResult,
 } from '@/lib/api/orderApi'
 import { Order } from '@/types/order'
@@ -33,6 +33,7 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
   const [receiptConfirmation, setReceiptConfirmation] = useState<ReceiptConfirmationResult | null>(null)
   const [history, setHistory] = useState<OrderHistoryItem[]>([])
   const [smsMessages, setSmsMessages] = useState<SmsMessageResult[]>([])
+  const [alimtalkMessages, setAlimtalkMessages] = useState<SmsMessageResult[]>([])
   const [resending, setResending] = useState(false)
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
   const [selectedPhotoUrls, setSelectedPhotoUrls] = useState<string[]>([])
@@ -48,12 +49,14 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
       fetchReceiptConfirmation(orderId).catch(() => null),
       fetchOrderHistory(orderId).catch(() => []),
       fetchSmsMessages(orderId).catch(() => []),
-    ]).then(([orderData, receipt, hist, sms]) => {
+      fetchAlimtalkMessages(orderId).catch(() => []),
+    ]).then(([orderData, receipt, hist, sms, alimtalk]) => {
       setOrder(orderData)
       setDraft(orderData)
       setReceiptConfirmation(receipt)
       setHistory(hist)
       setSmsMessages(sms)
+      setAlimtalkMessages(alimtalk)
     }).catch(() => setLoadError('발주 정보를 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
   }, [orderId])
@@ -61,6 +64,7 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
   const hasSitePhotos = (receiptConfirmation?.sitePhotoUrls.length ?? 0) > 0
   const hasPhotos = hasSitePhotos || (receiptConfirmation?.storePhotoUrls.length ?? 0) > 0
   const hasSmsFailure = smsMessages.some((m) => m.status === 'FAIL')
+  const hasAlimtalkFailure = alimtalkMessages.some((m) => m.status === 'FAIL')
 
   function startEdit() {
     setDraft({ ...order! })
@@ -152,8 +156,12 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
       const updated = await updateOrderStatus(orderId, 'complete', selectedPhotoUrls)
       setOrder(updated)
       setDraft(updated)
-      const sms = await fetchSmsMessages(orderId).catch(() => [])
+      const [sms, alimtalk] = await Promise.all([
+        fetchSmsMessages(orderId).catch(() => []),
+        fetchAlimtalkMessages(orderId).catch(() => []),
+      ])
       setSmsMessages(sms)
+      setAlimtalkMessages(alimtalk)
       onUpdated?.()
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : '배송완료 처리에 실패했습니다.')
@@ -197,8 +205,12 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
     setSaveError(null)
     try {
       await resendMms(orderId)
-      const sms = await fetchSmsMessages(orderId).catch(() => [])
+      const [sms, alimtalk] = await Promise.all([
+        fetchSmsMessages(orderId).catch(() => []),
+        fetchAlimtalkMessages(orderId).catch(() => []),
+      ])
       setSmsMessages(sms)
+      setAlimtalkMessages(alimtalk)
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : '재발송에 실패했습니다.')
     } finally {
@@ -228,15 +240,17 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
 
   async function refreshAfterDeliveryComplete() {
     try {
-      const [updated, receipt, sms] = await Promise.all([
+      const [updated, receipt, sms, alimtalk] = await Promise.all([
         fetchOrder(orderId),
         fetchReceiptConfirmation(orderId).catch(() => null),
         fetchSmsMessages(orderId).catch(() => []),
+        fetchAlimtalkMessages(orderId).catch(() => []),
       ])
       setOrder(updated)
       setDraft(updated)
       setReceiptConfirmation(receipt)
       setSmsMessages(sms)
+      setAlimtalkMessages(alimtalk)
       onUpdated?.()
     } catch {}
   }
@@ -249,11 +263,11 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
     orderId,
     order, draft, setDraft, loading, loadError,
     isEditing, saving, saveError, isSuperAdmin, canEdit,
-    receiptConfirmation, history, smsMessages, resending,
+    receiptConfirmation, history, smsMessages, alimtalkMessages, resending,
     products, vendors, selectedProductId, setSelectedProductId,
     completeDialogOpen, setCompleteDialogOpen, selectedPhotoUrls,
     confirmDelete, deleteError,
-    hasSitePhotos, hasPhotos, hasSmsFailure,
+    hasSitePhotos, hasPhotos, hasSmsFailure, hasAlimtalkFailure,
     startEdit, cancelEdit, saveEdit,
     openCompleteDialog, togglePhotoSelection, handleComplete,
     handleAccept, handleReject, handleResend, handleDelete,

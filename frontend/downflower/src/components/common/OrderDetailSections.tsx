@@ -744,6 +744,43 @@ export function SmsHistoryCard({ d, className }: SectionProps) {
   )
 }
 
+export function AlimtalkHistoryCard({ d, className }: SectionProps) {
+  const { alimtalkMessages } = d
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle className="text-sm">알림톡 발송 내역</CardTitle>
+      </CardHeader>
+      <CardContent className="text-sm">
+        {alimtalkMessages.length === 0 ? (
+          <p className="text-xs text-gray-400">배송완료 처리 시 알림톡이 발송됩니다.</p>
+        ) : (
+          <div className="space-y-2">
+            {alimtalkMessages.map((msg) => (
+              <div key={msg.id} className="space-y-1.5 rounded-md border bg-gray-50 px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{formatPhone(msg.receiver)}</span>
+                  <div className="flex items-center gap-1.5">
+                    {msg.isReplaced && (
+                      <span className="text-xs text-amber-600">SMS 대체</span>
+                    )}
+                    {msg.status === 'SUCCESS'
+                      ? <span className="text-xs text-green-600">✓ 발송성공</span>
+                      : <span className="text-xs text-red-500">✕ 발송실패</span>}
+                  </div>
+                </div>
+                {msg.templateCode && <p className="text-xs text-gray-400">템플릿: {msg.templateCode}</p>}
+                {msg.sentAt && <p className="text-xs text-gray-400">{msg.sentAt}</p>}
+                {msg.failReason && <p className="text-xs text-red-400">{msg.failReason}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export function HistoryCard({ d, className }: SectionProps) {
   const { history } = d
   return (

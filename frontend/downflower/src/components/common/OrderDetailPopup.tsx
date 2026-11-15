@@ -8,7 +8,7 @@ import {
   OrderActionButtons, SaveErrorBanner,
   BasicInfoCard, DeliveryInfoCard, RibbonCard, ContactCard, MemoCard,
   ReferenceImageCard, DeliveryPhotosCard, ReceiptConfirmationCard,
-  SmsHistoryCard, HistoryCard, CompleteDialog, DeleteDialog,
+  SmsHistoryCard, AlimtalkHistoryCard, HistoryCard, CompleteDialog, DeleteDialog,
 } from '@/components/common/OrderDetailSections'
 
 interface Props {
@@ -129,6 +129,7 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
               <DeliveryPhotosCard d={loaded} />
               <ReceiptConfirmationCard d={loaded} className="sm:col-span-2" />
               <SmsHistoryCard d={loaded} className="sm:col-span-2" />
+              <AlimtalkHistoryCard d={loaded} className="sm:col-span-2" />
               <HistoryCard d={loaded} className="sm:col-span-2" />
             </div>
           </div>

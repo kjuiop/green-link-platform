@@ -31,7 +31,9 @@ public class CompanyIntegrationController {
     public ResponseEntity<CompanySmsIntegrationResult> save(@PathVariable Long companyId,
                                                             @RequestBody SaveCompanySmsIntegrationCommand command) {
         SaveCompanySmsIntegrationCommand cmd = new SaveCompanySmsIntegrationCommand(
-                companyId, command.provider(), command.apiKey(), command.senderNumber());
+                companyId, command.provider(), command.apiKey(), command.senderNumber(),
+                command.alimtalkEnabled(), command.alimtalkTemplateFuneral(),
+                command.alimtalkTemplateWedding(), command.alimtalkTemplateEtc());
         return ResponseEntity.ok(saveUseCase.save(cmd));
     }
 }

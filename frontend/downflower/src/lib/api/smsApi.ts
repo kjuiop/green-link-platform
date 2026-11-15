@@ -9,6 +9,9 @@ export type SmsMessage = {
   failReason: string | null
   aligoMsgId: string | null
   sentAt: string
+  channel: 'SMS' | 'ALIMTALK'
+  templateCode: string | null
+  isReplaced: boolean
 }
 
 export async function fetchSmsMessages(): Promise<SmsMessage[]> {

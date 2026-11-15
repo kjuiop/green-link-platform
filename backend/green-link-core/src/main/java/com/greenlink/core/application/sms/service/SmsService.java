@@ -12,6 +12,7 @@ import com.greenlink.core.application.sms.usecase.SendOrderNotificationUseCase;
 import com.greenlink.core.domain.order.model.Order;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import org.springframework.beans.factory.annotation.Value;
+import com.greenlink.core.domain.sms.model.MessageChannel;
 import com.greenlink.core.domain.sms.model.SmsMessage;
 import com.greenlink.core.domain.sms.model.SmsMessageType;
 import com.greenlink.core.domain.sms.model.SmsStatus;
@@ -136,6 +137,19 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     @Transactional(readOnly = true)
     public PageResult<SmsMessageResult> getMessagesPaged(Pageable pageable) {
         return PageResult.of(smsMessageRepository.findAll(pageable).map(this::toResult));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SmsMessageResult> getMessagesByOrderAndChannel(Long orderId, String channel) {
+        MessageChannel ch;
+        try {
+            ch = MessageChannel.valueOf(channel.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return List.of();
+        }
+        return smsMessageRepository.findAllByOrderIdAndChannel(orderId, ch).stream()
+                .map(this::toResult).toList();
     }
 
     @Override
@@ -313,8 +327,12 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     private SmsMessageResult toResult(SmsMessage m) {
         return new SmsMessageResult(
                 m.getId(), m.getOrderId(), m.getReceiver(),
-                m.getMessage(), m.getStatus().name(), m.getFailReason(), m.getAligoMsgId(), m.getSentAt(), m.getImageUrl(),
-                m.getType() != null ? m.getType().name() : "DELIVERY"
+                m.getMessage(), m.getStatus().name(), m.getFailReason(),
+                m.getAligoMsgId(), m.getSentAt(), m.getImageUrl(),
+                m.getType() != null ? m.getType().name() : "DELIVERY",
+                m.getChannel() != null ? m.getChannel().name() : "SMS",
+                m.getTemplateCode(),
+                m.isReplaced()
         );
     }
 }

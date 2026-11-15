@@ -1,5 +1,6 @@
 package com.greenlink.core.domain.sms.port;
 
+import com.greenlink.core.domain.sms.model.MessageChannel;
 import com.greenlink.core.domain.sms.model.SmsMessage;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,4 +13,5 @@ public interface SmsMessageRepository {
     List<SmsMessage> findAllByOrderIdIn(List<Long> orderIds);
     List<SmsMessage> findAll();
     Page<SmsMessage> findAll(Pageable pageable);
+    List<SmsMessage> findAllByOrderIdAndChannel(Long orderId, MessageChannel channel);
 }
