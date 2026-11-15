@@ -87,12 +87,14 @@ export default function ProductsPage() {
           name: form.name.trim(),
           price: rawPrice,
           memo: form.memo.trim() || undefined,
+          sortOrder: editTarget.sortOrder,
         })
       } else {
         await createProduct({
           name: form.name.trim(),
           price: rawPrice,
           memo: form.memo.trim() || undefined,
+          sortOrder: 0,
         })
         setPage(0)
       }
