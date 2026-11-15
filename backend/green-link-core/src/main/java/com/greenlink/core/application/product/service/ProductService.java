@@ -33,7 +33,7 @@ public class ProductService implements CreateProductUseCase, UpdateProductUseCas
     @Override
     @Transactional
     public ProductResult createProduct(CreateProductCommand cmd) {
-        Product product = Product.create(cmd.name(), cmd.price(), cmd.memo());
+        Product product = Product.create(cmd.name(), cmd.price(), cmd.memo(), cmd.sortOrder());
         return toResult(productRepository.save(product));
     }
 
@@ -42,7 +42,7 @@ public class ProductService implements CreateProductUseCase, UpdateProductUseCas
     public ProductResult updateProduct(Long id, UpdateProductCommand cmd) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ProductErrorCode.PRODUCT_NOT_FOUND));
-        product.update(cmd.name(), cmd.price(), cmd.memo());
+        product.update(cmd.name(), cmd.price(), cmd.memo(), cmd.sortOrder());
         return toResult(productRepository.save(product));
     }
 
@@ -66,6 +66,6 @@ public class ProductService implements CreateProductUseCase, UpdateProductUseCas
     }
 
     private ProductResult toResult(Product p) {
-        return new ProductResult(p.getId(), p.getName(), p.getPrice(), p.getMemo(), p.getCreatedAt());
+        return new ProductResult(p.getId(), p.getName(), p.getPrice(), p.getMemo(), p.getCreatedAt(), p.getSortOrder());
     }
 }

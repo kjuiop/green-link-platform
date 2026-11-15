@@ -14,7 +14,7 @@ import { fetchProducts, createProduct, updateProduct, deleteProduct } from '@/li
 
 const PAGE_SIZE = 20
 
-const emptyForm = { name: '', price: '', memo: '' }
+const emptyForm = { name: '', price: '', memo: '', sortOrder: '' }
 
 function formatPrice(value: string) {
   const digits = value.replace(/\D/g, '')
@@ -69,6 +69,7 @@ export default function ProductsPage() {
       name: product.name,
       price: product.price.toLocaleString(),
       memo: product.memo ?? '',
+      sortOrder: String(product.sortOrder),
     })
     setModalError('')
     setModalOpen(true)
@@ -87,12 +88,14 @@ export default function ProductsPage() {
           name: form.name.trim(),
           price: rawPrice,
           memo: form.memo.trim() || undefined,
+          sortOrder: Number(form.sortOrder) || 0,
         })
       } else {
         await createProduct({
           name: form.name.trim(),
           price: rawPrice,
           memo: form.memo.trim() || undefined,
+          sortOrder: Number(form.sortOrder) || 0,
         })
         setPage(0)
       }
@@ -141,7 +144,8 @@ export default function ProductsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>상품명</TableHead>
+              <TableHead className="w-12 text-right">순서</TableHead>
+              <TableHead className="w-48">상품명</TableHead>
               <TableHead className="w-36 text-right">기본가격</TableHead>
               <TableHead>메모</TableHead>
               <TableHead className="w-32">등록일</TableHead>
@@ -151,19 +155,20 @@ export default function ProductsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={role === 'SUPER_ADMIN' ? 6 : 5} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={role === 'SUPER_ADMIN' ? 6 : 5} className="py-10 text-center text-sm text-gray-400">
                   등록된 상품이 없습니다.
                 </TableCell>
               </TableRow>
             ) : (
               products.map((product) => (
                 <TableRow key={product.id}>
+                  <TableCell className="text-right text-sm text-gray-400">{product.sortOrder}</TableCell>
                   <TableCell>
                     {role === 'SUPER_ADMIN' ? (
                       <button onClick={() => openEdit(product)} className="font-medium text-blue-700 hover:underline">
@@ -250,9 +255,20 @@ export default function ProductsPage() {
             <DialogTitle>{editTarget ? `${editTarget.name} 수정` : '상품 등록'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>상품명 *</Label>
-              <Input placeholder="예: 근조화환 3단" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2 space-y-1.5">
+                <Label>상품명 *</Label>
+                <Input placeholder="예: 근조화환 3단" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>순서</Label>
+                <Input
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={form.sortOrder}
+                  onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value.replace(/\D/g, '') }))}
+                />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>기본가격 *</Label>

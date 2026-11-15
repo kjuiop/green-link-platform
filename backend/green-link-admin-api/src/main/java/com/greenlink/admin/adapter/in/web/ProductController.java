@@ -45,7 +45,7 @@ public class ProductController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(getProductsUseCase.getProducts(
-                PageRequest.of(page, size, Sort.by("createdAt").descending())));
+                PageRequest.of(page, size, Sort.by("sortOrder").ascending())));
     }
 
     @GetMapping("/all")
