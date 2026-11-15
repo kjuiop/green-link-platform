@@ -120,43 +120,30 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
                 메시지미에 등록된 알림톡 템플릿 코드를 입력하세요. 발송 실패 시 SMS로 자동 전환됩니다.
               </p>
 
-              {/* 템플릿 변수 안내 */}
-              <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800 space-y-2">
-                <p className="font-semibold">📌 템플릿 변수 순서 (메시지미 템플릿 등록 시 사용)</p>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-center text-xs">
-                    <thead>
-                      <tr className="border-b border-blue-200">
-                        <th className="py-1 pr-3 font-medium text-blue-600">#{'{1}'}</th>
-                        <th className="py-1 pr-3 font-medium text-blue-600">#{'{2}'}</th>
-                        <th className="py-1 pr-3 font-medium text-blue-600">#{'{3}'}</th>
-                        <th className="py-1 pr-3 font-medium text-blue-600">#{'{4}'}</th>
-                        <th className="py-1 font-medium text-blue-600">#{'{5}'}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-b border-blue-100">
-                        <td className="py-1 pr-3 font-semibold">발주사명</td>
-                        <td className="py-1 pr-3 font-semibold">받는이</td>
-                        <td className="py-1 pr-3 font-semibold">주문번호</td>
-                        <td className="py-1 pr-3 font-semibold">장소</td>
-                        <td className="py-1 font-semibold">사진토큰</td>
-                      </tr>
-                      <tr className="text-blue-500">
-                        <td className="py-1 pr-3">온우림</td>
-                        <td className="py-1 pr-3">홍길동</td>
-                        <td className="py-1 pr-3">20241115-001</td>
-                        <td className="py-1 pr-3">강남구 삼성로</td>
-                        <td className="py-1">abc123</td>
-                      </tr>
-                    </tbody>
-                  </table>
+              {/* 템플릿 문구 예시 */}
+              <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800 space-y-3">
+                <p className="font-semibold">📌 발송 문구 예시</p>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-blue-600">장례식</p>
+                  <div className="rounded bg-blue-100 p-2 leading-relaxed text-blue-700 whitespace-pre-line">{`안녕하세요, 온우림입니다.
+홍길동님께 근조 화환 배송이 완료되었습니다.
+
+■ 주문번호: 20241115-001
+■ 받는 분: 홍길동
+■ 장례식장: 서울추모공원
+
+배송 사진을 아래 버튼에서 확인하실 수 있습니다.`}</div>
                 </div>
-                <div className="rounded bg-blue-100 p-2 font-mono leading-relaxed text-blue-700">
-                  <p>[배송완료] #{'{1}'}에서 주문하신 꽃 배달이 완료되었습니다.</p>
-                  <p>받는 이: #{'{2}'} (주문번호: #{'{3}'})</p>
-                  <p>배송지: #{'{4}'}</p>
-                  <p>배송 사진: https://downflower.kr/photo/#{'{5}'}</p>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-blue-600">결혼식</p>
+                  <div className="rounded bg-blue-100 p-2 leading-relaxed text-blue-700 whitespace-pre-line">{`안녕하세요, 온우림입니다.
+홍길동님께 축하 화환 배송이 완료되었습니다.
+
+■ 주문번호: 20241115-001
+■ 받는 분: 홍길동
+■ 예식장: 강남웨딩홀
+
+배송 사진을 아래 버튼에서 확인하실 수 있습니다.`}</div>
                 </div>
               </div>
 
