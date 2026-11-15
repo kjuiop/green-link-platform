@@ -155,13 +155,13 @@ export default function ProductsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={role === 'SUPER_ADMIN' ? 6 : 5} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={role === 'SUPER_ADMIN' ? 6 : 5} className="py-10 text-center text-sm text-gray-400">
                   등록된 상품이 없습니다.
                 </TableCell>
               </TableRow>
