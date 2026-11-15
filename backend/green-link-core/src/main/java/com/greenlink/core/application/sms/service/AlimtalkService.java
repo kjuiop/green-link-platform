@@ -66,6 +66,7 @@ public class AlimtalkService implements SendDeliveryAlimtalkUseCase {
 
         for (String receiver : resolveReceivers(order)) {
             SmsMessage msg = SmsMessage.createAlimtalk(orderId, receiver, templateCode);
+            msg.setCompanyId(order.getOrderingCompanyId());
             try {
                 AlimtalkClient.AlimtalkSendResult result = alimtalkClient.send(
                         ci.getApiKey(), templateCode, variable, ci.getSenderNumber(), receiver);

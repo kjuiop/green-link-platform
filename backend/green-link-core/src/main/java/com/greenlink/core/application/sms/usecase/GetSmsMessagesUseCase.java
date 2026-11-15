@@ -11,4 +11,5 @@ public interface GetSmsMessagesUseCase {
     List<SmsMessageResult> getMessagesByOrder(Long orderId);
     PageResult<SmsMessageResult> getMessagesPaged(Pageable pageable);
     List<SmsMessageResult> getMessagesByOrderAndChannel(Long orderId, String channel);
+    List<SmsMessageResult> getMessagesByCompanyId(Long companyId);
 }

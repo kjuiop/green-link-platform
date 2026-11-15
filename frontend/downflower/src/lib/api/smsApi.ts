@@ -33,6 +33,14 @@ export async function fetchSmsMessagesByOrder(orderId: number): Promise<SmsMessa
   return res.json()
 }
 
+export async function fetchSettingsSmsMessages(companyId?: number): Promise<SmsMessage[]> {
+  const qs = new URLSearchParams()
+  if (companyId !== undefined) qs.set('companyId', String(companyId))
+  const res = await fetchWithAuth(`/api/settings/messages?${qs}`, { headers: authHeaders() })
+  if (!res.ok) throw new Error('발송내역을 불러오지 못했습니다.')
+  return res.json()
+}
+
 export async function resendMms(orderId: number): Promise<void> {
   const res = await fetchWithAuth(`/api/orders/${orderId}/resend`, {
     method: 'POST',

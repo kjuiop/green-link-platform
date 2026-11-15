@@ -92,10 +92,10 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
 
         for (String imageUrl : urls) {
             if (ordererValid) {
-                sendAndRecord(orderId, order.getOrdererPhone(), msg, imageUrl, companyConfig, now, rdate, rtime);
+                sendAndRecord(orderId, order.getOrdererPhone(), msg, imageUrl, companyConfig, now, rdate, rtime, order.getOrderingCompanyId());
             }
             if (recipientValid && !samePhone) {
-                sendAndRecord(orderId, order.getRecipientPhone(), msg, imageUrl, companyConfig, now, rdate, rtime);
+                sendAndRecord(orderId, order.getRecipientPhone(), msg, imageUrl, companyConfig, now, rdate, rtime, order.getOrderingCompanyId());
             }
         }
     }
@@ -117,7 +117,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         CompanyConfig companyConfig = resolveCompanyConfig(order.getOrderingCompanyId(), settings);
 
         for (SmsMessage m : failed) {
-            sendAndRecord(orderId, m.getReceiver(), msg, m.getImageUrl(), companyConfig, now, null, null);
+            sendAndRecord(orderId, m.getReceiver(), msg, m.getImageUrl(), companyConfig, now, null, null, order.getOrderingCompanyId());
         }
     }
 
@@ -137,6 +137,12 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     @Transactional(readOnly = true)
     public PageResult<SmsMessageResult> getMessagesPaged(Pageable pageable) {
         return PageResult.of(smsMessageRepository.findAll(pageable).map(this::toResult));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SmsMessageResult> getMessagesByCompanyId(Long companyId) {
+        return smsMessageRepository.findAllByCompanyId(companyId).stream().map(this::toResult).toList();
     }
 
     @Override
@@ -169,6 +175,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
             SmsClient client = smsClientFactory.getByProvider(companyConfig.provider);
 
             SmsMessage smsMessage = SmsMessage.createNotification(orderId, vendorPhone, msg);
+            smsMessage.setCompanyId(order.getOrderingCompanyId());
             try {
                 SmsResult result = dispatchSend(client, companyConfig, vendorPhone, msg, null, null, null, title);
                 if (result.success()) {
@@ -219,9 +226,11 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     }
 
     private void sendAndRecord(Long orderId, String receiver, String msg, String imageUrl,
-                               CompanyConfig companyConfig, String sentAt, String rdate, String rtime) {
+                               CompanyConfig companyConfig, String sentAt, String rdate, String rtime,
+                               Long companyId) {
         SmsClient client = smsClientFactory.getByProvider(companyConfig.provider);
         SmsMessage smsMessage = SmsMessage.create(orderId, receiver, msg, imageUrl);
+        smsMessage.setCompanyId(companyId);
         try {
             SmsResult result = dispatchSend(client, companyConfig, receiver, msg, imageUrl, rdate, rtime, null);
             String fallbackReason = null;

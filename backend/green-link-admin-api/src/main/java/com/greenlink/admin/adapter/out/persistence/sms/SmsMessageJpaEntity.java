@@ -18,6 +18,9 @@ public class SmsMessageJpaEntity extends BaseJpaEntity {
     @Column(name = "order_id", nullable = false)
     private Long orderId;
 
+    @Column(name = "company_id")
+    private Long companyId;
+
     @Column(nullable = false, length = 20)
     private String receiver;
 
@@ -60,6 +63,7 @@ public class SmsMessageJpaEntity extends BaseJpaEntity {
         SmsMessageJpaEntity e = new SmsMessageJpaEntity();
         e.id = sms.getId();
         e.orderId = sms.getOrderId();
+        e.companyId = sms.getCompanyId();
         e.receiver = sms.getReceiver();
         e.message = sms.getMessage();
         e.status = sms.getStatus();
@@ -75,7 +79,7 @@ public class SmsMessageJpaEntity extends BaseJpaEntity {
     }
 
     public SmsMessage toDomain() {
-        return SmsMessage.of(id, orderId, receiver, message, status, failReason, aligoMsgId, sentAt, imageUrl, type,
+        return SmsMessage.of(id, orderId, companyId, receiver, message, status, failReason, aligoMsgId, sentAt, imageUrl, type,
                 channel, templateCode, isReplaced);
     }
 }

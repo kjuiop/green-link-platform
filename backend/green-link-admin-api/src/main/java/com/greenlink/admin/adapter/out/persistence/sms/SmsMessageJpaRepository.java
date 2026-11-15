@@ -9,4 +9,5 @@ public interface SmsMessageJpaRepository extends JpaRepository<SmsMessageJpaEnti
     List<SmsMessageJpaEntity> findByOrderId(Long orderId);
     List<SmsMessageJpaEntity> findByOrderIdIn(List<Long> orderIds);
     List<SmsMessageJpaEntity> findByOrderIdAndChannel(Long orderId, MessageChannel channel);
+    List<SmsMessageJpaEntity> findByCompanyId(Long companyId);
 }
