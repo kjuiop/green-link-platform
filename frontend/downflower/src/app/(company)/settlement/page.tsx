@@ -29,7 +29,7 @@ function DiffCards({
   vendorOrders: SettlementOrder[]
   orderingOrders: SettlementOrder[]
 }) {
-  const vendorSum = vendorOrders.reduce((s, o) => s + (o.vendorAmount ?? 0), 0)
+  const vendorSum = vendorOrders.reduce((s, o) => s + totalAmountOf(o), 0)
   const orderingSum = orderingOrders.reduce((s, o) => s + totalAmountOf(o), 0)
   const diff = vendorSum - orderingSum
   return (
@@ -93,16 +93,21 @@ function OrderTable({ orders, isVendor }: { orders: SettlementOrder[]; isVendor:
             <TableHead>상품명</TableHead>
             <TableHead>배달장소</TableHead>
             <TableHead>주문자</TableHead>
-            {isVendor
-              ? <TableHead className="text-right">수주금액</TableHead>
-              : <TableHead className="text-right">발주금액</TableHead>
-            }
+            {isVendor ? (
+              <>
+                <TableHead className="text-right">상품금액</TableHead>
+                <TableHead className="text-right">추가비용</TableHead>
+                <TableHead className="text-right">주문금액(합계)</TableHead>
+              </>
+            ) : (
+              <TableHead className="text-right">발주금액</TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
           {orders.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="py-10 text-center text-sm text-gray-400">
+              <TableCell colSpan={isVendor ? 9 : 7} className="py-10 text-center text-sm text-gray-400">
                 해당 기간에 배송완료된 주문이 없습니다.
               </TableCell>
             </TableRow>
@@ -115,12 +120,17 @@ function OrderTable({ orders, isVendor }: { orders: SettlementOrder[]; isVendor:
                 <TableCell className="text-sm">{o.productName}</TableCell>
                 <TableCell className="text-sm">{o.placeName}</TableCell>
                 <TableCell className="text-sm">{o.ordererName}</TableCell>
-                <TableCell className="text-right text-sm font-medium text-blue-700">
-                  {isVendor
-                    ? (o.vendorAmount != null ? formatKRW(o.vendorAmount) : '-')
-                    : formatKRW(totalAmountOf(o))
-                  }
-                </TableCell>
+                {isVendor ? (
+                  <>
+                    <TableCell className="text-right text-sm text-gray-700">{formatKRW(o.orderAmount)}</TableCell>
+                    <TableCell className="text-right text-sm text-gray-700">{o.extraCost ? formatKRW(o.extraCost) : '-'}</TableCell>
+                    <TableCell className="text-right text-sm font-medium text-blue-700">{formatKRW(totalAmountOf(o))}</TableCell>
+                  </>
+                ) : (
+                  <TableCell className="text-right text-sm font-medium text-blue-700">
+                    {formatKRW(totalAmountOf(o))}
+                  </TableCell>
+                )}
               </TableRow>
             ))
           )}
@@ -129,10 +139,15 @@ function OrderTable({ orders, isVendor }: { orders: SettlementOrder[]; isVendor:
       {orders.length > 0 && (
         <div className="flex justify-end gap-6 border-t bg-gray-50 px-4 py-3 text-sm">
           <span className="text-gray-600">합계: <strong>{orders.length}건</strong></span>
-          {isVendor
-            ? <span className="text-blue-700">수주금액: <strong>{formatKRW(orders.reduce((s, o) => s + (o.vendorAmount ?? 0), 0))}</strong></span>
-            : <span className="text-blue-700">발주금액: <strong>{formatKRW(orders.reduce((s, o) => s + totalAmountOf(o), 0))}</strong></span>
-          }
+          {isVendor ? (
+            <>
+              <span className="text-gray-600">상품금액: <strong>{formatKRW(orders.reduce((s, o) => s + o.orderAmount, 0))}</strong></span>
+              <span className="text-gray-600">추가비용: <strong>{formatKRW(orders.reduce((s, o) => s + (o.extraCost ?? 0), 0))}</strong></span>
+              <span className="text-blue-700">주문금액 합계: <strong>{formatKRW(orders.reduce((s, o) => s + totalAmountOf(o), 0))}</strong></span>
+            </>
+          ) : (
+            <span className="text-blue-700">발주금액: <strong>{formatKRW(orders.reduce((s, o) => s + totalAmountOf(o), 0))}</strong></span>
+          )}
         </div>
       )}
     </div>
@@ -169,7 +184,7 @@ export default function MySettlementPage() {
   const activeOrders = tab === 'vendor' ? vendorOrders : orderingOrders
   const isVendorTab = tab === 'vendor'
   const mainAmount = isVendorTab
-    ? vendorOrders.reduce((s, o) => s + (o.vendorAmount ?? 0), 0)
+    ? vendorOrders.reduce((s, o) => s + totalAmountOf(o), 0)
     : orderingOrders.reduce((s, o) => s + totalAmountOf(o), 0)
   const mainLabel = isVendorTab ? '수주금액' : '발주금액'
 
