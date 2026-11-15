@@ -62,6 +62,7 @@ type BackendOrder = {
   isDeleted: boolean
   messageSentAt: string | null
   isDelayed: boolean
+  photoToken: string | null
 }
 
 export type CreateOrderPayload = {
@@ -156,6 +157,7 @@ function toFrontend(o: BackendOrder): Order {
     receiptReceiverName: o.receiptReceiverName ?? undefined,
     receiptReceiverRelation: o.receiptReceiverRelation ?? undefined,
     isDelayed: o.isDelayed ?? false,
+    photoToken: o.photoToken ?? undefined,
   }
 }
 
