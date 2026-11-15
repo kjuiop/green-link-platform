@@ -24,6 +24,18 @@ public class CompanyIntegrationJpaEntity extends BaseJpaEntity {
     @Column(length = 20)
     private String senderNumber;
 
+    @Column(nullable = false)
+    private boolean alimtalkEnabled = false;
+
+    @Column(length = 100)
+    private String alimtalkTemplateFuneral;
+
+    @Column(length = 100)
+    private String alimtalkTemplateWedding;
+
+    @Column(length = 100)
+    private String alimtalkTemplateEtc;
+
     protected CompanyIntegrationJpaEntity() {}
 
     static CompanyIntegrationJpaEntity createNew(Long companyId, String provider, String apiKey, String senderNumber) {
@@ -41,7 +53,15 @@ public class CompanyIntegrationJpaEntity extends BaseJpaEntity {
         this.senderNumber = senderNumber;
     }
 
+    void updateAlimtalk(boolean enabled, String templateFuneral, String templateWedding, String templateEtc) {
+        this.alimtalkEnabled = enabled;
+        this.alimtalkTemplateFuneral = templateFuneral;
+        this.alimtalkTemplateWedding = templateWedding;
+        this.alimtalkTemplateEtc = templateEtc;
+    }
+
     CompanyIntegration toDomain() {
-        return CompanyIntegration.of(id, companyId, provider, apiKey, senderNumber);
+        return CompanyIntegration.of(id, companyId, provider, apiKey, senderNumber,
+                alimtalkEnabled, alimtalkTemplateFuneral, alimtalkTemplateWedding, alimtalkTemplateEtc);
     }
 }

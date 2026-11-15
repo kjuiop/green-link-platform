@@ -5,5 +5,9 @@ public record CompanySmsIntegrationResult(
         Long companyId,
         String provider,
         String apiKey,
-        String senderNumber
+        String senderNumber,
+        boolean alimtalkEnabled,
+        String alimtalkTemplateFuneral,
+        String alimtalkTemplateWedding,
+        String alimtalkTemplateEtc
 ) {}

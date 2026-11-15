@@ -10,5 +10,8 @@ public record SmsMessageResult(
         String aligoMsgId,
         String sentAt,
         String imageUrl,
-        String type
+        String type,
+        String channel,
+        String templateCode,
+        boolean isReplaced
 ) {}
