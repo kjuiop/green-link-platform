@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Pagination } from '@/components/ui/Pagination'
 import { fetchOrders } from '@/lib/api/orderApi'
-import { fetchSmsMessages, resendMms, SmsMessage } from '@/lib/api/smsApi'
+import { fetchSettingsSmsMessages, resendMms, SmsMessage } from '@/lib/api/smsApi'
 import { Order } from '@/types/order'
 import { Search, RefreshCw } from 'lucide-react'
 import { openOrderWindow } from '@/lib/utils'
+import { authHeaders, fetchWithAuth } from '@/lib/api/fetchWithAuth'
 
 const PAGE_SIZE = 20
 
@@ -19,6 +20,8 @@ const STATUS_FILTERS: { label: string; value: SmsStatusFilter }[] = [
   { label: '발송실패', value: 'FAIL' },
 ]
 
+type Company = { id: number; companyName: string }
+
 type MessageRow = {
   sms: SmsMessage
   order: Order | undefined
@@ -27,6 +30,8 @@ type MessageRow = {
 export default function MessagesPage() {
   const [rows, setRows] = useState<MessageRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | undefined>()
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<SmsStatusFilter>('ALL')
   const [appliedQuery, setAppliedQuery] = useState('')
@@ -34,14 +39,23 @@ export default function MessagesPage() {
   const [resendingIds, setResendingIds] = useState<Set<number>>(new Set())
   const [page, setPage] = useState(0)
 
-  const loadData = () =>
-    Promise.all([fetchSmsMessages(), fetchOrders()])
+  useEffect(() => {
+    fetchWithAuth('/api/companies?type=ORDERING', { headers: authHeaders() })
+      .then((r) => r.json())
+      .then(setCompanies)
+      .catch(() => {})
+  }, [])
+
+  const loadData = (companyId?: number) => {
+    setLoading(true)
+    Promise.all([fetchSettingsSmsMessages(companyId), fetchOrders()])
       .then(([messages, orders]) => {
         const orderMap = new Map(orders.map((o) => [Number(o.id), o]))
         setRows(messages.map((sms) => ({ sms, order: orderMap.get(sms.orderId) })))
       })
       .catch(() => {})
       .finally(() => setLoading(false))
+  }
 
   useEffect(() => { loadData() }, [])
 
@@ -49,19 +63,21 @@ export default function MessagesPage() {
     setAppliedQuery(query)
     setAppliedStatus(statusFilter)
     setPage(0)
+    loadData(selectedCompanyId)
   }
 
   const handleReset = () => {
-    setQuery(''); setStatusFilter('ALL')
+    setQuery(''); setStatusFilter('ALL'); setSelectedCompanyId(undefined)
     setAppliedQuery(''); setAppliedStatus('ALL')
     setPage(0)
+    loadData(undefined)
   }
 
   const handleResend = async (orderId: number) => {
     setResendingIds((prev) => new Set(prev).add(orderId))
     try {
       await resendMms(orderId)
-      await loadData()
+      loadData(selectedCompanyId)
     } catch {
       alert('재발송에 실패했습니다.')
     } finally {
@@ -102,8 +118,18 @@ export default function MessagesPage() {
             </label>
           ))}
         </div>
-        <div className="mt-3 flex gap-2">
-          <div className="relative flex-1">
+        <div className="mt-3 flex flex-wrap gap-2">
+          <select
+            value={selectedCompanyId ?? ''}
+            onChange={(e) => setSelectedCompanyId(e.target.value ? Number(e.target.value) : undefined)}
+            className="rounded-md border px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-700"
+          >
+            <option value="">전체 회사</option>
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>{c.companyName}</option>
+            ))}
+          </select>
+          <div className="relative flex-1 min-w-48">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="text"

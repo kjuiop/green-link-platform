@@ -14,4 +14,5 @@ public interface SmsMessageRepository {
     List<SmsMessage> findAll();
     Page<SmsMessage> findAll(Pageable pageable);
     List<SmsMessage> findAllByOrderIdAndChannel(Long orderId, MessageChannel channel);
+    List<SmsMessage> findAllByCompanyId(Long companyId);
 }

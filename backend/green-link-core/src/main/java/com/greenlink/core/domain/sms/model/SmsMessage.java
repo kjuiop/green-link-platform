@@ -4,6 +4,7 @@ public class SmsMessage {
 
     private Long id;
     private Long orderId;
+    private Long companyId;
     private String receiver;
     private String message;
     private SmsStatus status;
@@ -52,7 +53,9 @@ public class SmsMessage {
         return m;
     }
 
-    public static SmsMessage of(Long id, Long orderId, String receiver,
+    public void setCompanyId(Long companyId) { this.companyId = companyId; }
+
+    public static SmsMessage of(Long id, Long orderId, Long companyId, String receiver,
                                  String message, SmsStatus status, String failReason,
                                  String aligoMsgId, String sentAt, String imageUrl,
                                  SmsMessageType type, MessageChannel channel,
@@ -60,6 +63,7 @@ public class SmsMessage {
         SmsMessage m = new SmsMessage();
         m.id = id;
         m.orderId = orderId;
+        m.companyId = companyId;
         m.receiver = receiver;
         m.message = message;
         m.status = status;
@@ -99,6 +103,7 @@ public class SmsMessage {
 
     public Long getId() { return id; }
     public Long getOrderId() { return orderId; }
+    public Long getCompanyId() { return companyId; }
     public String getReceiver() { return receiver; }
     public String getMessage() { return message; }
     public SmsStatus getStatus() { return status; }

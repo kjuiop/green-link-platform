@@ -55,4 +55,11 @@ public class SmsMessageRepositoryAdapter implements SmsMessageRepository {
                 .map(SmsMessageJpaEntity::toDomain)
                 .toList();
     }
+
+    @Override
+    public List<SmsMessage> findAllByCompanyId(Long companyId) {
+        return jpaRepository.findByCompanyId(companyId).stream()
+                .map(SmsMessageJpaEntity::toDomain)
+                .toList();
+    }
 }
