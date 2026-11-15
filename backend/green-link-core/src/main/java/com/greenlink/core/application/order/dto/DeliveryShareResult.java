@@ -1,4 +1,4 @@
-package com.greenlink.admin.adapter.in.web.dto;
+package com.greenlink.core.application.order.dto;
 
 import java.util.List;
 

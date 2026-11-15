@@ -1,49 +1,27 @@
 package com.greenlink.admin.adapter.in.web;
 
-import com.greenlink.admin.adapter.in.web.dto.DeliveryShareResult;
-import com.greenlink.core.domain.order.model.Order;
-import com.greenlink.core.domain.order.port.OrderRepository;
-import com.greenlink.core.domain.photo.model.Photo;
-import com.greenlink.core.domain.photo.port.PhotoRepository;
+import com.greenlink.core.application.order.dto.DeliveryShareResult;
+import com.greenlink.core.application.order.usecase.GetDeliveryShareUseCase;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/public/delivery")
 public class PublicDeliveryController {
 
-    private final OrderRepository orderRepository;
-    private final PhotoRepository photoRepository;
+    private final GetDeliveryShareUseCase getDeliveryShareUseCase;
 
-    public PublicDeliveryController(OrderRepository orderRepository, PhotoRepository photoRepository) {
-        this.orderRepository = orderRepository;
-        this.photoRepository = photoRepository;
+    public PublicDeliveryController(GetDeliveryShareUseCase getDeliveryShareUseCase) {
+        this.getDeliveryShareUseCase = getDeliveryShareUseCase;
     }
 
     @GetMapping("/{token}")
     public ResponseEntity<DeliveryShareResult> getDeliveryShare(@PathVariable String token) {
-        Order order = orderRepository.findByPhotoToken(token)
-                .orElse(null);
-        if (order == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        List<String> photoUrls = photoRepository.findSelectedByOrderId(order.getId()).stream()
-                .map(Photo::getPhotoUrl)
-                .toList();
-
-        DeliveryShareResult result = new DeliveryShareResult(
-                order.getRecipientName(),
-                order.getPlaceName(),
-                order.getCompletedAt(),
-                photoUrls
-        );
-
-        return ResponseEntity.ok(result);
+        return getDeliveryShareUseCase.getDeliveryShare(token)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }
