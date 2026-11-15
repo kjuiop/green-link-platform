@@ -14,7 +14,6 @@ import {
   SettlementType,
   totalAmountOf,
 } from '@/lib/api/settlementApi'
-import { authBearerHeader } from '@/lib/api/fetchWithAuth'
 import { formatKRW } from '../page'
 
 export default function SettlementDetailPage() {
@@ -44,7 +43,6 @@ export default function SettlementDetailPage() {
   const totalBaseAmount = orders.reduce((s, o) => s + o.orderAmount, 0)
   const totalExtraCost = orders.reduce((s, o) => s + (o.extraCost ?? 0), 0)
   const totalOrderAmount = totalBaseAmount + totalExtraCost
-  const totalVendorAmount = orders.reduce((s, o) => s + (o.vendorAmount ?? 0), 0)
   const isVendor = type === 'VENDOR'
 
   async function downloadExcel() {
@@ -90,31 +88,18 @@ export default function SettlementDetailPage() {
           <p className="text-xs text-gray-500">배송완료 건수</p>
           <p className="mt-1 text-2xl font-bold">{orders.length}건</p>
         </div>
-        {isVendor ? (
-          <>
-            <div className="border-l pl-8">
-              <p className="text-xs text-blue-600">수주금액 합계</p>
-              <p className="mt-1 text-xl font-bold text-blue-700">{formatKRW(totalVendorAmount)}</p>
-            </div>
-            <div className="border-l pl-8">
-              <p className="text-xs text-gray-500">발주금액 합계</p>
-              <p className="mt-1 text-xl font-bold text-gray-800">{formatKRW(totalOrderAmount)}</p>
-              <p className="mt-0.5 text-xs text-gray-400">주문 {formatKRW(totalBaseAmount)} + 추가 {formatKRW(totalExtraCost)}</p>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="border-l pl-8">
-              <p className="text-xs text-gray-500">발주금액 합계</p>
-              <p className="mt-1 text-xl font-bold text-gray-800">{formatKRW(totalOrderAmount)}</p>
-              <p className="mt-0.5 text-xs text-gray-400">주문 {formatKRW(totalBaseAmount)} + 추가 {formatKRW(totalExtraCost)}</p>
-            </div>
-            <div className="border-l pl-8">
-              <p className="text-xs text-blue-600">지급금액 합계</p>
-              <p className="mt-1 text-xl font-bold text-blue-700">{formatKRW(totalVendorAmount)}</p>
-            </div>
-          </>
-        )}
+        <div className="border-l pl-8">
+          <p className="text-xs text-gray-500">상품금액</p>
+          <p className="mt-1 text-xl font-bold text-gray-800">{formatKRW(totalBaseAmount)}</p>
+        </div>
+        <div className="border-l pl-8">
+          <p className="text-xs text-gray-500">추가비용</p>
+          <p className="mt-1 text-xl font-bold text-gray-800">{formatKRW(totalExtraCost)}</p>
+        </div>
+        <div className="border-l pl-8">
+          <p className="text-xs text-blue-600">{isVendor ? '수주금액' : '발주금액'} 합계</p>
+          <p className="mt-1 text-xl font-bold text-blue-700">{formatKRW(totalOrderAmount)}</p>
+        </div>
       </div>
 
       {error && <p className="text-sm text-red-500">{error}</p>}
@@ -130,20 +115,19 @@ export default function SettlementDetailPage() {
               <TableHead>상품명</TableHead>
               <TableHead>배달장소</TableHead>
               <TableHead>주문자</TableHead>
-              <TableHead className="text-right">주문금액</TableHead>
+              <TableHead className="text-right">상품금액</TableHead>
               <TableHead className="text-right">추가비용</TableHead>
-              <TableHead className="text-right">발주금액</TableHead>
-              <TableHead className="text-right">{isVendor ? '수주금액' : '지급금액'}</TableHead>
+              <TableHead className="text-right">{isVendor ? '수주금액(합계)' : '발주금액(합계)'}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={10} className="py-10 text-center text-sm text-gray-400">불러오는 중...</TableCell>
+                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">불러오는 중...</TableCell>
               </TableRow>
             ) : orders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={9} className="py-10 text-center text-sm text-gray-400">
                   해당 기간에 배송완료된 주문이 없습니다.
                 </TableCell>
               </TableRow>
@@ -156,12 +140,9 @@ export default function SettlementDetailPage() {
                   <TableCell className="text-sm">{o.productName}</TableCell>
                   <TableCell className="text-sm">{o.placeName}</TableCell>
                   <TableCell className="text-sm">{o.ordererName}</TableCell>
-                  <TableCell className="text-right text-sm">{formatKRW(o.orderAmount)}</TableCell>
+                  <TableCell className="text-right text-sm text-gray-700">{formatKRW(o.orderAmount)}</TableCell>
                   <TableCell className="text-right text-sm text-gray-500">{o.extraCost ? formatKRW(o.extraCost) : '-'}</TableCell>
-                  <TableCell className="text-right text-sm font-medium">{formatKRW(totalAmountOf(o))}</TableCell>
-                  <TableCell className="text-right text-sm font-medium text-blue-700">
-                    {o.vendorAmount != null ? formatKRW(o.vendorAmount) : '-'}
-                  </TableCell>
+                  <TableCell className="text-right text-sm font-medium text-blue-700">{formatKRW(totalAmountOf(o))}</TableCell>
                 </TableRow>
               ))
             )}
@@ -170,17 +151,9 @@ export default function SettlementDetailPage() {
         {orders.length > 0 && (
           <div className="flex justify-end gap-6 border-t bg-gray-50 px-4 py-3 text-sm">
             <span className="text-gray-600">합계: <strong>{orders.length}건</strong></span>
-            {isVendor ? (
-              <>
-                <span className="text-blue-700">수주금액: <strong>{formatKRW(totalVendorAmount)}</strong></span>
-                <span className="text-gray-600">발주금액: <strong>{formatKRW(totalOrderAmount)}</strong></span>
-              </>
-            ) : (
-              <>
-                <span className="text-gray-600">발주금액: <strong>{formatKRW(totalOrderAmount)}</strong></span>
-                <span className="text-blue-700">지급금액: <strong>{formatKRW(totalVendorAmount)}</strong></span>
-              </>
-            )}
+          <span className="text-gray-600">상품금액: <strong>{formatKRW(totalBaseAmount)}</strong></span>
+          <span className="text-gray-600">추가비용: <strong>{formatKRW(totalExtraCost)}</strong></span>
+          <span className="text-blue-700">{isVendor ? '수주금액' : '발주금액'} 합계: <strong>{formatKRW(totalOrderAmount)}</strong></span>
           </div>
         )}
       </div>
