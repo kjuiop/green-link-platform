@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,9 +44,27 @@ function Row({ label, value }: { label: string; value: string | React.ReactNode 
 
 export function OrderActionButtons({ d }: { d: D }) {
   const { order, isEditing, saving, hasSitePhotos } = d
+  const [copied, setCopied] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function copyShareLink() {
+    if (!order.photoToken) return
+    const url = `${window.location.origin}/delivery/${order.photoToken}`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      if (timerRef.current) clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(() => setCopied(false), 2000)
+    }).catch(() => {})
+  }
+
   return (
     <>
       <PrintButton orderId={order.id} />
+      {order.status === '배송완료' && order.photoToken && (
+        <Button variant="outline" className="gap-1.5" onClick={copyShareLink}>
+          {copied ? '복사됨!' : '사진 링크 복사'}
+        </Button>
+      )}
       {order.status === '발주대기' && !isEditing && (
         <>
           <Button className="bg-green-700 hover:bg-green-800" onClick={d.handleAccept} disabled={saving}>수주승인</Button>

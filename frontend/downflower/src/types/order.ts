@@ -60,4 +60,5 @@ export interface Order {
   receiptReceiverRelation?: string
   messageSentAt?: string
   isDelayed?: boolean
+  photoToken?: string
 }
