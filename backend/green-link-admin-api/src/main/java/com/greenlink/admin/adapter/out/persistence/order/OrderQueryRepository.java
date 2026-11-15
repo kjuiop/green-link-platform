@@ -89,7 +89,7 @@ public class OrderQueryRepository {
                 )
             };
         }
-        return new OrderSpecifier[]{priorityGroup(order), order.createdAt.desc()};
+        return new OrderSpecifier[]{priorityGroup(order), order.deliveryDate.asc(), order.createdAt.desc()};
     }
 
     private OrderSpecifier<Integer> priorityGroup(QOrderJpaEntity order) {
