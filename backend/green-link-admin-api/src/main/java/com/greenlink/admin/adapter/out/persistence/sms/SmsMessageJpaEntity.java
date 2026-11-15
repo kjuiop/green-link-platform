@@ -8,7 +8,7 @@ import com.greenlink.core.domain.sms.model.SmsStatus;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "message_logs")
+@Table(name = "sms_messages")
 public class SmsMessageJpaEntity extends BaseJpaEntity {
 
     @Id
