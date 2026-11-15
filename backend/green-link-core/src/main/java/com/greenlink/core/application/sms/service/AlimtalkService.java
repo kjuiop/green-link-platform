@@ -1,6 +1,8 @@
 package com.greenlink.core.application.sms.service;
 
 import com.greenlink.core.application.sms.usecase.SendDeliveryAlimtalkUseCase;
+import com.greenlink.core.domain.company.model.Company;
+import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.integration.model.CompanyIntegration;
 import com.greenlink.core.domain.integration.port.CompanyIntegrationRepository;
 import com.greenlink.core.domain.order.model.Order;
@@ -27,21 +29,23 @@ public class AlimtalkService implements SendDeliveryAlimtalkUseCase {
 
     private final OrderRepository orderRepository;
     private final CompanyIntegrationRepository companyIntegrationRepository;
+    private final CompanyRepository companyRepository;
     private final AlimtalkClient alimtalkClient;
     private final SmsMessageRepository smsMessageRepository;
 
     public AlimtalkService(OrderRepository orderRepository,
                            CompanyIntegrationRepository companyIntegrationRepository,
+                           CompanyRepository companyRepository,
                            AlimtalkClient alimtalkClient,
                            SmsMessageRepository smsMessageRepository) {
         this.orderRepository = orderRepository;
         this.companyIntegrationRepository = companyIntegrationRepository;
+        this.companyRepository = companyRepository;
         this.alimtalkClient = alimtalkClient;
         this.smsMessageRepository = smsMessageRepository;
     }
 
     @Override
-    @Transactional
     public void send(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
@@ -80,12 +84,17 @@ public class AlimtalkService implements SendDeliveryAlimtalkUseCase {
     }
 
     private String buildVariable(Order order) {
-        String recipient = sanitize(order.getRecipientName() != null && !order.getRecipientName().isBlank()
+        String orderingCompanyName = "";
+        if (order.getOrderingCompanyId() != null) {
+            orderingCompanyName = sanitize(companyRepository.findById(order.getOrderingCompanyId())
+                    .map(Company::getCompanyName).orElse(""));
+        }
+        String recipientName = sanitize(order.getRecipientName() != null && !order.getRecipientName().isBlank()
                 ? order.getRecipientName() : order.getOrdererName());
         String orderNumber = sanitize(order.getOrderNumber());
         String placeName = sanitize(order.getPlaceName() != null ? order.getPlaceName() : "");
         String photoToken = sanitize(order.getPhotoToken() != null ? order.getPhotoToken() : "");
-        return String.join("|", recipient, orderNumber, placeName, photoToken);
+        return String.join("|", orderingCompanyName, recipientName, orderNumber, placeName, photoToken);
     }
 
     private String sanitize(String val) {

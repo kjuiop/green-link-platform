@@ -142,7 +142,12 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     @Override
     @Transactional(readOnly = true)
     public List<SmsMessageResult> getMessagesByOrderAndChannel(Long orderId, String channel) {
-        MessageChannel ch = MessageChannel.valueOf(channel.toUpperCase());
+        MessageChannel ch;
+        try {
+            ch = MessageChannel.valueOf(channel.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return List.of();
+        }
         return smsMessageRepository.findAllByOrderIdAndChannel(orderId, ch).stream()
                 .map(this::toResult).toList();
     }
