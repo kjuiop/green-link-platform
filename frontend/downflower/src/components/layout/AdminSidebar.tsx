@@ -17,6 +17,7 @@ import {
   Package,
   Newspaper,
   Calculator,
+  Coins,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -42,6 +43,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/community': Newspaper,
   '/settings/settlement': Calculator,
   '/settlement': Calculator,
+  '/settings/points': Coins,
+  '/points': Coins,
   '/sms/settings': SlidersHorizontal,
   '/sms/message-log': MessageSquare,
   '/sms/alimtalk-log': MessageSquare,
