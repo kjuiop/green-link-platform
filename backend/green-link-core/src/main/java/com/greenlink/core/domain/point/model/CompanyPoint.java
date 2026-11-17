@@ -25,7 +25,11 @@ public class CompanyPoint {
 
     public void charge(long amount) {
         if (amount <= 0) throw new IllegalArgumentException("충전 금액은 0보다 커야 합니다.");
-        this.balance += amount;
+        try {
+            this.balance = Math.addExact(this.balance, amount);
+        } catch (ArithmeticException e) {
+            throw new IllegalArgumentException("충전 후 잔액이 허용 범위를 초과합니다.");
+        }
     }
 
     public Long getId() { return id; }

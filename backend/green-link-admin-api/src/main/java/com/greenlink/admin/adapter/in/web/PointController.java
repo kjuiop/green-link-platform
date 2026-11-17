@@ -20,6 +20,8 @@ import java.util.List;
 @RestController
 public class PointController {
 
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final ChargePointUseCase chargePointUseCase;
     private final GetAdminPointListUseCase getAdminPointListUseCase;
     private final GetMyPointUseCase getMyPointUseCase;
@@ -55,7 +57,7 @@ public class PointController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(getPointTransactionsUseCase.getTransactions(
-                companyId, PageRequest.of(page, size, Sort.by("id").descending())));
+                companyId, pageRequest(page, size)));
     }
 
     @GetMapping("/api/points/my")
@@ -75,6 +77,11 @@ public class PointController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         return ResponseEntity.ok(getPointTransactionsUseCase.getTransactions(
-                companyId, PageRequest.of(page, size, Sort.by("id").descending())));
+                companyId, pageRequest(page, size)));
+    }
+
+    private static PageRequest pageRequest(int page, int size) {
+        return PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE),
+                Sort.by("id").descending());
     }
 }
