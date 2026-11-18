@@ -32,6 +32,7 @@ public class GlobalExceptionHandler {
         Map.entry("password", "비밀번호"),
         Map.entry("phone", "연락처"),
         Map.entry("price", "가격"),
+        Map.entry("memo", "메모"),
         Map.entry("productName", "상품명"),
         Map.entry("quantity", "수량"),
         Map.entry("roles", "권한"),

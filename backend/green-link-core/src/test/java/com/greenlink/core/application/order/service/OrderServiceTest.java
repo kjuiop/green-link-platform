@@ -124,7 +124,7 @@ class OrderServiceTest {
                 "김영희", "010-9876-5432", true, true,
                 "SCHEDULED", "13", "00", null, null
         );
-        given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
+        given(orderRepository.save(any(Order.class))).willAnswer(inv -> withId(inv.getArgument(0), 1L));
         given(adminRepository.findById(anyLong())).willReturn(Optional.empty());
         given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
         given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
@@ -439,5 +439,16 @@ class OrderServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(OrderErrorCode.SETTLED_ORDER_AMOUNT_LOCKED));
+    }
+
+    private static Order withId(Order order, Long id) {
+        try {
+            var field = Order.class.getDeclaredField("id");
+            field.setAccessible(true);
+            field.set(order, id);
+            return order;
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }
