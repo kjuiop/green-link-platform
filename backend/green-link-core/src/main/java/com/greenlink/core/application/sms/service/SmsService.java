@@ -268,8 +268,8 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
             address += " " + order.getAddressDetail();
         }
         String link = (portalBaseUrl != null && !portalBaseUrl.isBlank())
-                ? portalBaseUrl + "/vendor/orders/" + order.getId()
-                : "/vendor/orders/" + order.getId();
+                ? portalBaseUrl + "/orders/" + order.getId() + "/popup"
+                : "/orders/" + order.getId() + "/popup";
 
         String orderingLine = (orderingCompanyName != null && !orderingCompanyName.isBlank())
                 ? "발주사: " + orderingCompanyName + "\n" : "";
@@ -289,7 +289,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
                 + "배송지: " + address + "\n"
                 + "배송요구일: " + deliveryInfo + "\n"
                 + "상품명: " + order.getProductName() + " / " + order.getQuantity() + "개\n"
-                + "발주금액: " + String.format("%,d", order.getAmount()) + "원\n\n"
+                + "발주금액: " + String.format("%,d", order.getTotalAmount()) + "원\n\n"
                 + "수주 확인 및 승인/거절:\n"
                 + link;
     }
