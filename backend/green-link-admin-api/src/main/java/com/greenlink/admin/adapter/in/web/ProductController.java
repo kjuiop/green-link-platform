@@ -37,6 +37,6 @@ public class ProductController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(searchAvailableProductsUseCase.searchAvailable(vendorId, keyword,
-                PageRequest.of(page, size, Sort.by("sortOrder").ascending().and(Sort.by("id").ascending()))));
+                PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100), Sort.by("sortOrder").ascending().and(Sort.by("id").ascending()))));
     }
 }
