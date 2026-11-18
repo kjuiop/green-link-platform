@@ -8,7 +8,11 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -81,6 +85,32 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().code()).isEqualTo("INVALID_PARAM");
         assertThat(response.getBody().message()).isEqualTo("요청 형식이 올바르지 않습니다.");
+    }
+
+    record Sample(@NotBlank String ordererName,
+                  @Min(0) long price,
+                  @Size(min = 8) String newPassword,
+                  @Size(max = 5) String productName,
+                  @Size(min = 4, max = 6) String password) {}
+
+    @Test
+    void 실제_Validator가_만든_FieldError로도_한글_메시지가_나온다() throws Exception {
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+        BindingResult result = new BeanPropertyBindingResult(new Sample("", -1, "abc", "여섯글자이상", "a"), "sample");
+        validator.validate(result.getTarget(), result);
+        MethodParameter parameter = new MethodParameter(
+                GlobalExceptionHandlerTest.class.getDeclaredMethod("요청_본문_형식_오류는_400으로_응답한다"), -1);
+
+        String message = handler.handleValidation(new MethodArgumentNotValidException(parameter, result))
+                .getBody().message();
+
+        assertThat(message)
+                .contains("주문자 성함: 필수 입력 항목입니다")
+                .contains("가격: 0 이상이어야 합니다")
+                .contains("새 비밀번호: 8자 이상이어야 합니다")
+                .contains("상품명: 5자 이하여야 합니다")
+                .contains("비밀번호: 4~6자여야 합니다");
     }
 
     private FieldError error(String field, String code, String defaultMessage, Object... args) {
