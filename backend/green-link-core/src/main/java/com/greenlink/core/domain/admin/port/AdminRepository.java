@@ -4,6 +4,7 @@ import com.greenlink.core.domain.admin.model.Admin;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,6 +15,7 @@ public interface AdminRepository {
     Admin save(Admin admin);
     List<Admin> findAllVendors();
     List<Admin> findAllByCompanyId(Long companyId);
+    List<Admin> findAllByIdIn(Collection<Long> ids);
     Page<Admin> findVendorsPaged(String status, Pageable pageable);
     Optional<Admin> findByPhone(String phone);
     Admin updatePassword(Long id, String encodedPassword);

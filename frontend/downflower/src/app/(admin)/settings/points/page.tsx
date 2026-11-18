@@ -129,17 +129,18 @@ export default function AdminPointPage() {
               <TableHead>업체명</TableHead>
               <TableHead>유형</TableHead>
               <TableHead className="text-right">보유 포인트</TableHead>
+              <TableHead className="text-right">예치금</TableHead>
               <TableHead className="text-center">처리</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-10 text-center text-sm text-gray-400">불러오는 중...</TableCell>
+                <TableCell colSpan={5} className="py-10 text-center text-sm text-gray-400">불러오는 중...</TableCell>
               </TableRow>
             ) : displayed.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-10 text-center text-sm text-gray-400">업체가 없습니다.</TableCell>
+                <TableCell colSpan={5} className="py-10 text-center text-sm text-gray-400">업체가 없습니다.</TableCell>
               </TableRow>
             ) : (
               displayed.map((c) => (
@@ -147,6 +148,7 @@ export default function AdminPointPage() {
                   <TableCell className="font-medium">{c.companyName}</TableCell>
                   <TableCell className="text-sm text-gray-500">{companyTypeLabel(c.companyType)}</TableCell>
                   <TableCell className="text-right text-sm font-medium text-green-700">{formatPoint(c.balance)}</TableCell>
+                  <TableCell className="text-right text-sm text-orange-600">{formatPoint(c.depositBalance)}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-1">
                       <Button size="sm" className="h-7 bg-green-600 text-xs hover:bg-green-700" onClick={() => openCharge(c)}>

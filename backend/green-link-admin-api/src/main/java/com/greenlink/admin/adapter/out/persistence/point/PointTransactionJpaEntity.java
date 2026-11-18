@@ -9,7 +9,10 @@ import java.time.format.DateTimeFormatter;
 
 @Entity
 @Table(name = "point_transactions",
-    indexes = @Index(name = "idx_point_tx_company_created", columnList = "company_id, created_at"))
+    indexes = {
+        @Index(name = "idx_point_tx_company_created", columnList = "company_id, created_at"),
+        @Index(name = "idx_point_tx_order", columnList = "order_id")
+    })
 public class PointTransactionJpaEntity extends BaseJpaEntity {
 
     @Id
@@ -24,6 +27,9 @@ public class PointTransactionJpaEntity extends BaseJpaEntity {
 
     @Column
     private Long adminId;
+
+    @Column
+    private Long orderId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -46,6 +52,7 @@ public class PointTransactionJpaEntity extends BaseJpaEntity {
         e.companyId = t.getCompanyId();
         e.memberId = t.getMemberId();
         e.adminId = t.getAdminId();
+        e.orderId = t.getOrderId();
         e.type = t.getType();
         e.amount = t.getAmount();
         e.balanceAfter = t.getBalanceAfter();
@@ -56,6 +63,6 @@ public class PointTransactionJpaEntity extends BaseJpaEntity {
     public PointTransaction toDomain() {
         String createdAtStr = getCreatedAt() != null
                 ? getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null;
-        return PointTransaction.of(id, companyId, memberId, adminId, type, amount, balanceAfter, memo, createdAtStr);
+        return PointTransaction.of(id, companyId, memberId, adminId, orderId, type, amount, balanceAfter, memo, createdAtStr);
     }
 }

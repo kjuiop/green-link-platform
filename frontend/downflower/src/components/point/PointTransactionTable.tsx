@@ -6,6 +6,13 @@ import { PointTransaction } from '@/lib/api/pointApi'
 
 export const formatPoint = (n: number) => n.toLocaleString('ko-KR') + ' P'
 
+const TYPE_STYLE: Record<PointTransaction['type'], { label: string; badge: string; text: string; sign: string }> = {
+  CHARGE: { label: '충전', badge: 'border-green-200 bg-green-50 text-green-700', text: 'text-green-700', sign: '+' },
+  USE: { label: '예치', badge: 'border-orange-200 bg-orange-50 text-orange-700', text: 'text-orange-600', sign: '-' },
+  REFUND: { label: '환불', badge: 'border-blue-200 bg-blue-50 text-blue-700', text: 'text-blue-600', sign: '+' },
+  SETTLE: { label: '정산', badge: 'border-gray-200 bg-gray-50 text-gray-600', text: 'text-gray-500', sign: '' },
+}
+
 function formatDateTime(s: string) {
   return s.replace('T', ' ').slice(0, 16)
 }
@@ -41,25 +48,23 @@ export function PointTransactionTable({
             </TableRow>
           ) : (
             transactions.map((t) => {
-              const isCharge = t.type === 'CHARGE'
+              const style = TYPE_STYLE[t.type]
               return (
                 <TableRow key={t.id}>
                   <TableCell className="text-sm">{formatDateTime(t.createdAt)}</TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"
-                      className={isCharge
-                        ? 'border-green-200 bg-green-50 text-green-700'
-                        : 'border-orange-200 bg-orange-50 text-orange-700'}
+                      className={style.badge}
                     >
-                      {isCharge ? '충전' : '사용'}
+                      {style.label}
                     </Badge>
                   </TableCell>
-                  <TableCell className={`text-right text-sm font-medium ${isCharge ? 'text-green-700' : 'text-orange-600'}`}>
-                    {isCharge ? '+' : '-'}{formatPoint(t.amount)}
+                  <TableCell className={`text-right text-sm font-medium ${style.text}`}>
+                    {style.sign}{formatPoint(t.amount)}
                   </TableCell>
                   <TableCell className="text-right text-sm text-gray-700">{formatPoint(t.balanceAfter)}</TableCell>
-                  <TableCell className="text-sm text-gray-600">{t.memberLoginId ?? (isCharge ? '관리자' : '-')}</TableCell>
+                  <TableCell className="text-sm text-gray-600">{t.memberLoginId ?? (t.type === 'CHARGE' ? '관리자' : '-')}</TableCell>
                   <TableCell className="text-sm text-gray-600">{t.memo ?? '-'}</TableCell>
                 </TableRow>
               )

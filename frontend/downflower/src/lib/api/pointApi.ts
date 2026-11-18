@@ -6,15 +6,17 @@ export interface CompanyPoint {
   companyName: string
   companyType: 'VENDOR' | 'ORDERING' | 'BOTH'
   balance: number
+  depositBalance: number
 }
 
 export interface PointTransaction {
   id: number
-  type: 'CHARGE' | 'USE'
+  type: 'CHARGE' | 'USE' | 'REFUND' | 'SETTLE'
   amount: number
   balanceAfter: number
   memo: string | null
   memberLoginId: string | null
+  orderId: number | null
   createdAt: string
 }
 

@@ -96,14 +96,10 @@ function MemberInfoCard({ summary, name, loginId }: { summary: MemberSummary; na
           <span className="font-medium">{summary.vendorAmount.toLocaleString()}원</span>
         </div>
       )}
-      {isOrdering && (
-        <div className="flex justify-between pt-0.5">
-          <span className="text-green-200">예치금 잔액</span>
-          <span className="text-green-200">
-            {summary.depositBalance != null ? `${summary.depositBalance.toLocaleString()}원` : '-'}
-          </span>
-        </div>
-      )}
+      <div className={cn('flex justify-between pt-0.5', (isOrdering || isVendor) && 'mt-0.5 border-t border-green-600')}>
+        <span>포인트</span>
+        <span className="font-medium">{summary.pointBalance.toLocaleString()} P</span>
+      </div>
     </div>
   )
 }

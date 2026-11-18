@@ -11,6 +11,7 @@ import { cn, RIBBON_PHRASES, formatPhone } from '@/lib/utils'
 import { fetchVendors } from '@/lib/api/vendorApi'
 import { createOrder, fetchOrderingCompanies, uploadReferencePhotos, OrderingCompany } from '@/lib/api/orderApi'
 import { fetchAllProducts } from '@/lib/api/productApi'
+import { fetchAdminPointList, fetchMyPoint } from '@/lib/api/pointApi'
 import { Vendor } from '@/types/vendor'
 import { Product } from '@/types/product'
 import VendorSelectModal from '@/components/common/VendorSelectModal'
@@ -91,6 +92,20 @@ export default function NewOrderPage() {
   }>({})
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [availablePoint, setAvailablePoint] = useState<number | null>(null)
+  const requiredPoint = (Number(amount) || 0) + (Number(extraCost) || 0)
+  const pointInsufficient = availablePoint !== null && requiredPoint > availablePoint
+
+  useEffect(() => {
+    if (isSuperAdmin) {
+      if (!orderingCompanyId) { setAvailablePoint(null); return }
+      fetchAdminPointList()
+        .then((list) => setAvailablePoint(list.find((c) => String(c.companyId) === orderingCompanyId)?.balance ?? 0))
+        .catch(() => setAvailablePoint(null))
+    } else {
+      fetchMyPoint().then((p) => setAvailablePoint(p.balance)).catch(() => setAvailablePoint(null))
+    }
+  }, [isSuperAdmin, orderingCompanyId])
 
   useEffect(() => {
     fetchVendors('ACTIVE').then((list) => setVendors(list.filter((v) => v.companyType !== 'ORDERING'))).catch(() => {})
@@ -172,7 +187,6 @@ export default function NewOrderPage() {
       if (referenceItems.length > 0) {
         await uploadReferencePhotos(String(created.id), referenceItems.map((i) => i.file)).catch(() => {})
       }
-      window.dispatchEvent(new Event('member-summary-refresh'))
       router.push('/orders')
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : '발주 등록에 실패했습니다.')
@@ -817,12 +831,28 @@ export default function NewOrderPage() {
         <p className="text-sm text-red-500">{submitError}</p>
       )}
 
+      {availablePoint !== null && (
+        <div className={cn('rounded-md border px-3 py-2 text-sm', pointInsufficient ? 'border-red-200 bg-red-50 text-red-600' : 'bg-gray-50 text-gray-700')}>
+          <div className="flex justify-between">
+            <span>보유 포인트</span>
+            <span className="font-medium">{availablePoint.toLocaleString()} P</span>
+          </div>
+          <div className="flex justify-between">
+            <span>예치 예정 (상품금액 + 추가비용)</span>
+            <span className="font-medium">{requiredPoint.toLocaleString()} P</span>
+          </div>
+          {pointInsufficient && (
+            <p className="mt-1 text-xs">포인트가 부족합니다. 충전 후 발주해주세요.</p>
+          )}
+        </div>
+      )}
+
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={() => router.push('/orders')}>취소</Button>
         <Button
           className="bg-green-700 hover:bg-green-800"
           onClick={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || pointInsufficient}
         >
           {submitting ? '등록 중...' : '발주 등록'}
         </Button>

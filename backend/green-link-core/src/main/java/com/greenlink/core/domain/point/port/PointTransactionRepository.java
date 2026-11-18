@@ -7,4 +7,7 @@ import org.springframework.data.domain.Pageable;
 public interface PointTransactionRepository {
     PointTransaction save(PointTransaction transaction);
     Page<PointTransaction> findByCompanyId(Long companyId, Pageable pageable);
+    boolean existsOrderTransaction(Long orderId);
+    boolean existsSettle(Long orderId);
+    long sumNetHeldByOrderId(Long orderId);
 }

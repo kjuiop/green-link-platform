@@ -77,6 +77,14 @@ public class AdminRepositoryAdapter implements AdminRepository {
     }
 
     @Override
+    public List<Admin> findAllByIdIn(java.util.Collection<Long> ids) {
+        if (ids.isEmpty()) return List.of();
+        return jpaRepository.findByIdIn(ids).stream()
+            .map(AdminJpaEntity::toDomain)
+            .toList();
+    }
+
+    @Override
     public Page<Admin> findVendorsPaged(String status, Pageable pageable) {
         BooleanBuilder where = new BooleanBuilder();
         where.and(adminJpaEntity.companyId.isNotNull());
