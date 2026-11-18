@@ -5,101 +5,133 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Pagination } from '@/components/ui/Pagination'
-import { Product } from '@/types/product'
+import { VendorProduct } from '@/types/product'
 import { PageResult } from '@/types/page'
-import { fetchProducts, createProduct, updateProduct, deleteProduct } from '@/lib/api/productApi'
+import {
+  fetchVendorProducts,
+  createVendorProduct,
+  updateVendorProduct,
+  changeVendorProductSetting,
+  deleteVendorProduct,
+} from '@/lib/api/productApi'
 
 const PAGE_SIZE = 20
 
-const emptyForm = { name: '', price: '', memo: '' }
+const emptyForm = { name: '', price: '', memo: '', sortOrder: '' }
 
 function formatPrice(value: string) {
   const digits = value.replace(/\D/g, '')
   return digits ? Number(digits).toLocaleString() : ''
 }
 
-export default function ProductsPage() {
-  const [role, setRole] = useState<string>('')
+function isBase(product: VendorProduct) {
+  return product.baseProductId !== null
+}
 
-  const [result, setResult] = useState<PageResult<Product> | null>(null)
+export default function VendorProductsPage() {
+  const [result, setResult] = useState<PageResult<VendorProduct> | null>(null)
   const [page, setPage] = useState(0)
+  const [keywordInput, setKeywordInput] = useState('')
+  const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(true)
   const [pageError, setPageError] = useState('')
 
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<Product | null>(null)
+  const [ownModalOpen, setOwnModalOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<VendorProduct | null>(null)
   const [form, setForm] = useState(emptyForm)
+
+  const [priceTarget, setPriceTarget] = useState<VendorProduct | null>(null)
+  const [priceInput, setPriceInput] = useState('')
+
   const [modalError, setModalError] = useState('')
   const [modalSaving, setModalSaving] = useState(false)
 
-  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<VendorProduct | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  useEffect(() => {
-    setRole(localStorage.getItem('role') ?? '')
-  }, [])
-
-  const load = useCallback((p: number) => {
-    setLoading(true)
-    setPageError('')
-    fetchProducts(p, PAGE_SIZE)
+  const fetchPage = useCallback((p: number, k: string) => {
+    fetchVendorProducts(k, p, PAGE_SIZE)
       .then(setResult)
-      .catch((e) => setPageError(e.message))
+      .catch((e: Error) => setPageError(e.message))
       .finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
-    if (role === '') return
-    load(page)
-  }, [page, load, role])
+    fetchPage(page, keyword)
+  }, [page, keyword, fetchPage])
+
+  const refresh = () => {
+    setLoading(true)
+    setPageError('')
+    fetchPage(page, keyword)
+  }
+
+  const changePage = (p: number) => {
+    setLoading(true)
+    setPageError('')
+    setPage(p)
+  }
+
+  const handleSearch = () => {
+    setLoading(true)
+    setPageError('')
+    setPage(0)
+    setKeyword(keywordInput)
+  }
 
   const openRegister = () => {
     setEditTarget(null)
     setForm(emptyForm)
     setModalError('')
-    setModalOpen(true)
+    setOwnModalOpen(true)
   }
 
-  const openEdit = (product: Product) => {
+  const openEditOwn = (product: VendorProduct) => {
     setEditTarget(product)
     setForm({
       name: product.name,
       price: product.price.toLocaleString(),
       memo: product.memo ?? '',
+      sortOrder: String(product.sortOrder),
     })
     setModalError('')
-    setModalOpen(true)
+    setOwnModalOpen(true)
   }
 
-  const handleSave = async () => {
+  const openPrice = (product: VendorProduct) => {
+    setPriceTarget(product)
+    setPriceInput(product.price.toLocaleString())
+    setModalError('')
+  }
+
+  const handleSaveOwn = async () => {
     const rawPrice = Number(form.price.replace(/,/g, ''))
     if (!form.name.trim()) { setModalError('상품명을 입력해주세요.'); return }
     if (!rawPrice || rawPrice <= 0) { setModalError('가격을 입력해주세요.'); return }
 
     setModalSaving(true)
     setModalError('')
+    const req = {
+      name: form.name.trim(),
+      price: rawPrice,
+      memo: form.memo.trim() || undefined,
+      sortOrder: Number(form.sortOrder) || 0,
+    }
     try {
       if (editTarget) {
-        await updateProduct(editTarget.id, {
-          name: form.name.trim(),
-          price: rawPrice,
-          memo: form.memo.trim() || undefined,
-          sortOrder: editTarget.sortOrder,
-        })
+        await updateVendorProduct(editTarget.id, req)
+        setOwnModalOpen(false)
+        refresh()
       } else {
-        await createProduct({
-          name: form.name.trim(),
-          price: rawPrice,
-          memo: form.memo.trim() || undefined,
-          sortOrder: 0,
-        })
-        setPage(0)
+        await createVendorProduct(req)
+        setOwnModalOpen(false)
+        if (page !== 0) changePage(0)
+        else refresh()
       }
-      load(editTarget ? page : 0)
-      setModalOpen(false)
     } catch (e: unknown) {
       setModalError(e instanceof Error ? e.message : '저장에 실패했습니다.')
     } finally {
@@ -107,13 +139,41 @@ export default function ProductsPage() {
     }
   }
 
+  const handleSavePrice = async () => {
+    if (!priceTarget) return
+    const rawPrice = Number(priceInput.replace(/,/g, ''))
+    if (!rawPrice || rawPrice <= 0) { setModalError('가격을 입력해주세요.'); return }
+
+    setModalSaving(true)
+    setModalError('')
+    try {
+      await changeVendorProductSetting(priceTarget.id, rawPrice, priceTarget.enabled)
+      setPriceTarget(null)
+      refresh()
+    } catch (e: unknown) {
+      setModalError(e instanceof Error ? e.message : '저장에 실패했습니다.')
+    } finally {
+      setModalSaving(false)
+    }
+  }
+
+  const handleToggle = async (product: VendorProduct) => {
+    setPageError('')
+    try {
+      await changeVendorProductSetting(product.id, product.price, !product.enabled)
+      refresh()
+    } catch (e: unknown) {
+      setPageError(e instanceof Error ? e.message : '사용 여부 변경에 실패했습니다.')
+    }
+  }
+
   const handleDelete = async () => {
     if (!deleteTarget) return
     setDeleting(true)
     try {
-      await deleteProduct(deleteTarget.id)
+      await deleteVendorProduct(deleteTarget.id)
       setDeleteTarget(null)
-      load(page)
+      refresh()
     } catch (e: unknown) {
       setPageError(e instanceof Error ? e.message : '삭제에 실패했습니다.')
     } finally {
@@ -123,15 +183,48 @@ export default function ProductsPage() {
 
   const products = result?.content ?? []
 
+  const toggleButton = (product: VendorProduct) => (
+    <button
+      onClick={() => handleToggle(product)}
+      className={`rounded-full px-3 py-1 text-xs font-medium ${
+        product.enabled ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+      }`}
+    >
+      {product.enabled ? 'ON' : 'OFF'}
+    </button>
+  )
+
+  const actionButtons = (product: VendorProduct) =>
+    isBase(product) ? (
+      <button onClick={() => openPrice(product)} className="rounded border px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-50">가격 수정</button>
+    ) : (
+      <>
+        <button onClick={() => openEditOwn(product)} className="rounded border px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-50">수정</button>
+        <button onClick={() => setDeleteTarget(product)} className="rounded border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50">삭제</button>
+      </>
+    )
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">상품관리</h1>
-        {role === 'SUPER_ADMIN' && (
-          <Button className="bg-green-700 hover:bg-green-800" onClick={openRegister}>
-            상품 등록
-          </Button>
-        )}
+        <div>
+          <h1 className="text-xl font-bold">상품 관리</h1>
+          <p className="mt-1 text-xs text-gray-500">기본상품은 가격과 사용 여부만 변경할 수 있고, 직접 등록한 상품은 자유롭게 관리할 수 있습니다.</p>
+        </div>
+        <Button className="bg-green-700 hover:bg-green-800" onClick={openRegister}>
+          상품 등록
+        </Button>
+      </div>
+
+      <div className="flex gap-2">
+        <Input
+          placeholder="상품명 검색"
+          value={keywordInput}
+          onChange={(e) => setKeywordInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          className="max-w-xs"
+        />
+        <Button variant="outline" onClick={handleSearch}>검색</Button>
       </div>
 
       {pageError && (
@@ -143,49 +236,41 @@ export default function ProductsPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-20">구분</TableHead>
               <TableHead>상품명</TableHead>
-              <TableHead className="w-36 text-right">기본가격</TableHead>
+              <TableHead className="w-44 text-right">가격</TableHead>
               <TableHead>메모</TableHead>
-              <TableHead className="w-32">등록일</TableHead>
-              {role === 'SUPER_ADMIN' && <TableHead className="w-24 text-center">관리</TableHead>}
+              <TableHead className="w-24 text-center">사용</TableHead>
+              <TableHead className="w-36 text-center">관리</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-sm text-gray-400">
-                  불러오는 중...
-                </TableCell>
+                <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-400">불러오는 중...</TableCell>
               </TableRow>
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-sm text-gray-400">
-                  등록된 상품이 없습니다.
-                </TableCell>
+                <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-400">등록된 상품이 없습니다.</TableCell>
               </TableRow>
             ) : (
               products.map((product) => (
-                <TableRow key={product.id}>
+                <TableRow key={product.id} className={product.enabled ? '' : 'opacity-60'}>
                   <TableCell>
-                    {role === 'SUPER_ADMIN' ? (
-                      <button onClick={() => openEdit(product)} className="font-medium text-blue-700 hover:underline">
-                        {product.name}
-                      </button>
-                    ) : (
-                      <span className="font-medium">{product.name}</span>
+                    <Badge variant={isBase(product) ? 'secondary' : 'outline'}>{isBase(product) ? '기본' : '자체'}</Badge>
+                  </TableCell>
+                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell className="text-right text-sm">
+                    {product.price.toLocaleString()}원
+                    {product.basePrice !== null && product.basePrice !== product.price && (
+                      <div className="text-xs text-gray-400">기본 {product.basePrice.toLocaleString()}원</div>
                     )}
                   </TableCell>
-                  <TableCell className="text-right text-sm">{product.price.toLocaleString()}원</TableCell>
                   <TableCell className="text-sm text-gray-500">{product.memo ?? '—'}</TableCell>
-                  <TableCell className="text-sm text-gray-500">{product.createdAt.slice(0, 10)}</TableCell>
-                  {role === 'SUPER_ADMIN' && (
-                    <TableCell className="text-center">
-                      <div className="flex justify-center gap-1.5">
-                        <button onClick={() => openEdit(product)} className="rounded border px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-50">수정</button>
-                        <button onClick={() => setDeleteTarget(product)} className="rounded border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50">삭제</button>
-                      </div>
-                    </TableCell>
-                  )}
+                  <TableCell className="text-center">{toggleButton(product)}</TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex justify-center gap-1.5">{actionButtons(product)}</div>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -198,7 +283,7 @@ export default function ProductsPage() {
               totalPages={result.totalPages}
               totalElements={result.totalElements}
               size={result.size}
-              onPageChange={setPage}
+              onPageChange={changePage}
             />
           </div>
         )}
@@ -212,25 +297,24 @@ export default function ProductsPage() {
           <div className="rounded-lg border bg-white py-10 text-center text-sm text-gray-400">등록된 상품이 없습니다.</div>
         ) : (
           products.map((product) => (
-            <div key={product.id} className="rounded-lg border bg-white p-4">
+            <div key={product.id} className={`rounded-lg border bg-white p-4 ${product.enabled ? '' : 'opacity-60'}`}>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  {role === 'SUPER_ADMIN' ? (
-                    <button onClick={() => openEdit(product)} className="font-medium text-blue-700 hover:underline">{product.name}</button>
-                  ) : (
+                  <div className="flex items-center gap-2">
+                    <Badge variant={isBase(product) ? 'secondary' : 'outline'}>{isBase(product) ? '기본' : '자체'}</Badge>
                     <span className="font-medium">{product.name}</span>
-                  )}
-                  <div className="mt-1 text-sm font-semibold text-green-700">{product.price.toLocaleString()}원</div>
-                  {product.memo && <div className="mt-0.5 text-xs text-gray-500">{product.memo}</div>}
-                  <div className="mt-1 text-xs text-gray-400">{product.createdAt.slice(0, 10)}</div>
-                </div>
-                {role === 'SUPER_ADMIN' && (
-                  <div className="flex gap-1.5">
-                    <button onClick={() => openEdit(product)} className="rounded border px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-50">수정</button>
-                    <button onClick={() => setDeleteTarget(product)} className="rounded border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50">삭제</button>
                   </div>
-                )}
+                  <div className="mt-1 text-sm font-semibold text-green-700">
+                    {product.price.toLocaleString()}원
+                    {product.basePrice !== null && product.basePrice !== product.price && (
+                      <span className="ml-2 text-xs font-normal text-gray-400">기본 {product.basePrice.toLocaleString()}원</span>
+                    )}
+                  </div>
+                  {product.memo && <div className="mt-0.5 text-xs text-gray-500">{product.memo}</div>}
+                </div>
+                {toggleButton(product)}
               </div>
+              <div className="mt-3 flex justify-end gap-1.5">{actionButtons(product)}</div>
             </div>
           ))
         )}
@@ -240,24 +324,35 @@ export default function ProductsPage() {
             totalPages={result.totalPages}
             totalElements={result.totalElements}
             size={result.size}
-            onPageChange={setPage}
+            onPageChange={changePage}
           />
         )}
       </div>
 
-      {/* 등록/수정 모달 */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      {/* 자체 상품 등록/수정 모달 */}
+      <Dialog open={ownModalOpen} onOpenChange={setOwnModalOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>{editTarget ? `${editTarget.name} 수정` : '상품 등록'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>상품명 *</Label>
-              <Input placeholder="예: 근조화환 3단" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2 space-y-1.5">
+                <Label>상품명 *</Label>
+                <Input placeholder="예: 근조화환 3단" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>순서</Label>
+                <Input
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={form.sortOrder}
+                  onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value.replace(/\D/g, '') }))}
+                />
+              </div>
             </div>
             <div className="space-y-1.5">
-              <Label>기본가격 *</Label>
+              <Label>가격 *</Label>
               <div className="relative">
                 <Input
                   inputMode="numeric"
@@ -281,9 +376,52 @@ export default function ProductsPage() {
             {modalError && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{modalError}</p>}
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setModalOpen(false)}>취소</Button>
-            <Button className="bg-green-700 hover:bg-green-800" disabled={modalSaving} onClick={handleSave}>
+            <Button variant="outline" onClick={() => setOwnModalOpen(false)}>취소</Button>
+            <Button className="bg-green-700 hover:bg-green-800" disabled={modalSaving} onClick={handleSaveOwn}>
               {modalSaving ? '저장 중...' : editTarget ? '저장' : '등록'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 기본상품 가격 수정 모달 */}
+      <Dialog open={!!priceTarget} onOpenChange={(open) => !open && setPriceTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{priceTarget?.name} 가격 수정</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>가격 *</Label>
+              <div className="relative">
+                <Input
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={priceInput}
+                  onChange={(e) => setPriceInput(formatPrice(e.target.value))}
+                  className="pr-6"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">원</span>
+              </div>
+            </div>
+            {priceTarget?.basePrice != null && (
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>기본 가격 {priceTarget.basePrice.toLocaleString()}원</span>
+                <button
+                  type="button"
+                  className="text-blue-700 hover:underline"
+                  onClick={() => setPriceInput(priceTarget.basePrice!.toLocaleString())}
+                >
+                  기본 가격으로 되돌리기
+                </button>
+              </div>
+            )}
+            {modalError && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{modalError}</p>}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPriceTarget(null)}>취소</Button>
+            <Button className="bg-green-700 hover:bg-green-800" disabled={modalSaving} onClick={handleSavePrice}>
+              {modalSaving ? '저장 중...' : '저장'}
             </Button>
           </DialogFooter>
         </DialogContent>

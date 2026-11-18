@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Pagination } from '@/components/ui/Pagination'
 import { Product } from '@/types/product'
 import { PageResult } from '@/types/page'
-import { fetchProducts, createProduct, updateProduct, deleteProduct } from '@/lib/api/productApi'
+import { fetchBaseProducts, createBaseProduct, updateBaseProduct, deleteBaseProduct } from '@/lib/api/productApi'
 
 const PAGE_SIZE = 20
 
@@ -45,7 +45,7 @@ export default function ProductsPage() {
   const load = useCallback((p: number) => {
     setLoading(true)
     setPageError('')
-    fetchProducts(p, PAGE_SIZE)
+    fetchBaseProducts(p, PAGE_SIZE)
       .then(setResult)
       .catch((e) => setPageError(e.message))
       .finally(() => setLoading(false))
@@ -84,14 +84,14 @@ export default function ProductsPage() {
     setModalError('')
     try {
       if (editTarget) {
-        await updateProduct(editTarget.id, {
+        await updateBaseProduct(editTarget.id, {
           name: form.name.trim(),
           price: rawPrice,
           memo: form.memo.trim() || undefined,
           sortOrder: Number(form.sortOrder) || 0,
         })
       } else {
-        await createProduct({
+        await createBaseProduct({
           name: form.name.trim(),
           price: rawPrice,
           memo: form.memo.trim() || undefined,
@@ -112,7 +112,7 @@ export default function ProductsPage() {
     if (!deleteTarget) return
     setDeleting(true)
     try {
-      await deleteProduct(deleteTarget.id)
+      await deleteBaseProduct(deleteTarget.id)
       setDeleteTarget(null)
       load(page)
     } catch (e: unknown) {
@@ -127,7 +127,10 @@ export default function ProductsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">상품관리</h1>
+        <div>
+          <h1 className="text-xl font-bold">기본상품관리</h1>
+          <p className="mt-1 text-xs text-gray-500">등록한 기본상품은 모든 수주사의 상품에 자동 추가됩니다. 수주사는 가격과 사용 여부만 조정할 수 있습니다.</p>
+        </div>
         {role === 'SUPER_ADMIN' && (
           <Button className="bg-green-700 hover:bg-green-800" onClick={openRegister}>
             상품 등록
@@ -312,7 +315,7 @@ export default function ProductsPage() {
           <p className="text-sm text-gray-600">
             <span className="font-semibold">{deleteTarget?.name}</span>을(를) 삭제하시겠습니까?
             <br />
-            <span className="text-xs text-gray-400">삭제 후 복구할 수 없습니다.</span>
+            <span className="text-xs text-gray-400">모든 수주사의 해당 상품도 함께 삭제되며 복구할 수 없습니다.</span>
           </p>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>취소</Button>

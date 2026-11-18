@@ -9,9 +9,11 @@ import java.util.Optional;
 
 public interface ProductRepository {
     Product save(Product product);
-    Optional<Product> findById(Long id);
-    Page<Product> findAll(Pageable pageable);
-    List<Product> findAll();
+    List<Product> saveAll(List<Product> products);
+    Optional<Product> findByIdAndCompanyId(Long id, Long companyId);
+    Page<Product> search(Long companyId, String keyword, boolean enabledOnly, Pageable pageable);
+    List<Product> findAllByBaseProductId(Long baseProductId);
+    List<Long> findBaseProductIdsByCompanyId(Long companyId);
     void delete(Long id);
-    boolean existsById(Long id);
+    void deleteAllByBaseProductId(Long baseProductId);
 }

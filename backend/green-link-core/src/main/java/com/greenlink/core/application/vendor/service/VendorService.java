@@ -24,6 +24,7 @@ import com.greenlink.core.domain.company.port.DocumentStorage;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.Company;
+import com.greenlink.core.application.product.usecase.SyncBaseProductsUseCase;
 import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.global.exception.BusinessException;
@@ -53,15 +54,24 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
     private final CompanyRepository companyRepository;
     private final PasswordEncoder passwordEncoder;
     private final DocumentStorage documentStorage;
+    private final SyncBaseProductsUseCase syncBaseProductsUseCase;
 
     public VendorService(AdminRepository adminRepository,
                          CompanyRepository companyRepository,
                          PasswordEncoder passwordEncoder,
-                         DocumentStorage documentStorage) {
+                         DocumentStorage documentStorage,
+                         SyncBaseProductsUseCase syncBaseProductsUseCase) {
         this.adminRepository = adminRepository;
         this.companyRepository = companyRepository;
         this.passwordEncoder = passwordEncoder;
         this.documentStorage = documentStorage;
+        this.syncBaseProductsUseCase = syncBaseProductsUseCase;
+    }
+
+    private void syncBaseProductsIfVendor(Company company) {
+        if (company.getType() == CompanyType.VENDOR || company.getType() == CompanyType.BOTH) {
+            syncBaseProductsUseCase.syncBaseProducts(company.getId());
+        }
     }
 
     @Override
@@ -136,6 +146,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             parseCompanyType(cmd.companyType())
         );
         Company savedCompany = companyRepository.save(company);
+        syncBaseProductsIfVendor(savedCompany);
 
         Admin vendorAdmin = Admin.createVendor(
             cmd.loginId(),
@@ -186,6 +197,7 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
                 } catch (IllegalArgumentException ignored) {}
             }
             Company savedCompany = companyRepository.save(company);
+            syncBaseProductsIfVendor(savedCompany);
 
             if (cmd.regions() != null) {
                 List<CompanyRegion> regions = cmd.regions().stream()
@@ -276,6 +288,8 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
             );
             savedCompany = companyRepository.save(company);
         }
+
+        syncBaseProductsIfVendor(savedCompany);
 
         if (cmd.regions() != null && !cmd.regions().isEmpty()) {
             List<CompanyRegion> regions = cmd.regions().stream()

@@ -7,16 +7,21 @@ export interface Product {
   sortOrder: number
 }
 
-export interface CreateProductRequest {
+export interface ProductRequest {
   name: string
   price: number
   memo?: string
   sortOrder: number
 }
 
-export interface UpdateProductRequest {
+export interface VendorProduct {
+  id: string
   name: string
   price: number
   memo?: string
   sortOrder: number
+  enabled: boolean
+  baseProductId: string | null
+  basePrice: number | null
+  createdAt: string
 }

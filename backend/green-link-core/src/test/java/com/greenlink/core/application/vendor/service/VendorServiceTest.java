@@ -1,5 +1,6 @@
 package com.greenlink.core.application.vendor.service;
 
+import com.greenlink.core.application.product.usecase.SyncBaseProductsUseCase;
 import com.greenlink.core.application.vendor.dto.CreateVendorCommand;
 import com.greenlink.core.application.vendor.dto.VendorResult;
 import com.greenlink.core.application.vendor.dto.VendorSignupCommand;
@@ -10,6 +11,7 @@ import com.greenlink.core.domain.company.model.Company;
 import com.greenlink.core.domain.company.model.CompanyStatus;
 import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
+import com.greenlink.core.domain.company.port.DocumentStorage;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.vendor.VendorErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,12 +39,14 @@ class VendorServiceTest {
     @Mock AdminRepository adminRepository;
     @Mock CompanyRepository companyRepository;
     @Mock PasswordEncoder passwordEncoder;
+    @Mock DocumentStorage documentStorage;
+    @Mock SyncBaseProductsUseCase syncBaseProductsUseCase;
 
     private VendorService service;
 
     @BeforeEach
     void setUp() {
-        service = new VendorService(adminRepository, companyRepository, passwordEncoder);
+        service = new VendorService(adminRepository, companyRepository, passwordEncoder, documentStorage, syncBaseProductsUseCase);
     }
 
     private Company savedCompany(Long id) {
@@ -95,6 +99,7 @@ class VendorServiceTest {
 
         assertThat(result.id()).isEqualTo(2L);
         assertThat(result.companyName()).isEqualTo("테스트꽃집");
+        verify(syncBaseProductsUseCase).syncBaseProducts(1L);
         assertThat(result.status()).isEqualTo("ACTIVE");
     }
 
@@ -143,6 +148,7 @@ class VendorServiceTest {
                         "999-88-77777", "새꽃집", "김대표", "02-0000-0000", "부산", "", List.of("VENDOR")));
 
         verify(companyRepository).save(any(Company.class));
+        verify(syncBaseProductsUseCase).syncBaseProducts(20L);
         assertThat(result.status()).isEqualTo("PENDING");
     }
 
