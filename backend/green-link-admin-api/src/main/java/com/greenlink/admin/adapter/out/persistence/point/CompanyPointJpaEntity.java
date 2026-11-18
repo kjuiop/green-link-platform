@@ -19,6 +19,9 @@ public class CompanyPointJpaEntity extends BaseJpaEntity {
     @Column(nullable = false)
     private long balance;
 
+    @Column(nullable = false)
+    private long depositBalance;
+
     protected CompanyPointJpaEntity() {}
 
     public static CompanyPointJpaEntity from(CompanyPoint p) {
@@ -26,10 +29,11 @@ public class CompanyPointJpaEntity extends BaseJpaEntity {
         e.id = p.getId();
         e.companyId = p.getCompanyId();
         e.balance = p.getBalance();
+        e.depositBalance = p.getDepositBalance();
         return e;
     }
 
     public CompanyPoint toDomain() {
-        return CompanyPoint.of(id, companyId, balance);
+        return CompanyPoint.of(id, companyId, balance, depositBalance);
     }
 }

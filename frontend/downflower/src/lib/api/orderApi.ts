@@ -239,6 +239,10 @@ export async function fetchOrdersPaged(params?: OrderSearchParams, page = 0, siz
   return { ...data, content: data.content.map(toFrontend) }
 }
 
+function refreshMemberSummary() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('member-summary-refresh'))
+}
+
 export async function fetchOrder(id: string): Promise<Order> {
   const res = await fetchWithAuth(`/api/orders/${id}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('발주 정보를 불러오지 못했습니다.')
@@ -255,6 +259,7 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
     const data = await res.json().catch(() => ({}))
     throw new Error(data.message ?? '발주 등록에 실패했습니다.')
   }
+  refreshMemberSummary()
   return toFrontend(await res.json())
 }
 
@@ -268,6 +273,7 @@ export async function updateOrder(id: string, payload: UpdateOrderPayload): Prom
     const data = await res.json().catch(() => ({}))
     throw new Error(data.message ?? '발주 수정에 실패했습니다.')
   }
+  refreshMemberSummary()
   return toFrontend(await res.json())
 }
 
@@ -487,6 +493,7 @@ export async function deleteOrder(id: string): Promise<void> {
     headers: authHeaders(),
   })
   if (!res.ok) throw new Error('주문서 삭제에 실패했습니다.')
+  refreshMemberSummary()
 }
 
 export async function updateOrderStatus(id: string, action: string, photoUrls?: string[]): Promise<Order> {
@@ -499,5 +506,6 @@ export async function updateOrderStatus(id: string, action: string, photoUrls?: 
     const data = await res.json().catch(() => ({}))
     throw new Error(data.message ?? '상태 변경에 실패했습니다.')
   }
+  refreshMemberSummary()
   return toFrontend(await res.json())
 }

@@ -4,5 +4,6 @@ public record CompanyPointResult(
         Long companyId,
         String companyName,
         String companyType,
-        long balance
+        long balance,
+        long depositBalance
 ) {}

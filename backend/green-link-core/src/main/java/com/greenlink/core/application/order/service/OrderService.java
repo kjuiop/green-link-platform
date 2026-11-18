@@ -16,6 +16,8 @@ import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
 import com.greenlink.core.application.orderhistory.usecase.RecordOrderHistoryUseCase;
+import com.greenlink.core.application.point.usecase.ApplyOrderPointUseCase;
+import com.greenlink.core.domain.point.model.OrderPointState;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.Company;
@@ -83,6 +85,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     private final SmsMessageRepository smsMessageRepository;
     private final ReferencePhotoRepository referencePhotoRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final ApplyOrderPointUseCase applyOrderPointUseCase;
 
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository, PhotoRepository photoRepository,
                         ReceiptConfirmationRepository receiptConfirmationRepository,
@@ -90,7 +93,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                         AdminRepository adminRepository, CompanyRepository companyRepository,
                         SmsMessageRepository smsMessageRepository,
                         ReferencePhotoRepository referencePhotoRepository,
-                        ApplicationEventPublisher eventPublisher) {
+                        ApplicationEventPublisher eventPublisher,
+                        ApplyOrderPointUseCase applyOrderPointUseCase) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.photoRepository = photoRepository;
@@ -101,6 +105,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         this.smsMessageRepository = smsMessageRepository;
         this.referencePhotoRepository = referencePhotoRepository;
         this.eventPublisher = eventPublisher;
+        this.applyOrderPointUseCase = applyOrderPointUseCase;
     }
 
     @Override
@@ -157,6 +162,11 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         orderItemRepository.replaceAll(saved.getId(), items);
         recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.CREATED,
                 "발주 등록: " + saved.getOrderNumber());
+
+        if (saved.getOrderingCompanyId() != null) {
+            applyOrderPointUseCase.holdForNewOrder(saved.getOrderingCompanyId(), saved.getId(),
+                    saved.getOrderNumber(), saved.getTotalAmount(), resolveCurrentAdminId());
+        }
 
         String vendorPhone = resolveVendorPhone(saved.getVendorId());
         if (vendorPhone != null && !vendorPhone.isBlank()) {
@@ -419,6 +429,13 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
 
         Long previousVendorId = order.getVendorId();
         List<OrderItem> items = resolveItems(cmd.items(), cmd.productId(), cmd.productName(), cmd.quantity(), cmd.amount());
+        long newTotalAmount = items.stream().mapToLong(OrderItem::getAmount).sum()
+                + (cmd.extraCost() != null ? cmd.extraCost() : 0L);
+        if (order.getStatus() == OrderStatus.DELIVERED
+                && newTotalAmount != order.getTotalAmount()
+                && applyOrderPointUseCase.isSettled(id)) {
+            throw new BusinessException(OrderErrorCode.SETTLED_ORDER_AMOUNT_LOCKED);
+        }
         String changeDetail = buildChangeDetail(order, loadItems(order), items, cmd);
 
         Long newVendorCompanyId = cmd.vendorId() != null
@@ -468,7 +485,11 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 saved.resetToPending();
                 saved = orderRepository.save(saved);
             }
+        }
 
+        syncPoint(saved);
+
+        if (!Objects.equals(previousVendorId, cmd.vendorId())) {
             String vendorPhone = resolveVendorPhone(saved.getVendorId());
             if (vendorPhone != null && !vendorPhone.isBlank()) {
                 String vendorName = resolveVendorName(saved.getVendorId());
@@ -582,6 +603,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Order saved = orderRepository.save(order);
         recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.STATUS_CHANGED,
                 "상태 변경: " + STATUS_LABEL.getOrDefault(saved.getStatus(), saved.getStatus().name()));
+        syncPoint(saved);
         return toResult(saved);
     }
 
@@ -632,8 +654,23 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
         order.softDelete();
-        orderRepository.save(order);
+        Order saved = orderRepository.save(order);
         recordOrderHistoryUseCase.record(id, OrderHistoryAction.STATUS_CHANGED, "주문서 삭제");
+        syncPoint(saved);
+    }
+
+    private void syncPoint(Order order) {
+        if (order.getOrderingCompanyId() == null) return;
+        OrderPointState state;
+        if (order.isDeleted() || order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.REJECTED) {
+            state = OrderPointState.CLOSED;
+        } else if (order.getStatus() == OrderStatus.DELIVERED) {
+            state = OrderPointState.DELIVERED;
+        } else {
+            state = OrderPointState.ACTIVE;
+        }
+        applyOrderPointUseCase.syncOrder(order.getOrderingCompanyId(), order.getId(), order.getOrderNumber(),
+                state, order.getTotalAmount(), resolveCurrentAdminId());
     }
 
     private String resolveVendorPhone(Long vendorId) {

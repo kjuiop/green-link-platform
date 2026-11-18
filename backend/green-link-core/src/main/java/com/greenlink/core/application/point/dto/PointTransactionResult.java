@@ -7,5 +7,6 @@ public record PointTransactionResult(
         long balanceAfter,
         String memo,
         String memberLoginId,
+        Long orderId,
         String createdAt
 ) {}
