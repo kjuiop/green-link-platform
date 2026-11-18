@@ -71,9 +71,18 @@ public class PointService implements
                 PointTransaction.charge(companyId, adminId, amount, point.getBalance(), memo));
     }
 
+    private Long resolveActor(Long companyId, Long memberId) {
+        if (memberId == null) return null;
+        return adminRepository.findById(memberId)
+                .filter(a -> a.getCompanyId() == null || a.getCompanyId().equals(companyId))
+                .map(Admin::getId)
+                .orElse(null);
+    }
+
     @Override
     @Transactional
     public void holdForNewOrder(Long companyId, Long orderId, String orderNumber, long totalAmount, Long memberId) {
+        Long actorId = resolveActor(companyId, memberId);
         CompanyPoint point = companyPointRepository.findByCompanyIdForUpdate(companyId)
                 .orElseGet(() -> CompanyPoint.init(companyId));
         if (!point.canHold(totalAmount)) {
@@ -82,7 +91,7 @@ public class PointService implements
         point.hold(totalAmount);
         companyPointRepository.save(point);
         pointTransactionRepository.save(PointTransaction.use(
-                companyId, memberId, orderId, totalAmount, point.getBalance(), "발주 예치 " + orderNumber));
+                companyId, actorId, orderId, totalAmount, point.getBalance(), "발주 예치 " + orderNumber));
     }
 
     @Override
@@ -91,6 +100,7 @@ public class PointService implements
                           OrderPointState state, long totalAmount, Long memberId) {
         if (!pointTransactionRepository.existsOrderTransaction(orderId)) return;
         if (pointTransactionRepository.existsSettle(orderId)) return;
+        Long actorId = resolveActor(companyId, memberId);
 
         CompanyPoint point = companyPointRepository.findByCompanyIdForUpdate(companyId)
                 .orElseGet(() -> CompanyPoint.init(companyId));
@@ -100,7 +110,7 @@ public class PointService implements
             point.settle(held);
             companyPointRepository.save(point);
             pointTransactionRepository.save(PointTransaction.settle(
-                    companyId, memberId, orderId, held, point.getBalance(), "발주 정산 " + orderNumber));
+                    companyId, actorId, orderId, held, point.getBalance(), "발주 정산 " + orderNumber));
             return;
         }
 
@@ -113,12 +123,12 @@ public class PointService implements
             point.hold(delta);
             companyPointRepository.save(point);
             pointTransactionRepository.save(PointTransaction.use(
-                    companyId, memberId, orderId, delta, point.getBalance(), "발주 금액 변경 추가 예치 " + orderNumber));
+                    companyId, actorId, orderId, delta, point.getBalance(), "발주 금액 변경 추가 예치 " + orderNumber));
         } else if (delta < 0) {
             point.release(-delta);
             companyPointRepository.save(point);
             pointTransactionRepository.save(PointTransaction.refund(
-                    companyId, memberId, orderId, -delta, point.getBalance(), "발주 환불 " + orderNumber));
+                    companyId, actorId, orderId, -delta, point.getBalance(), "발주 환불 " + orderNumber));
         }
     }
 

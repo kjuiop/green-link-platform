@@ -148,6 +148,28 @@ class PointServiceOrderTest {
         assertThat(txRepo.saved).isEmpty();
     }
 
+    @Test
+    void syncOrder_actorFromOtherCompany_isNotRecorded() {
+        AdminRepository adminRepo = Mockito.mock(AdminRepository.class);
+        PointService svc = new PointService(pointRepo, txRepo, Mockito.mock(CompanyRepository.class), adminRepo);
+        var vendorAdmin = adminOf(9L, 2L);
+        var orderingAdmin = adminOf(8L, COMPANY);
+        Mockito.when(adminRepo.findById(9L)).thenReturn(Optional.of(vendorAdmin));
+        Mockito.when(adminRepo.findById(8L)).thenReturn(Optional.of(orderingAdmin));
+        svc.holdForNewOrder(COMPANY, ORDER, "DF-1", 40_000L, 8L);
+
+        svc.syncOrder(COMPANY, ORDER, "DF-1", OrderPointState.CLOSED, 40_000L, 9L);
+
+        assertThat(txRepo.saved).extracting(PointTransaction::getMemberId).containsExactly(8L, null);
+    }
+
+    private static com.greenlink.core.domain.admin.model.Admin adminOf(Long id, Long companyId) {
+        com.greenlink.core.domain.admin.model.Admin a = Mockito.mock(com.greenlink.core.domain.admin.model.Admin.class);
+        Mockito.when(a.getId()).thenReturn(id);
+        Mockito.when(a.getCompanyId()).thenReturn(companyId);
+        return a;
+    }
+
     static class FakePointRepo implements CompanyPointRepository {
         CompanyPoint point;
 

@@ -14,12 +14,6 @@ public interface PointTransactionJpaRepository extends JpaRepository<PointTransa
 
     boolean existsByOrderIdAndTypeIn(Long orderId, Collection<PointTransactionType> types);
 
-    @Query("""
-            select coalesce(sum(case when t.type = com.greenlink.core.domain.point.model.PointTransactionType.USE then t.amount
-                                     when t.type = com.greenlink.core.domain.point.model.PointTransactionType.REFUND then -t.amount
-                                     else 0 end), 0)
-            from PointTransactionJpaEntity t
-            where t.orderId = :orderId
-            """)
-    long sumNetHeldByOrderId(@Param("orderId") Long orderId);
+    @Query("select coalesce(sum(t.amount), 0) from PointTransactionJpaEntity t where t.orderId = :orderId and t.type = :type")
+    long sumAmountByOrderIdAndType(@Param("orderId") Long orderId, @Param("type") PointTransactionType type);
 }
