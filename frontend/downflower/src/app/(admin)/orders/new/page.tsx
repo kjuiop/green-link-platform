@@ -113,7 +113,6 @@ export default function NewOrderPage() {
     if (isSuperAdmin && !orderingCompanyId) next.orderingCompanyId = '발주업체를 선택해주세요.'
     if (!deliveryDate) next.deliveryDate = '배송날짜를 입력해주세요.'
     if (!deliveryHour && deliveryTimeType !== '3시간이내' && deliveryTimeType !== '직접입력') next.deliveryHour = '배송시간을 선택해주세요.'
-    if (!amount) next.amount = '발주금액을 입력해주세요.'
     if (!venueName.trim()) next.venueName = '장소를 입력해주세요.'
     if (!recipientName.trim()) next.recipientName = '받는 분 성함을 입력해주세요.'
     if (!(ribbonLefts[0] ?? '').trim()) next.ribbonLeft = '보내는이를 입력해주세요.'
@@ -259,18 +258,18 @@ export default function NewOrderPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>발주금액 *</Label>
+              <Label>상품금액</Label>
               <Input
-                type="number"
-                placeholder="0"
-                value={amount}
-                onChange={(e) => { setAmount(e.target.value); setErrors((prev) => ({ ...prev, amount: undefined })) }}
-                className={cn(errors.amount && 'border-red-500 focus-visible:ring-red-500')}
+                type="text"
+                readOnly
+                tabIndex={-1}
+                placeholder="수주업체·상품을 선택하면 자동 계산됩니다"
+                value={amount ? Number(amount).toLocaleString() : ''}
+                className="bg-gray-50"
               />
-              {errors.amount && <p className="text-xs text-red-500">{errors.amount}</p>}
-              {unitPrice > 0 && Number(quantity) > 1 && (
+              {unitPrice > 0 && (
                 <p className="text-xs text-gray-400">
-                  단가 {unitPrice.toLocaleString()}원 × {quantity}개
+                  단가 {unitPrice.toLocaleString()}원 × {Number(quantity) || 1}개
                 </p>
               )}
             </div>

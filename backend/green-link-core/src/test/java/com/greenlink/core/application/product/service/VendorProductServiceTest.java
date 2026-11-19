@@ -5,6 +5,11 @@ import com.greenlink.core.application.product.dto.VendorProductResult;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
+import com.greenlink.core.domain.company.model.BusinessStatus;
+import com.greenlink.core.domain.company.model.Company;
+import com.greenlink.core.domain.company.model.CompanyStatus;
+import com.greenlink.core.domain.company.model.CompanyType;
+import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.product.model.BaseProduct;
 import com.greenlink.core.domain.product.model.ProductCategory;
 import com.greenlink.core.domain.product.model.Product;
@@ -36,6 +41,7 @@ class VendorProductServiceTest {
     @Mock ProductRepository productRepository;
     @Mock BaseProductRepository baseProductRepository;
     @Mock AdminRepository adminRepository;
+    @Mock CompanyRepository companyRepository;
     @InjectMocks VendorProductService service;
 
     private Product own(Long id, Long companyId) {
@@ -128,12 +134,17 @@ class VendorProductServiceTest {
         PageRequest pageable = PageRequest.of(0, 20);
         given(adminRepository.findById(7L)).willReturn(Optional.of(
                 Admin.of(7L, "v", "pw", "홍", "010", null, 10L, AdminStatus.ACTIVE, "2026-10-22T10:00:00", null)));
+        given(companyRepository.findById(10L)).willReturn(Optional.of(
+                Company.of(10L, "000-00-00010", "수주사", null, "02-000-0010", null, null, null,
+                        CompanyType.VENDOR, CompanyStatus.ACTIVE, true, null, null, null, null, null,
+                        BusinessStatus.OPEN, 2000L)));
         given(productRepository.search(10L, "화환", true, pageable))
                 .willReturn(new PageImpl<>(List.of(own(2L, 10L)), pageable, 1));
 
         var page = service.searchAvailable(7L, "화환", pageable);
 
         assertThat(page.content()).hasSize(1);
+        assertThat(page.content().get(0).price()).isEqualTo(32000L);
         verify(productRepository).search(10L, "화환", true, pageable);
     }
 

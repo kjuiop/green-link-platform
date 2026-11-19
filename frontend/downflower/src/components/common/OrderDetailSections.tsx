@@ -161,8 +161,9 @@ export function BasicInfoCard({ d, className }: SectionProps) {
             <Field label="수량">
               <Input type="number" value={draft.quantity} onChange={(e) => set('quantity', Number(e.target.value))} />
             </Field>
-            <Field label="발주금액">
-              <Input type="number" value={draft.amount} onChange={(e) => set('amount', Number(e.target.value))} />
+            <Field label="상품금액">
+              <Input type="text" readOnly tabIndex={-1} value={draft.amount.toLocaleString()} className="bg-gray-50" />
+              <p className="mt-1 text-xs text-gray-400">상품·수량을 바꾸면 저장 시 수수료를 포함해 다시 계산됩니다.</p>
             </Field>
             <Field label="추가비용">
               <Input

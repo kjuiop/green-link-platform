@@ -119,7 +119,7 @@ public class OrderController {
                 resolvedCompletedAtFrom, resolvedCompletedAtTo);
         PageResult<OrderResult> result = getOrdersUseCase.getOrdersPaged(condition, PageRequest.of(page, size));
         if (isVendor) {
-            List<OrderResult> masked = result.content().stream().map(OrderController::maskPhones).toList();
+            List<OrderResult> masked = result.content().stream().map(r -> maskPhones(r).toVendorView()).toList();
             result = new PageResult<>(masked, result.page(), result.size(), result.totalElements(), result.totalPages(), result.totalAmount());
         }
         return ResponseEntity.ok(result);
@@ -130,7 +130,7 @@ public class OrderController {
         boolean isVendor = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
         OrderResult result = getOrderUseCase.getOrder(id);
-        return ResponseEntity.ok(isVendor ? maskPhones(result) : result);
+        return ResponseEntity.ok(isVendor ? maskPhones(result).toVendorView() : result);
     }
 
     @PostMapping
@@ -171,7 +171,8 @@ public class OrderController {
     }
 
     @PutMapping("/{id}/status")
-    public ResponseEntity<OrderResult> updateStatus(@PathVariable Long id,
+    public ResponseEntity<OrderResult> updateStatus(Authentication auth,
+                                                    @PathVariable Long id,
                                                     @RequestBody @Valid UpdateOrderStatusRequest req) {
         OrderResult result = updateOrderStatusUseCase.updateOrderStatus(id, req.action());
         if ("complete".equalsIgnoreCase(req.action())) {
@@ -186,7 +187,9 @@ public class OrderController {
                 // 알림톡 발송 실패는 배송완료 처리를 막지 않음
             }
         }
-        return ResponseEntity.ok(result);
+        boolean isVendor = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
+        return ResponseEntity.ok(isVendor ? result.toVendorView() : result);
     }
 
     @GetMapping("/{id}/history")
@@ -224,7 +227,7 @@ public class OrderController {
                 r.id(), r.orderNumber(), r.vendorId(), r.vendorCompanyId(), r.vendorName(), r.vendorPhone(),
                 r.orderingCompanyId(), r.orderingCompanyName(), r.orderingCompanyPhone(),
                 r.status(), r.productId(), r.productName(), r.quantity(), r.amount(),
-                r.vendorAmount(), r.extraCost(), r.totalAmount(), r.items(), r.deliveryDate(), r.deliveryTimeType(), r.deliveryTimeHour(),
+                r.vendorAmount(), r.extraCost(), r.totalAmount(), r.vendorFee(), r.items(), r.deliveryDate(), r.deliveryTimeType(), r.deliveryTimeHour(),
                 r.deliveryTimeMinute(), r.deliveryTimeCustom(), r.address(), r.addressDetail(),
                 r.eventType(), r.placeName(), r.roomName(), r.eventInfo(),
                 r.ribbonLeft(), r.ribbonRight(), r.ribbonExtras(),

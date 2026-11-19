@@ -9,6 +9,7 @@ import com.greenlink.core.application.point.usecase.ApplyOrderPointUseCase;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.order.model.Order;
+import com.greenlink.core.domain.order.model.OrderItem;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.domain.order.model.OrderStatus;
 import com.greenlink.core.domain.order.port.OrderItemRepository;
@@ -56,6 +57,7 @@ class OrderServiceTest {
     @Mock ReferencePhotoRepository referencePhotoRepository;
     @Mock ApplicationEventPublisher eventPublisher;
     @Mock ApplyOrderPointUseCase applyOrderPointUseCase;
+    @Mock OrderItemPricer orderItemPricer;
 
     private OrderService service;
 
@@ -65,7 +67,7 @@ class OrderServiceTest {
                 receiptConfirmationRepository, recordOrderHistoryUseCase,
                 adminRepository, companyRepository,
                 smsMessageRepository, referencePhotoRepository, eventPublisher,
-                applyOrderPointUseCase);
+                applyOrderPointUseCase, orderItemPricer);
     }
 
     private CreateOrderCommand sampleCommand() {
@@ -92,8 +94,23 @@ class OrderServiceTest {
         );
     }
 
+    private void stubPricer(long fee, long... unitPrices) {
+        given(orderItemPricer.price(any(), any())).willAnswer(inv -> {
+            List<OrderItemCommand> cmds = inv.getArgument(1);
+            List<OrderItem> items = new java.util.ArrayList<>();
+            long qty = 0;
+            for (int i = 0; i < cmds.size(); i++) {
+                OrderItemCommand c = cmds.get(i);
+                items.add(OrderItem.create(c.productId(), c.productName(), unitPrices[i], c.quantity()));
+                qty += c.quantity();
+            }
+            return new OrderItemPricer.Priced(items, fee * qty);
+        });
+    }
+
     @Test
     void createOrder_savesOrderAndRecordsHistory() {
+        stubPricer(0L, 50000L);
         Order saved = savedOrder(1L, OrderStatus.PENDING);
         given(orderRepository.save(any(Order.class))).willReturn(saved);
         given(adminRepository.findById(1L)).willReturn(Optional.empty());
@@ -124,6 +141,7 @@ class OrderServiceTest {
                 "김영희", "010-9876-5432", true, true,
                 "SCHEDULED", "13", "00", null, null
         );
+        stubPricer(0L, 50000L, 70000L);
         given(orderRepository.save(any(Order.class))).willAnswer(inv -> withId(inv.getArgument(0), 1L));
         given(adminRepository.findById(anyLong())).willReturn(Optional.empty());
         given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
@@ -239,8 +257,48 @@ class OrderServiceTest {
                         .isEqualTo(OrderErrorCode.INVALID_ORDER_ACTION));
     }
 
+    private UpdateOrderCommand updateCommand(int quantity, long amount) {
+        return new UpdateOrderCommand(
+                1L, null, "장미꽃다발", quantity, amount, null, null, null,
+                "2026-10-23", "FIXED", "14", "00", null,
+                "서울시 강남구", "101호", "생일", "그랜드볼룸", "A홀", null,
+                "축하합니다", "홍길동", null, "홍길동", "010-1234-5678",
+                "김영희", "010-9876-5432", true, true,
+                "SCHEDULED", "13", "00", null, null
+        );
+    }
+
+    @Test
+    void updateOrder_whenSelectionUnchanged_keepsStoredAmountAndVendorFee() {
+        Order pending = savedOrder(1L, OrderStatus.PENDING);
+        pending.assignVendorFee(3000L);
+        given(orderRepository.findById(1L)).willReturn(Optional.of(pending));
+        stubToResult();
+
+        OrderResult result = service.updateOrder(1L, updateCommand(1, 999999L));
+
+        verify(orderItemPricer, never()).price(any(), any());
+        assertThat(result.amount()).isEqualTo(50000L);
+        assertThat(result.vendorFee()).isEqualTo(3000L);
+    }
+
+    @Test
+    void updateOrder_whenQuantityChanged_repricesAndRecalculatesVendorFee() {
+        stubPricer(3000L, 53000L);
+        Order pending = savedOrder(1L, OrderStatus.PENDING);
+        pending.assignVendorFee(3000L);
+        given(orderRepository.findById(1L)).willReturn(Optional.of(pending));
+        stubToResult();
+
+        OrderResult result = service.updateOrder(1L, updateCommand(2, 1L));
+
+        assertThat(result.amount()).isEqualTo(106000L);
+        assertThat(result.vendorFee()).isEqualTo(6000L);
+    }
+
     @Test
     void updateOrder_withNewItems_replacesItemsAndRecordsHistory() {
+        stubPricer(0L, 30000L);
         Order pending = savedOrder(1L, OrderStatus.PENDING);
         given(orderRepository.findById(1L)).willReturn(Optional.of(pending));
         given(orderItemRepository.findAllByOrderId(any())).willReturn(List.of());
@@ -312,6 +370,7 @@ class OrderServiceTest {
 
     @Test
     void createOrder_withOrderingCompany_holdsPoint() {
+        stubPricer(0L, 50000L);
         CreateOrderCommand cmd = new CreateOrderCommand(
                 1L, ORDERING_COMPANY_ID, null, "장미꽃다발", 1, 50000L, null,
                 null, null,
@@ -335,6 +394,7 @@ class OrderServiceTest {
 
     @Test
     void createOrder_whenPointInsufficient_propagatesAndPublishesNoEvent() {
+        stubPricer(0L, 50000L);
         CreateOrderCommand cmd = new CreateOrderCommand(
                 1L, ORDERING_COMPANY_ID, null, "장미꽃다발", 1, 50000L, null,
                 null, null,
@@ -354,6 +414,7 @@ class OrderServiceTest {
 
     @Test
     void createOrder_withoutOrderingCompany_doesNotTouchPoint() {
+        stubPricer(0L, 50000L);
         given(orderRepository.save(any(Order.class))).willReturn(savedOrder(1L, OrderStatus.PENDING));
         given(adminRepository.findById(1L)).willReturn(Optional.empty());
         given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
@@ -426,8 +487,9 @@ class OrderServiceTest {
     void updateOrder_whenSettledAndAmountChanged_throwsLocked() {
         given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.DELIVERED)));
         given(applyOrderPointUseCase.isSettled(1L)).willReturn(true);
+        stubPricer(0L, 30000L);
         UpdateOrderCommand cmd = new UpdateOrderCommand(
-                1L, null, "장미꽃다발", 1, 60000L, null, null, null,
+                1L, null, "장미꽃다발", 2, 60000L, null, null, null,
                 "2026-10-23", "FIXED", "14", "00", null,
                 "서울시 강남구", "101호", "생일", "그랜드볼룸", "A홀", null,
                 "축하합니다", "홍길동", null, "홍길동", "010-1234-5678",

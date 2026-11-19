@@ -66,6 +66,9 @@ public class CompanyJpaEntity extends BaseJpaEntity {
     @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(20) DEFAULT 'OPEN'")
     private BusinessStatus businessStatus = BusinessStatus.OPEN;
 
+    @Column(name = "vendor_fee", nullable = false, columnDefinition = "BIGINT DEFAULT 3000")
+    private long vendorFee = Company.DEFAULT_VENDOR_FEE;
+
     protected CompanyJpaEntity() {}
 
     public static CompanyJpaEntity from(Company company) {
@@ -88,12 +91,13 @@ public class CompanyJpaEntity extends BaseJpaEntity {
         e.accountNumber = company.getAccountNumber();
         e.accountHolder = company.getAccountHolder();
         e.businessStatus = company.getBusinessStatus() != null ? company.getBusinessStatus() : BusinessStatus.OPEN;
+        e.vendorFee = company.getVendorFee();
         return e;
     }
 
     public Company toDomain() {
         return Company.of(id, businessNo, companyName, ceoName, phone, faxNumber,
                 address, detailAddress, type, status, displayYn, businessRegUrl, bankBookUrl,
-                bankName, accountNumber, accountHolder, businessStatus);
+                bankName, accountNumber, accountHolder, businessStatus, vendorFee);
     }
 }

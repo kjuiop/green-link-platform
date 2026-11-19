@@ -84,6 +84,6 @@ public class VendorSearchService implements SearchVendorsByProductUseCase {
                 regions.stream().map(r -> new VendorSearchResult.RegionDto(r.sido(), r.sigungu())).toList(),
                 capabilities.stream().map(Enum::name).toList(),
                 match.productCount(),
-                match.minPrice());
+                match.minPrice() + c.getVendorFee());
     }
 }

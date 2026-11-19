@@ -5,6 +5,7 @@ import com.greenlink.core.domain.company.model.CompanyCapability;
 import com.greenlink.core.domain.company.model.CompanyRegion;
 import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -91,6 +92,32 @@ public class CompanyRepositoryAdapter implements CompanyRepository {
     public Page<Company> findAllDisplayed(Pageable pageable) {
         return jpaRepository.findAllByDisplayYnTrue(pageable)
             .map(CompanyJpaEntity::toDomain);
+    }
+
+    @Override
+    public Page<Company> searchVendorCompanies(String keyword, Pageable pageable) {
+        BooleanBuilder where = new BooleanBuilder()
+            .and(companyJpaEntity.displayYn.isTrue())
+            .and(companyJpaEntity.type.in(CompanyType.VENDOR, CompanyType.BOTH));
+        if (keyword != null && !keyword.isBlank()) {
+            where.and(companyJpaEntity.companyName.containsIgnoreCase(keyword.trim()));
+        }
+        List<Company> content = queryFactory
+            .selectFrom(companyJpaEntity)
+            .where(where)
+            .orderBy(companyJpaEntity.companyName.asc(), companyJpaEntity.id.asc())
+            .offset(pageable.getOffset())
+            .limit(pageable.getPageSize())
+            .fetch()
+            .stream()
+            .map(CompanyJpaEntity::toDomain)
+            .toList();
+        Long total = queryFactory
+            .select(companyJpaEntity.count())
+            .from(companyJpaEntity)
+            .where(where)
+            .fetchOne();
+        return new org.springframework.data.domain.PageImpl<>(content, pageable, total != null ? total : 0L);
     }
 
     @Override
