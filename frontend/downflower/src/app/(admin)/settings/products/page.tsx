@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,13 +16,15 @@ const PAGE_SIZE = 20
 
 const emptyForm = { name: '', price: '', memo: '', sortOrder: '' }
 
+const subscribeNoop = () => () => {}
+
 function formatPrice(value: string) {
   const digits = value.replace(/\D/g, '')
   return digits ? Number(digits).toLocaleString() : ''
 }
 
 export default function ProductsPage() {
-  const [role, setRole] = useState<string>('')
+  const role = useSyncExternalStore(subscribeNoop, () => localStorage.getItem('role') ?? '', () => '')
 
   const [result, setResult] = useState<PageResult<Product> | null>(null)
   const [page, setPage] = useState(0)
@@ -38,23 +40,29 @@ export default function ProductsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  useEffect(() => {
-    setRole(localStorage.getItem('role') ?? '')
-  }, [])
-
-  const load = useCallback((p: number) => {
-    setLoading(true)
-    setPageError('')
+  const fetchPage = useCallback((p: number) => {
     fetchBaseProducts(p, PAGE_SIZE)
       .then(setResult)
-      .catch((e) => setPageError(e.message))
+      .catch((e: Error) => setPageError(e.message))
       .finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
     if (role === '') return
-    load(page)
-  }, [page, load, role])
+    fetchPage(page)
+  }, [page, role, fetchPage])
+
+  const refresh = (p: number) => {
+    setLoading(true)
+    setPageError('')
+    fetchPage(p)
+  }
+
+  const changePage = (p: number) => {
+    setLoading(true)
+    setPageError('')
+    setPage(p)
+  }
 
   const openRegister = () => {
     setEditTarget(null)
@@ -97,9 +105,10 @@ export default function ProductsPage() {
           memo: form.memo.trim() || undefined,
           sortOrder: Number(form.sortOrder) || 0,
         })
-        setPage(0)
       }
-      load(editTarget ? page : 0)
+      if (editTarget) refresh(page)
+      else if (page === 0) refresh(0)
+      else changePage(0)
       setModalOpen(false)
     } catch (e: unknown) {
       setModalError(e instanceof Error ? e.message : '저장에 실패했습니다.')
@@ -114,7 +123,7 @@ export default function ProductsPage() {
     try {
       await deleteBaseProduct(deleteTarget.id)
       setDeleteTarget(null)
-      load(page)
+      refresh(page)
     } catch (e: unknown) {
       setPageError(e instanceof Error ? e.message : '삭제에 실패했습니다.')
     } finally {
@@ -204,7 +213,7 @@ export default function ProductsPage() {
               totalPages={result.totalPages}
               totalElements={result.totalElements}
               size={result.size}
-              onPageChange={setPage}
+              onPageChange={changePage}
             />
           </div>
         )}
@@ -246,7 +255,7 @@ export default function ProductsPage() {
             totalPages={result.totalPages}
             totalElements={result.totalElements}
             size={result.size}
-            onPageChange={setPage}
+            onPageChange={changePage}
           />
         )}
       </div>
