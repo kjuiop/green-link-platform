@@ -11,6 +11,7 @@ import { cn, RIBBON_PHRASES, formatPhone } from '@/lib/utils'
 import { createOrder, fetchOrderingCompanies, uploadReferencePhotos, OrderingCompany } from '@/lib/api/orderApi'
 import { fetchAdminPointList, fetchMyPoint } from '@/lib/api/pointApi'
 import VendorSelectModal from '@/components/common/VendorSelectModal'
+import { fetchCoupangOrder, approveCoupangOrder, CoupangOrder } from '@/lib/api/coupangApi'
 
 
 export default function NewOrderPage() {
@@ -107,6 +108,34 @@ export default function NewOrderPage() {
     }
   }, [])
 
+  // 쿠팡 주문 승인 모드 (?coupangOrderId=)
+  const [coupangOrder, setCoupangOrder] = useState<CoupangOrder | null>(null)
+  const [coupangLoadError, setCoupangLoadError] = useState('')
+  const [coupangOrderId, setCoupangOrderId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setCoupangOrderId(new URLSearchParams(window.location.search).get('coupangOrderId'))
+  }, [])
+
+  useEffect(() => {
+    if (!coupangOrderId) return
+    fetchCoupangOrder(Number(coupangOrderId))
+      .then((o) => {
+        setCoupangOrder(o)
+        setOrderingCompanyId(String(o.companyId))
+        setOrdererName(o.ordererName ?? '')
+        setOrdererPhone(formatPhone(o.ordererPhone ?? ''))
+        setRecipientName(o.receiverName ?? '')
+        setRecipientPhone(formatPhone(o.receiverPhone ?? ''))
+        setAddress(o.receiverAddress ?? '')
+        setAddressDetail(o.receiverAddressDetail ?? '')
+        if (o.deliveryMessage) setAdminMemo(`[쿠팡 배송메시지] ${o.deliveryMessage}`)
+        setSendPhotoToOrderer(false)
+        setSendPhotoToRecipient(false)
+      })
+      .catch((e) => setCoupangLoadError(e instanceof Error ? e.message : '쿠팡 주문을 불러오지 못했습니다.'))
+  }, [coupangOrderId])
+
   async function handleSubmit() {
     const next: typeof errors = {}
     if (!vendorId) next.vendorId = '수주업체와 상품을 선택해주세요.'
@@ -129,7 +158,7 @@ export default function NewOrderPage() {
     setSubmitting(true)
     setSubmitError('')
     try {
-      const created = await createOrder({
+      const payload: Parameters<typeof createOrder>[0] = {
         vendorId: Number(vendorId),
         ...(isSuperAdmin && orderingCompanyId ? { orderingCompanyId: Number(orderingCompanyId) } : {}),
         ...(selectedProductId ? { productId: Number(selectedProductId) } : {}),
@@ -171,11 +200,14 @@ export default function NewOrderPage() {
         scheduledMessageMinute: scheduledMinute,
         adminMemo,
         vendorMemo,
-      })
+      }
+      const created = coupangOrder
+        ? await approveCoupangOrder(coupangOrder.id, payload)
+        : await createOrder(payload)
       if (referenceItems.length > 0) {
         await uploadReferencePhotos(String(created.id), referenceItems.map((i) => i.file)).catch(() => {})
       }
-      router.push('/orders')
+      router.push(coupangOrder ? '/coupang/orders' : '/orders')
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : '발주 등록에 실패했습니다.')
     } finally {
@@ -185,7 +217,29 @@ export default function NewOrderPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">신규 발주</h1>
+      <h1 className="text-xl font-bold">{coupangOrderId ? '쿠팡 주문 승인 발주' : '신규 발주'}</h1>
+
+      {coupangLoadError && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{coupangLoadError}</div>
+      )}
+      {coupangOrder && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="space-y-1 py-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-1">
+              <span className="font-semibold text-orange-800">쿠팡 주문 #{coupangOrder.orderId}</span>
+              <span className="text-xs text-gray-500">쿠팡 상태: {coupangOrder.coupangStatus ?? '-'}</span>
+            </div>
+            {coupangOrder.items.map((it, i) => (
+              <p key={i} className="text-gray-700">{it.name} × {it.quantity} ({it.salesPrice.toLocaleString()}원)</p>
+            ))}
+            <p className="font-medium text-gray-800">쿠팡 결제 합계 {coupangOrder.totalPrice.toLocaleString()}원</p>
+            <p className="text-xs text-gray-500">
+              수주업체·상품, 배송시간, 리본 문구를 입력한 뒤 승인하면 발주가 생성됩니다. 주문자/받는 분 번호는 쿠팡 안심번호일 수 있어
+              문자 발송 대상은 기본 해제되어 있습니다.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         <div className="space-y-4">
@@ -205,6 +259,7 @@ export default function NewOrderPage() {
                 <select
                   value={orderingCompanyId}
                   onChange={(e) => setOrderingCompanyId(e.target.value)}
+                  disabled={!!coupangOrderId}
                   className={`w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700 ${errors.orderingCompanyId ? 'border-red-500' : ''}`}
                 >
                   <option value="">선택하세요</option>
@@ -796,13 +851,13 @@ export default function NewOrderPage() {
       )}
 
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={() => router.push('/orders')}>취소</Button>
+        <Button variant="outline" onClick={() => router.push(coupangOrderId ? '/coupang/orders' : '/orders')}>취소</Button>
         <Button
           className="bg-green-700 hover:bg-green-800"
           onClick={handleSubmit}
-          disabled={submitting || pointInsufficient}
+          disabled={submitting || pointInsufficient || (!!coupangOrderId && !coupangOrder)}
         >
-          {submitting ? '등록 중...' : '발주 등록'}
+          {submitting ? '등록 중...' : coupangOrderId ? '승인 및 발주 등록' : '발주 등록'}
         </Button>
       </div>
 

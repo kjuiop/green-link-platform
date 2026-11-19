@@ -40,6 +40,17 @@ aligo:
   sender: ${ALIGO_SENDER:1855-4400}
   url: https://apis.aligo.in/send/
 
+coupang:
+  base-url: https://api-gateway.coupang.com
+  credential-key: ${COUPANG_CRED_KEY:}
+  collect:
+    enabled: ${COUPANG_COLLECT_ENABLED:false}
+    interval-ms: 240000
+    overlap-minutes: 10
+    max-range-hours: 24
+  approve:
+    verify-live: true
+
 app:
   portal-base-url: ${PORTAL_BASE_URL:https://green-link-platform.vercel.app}
 
