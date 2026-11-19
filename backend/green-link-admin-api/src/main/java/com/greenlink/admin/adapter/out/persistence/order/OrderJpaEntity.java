@@ -57,6 +57,9 @@ public class OrderJpaEntity extends BaseJpaEntity {
     @Column(name = "total_amount")
     private Long totalAmount;
 
+    @Column(name = "vendor_fee")
+    private Long vendorFee;
+
     @Column(nullable = false, length = 16)
     private String deliveryDate;
 
@@ -163,6 +166,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
         e.vendorAmount = order.getVendorAmount();
         e.extraCost = order.getExtraCost();
         e.totalAmount = order.getTotalAmount();
+        e.vendorFee = order.getVendorFee();
         e.deliveryDate = order.getDeliveryDate();
         e.deliveryTimeType = order.getDeliveryTimeType();
         e.deliveryTimeHour = order.getDeliveryTimeHour();
@@ -196,7 +200,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
     }
 
     public Order toDomain() {
-        return Order.of(
+        Order order = Order.of(
                 id,
                 orderNumber,
                 vendorId,
@@ -243,5 +247,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
                 isDeleted,
                 photoToken
         );
+        order.assignVendorFee(vendorFee);
+        return order;
     }
 }

@@ -6,6 +6,8 @@ import com.greenlink.core.application.product.dto.VendorProductResult;
 import com.greenlink.core.application.product.usecase.ManageVendorProductsUseCase;
 import com.greenlink.core.application.product.usecase.SearchAvailableProductsUseCase;
 import com.greenlink.core.domain.admin.port.AdminRepository;
+import com.greenlink.core.domain.company.model.Company;
+import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.product.model.BaseProduct;
 import com.greenlink.core.domain.product.model.Product;
 import com.greenlink.core.domain.product.port.BaseProductRepository;
@@ -18,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -29,13 +32,16 @@ public class VendorProductService implements ManageVendorProductsUseCase, Search
     private final ProductRepository productRepository;
     private final BaseProductRepository baseProductRepository;
     private final AdminRepository adminRepository;
+    private final CompanyRepository companyRepository;
 
     public VendorProductService(ProductRepository productRepository,
                                 BaseProductRepository baseProductRepository,
-                                AdminRepository adminRepository) {
+                                AdminRepository adminRepository,
+                                CompanyRepository companyRepository) {
         this.productRepository = productRepository;
         this.baseProductRepository = baseProductRepository;
         this.adminRepository = adminRepository;
+        this.companyRepository = companyRepository;
     }
 
     @Override
@@ -49,7 +55,15 @@ public class VendorProductService implements ManageVendorProductsUseCase, Search
                 .map(a -> a.getCompanyId())
                 .filter(id -> id != null)
                 .orElseThrow(() -> new BusinessException(VendorErrorCode.VENDOR_NOT_FOUND));
-        return toPage(productRepository.search(companyId, keyword, true, pageable));
+        long fee = companyRepository.findById(companyId).map(Company::getVendorFee).orElse(0L);
+        PageResult<VendorProductResult> page = toPage(productRepository.search(companyId, keyword, true, pageable));
+        List<VendorProductResult> withFee = page.content().stream().map(r -> withPrice(r, r.price() + fee)).toList();
+        return new PageResult<>(withFee, page.page(), page.size(), page.totalElements(), page.totalPages(), page.totalAmount());
+    }
+
+    private static VendorProductResult withPrice(VendorProductResult r, long price) {
+        return new VendorProductResult(r.id(), r.name(), price, r.memo(), r.sortOrder(),
+                r.enabled(), r.baseProductId(), r.basePrice(), r.createdAt(), r.category());
     }
 
     @Override

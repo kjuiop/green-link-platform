@@ -72,6 +72,12 @@ public class OrderQueryRepository {
         return (amountSum != null ? amountSum : 0L) + (extraCostSum != null ? extraCostSum : 0L);
     }
 
+    public long sumVendorFee(OrderSearchCondition condition) {
+        QOrderJpaEntity order = QOrderJpaEntity.orderJpaEntity;
+        Long feeSum = queryFactory.select(order.vendorFee.sum()).from(order).where(buildWhere(condition, order)).fetchOne();
+        return feeSum != null ? feeSum : 0L;
+    }
+
     @SuppressWarnings({"unchecked", "rawtypes"})
     private OrderSpecifier<?>[] buildOrderBy(OrderSearchCondition condition, QOrderJpaEntity order) {
         if ("messageSentAt".equals(condition.sortBy())) {

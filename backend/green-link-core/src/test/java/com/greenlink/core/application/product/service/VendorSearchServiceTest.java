@@ -78,7 +78,7 @@ class VendorSearchServiceTest {
         VendorSearchResult first = result.get(1);
         assertThat(first.vendorId()).isEqualTo(11L);
         assertThat(first.matchedProductCount()).isEqualTo(3);
-        assertThat(first.minPrice()).isEqualTo(50000);
+        assertThat(first.minPrice()).isEqualTo(50000 + Company.DEFAULT_VENDOR_FEE);
         assertThat(first.capabilities()).containsExactly("MEMORIAL");
     }
 

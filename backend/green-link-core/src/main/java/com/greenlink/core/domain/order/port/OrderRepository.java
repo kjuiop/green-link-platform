@@ -22,5 +22,7 @@ public interface OrderRepository {
 
     long sumAmount(OrderSearchCondition condition);
 
+    long sumVendorFee(OrderSearchCondition condition);
+
     Order save(Order order);
 }

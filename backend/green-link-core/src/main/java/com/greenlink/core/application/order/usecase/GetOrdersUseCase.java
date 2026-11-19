@@ -12,4 +12,6 @@ public interface GetOrdersUseCase {
     List<OrderResult> getOrders(OrderSearchCondition condition);
 
     PageResult<OrderResult> getOrdersPaged(OrderSearchCondition condition, Pageable pageable);
+
+    PageResult<OrderResult> getVendorOrdersPaged(OrderSearchCondition condition, Pageable pageable);
 }

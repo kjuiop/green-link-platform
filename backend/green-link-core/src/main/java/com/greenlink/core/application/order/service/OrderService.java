@@ -86,6 +86,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     private final ReferencePhotoRepository referencePhotoRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final ApplyOrderPointUseCase applyOrderPointUseCase;
+    private final OrderItemPricer orderItemPricer;
 
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository, PhotoRepository photoRepository,
                         ReceiptConfirmationRepository receiptConfirmationRepository,
@@ -94,7 +95,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                         SmsMessageRepository smsMessageRepository,
                         ReferencePhotoRepository referencePhotoRepository,
                         ApplicationEventPublisher eventPublisher,
-                        ApplyOrderPointUseCase applyOrderPointUseCase) {
+                        ApplyOrderPointUseCase applyOrderPointUseCase,
+                        OrderItemPricer orderItemPricer) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.photoRepository = photoRepository;
@@ -106,6 +108,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         this.referencePhotoRepository = referencePhotoRepository;
         this.eventPublisher = eventPublisher;
         this.applyOrderPointUseCase = applyOrderPointUseCase;
+        this.orderItemPricer = orderItemPricer;
     }
 
     @Override
@@ -120,7 +123,9 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 ? adminRepository.findById(cmd.vendorId()).map(Admin::getCompanyId).orElse(null)
                 : null;
 
-        List<OrderItem> items = resolveItems(cmd.items(), cmd.productId(), cmd.productName(), cmd.quantity(), cmd.amount());
+        OrderItemPricer.Priced priced = orderItemPricer.price(vendorCompanyId,
+                toItemCommands(cmd.items(), cmd.productId(), cmd.productName(), cmd.quantity()));
+        List<OrderItem> items = priced.items();
 
         Order order = Order.create(
                 cmd.vendorId(),
@@ -157,6 +162,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 cmd.vendorMemo(),
                 resolveCurrentAdminId()
         );
+        order.assignVendorFee(priced.vendorFee());
 
         Order saved = orderRepository.save(order);
         orderItemRepository.replaceAll(saved.getId(), items);
@@ -204,6 +210,14 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                     return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, mi.status(), mi.sentAt(), refCount, receiptMap.get(o.getId()), itemsMap.get(o.getId()));
                 })
                 .toList();
+    }
+
+    @Override
+    public PageResult<OrderResult> getVendorOrdersPaged(OrderSearchCondition condition, Pageable pageable) {
+        PageResult<OrderResult> page = getOrdersPaged(condition, pageable);
+        long netTotal = page.totalAmount() - orderRepository.sumVendorFee(condition);
+        return new PageResult<>(page.content().stream().map(OrderResult::toVendorView).toList(),
+                page.page(), page.size(), page.totalElements(), page.totalPages(), netTotal);
     }
 
     @Override
@@ -303,6 +317,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 order.getVendorAmount(),
                 order.getExtraCost(),
                 order.getTotalAmount(),
+                order.getVendorFee(),
                 itemResults,
                 order.getDeliveryDate(),
                 order.getDeliveryTimeType(),
@@ -428,7 +443,21 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
 
         Long previousVendorId = order.getVendorId();
-        List<OrderItem> items = resolveItems(cmd.items(), cmd.productId(), cmd.productName(), cmd.quantity(), cmd.amount());
+        Long newVendorCompanyId = cmd.vendorId() != null
+                ? adminRepository.findById(cmd.vendorId()).map(Admin::getCompanyId).orElse(null)
+                : null;
+        List<OrderItem> beforeItems = loadItems(order);
+        List<OrderItemCommand> itemCommands = toItemCommands(cmd.items(), cmd.productId(), cmd.productName(), cmd.quantity());
+        List<OrderItem> items;
+        Long newVendorFee;
+        if (isSameSelection(order, cmd.vendorId(), beforeItems, itemCommands)) {
+            items = beforeItems;
+            newVendorFee = order.getVendorFee();
+        } else {
+            OrderItemPricer.Priced priced = orderItemPricer.price(newVendorCompanyId, itemCommands);
+            items = priced.items();
+            newVendorFee = priced.vendorFee();
+        }
         long newTotalAmount = items.stream().mapToLong(OrderItem::getAmount).sum()
                 + (cmd.extraCost() != null ? cmd.extraCost() : 0L);
         if (order.getStatus() == OrderStatus.DELIVERED
@@ -436,11 +465,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 && applyOrderPointUseCase.isSettled(id)) {
             throw new BusinessException(OrderErrorCode.SETTLED_ORDER_AMOUNT_LOCKED);
         }
-        String changeDetail = buildChangeDetail(order, loadItems(order), items, cmd);
-
-        Long newVendorCompanyId = cmd.vendorId() != null
-                ? adminRepository.findById(cmd.vendorId()).map(Admin::getCompanyId).orElse(null)
-                : null;
+        String changeDetail = buildChangeDetail(order, beforeItems, items, cmd);
 
         order.updateInfo(
                 cmd.vendorId(),
@@ -475,6 +500,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 cmd.vendorMemo(),
                 resolveCurrentAdminId()
         );
+        order.assignVendorFee(newVendorFee);
 
         Order saved = orderRepository.save(order);
         orderItemRepository.replaceAll(saved.getId(), items);
@@ -529,22 +555,23 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         return lines.isEmpty() ? "변경 사항 없음" : String.join("\n", lines);
     }
 
-    private List<OrderItem> resolveItems(List<OrderItemCommand> commands, Long productId, String productName, int quantity, long amount) {
-        if (commands != null && !commands.isEmpty()) {
-            return commands.stream()
-                    .map(c -> OrderItem.create(c.productId(), c.productName(), c.unitPrice(), c.quantity()))
-                    .toList();
-        }
-        if (productName == null || productName.isBlank()) {
-            throw new IllegalArgumentException("주문 상품은 1개 이상이어야 합니다.");
-        }
+    private static List<OrderItemCommand> toItemCommands(List<OrderItemCommand> items, Long productId, String productName, int quantity) {
+        if (items != null && !items.isEmpty()) return items;
         if (quantity < 1) {
             throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
         }
-        if (amount < 0) {
-            throw new IllegalArgumentException("금액은 0 이상이어야 합니다.");
+        return List.of(new OrderItemCommand(productId, productName, 0L, quantity));
+    }
+
+    private static boolean isSameSelection(Order order, Long newVendorId, List<OrderItem> beforeItems, List<OrderItemCommand> commands) {
+        if (!Objects.equals(order.getVendorId(), newVendorId)) return false;
+        if (beforeItems.size() != commands.size()) return false;
+        for (int i = 0; i < commands.size(); i++) {
+            OrderItem before = beforeItems.get(i);
+            OrderItemCommand c = commands.get(i);
+            if (!Objects.equals(before.getProductId(), c.productId()) || before.getQuantity() != c.quantity()) return false;
         }
-        return List.of(OrderItem.fromLegacy(null, productId, productName, quantity, amount));
+        return true;
     }
 
     private List<OrderItem> loadItems(Order order) {
