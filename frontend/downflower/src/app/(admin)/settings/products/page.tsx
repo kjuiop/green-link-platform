@@ -10,11 +10,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { Pagination } from '@/components/ui/Pagination'
 import { Product } from '@/types/product'
 import { PageResult } from '@/types/page'
+import { PRODUCT_CATEGORIES, categoryLabel, type ProductCategory } from '@/lib/constants/productCategory'
 import { fetchBaseProducts, createBaseProduct, updateBaseProduct, deleteBaseProduct } from '@/lib/api/productApi'
 
 const PAGE_SIZE = 20
 
-const emptyForm = { name: '', price: '', memo: '', sortOrder: '' }
+const emptyForm = { name: '', price: '', memo: '', sortOrder: '', category: '' }
 
 const subscribeNoop = () => () => {}
 
@@ -78,6 +79,7 @@ export default function ProductsPage() {
       price: product.price.toLocaleString(),
       memo: product.memo ?? '',
       sortOrder: String(product.sortOrder),
+      category: product.category ?? '',
     })
     setModalError('')
     setModalOpen(true)
@@ -85,6 +87,7 @@ export default function ProductsPage() {
 
   const handleSave = async () => {
     const rawPrice = Number(form.price.replace(/,/g, ''))
+    if (!form.category) { setModalError('상품 종류를 선택해주세요.'); return }
     if (!form.name.trim()) { setModalError('상품명을 입력해주세요.'); return }
     if (!rawPrice || rawPrice <= 0) { setModalError('가격을 입력해주세요.'); return }
 
@@ -97,6 +100,7 @@ export default function ProductsPage() {
           price: rawPrice,
           memo: form.memo.trim() || undefined,
           sortOrder: Number(form.sortOrder) || 0,
+          category: form.category as ProductCategory,
         })
       } else {
         await createBaseProduct({
@@ -104,6 +108,7 @@ export default function ProductsPage() {
           price: rawPrice,
           memo: form.memo.trim() || undefined,
           sortOrder: Number(form.sortOrder) || 0,
+          category: form.category as ProductCategory,
         })
       }
       if (editTarget) refresh(page)
@@ -157,6 +162,7 @@ export default function ProductsPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 text-right">순서</TableHead>
+              <TableHead className="w-24">종류</TableHead>
               <TableHead className="w-48">상품명</TableHead>
               <TableHead className="w-36 text-right">기본가격</TableHead>
               <TableHead>메모</TableHead>
@@ -167,13 +173,13 @@ export default function ProductsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={role === 'SUPER_ADMIN' ? 6 : 5} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={role === 'SUPER_ADMIN' ? 7 : 6} className="py-10 text-center text-sm text-gray-400">
                   불러오는 중...
                 </TableCell>
               </TableRow>
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={role === 'SUPER_ADMIN' ? 6 : 5} className="py-10 text-center text-sm text-gray-400">
+                <TableCell colSpan={role === 'SUPER_ADMIN' ? 7 : 6} className="py-10 text-center text-sm text-gray-400">
                   등록된 상품이 없습니다.
                 </TableCell>
               </TableRow>
@@ -181,6 +187,7 @@ export default function ProductsPage() {
               products.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell className="text-right text-sm text-gray-400">{product.sortOrder}</TableCell>
+                  <TableCell className="text-sm">{categoryLabel(product.category)}</TableCell>
                   <TableCell>
                     {role === 'SUPER_ADMIN' ? (
                       <button onClick={() => openEdit(product)} className="font-medium text-blue-700 hover:underline">
@@ -230,6 +237,7 @@ export default function ProductsPage() {
             <div key={product.id} className="rounded-lg border bg-white p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
+                  <div className="mb-0.5 text-xs text-gray-500">{categoryLabel(product.category)}</div>
                   {role === 'SUPER_ADMIN' ? (
                     <button onClick={() => openEdit(product)} className="font-medium text-blue-700 hover:underline">{product.name}</button>
                   ) : (
@@ -267,6 +275,19 @@ export default function ProductsPage() {
             <DialogTitle>{editTarget ? `${editTarget.name} 수정` : '상품 등록'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>상품 종류 *</Label>
+              <select
+                value={form.category}
+                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm focus:outline-none focus:ring-1 focus:ring-green-700"
+              >
+                <option value="">선택</option>
+                {PRODUCT_CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2 space-y-1.5">
                 <Label>상품명 *</Label>

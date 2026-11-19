@@ -8,10 +8,6 @@ import {
   OrderHistoryItem, ReceiptConfirmationResult, SmsMessageResult,
 } from '@/lib/api/orderApi'
 import { Order } from '@/types/order'
-import { fetchAllProducts } from '@/lib/api/productApi'
-import { Product } from '@/types/product'
-import { fetchVendors } from '@/lib/api/vendorApi'
-import { Vendor } from '@/types/vendor'
 
 interface Options {
   onUpdated?: () => void
@@ -37,13 +33,9 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
   const [resending, setResending] = useState(false)
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
   const [selectedPhotoUrls, setSelectedPhotoUrls] = useState<string[]>([])
-  const [products, setProducts] = useState<Product[]>([])
   const [selectedProductId, setSelectedProductId] = useState('')
-  const [vendors, setVendors] = useState<Vendor[]>([])
 
   useEffect(() => {
-    fetchAllProducts().then(setProducts).catch(() => setSelectedProductId('__direct__'))
-    fetchVendors('ACTIVE').then(setVendors).catch(() => {})
     Promise.all([
       fetchOrder(orderId),
       fetchReceiptConfirmation(orderId).catch(() => null),
@@ -69,7 +61,7 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
   function startEdit() {
     setDraft({ ...order! })
     const pid = order!.productId
-    setSelectedProductId(pid ? String(pid) : order!.productName ? '__direct__' : '')
+    setSelectedProductId(pid ? String(pid) : '')
     setIsEditing(true)
     setSaveError(null)
   }
@@ -94,7 +86,7 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
     try {
       const updated = await updateOrder(orderId, {
         vendorId: Number(draft.vendorId),
-        ...(selectedProductId && selectedProductId !== '__direct__' ? { productId: Number(selectedProductId) } : {}),
+        ...(selectedProductId ? { productId: Number(selectedProductId) } : {}),
         productName: draft.productName,
         quantity: draft.quantity,
         amount: draft.amount,
@@ -264,7 +256,7 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
     order, draft, setDraft, loading, loadError,
     isEditing, saving, saveError, isSuperAdmin, canEdit,
     receiptConfirmation, history, smsMessages, alimtalkMessages, resending,
-    products, vendors, selectedProductId, setSelectedProductId,
+    selectedProductId, setSelectedProductId,
     completeDialogOpen, setCompleteDialogOpen, selectedPhotoUrls,
     confirmDelete, deleteError,
     hasSitePhotos, hasPhotos, hasSmsFailure, hasAlimtalkFailure,

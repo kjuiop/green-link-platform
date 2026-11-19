@@ -56,7 +56,7 @@ public class VendorProductService implements ManageVendorProductsUseCase, Search
     @Transactional
     public VendorProductResult createProduct(Long companyId, ProductCommand cmd) {
         Product saved = productRepository.save(
-                Product.createOwn(companyId, cmd.name(), cmd.price(), cmd.memo(), cmd.sortOrder()));
+                Product.createOwn(companyId, cmd.name(), cmd.price(), cmd.memo(), cmd.sortOrder(), cmd.category()));
         return toResult(saved, null);
     }
 
@@ -64,7 +64,7 @@ public class VendorProductService implements ManageVendorProductsUseCase, Search
     @Transactional
     public VendorProductResult updateProduct(Long companyId, Long productId, ProductCommand cmd) {
         Product product = find(companyId, productId);
-        product.update(cmd.name(), cmd.price(), cmd.memo(), cmd.sortOrder());
+        product.update(cmd.name(), cmd.price(), cmd.memo(), cmd.sortOrder(), cmd.category());
         return toResult(productRepository.save(product), null);
     }
 
@@ -106,6 +106,7 @@ public class VendorProductService implements ManageVendorProductsUseCase, Search
 
     private VendorProductResult toResult(Product p, Long basePrice) {
         return new VendorProductResult(p.getId(), p.getName(), p.getPrice(), p.getMemo(), p.getSortOrder(),
-                p.isEnabled(), p.getBaseProductId(), basePrice, p.getCreatedAt());
+                p.isEnabled(), p.getBaseProductId(), basePrice, p.getCreatedAt(),
+                p.getCategory() != null ? p.getCategory().name() : null);
     }
 }

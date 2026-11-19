@@ -8,12 +8,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { cn, RIBBON_PHRASES, formatPhone } from '@/lib/utils'
-import { fetchVendors } from '@/lib/api/vendorApi'
 import { createOrder, fetchOrderingCompanies, uploadReferencePhotos, OrderingCompany } from '@/lib/api/orderApi'
-import { fetchAllProducts } from '@/lib/api/productApi'
 import { fetchAdminPointList, fetchMyPoint } from '@/lib/api/pointApi'
-import { Vendor } from '@/types/vendor'
-import { Product } from '@/types/product'
 import VendorSelectModal from '@/components/common/VendorSelectModal'
 
 
@@ -22,7 +18,8 @@ export default function NewOrderPage() {
 
   // 기본정보
   const [vendorId, setVendorId] = useState('')
-  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
+  const [selectedVendorName, setSelectedVendorName] = useState('')
+  const [selectedProductId, setSelectedProductId] = useState('')
   const [vendorModalOpen, setVendorModalOpen] = useState(false)
   const [productName, setProductName] = useState('')
   const [quantity, setQuantity] = useState('1')
@@ -66,15 +63,10 @@ export default function NewOrderPage() {
     return () => referenceItems.forEach((item) => URL.revokeObjectURL(item.url))
   }, [])
 
-  // 업체 목록
-  const [vendors, setVendors] = useState<Vendor[]>([])
   // 발주업체 (SUPER_ADMIN 전용)
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [orderingCompanies, setOrderingCompanies] = useState<OrderingCompany[]>([])
   const [orderingCompanyId, setOrderingCompanyId] = useState('')
-  // 상품 목록
-  const [products, setProducts] = useState<Product[]>([])
-  const [selectedProductId, setSelectedProductId] = useState('')
 
   // 제출 상태
   const [errors, setErrors] = useState<{
@@ -108,8 +100,6 @@ export default function NewOrderPage() {
   }, [isSuperAdmin, orderingCompanyId])
 
   useEffect(() => {
-    fetchVendors('ACTIVE').then((list) => setVendors(list.filter((v) => v.companyType !== 'ORDERING'))).catch(() => {})
-    fetchAllProducts().then(setProducts).catch(() => {})
     const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null
     if (role === 'SUPER_ADMIN') {
       setIsSuperAdmin(true)
@@ -119,9 +109,8 @@ export default function NewOrderPage() {
 
   async function handleSubmit() {
     const next: typeof errors = {}
-    if (!vendorId) next.vendorId = '수주업체를 선택해주세요.'
+    if (!vendorId) next.vendorId = '수주업체와 상품을 선택해주세요.'
     if (isSuperAdmin && !orderingCompanyId) next.orderingCompanyId = '발주업체를 선택해주세요.'
-    if (!productName.trim()) next.productName = '상품명을 입력해주세요.'
     if (!deliveryDate) next.deliveryDate = '배송날짜를 입력해주세요.'
     if (!deliveryHour && deliveryTimeType !== '3시간이내' && deliveryTimeType !== '직접입력') next.deliveryHour = '배송시간을 선택해주세요.'
     if (!amount) next.amount = '발주금액을 입력해주세요.'
@@ -144,7 +133,7 @@ export default function NewOrderPage() {
       const created = await createOrder({
         vendorId: Number(vendorId),
         ...(isSuperAdmin && orderingCompanyId ? { orderingCompanyId: Number(orderingCompanyId) } : {}),
-        ...(selectedProductId && selectedProductId !== '__direct__' ? { productId: Number(selectedProductId) } : {}),
+        ...(selectedProductId ? { productId: Number(selectedProductId) } : {}),
         productName,
         quantity: Number(quantity) || 1,
         amount: Number(amount),
@@ -228,69 +217,29 @@ export default function NewOrderPage() {
               </div>
             )}
             <div className="space-y-1.5">
-              <Label>수주업체 *</Label>
+              <Label>수주업체 · 상품 *</Label>
               <button
                 type="button"
                 onClick={() => setVendorModalOpen(true)}
                 className={cn(
                   'w-full rounded-md border bg-white px-3 py-2 text-left text-sm focus:outline-none focus:ring-2 focus:ring-green-700',
                   errors.vendorId && 'border-red-500',
-                  !selectedVendor && 'text-gray-400',
+                  !vendorId && 'text-gray-400',
                 )}
               >
-                {selectedVendor ? selectedVendor.name : '업체 선택 (지도)'}
+                {vendorId ? (
+                  <span>
+                    <span className="font-medium">{selectedVendorName}</span>
+                    <span className="mx-1.5 text-gray-300">|</span>
+                    {productName} · {unitPrice.toLocaleString()}원
+                  </span>
+                ) : (
+                  '수주업체·상품 선택'
+                )}
               </button>
               {errors.vendorId && <p className="text-xs text-red-500">{errors.vendorId}</p>}
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>상품명 *</Label>
-                <select
-                  value={selectedProductId}
-                  onChange={(e) => {
-                    const id = e.target.value
-                    setSelectedProductId(id)
-                    if (id === '__direct__') {
-                      setProductName('')
-                      setUnitPrice(0)
-                      setAmount('')
-                    } else if (id === '') {
-                      setProductName('')
-                      setUnitPrice(0)
-                      setAmount('')
-                    } else {
-                      const found = products.find((p) => p.id === id)
-                      if (found) {
-                        setProductName(found.name)
-                        setUnitPrice(found.price)
-                        setAmount(String(found.price * (Number(quantity) || 1)))
-                      }
-                    }
-                    setErrors((prev) => ({ ...prev, productName: undefined }))
-                  }}
-                  className={cn(
-                    'w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700',
-                    errors.productName && 'border-red-500',
-                  )}
-                >
-                  <option value="">상품 선택</option>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} — {p.price.toLocaleString()}원
-                    </option>
-                  ))}
-                  <option value="__direct__">직접 입력</option>
-                </select>
-                {selectedProductId === '__direct__' && (
-                  <Input
-                    placeholder="예: 근조화환 3단"
-                    value={productName}
-                    onChange={(e) => { setProductName(e.target.value); setErrors((prev) => ({ ...prev, productName: undefined })) }}
-                    className={cn(errors.productName && 'border-red-500 focus-visible:ring-red-500')}
-                  />
-                )}
-                {errors.productName && <p className="text-xs text-red-500">{errors.productName}</p>}
-              </div>
               <div className="space-y-1.5">
                 <Label>수량 *</Label>
                 <Input
@@ -860,11 +809,14 @@ export default function NewOrderPage() {
 
       <VendorSelectModal
         open={vendorModalOpen}
-        vendors={vendors}
-        onSelect={(v) => {
-          setSelectedVendor(v)
-          setVendorId(v.id)
-          setErrors((prev) => ({ ...prev, vendorId: undefined }))
+        onSelect={(v, product) => {
+          setVendorId(v.vendorId)
+          setSelectedVendorName(v.companyName)
+          setSelectedProductId(product.id)
+          setProductName(product.name)
+          setUnitPrice(product.price)
+          setAmount(String(product.price * (Number(quantity) || 1)))
+          setErrors((prev) => ({ ...prev, vendorId: undefined, amount: undefined }))
           setVendorModalOpen(false)
         }}
         onClose={() => setVendorModalOpen(false)}

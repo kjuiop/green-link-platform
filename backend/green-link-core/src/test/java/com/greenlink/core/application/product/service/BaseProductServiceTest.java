@@ -6,6 +6,7 @@ import com.greenlink.core.domain.company.model.CompanyStatus;
 import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.product.model.BaseProduct;
+import com.greenlink.core.domain.product.model.ProductCategory;
 import com.greenlink.core.domain.product.model.Product;
 import com.greenlink.core.domain.product.port.BaseProductRepository;
 import com.greenlink.core.domain.product.port.ProductRepository;
@@ -45,11 +46,11 @@ class BaseProductServiceTest {
     @SuppressWarnings("unchecked")
     void 기본_상품_생성_시_수주_가능_회사마다_복사본이_생긴다() {
         given(baseProductRepository.save(any(BaseProduct.class)))
-                .willReturn(BaseProduct.of(5L, "근조화환", 50000, null, null, 1));
+                .willReturn(BaseProduct.of(5L, "근조화환", 50000, null, null, 1, ProductCategory.MEMORIAL));
         given(companyRepository.findAllByTypeIn(List.of(CompanyType.VENDOR, CompanyType.BOTH)))
                 .willReturn(List.of(company(1L, CompanyType.VENDOR), company(2L, CompanyType.BOTH)));
 
-        service.createBaseProduct(new ProductCommand("근조화환", 50000, null, 1));
+        service.createBaseProduct(new ProductCommand("근조화환", 50000, null, 1, ProductCategory.MEMORIAL));
 
         ArgumentCaptor<List<Product>> captor = ArgumentCaptor.forClass(List.class);
         verify(productRepository).saveAll(captor.capture());
@@ -64,14 +65,14 @@ class BaseProductServiceTest {
     @Test
     @SuppressWarnings("unchecked")
     void 기본_상품_수정은_복사본에_가격을_전파하지_않는다() {
-        BaseProduct base = BaseProduct.of(5L, "근조화환", 50000, null, null, 1);
-        Product copy = Product.of(100L, 1L, 5L, "근조화환", 50000, null, null, 1, true);
+        BaseProduct base = BaseProduct.of(5L, "근조화환", 50000, null, null, 1, ProductCategory.MEMORIAL);
+        Product copy = Product.of(100L, 1L, 5L, "근조화환", 50000, null, null, 1, true, ProductCategory.MEMORIAL);
         given(baseProductRepository.findById(5L)).willReturn(Optional.of(base));
         given(baseProductRepository.save(any(BaseProduct.class)))
                 .willAnswer(inv -> inv.getArgument(0));
         given(productRepository.findAllByBaseProductId(5L)).willReturn(List.of(copy));
 
-        service.updateBaseProduct(5L, new ProductCommand("근조화환 특대", 99000, "메모", 3));
+        service.updateBaseProduct(5L, new ProductCommand("근조화환 특대", 99000, "메모", 3, ProductCategory.MEMORIAL));
 
         ArgumentCaptor<List<Product>> captor = ArgumentCaptor.forClass(List.class);
         verify(productRepository).saveAll(captor.capture());
@@ -84,7 +85,7 @@ class BaseProductServiceTest {
     @Test
     void 기본_상품_삭제_시_복사본을_먼저_삭제한다() {
         given(baseProductRepository.findById(5L))
-                .willReturn(Optional.of(BaseProduct.of(5L, "근조화환", 50000, null, null, 1)));
+                .willReturn(Optional.of(BaseProduct.of(5L, "근조화환", 50000, null, null, 1, ProductCategory.MEMORIAL)));
 
         service.deleteBaseProduct(5L);
 

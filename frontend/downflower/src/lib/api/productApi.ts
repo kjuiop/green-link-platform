@@ -1,4 +1,5 @@
-import { Product, ProductRequest, VendorProduct } from '@/types/product'
+import { Product, ProductRequest, VendorProduct, VendorSearchParams, VendorSearchResult } from '@/types/product'
+import type { ProductCategory } from '@/lib/constants/productCategory'
 import { PageResult } from '@/types/page'
 import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
@@ -9,6 +10,7 @@ type BackendProduct = {
   memo: string | null
   createdAt: string
   sortOrder: number
+  category: ProductCategory | null
 }
 
 type BackendVendorProduct = BackendProduct & {
@@ -25,6 +27,7 @@ function toFrontend(p: BackendProduct): Product {
     memo: p.memo ?? undefined,
     createdAt: p.createdAt ?? '',
     sortOrder: p.sortOrder ?? 0,
+    category: p.category ?? null,
   }
 }
 
@@ -39,6 +42,7 @@ function toVendorProduct(p: BackendVendorProduct): VendorProduct {
     baseProductId: p.baseProductId == null ? null : String(p.baseProductId),
     basePrice: p.basePrice ?? null,
     createdAt: p.createdAt ?? '',
+    category: p.category ?? null,
   }
 }
 
@@ -48,7 +52,7 @@ async function errorMessage(res: Response, fallback: string): Promise<string> {
 }
 
 function body(req: ProductRequest): string {
-  return JSON.stringify({ name: req.name, price: req.price, memo: req.memo, sortOrder: req.sortOrder })
+  return JSON.stringify({ name: req.name, price: req.price, memo: req.memo, sortOrder: req.sortOrder, category: req.category })
 }
 
 // 발주 폼용 전체 목록 (기본상품)
@@ -57,6 +61,29 @@ export async function fetchAllProducts(): Promise<Product[]> {
   if (!res.ok) throw new Error('상품 목록을 불러오지 못했습니다.')
   const data: BackendProduct[] = await res.json()
   return data.map(toFrontend)
+}
+
+// 상품 조건에 맞는 수주업체 검색 (업체당 1행)
+export async function searchVendorsByProduct(params: VendorSearchParams): Promise<VendorSearchResult[]> {
+  const qs = new URLSearchParams()
+  if (params.category) qs.set('category', params.category)
+  if (params.baseProductId) qs.set('baseProductId', params.baseProductId)
+  if (params.keyword?.trim()) qs.set('keyword', params.keyword.trim())
+  if (params.sido) qs.set('sido', params.sido)
+  if (params.sigungu) qs.set('sigungu', params.sigungu)
+  const res = await fetchWithAuth(`/api/products/vendors?${qs}`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(await errorMessage(res, '수주업체를 불러오지 못했습니다.'))
+  const data: (Omit<VendorSearchResult, 'vendorId'> & { vendorId: number })[] = await res.json()
+  return data.map((v) => ({ ...v, vendorId: String(v.vendorId) }))
+}
+
+// 수주업체의 발주 가능(ON) 상품 목록
+export async function fetchSellableVendorProducts(vendorId: string): Promise<VendorProduct[]> {
+  const qs = new URLSearchParams({ vendorId, page: '0', size: '100' })
+  const res = await fetchWithAuth(`/api/products/search?${qs}`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(await errorMessage(res, '상품 목록을 불러오지 못했습니다.'))
+  const data: PageResult<BackendVendorProduct> = await res.json()
+  return data.content.map(toVendorProduct)
 }
 
 // ── 기본상품 (슈퍼관리자) ────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 package com.greenlink.core.domain.product.port;
 
 import com.greenlink.core.domain.product.model.Product;
+import com.greenlink.core.domain.product.model.ProductCategory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -16,4 +17,7 @@ public interface ProductRepository {
     List<Long> findBaseProductIdsByCompanyId(Long companyId);
     void delete(Long id);
     void deleteAllByBaseProductId(Long baseProductId);
+    List<VendorMatch> findVendorMatches(ProductCategory category, Long baseProductId, String keyword);
+
+    record VendorMatch(Long companyId, long productCount, long minPrice) {}
 }

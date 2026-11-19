@@ -7,7 +7,9 @@ import com.greenlink.core.domain.company.model.CompanyType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface CompanyRepository {
@@ -25,4 +27,6 @@ public interface CompanyRepository {
     void saveCapabilities(Long companyId, List<CompanyCapability> capabilities);
     List<CompanyRegion> findRegionsByCompanyId(Long companyId);
     List<CompanyCapability> findCapabilitiesByCompanyId(Long companyId);
+    Map<Long, List<CompanyRegion>> findRegionsByCompanyIdIn(Collection<Long> companyIds);
+    Map<Long, List<CompanyCapability>> findCapabilitiesByCompanyIdIn(Collection<Long> companyIds);
 }

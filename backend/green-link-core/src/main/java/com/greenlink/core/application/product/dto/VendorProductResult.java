@@ -9,4 +9,5 @@ public record VendorProductResult(
         boolean enabled,
         Long baseProductId,
         Long basePrice,
-        String createdAt) {}
+        String createdAt,
+        String category) {}
