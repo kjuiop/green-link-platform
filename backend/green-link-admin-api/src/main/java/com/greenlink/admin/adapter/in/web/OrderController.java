@@ -117,9 +117,11 @@ public class OrderController {
                 receiverName, messageStatus, ribbonLeft, resolvedDeleted,
                 address, recipientName, vendorName, orderingCompanyName, sortBy, sortDir,
                 resolvedCompletedAtFrom, resolvedCompletedAtTo);
-        PageResult<OrderResult> result = getOrdersUseCase.getOrdersPaged(condition, PageRequest.of(page, size));
+        PageResult<OrderResult> result = isVendor
+                ? getOrdersUseCase.getVendorOrdersPaged(condition, PageRequest.of(page, size))
+                : getOrdersUseCase.getOrdersPaged(condition, PageRequest.of(page, size));
         if (isVendor) {
-            List<OrderResult> masked = result.content().stream().map(r -> maskPhones(r).toVendorView()).toList();
+            List<OrderResult> masked = result.content().stream().map(OrderController::maskPhones).toList();
             result = new PageResult<>(masked, result.page(), result.size(), result.totalElements(), result.totalPages(), result.totalAmount());
         }
         return ResponseEntity.ok(result);

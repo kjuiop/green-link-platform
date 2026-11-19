@@ -70,7 +70,7 @@ public class MemberSummaryService implements GetMemberSummaryUseCase, GetMyAccou
                     companyId,
                     null, null
             );
-            vendorAmount = orderRepository.sumAmount(vendorCondition);
+            vendorAmount = orderRepository.sumAmount(vendorCondition) - orderRepository.sumVendorFee(vendorCondition);
         }
 
         long pointBalance = companyPointRepository.findByCompanyId(companyId)

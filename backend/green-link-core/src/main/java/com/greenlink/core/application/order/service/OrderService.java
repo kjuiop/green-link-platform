@@ -213,6 +213,14 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     }
 
     @Override
+    public PageResult<OrderResult> getVendorOrdersPaged(OrderSearchCondition condition, Pageable pageable) {
+        PageResult<OrderResult> page = getOrdersPaged(condition, pageable);
+        long netTotal = page.totalAmount() - orderRepository.sumVendorFee(condition);
+        return new PageResult<>(page.content().stream().map(OrderResult::toVendorView).toList(),
+                page.page(), page.size(), page.totalElements(), page.totalPages(), netTotal);
+    }
+
+    @Override
     public PageResult<OrderResult> getOrdersPaged(OrderSearchCondition condition, Pageable pageable) {
         Page<Order> page = orderRepository.searchPaged(condition, pageable);
         Map<Long, VendorInfo> infoMap = buildVendorInfoMap();

@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/admin/vendor-fees")
 public class VendorFeeController {
 
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final ManageVendorFeeUseCase manageVendorFeeUseCase;
 
     public VendorFeeController(ManageVendorFeeUseCase manageVendorFeeUseCase) {
@@ -24,7 +26,7 @@ public class VendorFeeController {
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(manageVendorFeeUseCase.getVendorFees(keyword, PageRequest.of(page, size)));
+        return ResponseEntity.ok(manageVendorFeeUseCase.getVendorFees(keyword, PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE))));
     }
 
     @PutMapping("/{companyId}")
