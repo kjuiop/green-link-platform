@@ -23,7 +23,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -202,7 +204,7 @@ public class OrderController {
         if (isVendor) {
             history = history.stream()
                     .map(h -> new OrderHistoryResult(h.id(), h.orderId(), h.action(),
-                            maskPhone(h.detail()), h.actorCompany(), h.actorName(), h.actorAdminId(), h.createdAt()))
+                            hideFeeAmounts(maskPhone(h.detail())), h.actorCompany(), h.actorName(), h.actorAdminId(), h.createdAt()))
                     .toList();
         }
         return ResponseEntity.ok(history);
@@ -217,6 +219,15 @@ public class OrderController {
         }
         deleteOrderUseCase.deleteOrder(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private static String hideFeeAmounts(String detail) {
+        if (detail == null || detail.isBlank()) return detail;
+        String filtered = Arrays.stream(detail.split("\\n"))
+                .filter(line -> !line.startsWith("상품금액:") && !line.startsWith("발주금액:"))
+                .map(line -> line.startsWith("상품:") ? line.replaceAll("\\s\\d+x(\\d+)", " x$1") : line)
+                .collect(Collectors.joining("\n"));
+        return filtered.isBlank() ? "금액 정보 변경" : filtered;
     }
 
     private static String maskPhone(String phone) {
