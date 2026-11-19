@@ -80,13 +80,13 @@ public class CoupangOrderJpaEntity extends BaseJpaEntity {
         e.orderId = o.getOrderId();
         e.shipmentBoxId = o.getShipmentBoxId();
         e.orderedAt = o.getOrderedAt();
-        e.ordererName = o.getOrdererName();
-        e.ordererPhone = o.getOrdererPhone();
-        e.receiverName = o.getReceiverName();
-        e.receiverPhone = o.getReceiverPhone();
-        e.receiverAddress = o.getReceiverAddress();
-        e.receiverAddressDetail = o.getReceiverAddressDetail();
-        e.deliveryMessage = o.getDeliveryMessage();
+        e.ordererName = cut(o.getOrdererName(), 100);
+        e.ordererPhone = cut(o.getOrdererPhone(), 50);
+        e.receiverName = cut(o.getReceiverName(), 100);
+        e.receiverPhone = cut(o.getReceiverPhone(), 50);
+        e.receiverAddress = cut(o.getReceiverAddress(), 500);
+        e.receiverAddressDetail = cut(o.getReceiverAddressDetail(), 500);
+        e.deliveryMessage = cut(o.getDeliveryMessage(), 1000);
         e.itemsJson = CoupangItemsJson.write(o.getItems());
         e.totalPrice = o.getTotalPrice();
         e.rawJson = o.getRawJson();
@@ -96,10 +96,14 @@ public class CoupangOrderJpaEntity extends BaseJpaEntity {
 
     void applyState(CoupangOrder o) {
         this.status = o.getStatus();
-        this.coupangStatus = o.getCoupangStatus();
+        this.coupangStatus = cut(o.getCoupangStatus(), 30);
         this.linkedOrderId = o.getLinkedOrderId();
         this.approvedBy = o.getApprovedBy();
         this.approvedAt = o.getApprovedAt();
+    }
+
+    private static String cut(String value, int max) {
+        return value != null && value.length() > max ? value.substring(0, max) : value;
     }
 
     CoupangOrder toDomain() {

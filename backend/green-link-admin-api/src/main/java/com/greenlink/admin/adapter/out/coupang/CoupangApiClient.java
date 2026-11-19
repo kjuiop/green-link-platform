@@ -15,12 +15,16 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -58,7 +62,7 @@ public class CoupangApiClient implements CoupangApiPort {
             String query = "createdAtFrom=" + from.format(QUERY_TIME)
                     + "&createdAtTo=" + to.format(QUERY_TIME)
                     + "&searchType=timeFrame&status=ACCEPT&maxPerPage=" + PAGE_SIZE
-                    + (nextToken == null || nextToken.isBlank() ? "" : "&nextToken=" + nextToken);
+                    + (nextToken == null || nextToken.isBlank() ? "" : "&nextToken=" + URLEncoder.encode(nextToken, StandardCharsets.UTF_8));
             JsonNode body = get(secret, path, query);
             JsonNode data = body.path("data");
             if (data.isArray()) {
@@ -110,6 +114,12 @@ public class CoupangApiClient implements CoupangApiPort {
         } catch (ResourceAccessException e) {
             log.warn("쿠팡 API 연결 오류 path={}", path);
             throw new CoupangApiException(0, "연결에 실패했습니다.", e);
+        } catch (JacksonException e) {
+            log.warn("쿠팡 API 응답 파싱 실패 path={}", path);
+            throw new CoupangApiException(0, "응답을 해석하지 못했습니다.", e);
+        } catch (RestClientException e) {
+            log.warn("쿠팡 API 호출 실패 path={} type={}", path, e.getClass().getSimpleName());
+            throw new CoupangApiException(0, "응답을 처리하지 못했습니다.", e);
         }
     }
 

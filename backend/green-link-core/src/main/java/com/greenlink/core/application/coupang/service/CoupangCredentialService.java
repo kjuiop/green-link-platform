@@ -22,11 +22,13 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Service
 public class CoupangCredentialService implements ManageCoupangCredentialUseCase {
 
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+    private static final Pattern VENDOR_CODE = Pattern.compile("^[A-Za-z0-9]{1,50}$");
 
     private final CoupangCredentialRepository credentialRepository;
     private final CoupangSyncLogRepository syncLogRepository;
@@ -53,7 +55,8 @@ public class CoupangCredentialService implements ManageCoupangCredentialUseCase 
 
     @Override
     public CoupangCredentialResult save(SaveCoupangCredentialCommand cmd) {
-        if (isBlank(cmd.vendorCode()) || cmd.keyIssuedAt() == null) {
+        if (isBlank(cmd.vendorCode()) || !VENDOR_CODE.matcher(cmd.vendorCode().trim()).matches()
+                || cmd.keyIssuedAt() == null) {
             throw new BusinessException(CoupangErrorCode.INVALID_CREDENTIAL);
         }
         Optional<CoupangCredential> existing = credentialRepository.findByCompanyId(cmd.companyId());
@@ -114,9 +117,13 @@ public class CoupangCredentialService implements ManageCoupangCredentialUseCase 
     }
 
     private String maskAccessKey(CoupangCredential c) {
-        String plain = cipher.decrypt(c.getAccessKeyEnc());
-        if (plain == null || plain.length() <= 4) return "****";
-        return "****" + plain.substring(plain.length() - 4);
+        try {
+            String plain = cipher.decrypt(c.getAccessKeyEnc());
+            if (plain == null || plain.length() <= 4) return "****";
+            return "****" + plain.substring(plain.length() - 4);
+        } catch (RuntimeException e) {
+            return "****";
+        }
     }
 
     private static boolean isBlank(String s) {

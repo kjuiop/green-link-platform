@@ -66,6 +66,11 @@ public class CoupangOrderCollectService implements CollectCoupangOrdersUseCase {
         CoupangCredential credential = credentialRepository.findByCompanyId(companyId)
                 .orElseThrow(() -> new BusinessException(CoupangErrorCode.CREDENTIAL_NOT_FOUND));
         if (credential.isExpired(LocalDate.now(KST))) {
+            String message = CoupangErrorCode.KEY_EXPIRED.getMessage();
+            if (!message.equals(credential.getLastError())) {
+                credential.recordError(message, LocalDateTime.now(KST));
+                credentialRepository.save(credential);
+            }
             throw new BusinessException(CoupangErrorCode.KEY_EXPIRED);
         }
         if (!running.add(companyId)) {
@@ -98,6 +103,13 @@ public class CoupangOrderCollectService implements CollectCoupangOrdersUseCase {
         } catch (CoupangApiException e) {
             log.warn("쿠팡 주문 수집 실패 companyId={} httpStatus={}", companyId, e.getHttpStatus());
             recordFailure(credential, companyId, trigger, start, end, e.toUserMessage());
+            throw new BusinessException(CoupangErrorCode.COLLECT_FAILED);
+        } catch (BusinessException e) {
+            recordFailure(credential, companyId, trigger, start, end, e.getMessage());
+            throw e;
+        } catch (RuntimeException e) {
+            log.error("쿠팡 주문 수집 중 내부 오류 companyId={}", companyId, e);
+            recordFailure(credential, companyId, trigger, start, end, "수집 중 내부 오류가 발생했습니다. 서버 로그를 확인해 주세요.");
             throw new BusinessException(CoupangErrorCode.COLLECT_FAILED);
         } finally {
             running.remove(companyId);

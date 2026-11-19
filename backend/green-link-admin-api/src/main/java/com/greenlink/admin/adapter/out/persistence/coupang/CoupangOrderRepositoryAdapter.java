@@ -43,7 +43,10 @@ public class CoupangOrderRepositoryAdapter implements CoupangOrderRepository {
             jpaRepository.saveAndFlush(CoupangOrderJpaEntity.from(order));
             return true;
         } catch (DataIntegrityViolationException e) {
-            return false;
+            if (jpaRepository.existsByCompanyIdAndShipmentBoxId(order.getCompanyId(), order.getShipmentBoxId())) {
+                return false;
+            }
+            throw e;
         }
     }
 
