@@ -1,414 +1,331 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
-import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps'
-import { geoCentroid } from 'd3-geo'
-import { X } from 'lucide-react'
-import { Vendor } from '@/types/vendor'
-import { SIDO_LIST as SIDO_DATA } from '@/data/regions'
-import { SIDO_VIEWPORT } from '@/data/sidoViewport'
-
-const GEO_URL = '/korea-sido.json'
-const SIGUNGU_GEO_URL = '/korea-sigungu.json'
-
-const CAPABILITIES = [
-  { value: 'ALL', label: '전체' },
-  { value: 'ANNIVERSARY', label: '축하' },
-  { value: 'MEMORIAL', label: '근조' },
-  { value: 'ORCHID_EAST', label: '동양란' },
-  { value: 'ORCHID_WEST', label: '서양란' },
-  { value: 'FLOWER', label: '꽃' },
-  { value: 'INDOOR', label: '관엽' },
-  { value: 'RICE_WREATH', label: '쌀화환' },
-]
-
-const SIDO_LIST = [
-  '서울특별시', '부산광역시', '대구광역시', '인천광역시', '광주광역시',
-  '대전광역시', '울산광역시', '세종특별자치시', '경기도', '강원도',
-  '충청북도', '충청남도', '전라북도', '전라남도', '경상북도', '경상남도', '제주특별자치도',
-]
-
-const CAP_LABEL: Record<string, string> = {
-  ANNIVERSARY: '축하', MEMORIAL: '근조', ORCHID_EAST: '동양란',
-  ORCHID_WEST: '서양란', FLOWER: '꽃', INDOOR: '관엽', RICE_WREATH: '쌀화환',
-}
-
-// GeoJSON의 구 행정명 → regions.ts 현행 행정명 매핑
-const SIDO_NAME_MAP: Record<string, string> = {
-  '강원도': '강원특별자치도',
-  '전라북도': '전북특별자치도',
-}
-
-const MAP_FILL = { base: '#ffffff', hover: '#f0fdf4', selected: '#15803d' }
-
-const toCityName = (name: string) => name.replace(/^(.+?시)(.+구)$/, '$1')
-
-// 레이블이 겹치는 시도의 텍스트 위치 보정 (SVG dx/dy, 단위: px)
-const SIDO_LABEL_OFFSET: Record<string, [number, number]> = {
-  '서울특별시':    [-12, -8],
-  '경기도':       [ 32,  6],
-  '인천광역시':   [-18,  0],
-  '세종특별자치시': [ 0, -10],
-  '대전광역시':   [  0,  10],
-  '충청북도':     [  8, -8],
-}
+import { useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, X } from 'lucide-react'
+import { SIDO_LIST } from '@/data/regions'
+import { PRODUCT_CATEGORIES, categoryLabel, type ProductCategory } from '@/lib/constants/productCategory'
+import { fetchAllProducts, fetchSellableVendorProducts, searchVendorsByProduct } from '@/lib/api/productApi'
+import { fetchVendorRecentPhotos, type VendorRecentPhoto } from '@/lib/api/vendorApi'
+import type { Product, VendorProduct, VendorSearchParams, VendorSearchResult } from '@/types/product'
 
 type Props = {
   open: boolean
-  vendors: Vendor[]
-  onSelect: (vendor: Vendor) => void
+  onSelect: (vendor: VendorSearchResult, product: VendorProduct) => void
   onClose: () => void
 }
 
-export default function VendorSelectModal({ open, vendors, onSelect, onClose }: Props) {
-  const [selectedSido, setSelectedSido] = useState<string | null>(null)
-  const [selectedSigungu, setSelectedSigungu] = useState<string | null>(null)
-  const [selectedCapability, setSelectedCapability] = useState('ALL')
-  const [mapLevel, setMapLevel] = useState<'national' | 'sido'>('national')
+type SearchState = { key: string; vendors: VendorSearchResult[]; error: string }
+type DetailState = { vendorId: string; products: VendorProduct[]; photos: VendorRecentPhoto[] }
 
-  const sigunguList = useMemo(() => {
-    if (!selectedSido) return []
-    const normalizedSido = SIDO_NAME_MAP[selectedSido] ?? selectedSido
-    return SIDO_DATA.find((s) => s.name === normalizedSido)?.sigunguList ?? []
-  }, [selectedSido])
+const selectClass =
+  'h-8 w-full rounded border border-gray-200 bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-green-700 disabled:bg-gray-50 disabled:text-gray-400'
 
-  const filteredVendors = useMemo(() => {
-    const normalizedSido = selectedSido ? (SIDO_NAME_MAP[selectedSido] ?? selectedSido) : null
-    return vendors.filter((v) => {
-      if (v.status !== 'ACTIVE') return false
-      const regionMatch = normalizedSido
-        ? (v.regions ?? []).some(
-            (r) => r.sido === normalizedSido && (!selectedSigungu || r.sigungu === '전체' || r.sigungu === selectedSigungu)
-          )
-        : true
-      const capMatch =
-        selectedCapability === 'ALL' || (v.capabilities ?? []).includes(selectedCapability)
-      return regionMatch && capMatch
-    })
-  }, [vendors, selectedSido, selectedSigungu, selectedCapability])
+const shortSido = (sido: string) => sido.replace(/(특별자치시|특별자치도|광역시|특별시|자치시|자치도|시|도)$/, '')
+
+function formatRegions(regions: { sido: string; sigungu: string }[]): string {
+  const grouped = new Map<string, string[]>()
+  for (const r of regions) {
+    const list = grouped.get(r.sido) ?? []
+    list.push(r.sigungu)
+    grouped.set(r.sido, list)
+  }
+  return [...grouped.entries()]
+    .map(([sido, list]) => `${shortSido(sido)} ${list.includes('전체') ? '전체' : list.join(', ')}`)
+    .join(' · ')
+}
+
+export default function VendorSelectModal({ open, onSelect, onClose }: Props) {
+  if (!open) return null
+  return <VendorSelectModalBody onSelect={onSelect} onClose={onClose} />
+}
+
+function VendorSelectModalBody({ onSelect, onClose }: Omit<Props, 'open'>) {
+  const [category, setCategory] = useState<ProductCategory | ''>('')
+  const [baseProductId, setBaseProductId] = useState('')
+  const [keywordInput, setKeywordInput] = useState('')
+  const [keyword, setKeyword] = useState('')
+  const [sido, setSido] = useState('')
+  const [sigungu, setSigungu] = useState('')
+
+  const [baseProducts, setBaseProducts] = useState<Product[]>([])
+  const [search, setSearch] = useState<SearchState | null>(null)
+  const [selectedVendor, setSelectedVendor] = useState<VendorSearchResult | null>(null)
+  const [detail, setDetail] = useState<DetailState | null>(null)
+  const [showAllProducts, setShowAllProducts] = useState(false)
+  const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null)
+
+  const searchKey = JSON.stringify([category, baseProductId, keyword, sido, sigungu])
+  const searchLoading = search?.key !== searchKey
+  const detailLoading = selectedVendor !== null && detail?.vendorId !== selectedVendor.vendorId
 
   useEffect(() => {
-    if (!open) {
-      setSelectedSido(null)
-      setSelectedSigungu(null)
-      setMapLevel('national')
+    fetchAllProducts().then(setBaseProducts).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    const params: VendorSearchParams = {
+      category: category || undefined,
+      baseProductId: baseProductId || undefined,
+      keyword: keyword || undefined,
+      sido: sido || undefined,
+      sigungu: sigungu || undefined,
     }
-  }, [open])
+    searchVendorsByProduct(params)
+      .then((vendors) => { if (!cancelled) setSearch({ key: searchKey, vendors, error: '' }) })
+      .catch((e: Error) => { if (!cancelled) setSearch({ key: searchKey, vendors: [], error: e.message }) })
+    return () => { cancelled = true }
+  }, [searchKey, category, baseProductId, keyword, sido, sigungu])
 
-  function handleSidoSelect(sido: string) {
-    setSelectedSido(sido)
-    setSelectedSigungu(null)
-    setMapLevel('sido')
+  const selectedVendorId = selectedVendor?.vendorId
+  useEffect(() => {
+    if (!selectedVendorId) return
+    let cancelled = false
+    Promise.all([
+      fetchSellableVendorProducts(selectedVendorId).catch(() => [] as VendorProduct[]),
+      fetchVendorRecentPhotos(selectedVendorId, 5),
+    ]).then(([products, photos]) => {
+      if (!cancelled) setDetail({ vendorId: selectedVendorId, products, photos })
+    })
+    return () => { cancelled = true }
+  }, [selectedVendorId])
+
+  const baseProductOptions = useMemo(
+    () => (category ? baseProducts.filter((p) => p.category === category) : baseProducts),
+    [baseProducts, category],
+  )
+  const sigunguList = useMemo(() => SIDO_LIST.find((s) => s.name === sido)?.sigunguList ?? [], [sido])
+
+  const handleCategoryChange = (value: string) => {
+    setCategory(value as ProductCategory | '')
+    setBaseProductId('')
   }
 
-  function handleBackToNational() {
-    setSelectedSido(null)
-    setSelectedSigungu(null)
-    setMapLevel('national')
+  const handleSidoChange = (value: string) => {
+    setSido(value)
+    setSigungu('')
   }
 
-  const normalizedSelectedSido = selectedSido ? (SIDO_NAME_MAP[selectedSido] ?? selectedSido) : null
-  const sidoViewport = normalizedSelectedSido ? SIDO_VIEWPORT[normalizedSelectedSido] : null
+  const applyKeyword = () => setKeyword(keywordInput.trim())
 
-  if (!open) return null
+  const handleVendorClick = (vendor: VendorSearchResult) => {
+    setSelectedVendor(vendor)
+    setShowAllProducts(false)
+  }
+
+  const detailProducts = useMemo(() => {
+    if (!detail) return []
+    if (showAllProducts) return detail.products
+    return detail.products.filter((p) => {
+      if (category && p.category !== category) return false
+      if (baseProductId && p.baseProductId !== baseProductId) return false
+      if (keyword && !p.name.toLowerCase().includes(keyword.toLowerCase())) return false
+      return true
+    })
+  }, [detail, showAllProducts, category, baseProductId, keyword])
+
+  const vendors = search?.vendors ?? []
+  const isClosed = selectedVendor?.businessStatus === 'CLOSED'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="flex w-full max-w-7xl flex-col rounded-lg bg-white shadow-xl" style={{ maxHeight: '95vh' }} onClick={(e) => e.stopPropagation()}>
-        {/* 헤더 */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-0 md:p-4" onClick={onClose}>
+      <div
+        className="flex h-full w-full max-w-5xl flex-col bg-white shadow-xl md:h-[85vh] md:rounded-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b px-4 py-3">
-          <h2 className="text-base font-semibold">수주업체 선택</h2>
+          <h2 className="text-base font-semibold">수주업체·상품 선택</h2>
           <button onClick={onClose} className="rounded p-1 hover:bg-gray-100">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* 카테고리 탭 */}
-        <div className="flex flex-wrap gap-1.5 border-b px-4 py-2">
-          {CAPABILITIES.map(({ value, label }) => (
-            <button
-              key={value}
-              onClick={() => setSelectedCapability(value)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                selectedCapability === value
-                  ? 'bg-green-700 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="space-y-2 border-b bg-gray-50 px-4 py-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <select value={category} onChange={(e) => handleCategoryChange(e.target.value)} className={selectClass}>
+              <option value="">상품 종류 전체</option>
+              {PRODUCT_CATEGORIES.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
+            <select value={baseProductId} onChange={(e) => setBaseProductId(e.target.value)} className={selectClass}>
+              <option value="">기본상품 전체</option>
+              {baseProductOptions.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <div className="flex gap-1.5">
+              <input
+                value={keywordInput}
+                onChange={(e) => setKeywordInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') applyKeyword() }}
+                placeholder="상품명 검색"
+                className="h-8 min-w-0 flex-1 rounded border border-gray-200 bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-green-700"
+              />
+              <button onClick={applyKeyword} className="shrink-0 rounded bg-green-700 px-3 text-xs text-white hover:bg-green-800">
+                검색
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <select value={sido} onChange={(e) => handleSidoChange(e.target.value)} className={selectClass}>
+              <option value="">시·도 전체</option>
+              {SIDO_LIST.map((s) => (
+                <option key={s.name} value={s.name}>{s.name}</option>
+              ))}
+            </select>
+            <select value={sigungu} onChange={(e) => setSigungu(e.target.value)} disabled={!sido} className={selectClass}>
+              <option value="">시·군·구 전체</option>
+              {sigunguList.map((sg) => (
+                <option key={sg} value={sg}>{sg}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* 본문 */}
-        <div className="flex min-h-0 flex-1 overflow-hidden" style={{ minHeight: '760px' }}>
-          {/* 지도 영역 */}
-          <div className="flex flex-col border-r overflow-y-auto" style={{ width: '45%' }}>
-            {/* PC: SVG 지도 */}
-            <div className="hidden sm:flex flex-col overflow-hidden" style={{ height: '700px', flexShrink: 0 }}>
-              {mapLevel === 'national' ? (
-                <>
-                  <div className="flex-1 min-h-0 overflow-hidden">
-                    <ComposableMap
-                      projection="geoMercator"
-                      projectionConfig={{ center: [127.5, 36], scale: 3800 }}
-                      width={430}
-                      height={520}
-                      style={{ width: '100%', height: '100%' }}
-                    >
-                      <Geographies geography={GEO_URL}>
-                        {({ geographies }) => {
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          const geos = geographies as any[]
-                          return (
-                            <>
-                              {geos.map((geo) => {
-                                const sido = (geo.properties as { name?: string })?.name ?? ''
-                                const isSelected = selectedSido === sido
-                                return (
-                                  <Geography
-                                    key={geo.rsmKey}
-                                    geography={geo}
-                                    onClick={() => handleSidoSelect(sido)}
-                                    fill={isSelected ? MAP_FILL.selected : MAP_FILL.base}
-                                    stroke="#9ca3af"
-                                    strokeWidth={0.7}
-                                    style={{ cursor: 'pointer', outline: 'none' }}
-                                    onMouseEnter={(e) => {
-                                      if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.hover)
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.base)
-                                    }}
-                                  />
-                                )
-                              })}
-                              {geos.map((geo) => {
-                                const sido = (geo.properties as { name?: string })?.name ?? ''
-                                const isSelected = selectedSido === sido
-                                const centroid = geoCentroid(geo)
-                                const shortName = sido
-                                  .replace('특별자치시', '').replace('특별자치도', '')
-                                  .replace('광역시', '').replace('특별시', '')
-                                  .replace('자치시', '').replace('자치도', '')
-                                const [dx, dy] = SIDO_LABEL_OFFSET[sido] ?? [0, 0]
-                                return (
-                                  <Marker key={geo.rsmKey + '-label'} coordinates={centroid}>
-                                    <text
-                                      fontSize={10}
-                                      fontWeight="600"
-                                      textAnchor="middle"
-                                      dominantBaseline="central"
-                                      dx={dx}
-                                      dy={dy}
-                                      fill={isSelected ? '#fff' : '#1f2937'}
-                                      stroke={isSelected ? 'none' : '#fff'}
-                                      strokeWidth={2.5}
-                                      paintOrder="stroke"
-                                      style={{ pointerEvents: 'none', userSelect: 'none' }}
-                                    >
-                                      {shortName}
-                                    </text>
-                                  </Marker>
-                                )
-                              })}
-                            </>
-                          )
-                        }}
-                      </Geographies>
-                    </ComposableMap>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={handleBackToNational}
-                    className="flex items-center gap-1 border-b px-3 py-1.5 text-xs text-green-700 hover:bg-green-50 w-full shrink-0"
-                  >
-                    ← 전국지도보기
-                  </button>
-                  <div className="flex-1 min-h-0 overflow-hidden">
-                    <ComposableMap
-                      projection="geoMercator"
-                      projectionConfig={
-                        sidoViewport
-                          ? { center: sidoViewport.center, scale: sidoViewport.scale }
-                          : { center: [127.5, 36], scale: 3800 }
-                      }
-                      width={430}
-                      height={500}
-                      style={{ width: '100%', height: '100%' }}
-                    >
-                      <Geographies geography={SIGUNGU_GEO_URL}>
-                        {({ geographies }) => {
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          const filtered = geographies.filter((geo: any) => geo.properties.sido === normalizedSelectedSido)
-                          const labeledCities = new Set<string>()
-                          const cityCentroids = new Map<string, [number, number][]>()
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          filtered.forEach((geo: any) => {
-                            const city = toCityName((geo.properties as { name?: string })?.name ?? '')
-                            const list = cityCentroids.get(city) ?? []
-                            list.push(geoCentroid(geo))
-                            cityCentroids.set(city, list)
-                          })
-                          return (
-                            <>
-                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                              {filtered.map((geo: any) => {
-                                const sigungu = toCityName((geo.properties as { name?: string })?.name ?? '')
-                                const isSelected = selectedSigungu === sigungu
-                                return (
-                                  <Geography
-                                    key={geo.rsmKey}
-                                    geography={geo}
-                                    onClick={() => setSelectedSigungu(sigungu === selectedSigungu ? null : sigungu)}
-                                    fill={isSelected ? MAP_FILL.selected : MAP_FILL.base}
-                                    stroke="#9ca3af"
-                                    strokeWidth={0.7}
-                                    style={{ cursor: 'pointer', outline: 'none' }}
-                                    onMouseEnter={(e) => {
-                                      if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.hover)
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      if (!isSelected) (e.target as SVGPathElement).setAttribute('fill', MAP_FILL.base)
-                                    }}
-                                  />
-                                )
-                              })}
-                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                              {filtered.map((geo: any) => {
-                                const sigungu = toCityName((geo.properties as { name?: string })?.name ?? '')
-                                if (labeledCities.has(sigungu)) return null
-                                labeledCities.add(sigungu)
-                                const isSelected = selectedSigungu === sigungu
-                                const points = cityCentroids.get(sigungu) ?? []
-                                const centroid: [number, number] = [
-                                  points.reduce((s, p) => s + p[0], 0) / points.length,
-                                  points.reduce((s, p) => s + p[1], 0) / points.length,
-                                ]
-                                return (
-                                  <Marker key={geo.rsmKey + '-label'} coordinates={centroid}>
-                                    <text
-                                      fontSize={7}
-                                      fontWeight="600"
-                                      textAnchor="middle"
-                                      dominantBaseline="central"
-                                      fill={isSelected ? '#fff' : '#1f2937'}
-                                      stroke={isSelected ? 'none' : '#fff'}
-                                      strokeWidth={2.5}
-                                      paintOrder="stroke"
-                                      style={{ pointerEvents: 'none', userSelect: 'none' }}
-                                    >
-                                      {sigungu}
-                                    </text>
-                                  </Marker>
-                                )
-                              })}
-                            </>
-                          )
-                        }}
-                      </Geographies>
-                    </ComposableMap>
-                  </div>
-                </>
+        <div className="flex min-h-0 flex-1">
+          <div className={`min-h-0 w-full flex-col border-r md:flex md:w-5/12 ${selectedVendor ? 'hidden' : 'flex'}`}>
+            <p className="border-b px-4 py-2 text-xs text-gray-500">
+              {searchLoading ? '검색 중...' : `${vendors.length}개 업체`}
+            </p>
+            <div className="flex-1 space-y-2 overflow-y-auto p-3">
+              {search?.error && <p className="rounded bg-red-50 px-3 py-2 text-xs text-red-600">{search.error}</p>}
+              {!searchLoading && vendors.length === 0 && !search?.error && (
+                <p className="py-10 text-center text-sm text-gray-400">조건에 맞는 수주업체가 없습니다.</p>
               )}
+              {vendors.map((v) => {
+                const active = selectedVendor?.vendorId === v.vendorId
+                return (
+                  <button
+                    key={v.vendorId}
+                    onClick={() => handleVendorClick(v)}
+                    className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                      active ? 'border-green-600 bg-green-50' : 'bg-white hover:border-green-500 hover:bg-green-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{v.companyName}</p>
+                      {v.businessStatus === 'CLOSED' && (
+                        <span className="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-500">휴무중</span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-xs text-gray-600">
+                      최저 <span className="font-semibold text-green-700">{v.minPrice.toLocaleString()}원</span>
+                      <span className="ml-2 text-gray-400">상품 {v.matchedProductCount}개</span>
+                    </p>
+                    {v.regions.length > 0 && (
+                      <p className="mt-1 truncate text-xs text-gray-400">{formatRegions(v.regions)}</p>
+                    )}
+                  </button>
+                )
+              })}
             </div>
-
-            {/* 모바일: 시도 버튼 그리드 */}
-            <div className="grid grid-cols-2 gap-1.5 overflow-auto p-3 sm:hidden">
-              {SIDO_LIST.map((sido) => (
-                <button
-                  key={sido}
-                  onClick={() => handleSidoSelect(sido)}
-                  className={`rounded px-2 py-1.5 text-xs font-medium transition-colors ${
-                    selectedSido === sido
-                      ? 'bg-green-700 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {sido}
-                </button>
-              ))}
-            </div>
-
           </div>
 
-          {/* 업체 목록 */}
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <div className="border-b px-4 py-2">
-              {selectedSido && sigunguList.length > 0 ? (
-                <div className="flex items-center gap-2">
-                  <span className="shrink-0 text-xs font-medium text-gray-600">{selectedSido}</span>
-                  <select
-                    value={selectedSigungu ?? ''}
-                    onChange={(e) => setSelectedSigungu(e.target.value || null)}
-                    className="flex-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-green-700"
-                  >
-                    <option value="">구·군 전체</option>
-                    {sigunguList.map((sg) => (
-                      <option key={sg} value={sg}>{sg}</option>
-                    ))}
-                  </select>
-                  <span className="shrink-0 text-xs text-gray-400">{filteredVendors.length}개</span>
+          <div className={`min-h-0 w-full flex-col md:flex md:w-7/12 ${selectedVendor ? 'flex' : 'hidden'}`}>
+            {!selectedVendor ? (
+              <p className="m-auto text-sm text-gray-400">왼쪽에서 수주업체를 선택하세요.</p>
+            ) : (
+              <div className="flex-1 space-y-5 overflow-y-auto p-4">
+                <button
+                  onClick={() => setSelectedVendor(null)}
+                  className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 md:hidden"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" /> 업체 목록
+                </button>
+
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-semibold">{selectedVendor.companyName}</h3>
+                    {isClosed && <span className="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-500">휴무중</span>}
+                  </div>
+                  <dl className="mt-2 space-y-1 text-xs">
+                    <div className="flex gap-2">
+                      <dt className="w-16 shrink-0 text-gray-400">배송 가능</dt>
+                      <dd className="text-gray-700">
+                        {selectedVendor.regions.length > 0 ? formatRegions(selectedVendor.regions) : '-'}
+                      </dd>
+                    </div>
+                    <div className="flex gap-2">
+                      <dt className="w-16 shrink-0 text-gray-400">연락처</dt>
+                      <dd className="text-gray-700">{selectedVendor.phone ?? '-'}</dd>
+                    </div>
+                  </dl>
                 </div>
-              ) : (
-                <p className="text-xs text-gray-500">
-                  {selectedSido
-                    ? `${selectedSido} · ${filteredVendors.length}개 업체`
-                    : `전체 · ${filteredVendors.length}개 업체`}
-                </p>
-              )}
-            </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {filteredVendors.length === 0 ? (
-                <p className="py-10 text-center text-sm text-gray-400">
-                  {selectedSido ? '해당 지역에 등록된 업체가 없습니다.' : '지도에서 지역을 선택하세요.'}
-                </p>
-              ) : (
-                filteredVendors.map((v) => {
-                  const isClosed = v.businessStatus === 'CLOSED'
-                  return (
+
+                <div>
+                  <p className="mb-2 text-xs font-medium text-gray-500">최근 배송완료 사진</p>
+                  {detailLoading ? (
+                    <p className="text-xs text-gray-400">불러오는 중...</p>
+                  ) : !detail || detail.photos.length === 0 ? (
+                    <p className="text-xs text-gray-400">등록된 배송완료 사진이 없습니다.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {detail.photos.map((p) => (
+                        <img
+                          key={p.id}
+                          src={p.photoUrl}
+                          alt="배송완료 사진"
+                          className="h-20 w-20 cursor-pointer rounded object-cover transition-opacity hover:opacity-80"
+                          onClick={() => setExpandedPhoto(p.photoUrl)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs font-medium text-gray-500">상품 목록</p>
                     <button
-                      key={v.id}
-                      onClick={() => !isClosed && onSelect(v)}
-                      disabled={isClosed}
-                      className={`w-full rounded-lg border p-3 text-left transition-colors ${
-                        isClosed
-                          ? 'cursor-not-allowed bg-gray-50 opacity-60'
-                          : 'bg-white hover:border-green-500 hover:bg-green-50'
-                      }`}
+                      onClick={() => setShowAllProducts((v) => !v)}
+                      className="text-xs text-blue-600 hover:underline"
                     >
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">{v.name}</p>
-                        {isClosed && (
-                          <span className="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-500">휴무중</span>
-                        )}
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {(v.capabilities ?? []).map((cap) => (
-                          <span key={cap} className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
-                            {CAP_LABEL[cap] ?? cap}
-                          </span>
-                        ))}
-                      </div>
-                      {(v.regions ?? []).length > 0 && (
-                        <p className="mt-1 text-xs text-gray-400">
-                          {(v.regions ?? [])
-                            .slice(0, 3)
-                            .map((r) => `${r.sido.replace(/(특별자치시|특별자치도|광역시|특별시|자치시|자치도|시|도)$/, '')} ${r.sigungu}`)
-                            .join(' · ')}
-                          {(v.regions ?? []).length > 3 && ` 외 ${(v.regions ?? []).length - 3}곳`}
-                        </p>
-                      )}
+                      {showAllProducts ? '조건에 맞는 상품만' : '전체 상품 보기'}
                     </button>
-                  )
-                })
-              )}
-            </div>
+                  </div>
+                  {detailLoading ? (
+                    <p className="py-6 text-center text-xs text-gray-400">불러오는 중...</p>
+                  ) : detailProducts.length === 0 ? (
+                    <p className="py-6 text-center text-xs text-gray-400">표시할 상품이 없습니다.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {detailProducts.map((p) => (
+                        <li key={p.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{p.name}</p>
+                            <p className="mt-0.5 text-xs text-gray-500">
+                              {categoryLabel(p.category)}
+                              {p.memo && <span className="ml-2 text-gray-400">{p.memo}</span>}
+                            </p>
+                            <p className="mt-0.5 text-sm font-semibold text-green-700">{p.price.toLocaleString()}원</p>
+                          </div>
+                          <button
+                            disabled={isClosed}
+                            onClick={() => onSelect(selectedVendor, p)}
+                            className="shrink-0 rounded bg-green-700 px-3 py-1.5 text-xs text-white hover:bg-green-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+                          >
+                            선택
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {expandedPhoto && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75"
+          onClick={(e) => { e.stopPropagation(); setExpandedPhoto(null) }}
+        >
+          <img src={expandedPhoto} alt="배송완료 사진 확대" className="max-h-[90vh] max-w-[90vw] rounded shadow-xl" />
+        </div>
+      )}
     </div>
   )
 }

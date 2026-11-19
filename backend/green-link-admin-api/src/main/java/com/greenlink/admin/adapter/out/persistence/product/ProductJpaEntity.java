@@ -2,6 +2,7 @@ package com.greenlink.admin.adapter.out.persistence.product;
 
 import com.greenlink.admin.adapter.out.persistence.BaseJpaEntity;
 import com.greenlink.core.domain.product.model.Product;
+import com.greenlink.core.domain.product.model.ProductCategory;
 import jakarta.persistence.*;
 
 @Entity
@@ -33,6 +34,10 @@ public class ProductJpaEntity extends BaseJpaEntity {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ProductCategory category;
+
     protected ProductJpaEntity() {}
 
     public static ProductJpaEntity from(Product product) {
@@ -45,11 +50,12 @@ public class ProductJpaEntity extends BaseJpaEntity {
         e.memo = product.getMemo();
         e.sortOrder = product.getSortOrder();
         e.enabled = product.isEnabled();
+        e.category = product.getCategory();
         return e;
     }
 
     public Product toDomain() {
         return Product.of(id, companyId, baseProductId, name, price, memo,
-                getCreatedAt() != null ? getCreatedAt().toString() : null, sortOrder, enabled);
+                getCreatedAt() != null ? getCreatedAt().toString() : null, sortOrder, enabled, category);
     }
 }

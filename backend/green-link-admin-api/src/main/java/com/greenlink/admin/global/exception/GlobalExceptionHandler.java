@@ -20,6 +20,7 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     private static final Map<String, String> FIELD_LABELS = Map.ofEntries(
+        Map.entry("category", "상품 종류"),
         Map.entry("companyName", "업체명"),
         Map.entry("deliveryDate", "배송일"),
         Map.entry("deliveryTimeType", "배송시간 유형"),

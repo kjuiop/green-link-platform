@@ -27,6 +27,10 @@ public class CompanyCapabilityJpaEntity {
         return e;
     }
 
+    public Long getCompanyId() {
+        return companyId;
+    }
+
     public CompanyCapability toDomain() {
         return category;
     }

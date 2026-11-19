@@ -6,6 +6,7 @@ import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.product.model.BaseProduct;
+import com.greenlink.core.domain.product.model.ProductCategory;
 import com.greenlink.core.domain.product.model.Product;
 import com.greenlink.core.domain.product.port.BaseProductRepository;
 import com.greenlink.core.domain.product.port.ProductRepository;
@@ -38,18 +39,18 @@ class VendorProductServiceTest {
     @InjectMocks VendorProductService service;
 
     private Product own(Long id, Long companyId) {
-        return Product.of(id, companyId, null, "자체상품", 30000, null, null, 0, true);
+        return Product.of(id, companyId, null, "자체상품", 30000, null, null, 0, true, ProductCategory.MEMORIAL);
     }
 
     private Product copy(Long id, Long companyId, Long baseId) {
-        return Product.of(id, companyId, baseId, "기본상품", 50000, null, null, 0, true);
+        return Product.of(id, companyId, baseId, "기본상품", 50000, null, null, 0, true, ProductCategory.MEMORIAL);
     }
 
     @Test
     void 자체_상품을_등록하면_해당_회사_소속이다() {
         given(productRepository.save(any(Product.class))).willAnswer(inv -> inv.getArgument(0));
 
-        VendorProductResult result = service.createProduct(10L, new ProductCommand("자체상품", 30000, null, 0));
+        VendorProductResult result = service.createProduct(10L, new ProductCommand("자체상품", 30000, null, 0, ProductCategory.MEMORIAL));
 
         assertThat(result.baseProductId()).isNull();
         assertThat(result.enabled()).isTrue();
@@ -60,7 +61,7 @@ class VendorProductServiceTest {
     void 다른_수주사_상품_수정은_404다() {
         given(productRepository.findByIdAndCompanyId(1L, 10L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.updateProduct(10L, 1L, new ProductCommand("x", 1, null, 0)))
+        assertThatThrownBy(() -> service.updateProduct(10L, 1L, new ProductCommand("x", 1, null, 0, ProductCategory.MEMORIAL)))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProductErrorCode.PRODUCT_NOT_FOUND));
     }
@@ -69,7 +70,7 @@ class VendorProductServiceTest {
     void 기본_상품_복사본은_수정_삭제가_거부된다() {
         given(productRepository.findByIdAndCompanyId(1L, 10L)).willReturn(Optional.of(copy(1L, 10L, 5L)));
 
-        assertThatThrownBy(() -> service.updateProduct(10L, 1L, new ProductCommand("x", 1, null, 0)))
+        assertThatThrownBy(() -> service.updateProduct(10L, 1L, new ProductCommand("x", 1, null, 0, ProductCategory.MEMORIAL)))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProductErrorCode.PRODUCT_BASE_COPY_READONLY));
         assertThatThrownBy(() -> service.deleteProduct(10L, 1L))
@@ -92,7 +93,7 @@ class VendorProductServiceTest {
         given(productRepository.findByIdAndCompanyId(1L, 10L)).willReturn(Optional.of(copy(1L, 10L, 5L)));
         given(productRepository.save(any(Product.class))).willAnswer(inv -> inv.getArgument(0));
         given(baseProductRepository.findById(5L))
-                .willReturn(Optional.of(BaseProduct.of(5L, "기본상품", 50000, null, null, 0)));
+                .willReturn(Optional.of(BaseProduct.of(5L, "기본상품", 50000, null, null, 0, ProductCategory.MEMORIAL)));
 
         VendorProductResult result = service.changeSetting(10L, 1L, 42000, false);
 
@@ -115,7 +116,7 @@ class VendorProductServiceTest {
         given(productRepository.search(10L, null, false, pageable))
                 .willReturn(new PageImpl<>(List.of(copy(1L, 10L, 5L), own(2L, 10L)), pageable, 2));
         given(baseProductRepository.findAllByIdIn(any()))
-                .willReturn(List.of(BaseProduct.of(5L, "기본상품", 55000, null, null, 0)));
+                .willReturn(List.of(BaseProduct.of(5L, "기본상품", 55000, null, null, 0, ProductCategory.MEMORIAL)));
 
         var page = service.getProducts(10L, null, pageable);
 

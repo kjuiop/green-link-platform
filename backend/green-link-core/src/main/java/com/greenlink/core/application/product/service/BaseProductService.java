@@ -48,7 +48,7 @@ public class BaseProductService implements ManageBaseProductsUseCase {
     @Transactional
     public BaseProductResult createBaseProduct(ProductCommand cmd) {
         BaseProduct saved = baseProductRepository.save(
-                BaseProduct.create(cmd.name(), cmd.price(), cmd.memo(), cmd.sortOrder()));
+                BaseProduct.create(cmd.name(), cmd.price(), cmd.memo(), cmd.sortOrder(), cmd.category()));
         List<Product> copies = companyRepository.findAllByTypeIn(List.of(CompanyType.VENDOR, CompanyType.BOTH))
                 .stream()
                 .map(c -> Product.copyOf(c.getId(), saved))
@@ -62,7 +62,7 @@ public class BaseProductService implements ManageBaseProductsUseCase {
     public BaseProductResult updateBaseProduct(Long id, ProductCommand cmd) {
         BaseProduct base = baseProductRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ProductErrorCode.BASE_PRODUCT_NOT_FOUND));
-        base.update(cmd.name(), cmd.price(), cmd.memo(), cmd.sortOrder());
+        base.update(cmd.name(), cmd.price(), cmd.memo(), cmd.sortOrder(), cmd.category());
         BaseProduct saved = baseProductRepository.save(base);
         List<Product> copies = productRepository.findAllByBaseProductId(id);
         copies.forEach(c -> c.applyBaseUpdate(saved));
@@ -81,6 +81,7 @@ public class BaseProductService implements ManageBaseProductsUseCase {
     }
 
     private BaseProductResult toResult(BaseProduct p) {
-        return new BaseProductResult(p.getId(), p.getName(), p.getPrice(), p.getMemo(), p.getCreatedAt(), p.getSortOrder());
+        return new BaseProductResult(p.getId(), p.getName(), p.getPrice(), p.getMemo(), p.getCreatedAt(), p.getSortOrder(),
+                p.getCategory() != null ? p.getCategory().name() : null);
     }
 }

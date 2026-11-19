@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Pagination } from '@/components/ui/Pagination'
 import { VendorProduct } from '@/types/product'
 import { PageResult } from '@/types/page'
+import { PRODUCT_CATEGORIES, categoryLabel, type ProductCategory } from '@/lib/constants/productCategory'
 import {
   fetchVendorProducts,
   createVendorProduct,
@@ -21,7 +22,7 @@ import {
 
 const PAGE_SIZE = 20
 
-const emptyForm = { name: '', price: '', memo: '', sortOrder: '' }
+const emptyForm = { name: '', price: '', memo: '', sortOrder: '', category: '' }
 
 function formatPrice(value: string) {
   const digits = value.replace(/\D/g, '')
@@ -97,6 +98,7 @@ export default function VendorProductsPage() {
       price: product.price.toLocaleString(),
       memo: product.memo ?? '',
       sortOrder: String(product.sortOrder),
+      category: product.category ?? '',
     })
     setModalError('')
     setOwnModalOpen(true)
@@ -110,6 +112,7 @@ export default function VendorProductsPage() {
 
   const handleSaveOwn = async () => {
     const rawPrice = Number(form.price.replace(/,/g, ''))
+    if (!form.category) { setModalError('상품 종류를 선택해주세요.'); return }
     if (!form.name.trim()) { setModalError('상품명을 입력해주세요.'); return }
     if (!rawPrice || rawPrice <= 0) { setModalError('가격을 입력해주세요.'); return }
 
@@ -120,6 +123,7 @@ export default function VendorProductsPage() {
       price: rawPrice,
       memo: form.memo.trim() || undefined,
       sortOrder: Number(form.sortOrder) || 0,
+      category: form.category as ProductCategory,
     }
     try {
       if (editTarget) {
@@ -237,6 +241,7 @@ export default function VendorProductsPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-20">구분</TableHead>
+              <TableHead className="w-24">종류</TableHead>
               <TableHead>상품명</TableHead>
               <TableHead className="w-44 text-right">가격</TableHead>
               <TableHead>메모</TableHead>
@@ -247,11 +252,11 @@ export default function VendorProductsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-400">불러오는 중...</TableCell>
+                <TableCell colSpan={7} className="py-10 text-center text-sm text-gray-400">불러오는 중...</TableCell>
               </TableRow>
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-400">등록된 상품이 없습니다.</TableCell>
+                <TableCell colSpan={7} className="py-10 text-center text-sm text-gray-400">등록된 상품이 없습니다.</TableCell>
               </TableRow>
             ) : (
               products.map((product) => (
@@ -259,6 +264,7 @@ export default function VendorProductsPage() {
                   <TableCell>
                     <Badge variant={isBase(product) ? 'secondary' : 'outline'}>{isBase(product) ? '기본' : '자체'}</Badge>
                   </TableCell>
+                  <TableCell className="text-sm">{categoryLabel(product.category)}</TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell className="text-right text-sm">
                     {product.price.toLocaleString()}원
@@ -304,6 +310,7 @@ export default function VendorProductsPage() {
                     <Badge variant={isBase(product) ? 'secondary' : 'outline'}>{isBase(product) ? '기본' : '자체'}</Badge>
                     <span className="font-medium">{product.name}</span>
                   </div>
+                  <div className="mt-0.5 text-xs text-gray-500">{categoryLabel(product.category)}</div>
                   <div className="mt-1 text-sm font-semibold text-green-700">
                     {product.price.toLocaleString()}원
                     {product.basePrice !== null && product.basePrice !== product.price && (
@@ -336,6 +343,19 @@ export default function VendorProductsPage() {
             <DialogTitle>{editTarget ? `${editTarget.name} 수정` : '상품 등록'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>상품 종류 *</Label>
+              <select
+                value={form.category}
+                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm focus:outline-none focus:ring-1 focus:ring-green-700"
+              >
+                <option value="">선택</option>
+                {PRODUCT_CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2 space-y-1.5">
                 <Label>상품명 *</Label>

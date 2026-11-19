@@ -1,6 +1,7 @@
 package com.greenlink.core.application.product.service;
 
 import com.greenlink.core.domain.product.model.BaseProduct;
+import com.greenlink.core.domain.product.model.ProductCategory;
 import com.greenlink.core.domain.product.model.Product;
 import com.greenlink.core.domain.product.port.BaseProductRepository;
 import com.greenlink.core.domain.product.port.ProductRepository;
@@ -27,7 +28,7 @@ class BaseProductSyncServiceTest {
     @InjectMocks BaseProductSyncService service;
 
     private BaseProduct base(long id) {
-        return BaseProduct.of(id, "상품" + id, 1000L * id, null, null, (int) id);
+        return BaseProduct.of(id, "상품" + id, 1000L * id, null, null, (int) id, ProductCategory.MEMORIAL);
     }
 
     @Test

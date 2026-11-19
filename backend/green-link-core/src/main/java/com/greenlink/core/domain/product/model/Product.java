@@ -16,18 +16,22 @@ public class Product {
     private String createdAt;
     private int sortOrder;
     private boolean enabled;
+    private ProductCategory category;
 
     private Product() {}
 
-    public static Product createOwn(Long companyId, String name, long price, String memo, int sortOrder) {
+    public static Product createOwn(Long companyId, String name, long price, String memo, int sortOrder,
+                                    ProductCategory category) {
         if (companyId == null) throw new IllegalArgumentException("수주사 상품은 소속 회사가 필요합니다.");
         requireNonNegative(price);
+        requireCategory(category);
         Product p = new Product();
         p.companyId = companyId;
         p.name = name;
         p.price = price;
         p.memo = memo;
         p.sortOrder = sortOrder;
+        p.category = category;
         p.enabled = true;
         return p;
     }
@@ -41,12 +45,14 @@ public class Product {
         p.price = base.getPrice();
         p.memo = base.getMemo();
         p.sortOrder = base.getSortOrder();
+        p.category = base.getCategory();
         p.enabled = true;
         return p;
     }
 
     public static Product of(Long id, Long companyId, Long baseProductId, String name, long price,
-                             String memo, String createdAt, int sortOrder, boolean enabled) {
+                             String memo, String createdAt, int sortOrder, boolean enabled,
+                             ProductCategory category) {
         Product p = new Product();
         p.id = id;
         p.companyId = companyId;
@@ -57,6 +63,7 @@ public class Product {
         p.createdAt = createdAt;
         p.sortOrder = sortOrder;
         p.enabled = enabled;
+        p.category = category;
         return p;
     }
 
@@ -64,13 +71,15 @@ public class Product {
 
     public boolean isOwnedBy(Long companyId) { return Objects.equals(this.companyId, companyId); }
 
-    public void update(String name, long price, String memo, int sortOrder) {
+    public void update(String name, long price, String memo, int sortOrder, ProductCategory category) {
         requireOwn();
         requireNonNegative(price);
+        requireCategory(category);
         this.name = name;
         this.price = price;
         this.memo = memo;
         this.sortOrder = sortOrder;
+        this.category = category;
     }
 
     public void changeSetting(long price, boolean enabled) {
@@ -83,10 +92,15 @@ public class Product {
         this.name = base.getName();
         this.memo = base.getMemo();
         this.sortOrder = base.getSortOrder();
+        this.category = base.getCategory();
     }
 
     public void requireOwn() {
         if (isBaseCopy()) throw new BusinessException(ProductErrorCode.PRODUCT_BASE_COPY_READONLY);
+    }
+
+    private static void requireCategory(ProductCategory category) {
+        if (category == null) throw new IllegalArgumentException("상품 종류는 필수입니다.");
     }
 
     private static void requireNonNegative(long price) {
@@ -102,4 +116,5 @@ public class Product {
     public String getCreatedAt() { return createdAt; }
     public int getSortOrder() { return sortOrder; }
     public boolean isEnabled() { return enabled; }
+    public ProductCategory getCategory() { return category; }
 }

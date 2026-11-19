@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface CompanyCapabilityJpaRepository extends JpaRepository<CompanyCapabilityJpaEntity, Long> {
     List<CompanyCapabilityJpaEntity> findAllByCompanyId(Long companyId);
+    List<CompanyCapabilityJpaEntity> findAllByCompanyIdIn(java.util.Collection<Long> companyIds);
     void deleteAllByCompanyId(Long companyId);
 }

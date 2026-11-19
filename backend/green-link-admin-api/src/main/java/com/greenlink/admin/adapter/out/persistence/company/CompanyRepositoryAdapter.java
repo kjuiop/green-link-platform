@@ -11,8 +11,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.greenlink.admin.adapter.out.persistence.company.QCompanyJpaEntity.companyJpaEntity;
 
@@ -120,5 +123,21 @@ public class CompanyRepositoryAdapter implements CompanyRepository {
         return capabilityJpaRepository.findAllByCompanyId(companyId).stream()
             .map(CompanyCapabilityJpaEntity::toDomain)
             .toList();
+    }
+
+    @Override
+    public Map<Long, List<CompanyRegion>> findRegionsByCompanyIdIn(Collection<Long> companyIds) {
+        if (companyIds.isEmpty()) return Map.of();
+        return regionJpaRepository.findAllByCompanyIdIn(companyIds).stream()
+            .map(CompanyRegionJpaEntity::toDomain)
+            .collect(Collectors.groupingBy(CompanyRegion::companyId));
+    }
+
+    @Override
+    public Map<Long, List<CompanyCapability>> findCapabilitiesByCompanyIdIn(Collection<Long> companyIds) {
+        if (companyIds.isEmpty()) return Map.of();
+        return capabilityJpaRepository.findAllByCompanyIdIn(companyIds).stream()
+            .collect(Collectors.groupingBy(CompanyCapabilityJpaEntity::getCompanyId,
+                Collectors.mapping(CompanyCapabilityJpaEntity::toDomain, Collectors.toList())));
     }
 }
