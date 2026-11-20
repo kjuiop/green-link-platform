@@ -8,7 +8,7 @@ description: PR 리뷰 → 코드 반영을 LGTM이 나올 때까지 자동으�
 ## 전체 흐름
 
 ```
-[REVIEW] → 새 이슈 있음 → [APPLY] → [REVIEW] → ... → LGTM ✅ → [QA] → PASS → [SQUASH MERGE]
+[REVIEW] → 새 이슈 있음 → [APPLY] → [REVIEW] → ... → LGTM ✅ → [QA: 사용자 요청 시에만] → PASS → [SQUASH MERGE]
 ```
 
 각 이터레이션은 REVIEW → APPLY 한 쌍입니다.  
@@ -119,9 +119,11 @@ PHASE 1 (REVIEW) 로 돌아갑니다.
 
 ---
 
-## PHASE 3 — QA (Playwright 브라우저 검증)
+## PHASE 3 — QA (dev 사이트 Playwright 검증)
 
-LGTM 확인 후 `pr-qa` 스킬을 실행해 실제 브라우저에서 동작을 검증합니다.
+**사용자가 QA를 명시적으로 요청한 경우에만** 실행합니다. 요청이 없거나 외부 API 연동(알리고 MMS·S3·쿠팡·알림톡) PR이면 건너뛰고 PHASE 4로 이동합니다.
+
+LGTM 확인 후 `dev-qa` 스킬을 실행해 개발 서버(dev.onurim.com)의 브라우저에서 동작을 검증합니다. (PR 코드가 dev에 배포된 상태여야 합니다)
 
 - **QA PASS** → PHASE 4 (Squash Merge) 로 이동
 - **QA FAIL** → 실패 항목을 사용자에게 보고하고 중단 (자동 머지 하지 않음)
