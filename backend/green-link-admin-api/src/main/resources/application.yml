@@ -40,6 +40,10 @@ aligo:
   sender: ${ALIGO_SENDER:1855-4400}
   url: https://apis.aligo.in/send/
 
+barobill:
+  # 프로필(dev/prod)별 기본값이 있으며, BAROBILL_URL 환경변수로 덮어쓸 수 있음
+  url: ${BAROBILL_URL:https://testws.baroservice.com/SMS.asmx}
+
 coupang:
   base-url: https://api-gateway.coupang.com
   credential-key: ${COUPANG_CRED_KEY:}

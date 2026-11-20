@@ -5,6 +5,7 @@ import com.greenlink.core.application.auth.usecase.FindIdByPhoneUseCase;
 import com.greenlink.core.application.auth.usecase.ResetPasswordUseCase;
 import com.greenlink.core.application.auth.usecase.SendPhoneVerificationUseCase;
 import com.greenlink.core.application.auth.usecase.VerifyPhoneCodeUseCase;
+import com.greenlink.core.domain.sms.model.SmsAccount;
 import com.greenlink.core.domain.sms.model.SmsResult;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.port.AdminRepository;
@@ -60,6 +61,10 @@ public class PhoneVerificationService implements
         if ("MESSAGEME".equalsIgnoreCase(settings.getProvider())) {
             result = client.sendWithCredentials(settings.getApiKey(), settings.getSenderNumber(),
                     phone, msg, null, "0", null);
+        } else if ("BAROBILL".equalsIgnoreCase(settings.getProvider())) {
+            SmsAccount account = new SmsAccount(settings.getProvider(), settings.getApiKey(),
+                    settings.getSenderNumber(), settings.getUserId(), settings.getCorpNum());
+            result = client.sendWithAccount(account, phone, msg, null, null, null, null);
         } else {
             result = client.send(phone, msg, null, settings.getSenderNumber(), null, null, null);
         }

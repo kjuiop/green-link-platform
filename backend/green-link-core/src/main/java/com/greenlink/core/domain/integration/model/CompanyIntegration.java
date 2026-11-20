@@ -7,6 +7,8 @@ public class CompanyIntegration {
     private String provider;
     private String apiKey;
     private String senderNumber;
+    private String userId;
+    private String corpNum;
     private boolean alimtalkEnabled = false;
     private String alimtalkTemplateFuneral;
     private String alimtalkTemplateWedding;
@@ -15,16 +17,20 @@ public class CompanyIntegration {
 
     private CompanyIntegration() {}
 
-    public static CompanyIntegration create(Long companyId, String provider, String apiKey, String senderNumber) {
+    public static CompanyIntegration create(Long companyId, String provider, String apiKey, String senderNumber,
+                                          String userId, String corpNum) {
         CompanyIntegration ci = new CompanyIntegration();
         ci.companyId = companyId;
         ci.provider = provider;
         ci.apiKey = apiKey;
         ci.senderNumber = senderNumber;
+        ci.userId = userId;
+        ci.corpNum = corpNum;
         return ci;
     }
 
     public static CompanyIntegration of(Long id, Long companyId, String provider, String apiKey, String senderNumber,
+                                        String userId, String corpNum,
                                         boolean alimtalkEnabled, String alimtalkTemplateFuneral,
                                         String alimtalkTemplateWedding, String alimtalkTemplateEtc,
                                         String alimtalkSenderKey) {
@@ -34,6 +40,8 @@ public class CompanyIntegration {
         ci.provider = provider;
         ci.apiKey = apiKey;
         ci.senderNumber = senderNumber;
+        ci.userId = userId;
+        ci.corpNum = corpNum;
         ci.alimtalkEnabled = alimtalkEnabled;
         ci.alimtalkTemplateFuneral = alimtalkTemplateFuneral;
         ci.alimtalkTemplateWedding = alimtalkTemplateWedding;
@@ -42,10 +50,12 @@ public class CompanyIntegration {
         return ci;
     }
 
-    public void update(String provider, String apiKey, String senderNumber) {
+    public void update(String provider, String apiKey, String senderNumber, String userId, String corpNum) {
         this.provider = provider;
         this.apiKey = apiKey;
         this.senderNumber = senderNumber;
+        this.userId = userId;
+        this.corpNum = corpNum;
     }
 
     public void updateAlimtalk(boolean enabled, String templateFuneral, String templateWedding,
@@ -68,6 +78,8 @@ public class CompanyIntegration {
     public String getProvider() { return provider; }
     public String getApiKey() { return apiKey; }
     public String getSenderNumber() { return senderNumber; }
+    public String getUserId() { return userId; }
+    public String getCorpNum() { return corpNum; }
     public boolean isAlimtalkEnabled() { return alimtalkEnabled; }
     public String getAlimtalkTemplateFuneral() { return alimtalkTemplateFuneral; }
     public String getAlimtalkTemplateWedding() { return alimtalkTemplateWedding; }

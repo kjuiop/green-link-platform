@@ -8,5 +8,6 @@ public record SaveSmsSettingsCommand(
         String templateOthers,
         String provider,
         String apiKey,
-        String userId
+        String userId,
+        String corpNum
 ) {}

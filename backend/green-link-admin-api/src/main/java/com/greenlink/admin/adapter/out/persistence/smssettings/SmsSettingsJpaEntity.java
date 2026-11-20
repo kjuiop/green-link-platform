@@ -36,11 +36,14 @@ public class SmsSettingsJpaEntity extends BaseJpaEntity {
     @Column(length = 100)
     private String userId;
 
+    @Column(length = 10)
+    private String corpNum;
+
     protected SmsSettingsJpaEntity() {}
 
     public void update(String senderNumber, String senderName,
                        String templateFuneral, String templateWedding, String templateOthers,
-                       String provider, String apiKey, String userId) {
+                       String provider, String apiKey, String userId, String corpNum) {
         this.senderNumber = senderNumber;
         this.senderName = senderName;
         this.templateFuneral = templateFuneral;
@@ -49,10 +52,11 @@ public class SmsSettingsJpaEntity extends BaseJpaEntity {
         this.provider = provider != null ? provider : "ALIGO";
         this.apiKey = apiKey;
         this.userId = userId;
+        this.corpNum = corpNum;
     }
 
     public SmsSettings toDomain() {
         return SmsSettings.of(id, senderNumber, senderName, templateFuneral, templateWedding, templateOthers,
-                provider, apiKey, userId);
+                provider, apiKey, userId, corpNum);
     }
 }

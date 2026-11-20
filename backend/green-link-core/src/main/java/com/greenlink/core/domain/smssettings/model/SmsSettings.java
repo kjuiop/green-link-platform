@@ -11,6 +11,7 @@ public class SmsSettings {
     private String provider;
     private String apiKey;
     private String userId;
+    private String corpNum;
 
     private SmsSettings() {}
 
@@ -29,7 +30,7 @@ public class SmsSettings {
 
     public static SmsSettings of(Long id, String senderNumber, String senderName,
                                   String templateFuneral, String templateWedding, String templateOthers,
-                                  String provider, String apiKey, String userId) {
+                                  String provider, String apiKey, String userId, String corpNum) {
         SmsSettings s = new SmsSettings();
         s.id = id;
         s.senderNumber = senderNumber;
@@ -40,12 +41,13 @@ public class SmsSettings {
         s.provider = provider != null ? provider : "ALIGO";
         s.apiKey = apiKey;
         s.userId = userId;
+        s.corpNum = corpNum;
         return s;
     }
 
     public void update(String senderNumber, String senderName,
                        String templateFuneral, String templateWedding, String templateOthers,
-                       String provider, String apiKey, String userId) {
+                       String provider, String apiKey, String userId, String corpNum) {
         this.senderNumber = senderNumber;
         this.senderName = senderName;
         this.templateFuneral = templateFuneral;
@@ -54,6 +56,7 @@ public class SmsSettings {
         this.provider = provider != null ? provider : "ALIGO";
         this.apiKey = apiKey;
         this.userId = userId;
+        this.corpNum = corpNum;
     }
 
     public String resolveTemplate(String eventType) {
@@ -71,4 +74,5 @@ public class SmsSettings {
     public String getProvider() { return provider != null ? provider : "ALIGO"; }
     public String getApiKey() { return apiKey; }
     public String getUserId() { return userId; }
+    public String getCorpNum() { return corpNum; }
 }

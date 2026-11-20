@@ -1,6 +1,7 @@
 package com.greenlink.admin.infrastructure.config;
 
 import com.greenlink.admin.adapter.out.sms.AligoProperties;
+import com.greenlink.admin.adapter.out.sms.BarobillProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,7 +13,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 
 @Configuration
-@EnableConfigurationProperties(AligoProperties.class)
+@EnableConfigurationProperties({AligoProperties.class, BarobillProperties.class})
 public class SmsConfig {
 
     @Bean
