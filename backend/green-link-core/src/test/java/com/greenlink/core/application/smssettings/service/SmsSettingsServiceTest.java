@@ -82,4 +82,17 @@ class SmsSettingsServiceTest {
         verify(repository).save(saved.capture());
         assertThat(saved.getValue().getApiKey()).isNull();
     }
+
+    @Test
+    void 사업자번호의_하이픈은_제거해_저장한다() {
+        given(repository.get()).willReturn(barobill());
+        given(repository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        new SmsSettingsService(repository).save(new SaveSmsSettingsCommand(
+                "02-000-0000", "온우림", "f", "w", "o", "BAROBILL", "NEW-KEY", "baro_id", "476-86-02607"));
+
+        ArgumentCaptor<SmsSettings> saved = ArgumentCaptor.forClass(SmsSettings.class);
+        verify(repository).save(saved.capture());
+        assertThat(saved.getValue().getCorpNum()).isEqualTo("4768602607");
+    }
 }
