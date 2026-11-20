@@ -1,7 +1,10 @@
 package com.greenlink.core.application.sms.service;
 
+import com.greenlink.core.application.common.BusinessNumber;
 import com.greenlink.core.application.sms.dto.BarobillQueryResult;
 import com.greenlink.core.application.sms.usecase.BarobillQueryUseCase;
+import com.greenlink.core.domain.company.port.CompanyRepository;
+import com.greenlink.core.domain.integration.model.CompanyIntegration;
 import com.greenlink.core.domain.integration.port.CompanyIntegrationRepository;
 import com.greenlink.core.domain.sms.model.SmsAccount;
 import com.greenlink.core.domain.sms.port.BarobillGateway;
@@ -17,13 +20,16 @@ public class BarobillQueryService implements BarobillQueryUseCase {
     private final BarobillGateway gateway;
     private final SmsSettingsRepository smsSettingsRepository;
     private final CompanyIntegrationRepository companyIntegrationRepository;
+    private final CompanyRepository companyRepository;
 
     public BarobillQueryService(BarobillGateway gateway,
                                 SmsSettingsRepository smsSettingsRepository,
-                                CompanyIntegrationRepository companyIntegrationRepository) {
+                                CompanyIntegrationRepository companyIntegrationRepository,
+                                CompanyRepository companyRepository) {
         this.gateway = gateway;
         this.smsSettingsRepository = smsSettingsRepository;
         this.companyIntegrationRepository = companyIntegrationRepository;
+        this.companyRepository = companyRepository;
     }
 
     @Override
@@ -58,10 +64,13 @@ public class BarobillQueryService implements BarobillQueryUseCase {
     private SmsAccount resolveAccount(Long companyId) {
         SmsAccount account;
         if (companyId != null) {
-            account = companyIntegrationRepository.findByCompanyId(companyId)
-                    .map(ci -> new SmsAccount(ci.getProvider(), ci.getApiKey(), ci.getSenderNumber(),
-                            ci.getUserId(), ci.getCorpNum()))
+            CompanyIntegration ci = companyIntegrationRepository.findByCompanyId(companyId)
                     .orElseThrow(() -> new BusinessException(SmsErrorCode.BAROBILL_NOT_CONFIGURED));
+            String corpNum = companyRepository.findById(companyId)
+                    .map(c -> BusinessNumber.normalize(c.getBusinessNo()))
+                    .filter(n -> !isBlank(n))
+                    .orElseThrow(() -> new BusinessException(SmsErrorCode.BAROBILL_BUSINESS_NO_MISSING));
+            account = new SmsAccount(ci.getProvider(), ci.getApiKey(), ci.getSenderNumber(), ci.getUserId(), corpNum);
         } else {
             SmsSettings global = smsSettingsRepository.get();
             account = new SmsAccount(global.getProvider(), global.getApiKey(), global.getSenderNumber(),

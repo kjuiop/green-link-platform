@@ -5,6 +5,7 @@ import com.greenlink.core.domain.order.model.Order;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.sms.model.SmsMessage;
 import com.greenlink.core.domain.sms.model.SmsStatus;
+import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.integration.port.CompanyIntegrationRepository;
 import com.greenlink.core.domain.sms.port.SmsClient;
 import com.greenlink.core.domain.sms.port.SmsClientFactory;
@@ -38,6 +39,7 @@ class SmsServiceTest {
     @Mock SmsClient smsClient;
     @Mock SmsClientFactory smsClientFactory;
     @Mock CompanyIntegrationRepository companyIntegrationRepository;
+    @Mock CompanyRepository companyRepository;
     @Mock SmsSettingsRepository smsSettingsRepository;
     @Mock Order order;
     @Mock SmsSettings settings;
@@ -47,7 +49,7 @@ class SmsServiceTest {
     @BeforeEach
     void setUp() {
         smsService = new SmsService(orderRepository, smsMessageRepository, smsClientFactory,
-                smsSettingsRepository, companyIntegrationRepository);
+                smsSettingsRepository, companyIntegrationRepository, companyRepository);
         given(smsMessageRepository.findAllByOrderId(1L)).willReturn(List.of());
         given(orderRepository.findById(1L)).willReturn(Optional.of(order));
         given(smsSettingsRepository.get()).willReturn(settings);

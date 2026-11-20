@@ -32,7 +32,6 @@ export type CompanySmsIntegration = {
   apiKey: string | null
   senderNumber: string | null
   userId: string | null
-  corpNum: string | null
   alimtalkEnabled: boolean
   alimtalkTemplateFuneral: string | null
   alimtalkTemplateWedding: string | null
@@ -52,7 +51,6 @@ export type SaveCompanySmsIntegrationData = {
   apiKey: string
   senderNumber: string
   userId: string
-  corpNum: string
   alimtalkEnabled: boolean
   alimtalkTemplateFuneral: string
   alimtalkTemplateWedding: string

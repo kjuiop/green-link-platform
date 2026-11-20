@@ -2,6 +2,8 @@ package com.greenlink.core.application.sms.service;
 
 import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.sms.dto.SmsMessageResult;
+import com.greenlink.core.application.common.BusinessNumber;
+import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.integration.model.CompanyIntegration;
 import com.greenlink.core.domain.integration.port.CompanyIntegrationRepository;
 import com.greenlink.core.domain.sms.model.SmsAccount;
@@ -44,6 +46,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     private final SmsClientFactory smsClientFactory;
     private final SmsSettingsRepository smsSettingsRepository;
     private final CompanyIntegrationRepository companyIntegrationRepository;
+    private final CompanyRepository companyRepository;
 
     @Value("${app.portal-base-url:}")
     private String portalBaseUrl;
@@ -52,12 +55,14 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
                       SmsMessageRepository smsMessageRepository,
                       SmsClientFactory smsClientFactory,
                       SmsSettingsRepository smsSettingsRepository,
-                      CompanyIntegrationRepository companyIntegrationRepository) {
+                      CompanyIntegrationRepository companyIntegrationRepository,
+                      CompanyRepository companyRepository) {
         this.orderRepository = orderRepository;
         this.smsMessageRepository = smsMessageRepository;
         this.smsClientFactory = smsClientFactory;
         this.smsSettingsRepository = smsSettingsRepository;
         this.companyIntegrationRepository = companyIntegrationRepository;
+        this.companyRepository = companyRepository;
     }
 
     @Override
@@ -199,10 +204,16 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
             return companyIntegrationRepository.findByCompanyId(companyId)
                     .map(ci -> new SmsAccount(ci.getProvider(), ci.getApiKey(),
                             ci.getSenderNumber() != null ? ci.getSenderNumber() : fallback.getSenderNumber(),
-                            ci.getUserId(), ci.getCorpNum()))
+                            ci.getUserId(), companyBusinessNo(companyId)))
                     .orElseGet(() -> toAccount(fallback));
         }
         return toAccount(fallback);
+    }
+
+    private String companyBusinessNo(Long companyId) {
+        return companyRepository.findById(companyId)
+                .map(c -> BusinessNumber.normalize(c.getBusinessNo()))
+                .orElse(null);
     }
 
     private SmsAccount toAccount(SmsSettings s) {
