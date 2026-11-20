@@ -1,6 +1,15 @@
 package com.greenlink.admin.adapter.out.sms;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -20,16 +29,63 @@ final class BarobillSoap {
 
     /** params 는 WSDL 에 정의된 순서대로 전달해야 한다(LinkedHashMap). */
     static String buildEnvelope(String method, Map<String, String> params) {
-        StringBuilder sb = new StringBuilder(512);
-        sb.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
-          .append("<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"")
-          .append(" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"")
-          .append(" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">")
-          .append("<soap:Body><").append(method).append(" xmlns=\"").append(NAMESPACE).append("\">");
-        params.forEach((name, value) ->
-                sb.append('<').append(name).append('>').append(escape(value)).append("</").append(name).append('>'));
-        sb.append("</").append(method).append("></soap:Body></soap:Envelope>");
-        return sb.toString();
+        StringBuilder inner = new StringBuilder(256);
+        params.forEach((name, value) -> inner.append(element(name, value)));
+        return buildEnvelopeXml(method, inner.toString());
+    }
+
+    /** innerXml 은 이미 조립·이스케이프된 요청 본문(중첩 요소 포함)이다. */
+    static String buildEnvelopeXml(String method, String innerXml) {
+        return "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+                + "<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""
+                + " xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\""
+                + " xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">"
+                + "<soap:Body><" + method + " xmlns=\"" + NAMESPACE + "\">"
+                + innerXml
+                + "</" + method + "></soap:Body></soap:Envelope>";
+    }
+
+    static String element(String name, String value) {
+        return "<" + name + ">" + escape(value) + "</" + name + ">";
+    }
+
+    record KakaotalkButton(String name, String buttonType, String url1, String url2) {}
+
+    record KakaotalkTemplate(String templateName, String title, String content, List<KakaotalkButton> buttons) {}
+
+    /** GetKakaotalkTemplates 응답에서 템플릿 목록을 추출한다. 파싱할 수 없으면 빈 목록. */
+    static List<KakaotalkTemplate> parseTemplates(String xml) {
+        List<KakaotalkTemplate> templates = new ArrayList<>();
+        if (xml == null || xml.isBlank()) return templates;
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setXIncludeAware(false);
+            factory.setExpandEntityReferences(false);
+            Document doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));
+            NodeList nodes = doc.getElementsByTagNameNS("*", "KakaotalkTemplate");
+            for (int i = 0; i < nodes.getLength(); i++) {
+                Element t = (Element) nodes.item(i);
+                List<KakaotalkButton> buttons = new ArrayList<>();
+                NodeList btnNodes = t.getElementsByTagNameNS("*", "KakaotalkButton");
+                for (int j = 0; j < btnNodes.getLength(); j++) {
+                    Element b = (Element) btnNodes.item(j);
+                    buttons.add(new KakaotalkButton(text(b, "Name"), text(b, "ButtonType"),
+                            text(b, "Url1"), text(b, "Url2")));
+                }
+                templates.add(new KakaotalkTemplate(text(t, "TemplateName"), text(t, "TemplateTitle"),
+                        text(t, "TemplateContent"), buttons));
+            }
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+        return templates;
+    }
+
+    private static String text(Element parent, String tag) {
+        NodeList list = parent.getElementsByTagNameNS("*", tag);
+        return list.getLength() == 0 ? "" : list.item(0).getTextContent();
     }
 
     static String escape(String value) {
