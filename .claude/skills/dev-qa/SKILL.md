@@ -31,10 +31,10 @@ gh pr diff --stat
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}" https://dev.onurim.com
-curl -s -o /dev/null -w "%{http_code}" https://dev-api.onurim.com/actuator/health
 ```
 
-- 응답이 없으면 안내 후 중단한다 (로컬 서버로 대체하지 않는다)
+- 프론트가 200/3xx로 응답하는지만 확인한다. dev API의 `/actuator/health`는 외부에서 403으로 막혀 있어 헬스체크로 쓰지 않는다. API 장애는 로그인 시도 시 네트워크 에러로 판단한다.
+- 프론트 응답이 없으면 안내 후 중단한다 (로컬 서버로 대체하지 않는다)
 - **이 변경 코드가 dev에 배포되어 있는지 사용자에게 확인한다.** 미배포 상태에서 테스트하면 이전 버전을 검증하게 되므로, 배포 전이면 안내 후 중단한다.
 
 ---

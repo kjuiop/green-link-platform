@@ -8,7 +8,7 @@ description: PR 리뷰 → 코드 반영을 LGTM이 나올 때까지 자동으�
 ## 전체 흐름
 
 ```
-[REVIEW] → 새 이슈 있음 → [APPLY] → [REVIEW] → ... → LGTM ✅ → [QA] → PASS → [SQUASH MERGE]
+[REVIEW] → 새 이슈 있음 → [APPLY] → [REVIEW] → ... → LGTM ✅ → [QA: 사용자 요청 시에만] → PASS → [SQUASH MERGE]
 ```
 
 각 이터레이션은 REVIEW → APPLY 한 쌍입니다.  
