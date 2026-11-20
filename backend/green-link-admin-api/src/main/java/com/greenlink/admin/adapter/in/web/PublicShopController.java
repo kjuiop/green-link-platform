@@ -9,18 +9,25 @@ import com.greenlink.core.application.shop.dto.PublicShopView;
 import com.greenlink.core.application.shop.usecase.PublicShopUseCase;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 
 @RestController
 @RequestMapping("/public/shop/{slug}")
 public class PublicShopController {
 
     private final PublicShopUseCase useCase;
+    private final byte[] proxySecret;
 
-    public PublicShopController(PublicShopUseCase useCase) {
+    public PublicShopController(PublicShopUseCase useCase,
+                                @Value("${shop.public.proxy-secret:}") String proxySecret) {
         this.useCase = useCase;
+        this.proxySecret = proxySecret.getBytes(StandardCharsets.UTF_8);
     }
 
     @GetMapping
@@ -49,6 +56,12 @@ public class PublicShopController {
     }
 
     private String clientIp(HttpServletRequest http) {
+        String proxied = http.getHeader("X-Shop-Client-Ip");
+        String secret = http.getHeader("X-Shop-Proxy-Secret");
+        if (proxySecret.length > 0 && proxied != null && !proxied.isBlank() && secret != null
+                && MessageDigest.isEqual(proxySecret, secret.getBytes(StandardCharsets.UTF_8))) {
+            return proxied.trim();
+        }
         String forwarded = http.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
             String[] hops = forwarded.split(",");
