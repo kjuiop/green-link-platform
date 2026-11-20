@@ -1,5 +1,7 @@
-package com.greenlink.admin.infrastructure.external.alimtalk;
+package com.greenlink.admin.adapter.out.sms;
 
+import com.greenlink.core.domain.sms.model.AlimtalkRequest;
+import com.greenlink.core.domain.sms.model.AlimtalkRequest.AlimtalkVariables;
 import com.greenlink.core.domain.sms.port.AlimtalkClient;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
@@ -16,24 +18,23 @@ public class MsgmeAlimtalkClient implements AlimtalkClient {
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Override
-    public AlimtalkSendResult send(String apiKey, String senderKey, String templateCode,
-                                   String variable, String callback, String dstaddr) {
+    public AlimtalkSendResult send(AlimtalkRequest request) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("api_key", apiKey);
-        body.add("senderkey", senderKey);
-        body.add("template_code", templateCode);
-        body.add("variable", variable);
-        body.add("callback", callback != null ? callback.replace("-", "") : "");
-        body.add("dstaddr", dstaddr != null ? dstaddr.replace("-", "") : "");
+        body.add("api_key", request.apiKey());
+        body.add("senderkey", request.senderKey());
+        body.add("template_code", request.templateCode());
+        body.add("variable", toVariable(request.variables()));
+        body.add("callback", request.callback() != null ? request.callback().replace("-", "") : "");
+        body.add("dstaddr", request.receiver() != null ? request.receiver().replace("-", "") : "");
         body.add("send_reserve", "0");
         body.add("next_type", "1");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(body, headers);
 
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(URL, request, Map.class);
+            ResponseEntity<Map> response = restTemplate.postForEntity(URL, entity, Map.class);
             if (response.getBody() == null) return new AlimtalkSendResult(false, false, "EMPTY_RESPONSE");
             String result = String.valueOf(response.getBody().get("result"));
             boolean success = "100".equals(result);
@@ -41,5 +42,14 @@ public class MsgmeAlimtalkClient implements AlimtalkClient {
         } catch (Exception e) {
             return new AlimtalkSendResult(false, false, e.getMessage());
         }
+    }
+
+    static String toVariable(AlimtalkVariables v) {
+        return String.join("|", clean(v.companyName()), clean(v.recipientName()),
+                clean(v.orderNumber()), clean(v.placeName()), clean(v.photoToken()));
+    }
+
+    private static String clean(String val) {
+        return val != null ? val.replace("|", "") : "";
     }
 }

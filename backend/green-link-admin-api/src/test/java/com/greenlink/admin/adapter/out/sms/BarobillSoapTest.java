@@ -58,4 +58,42 @@ class BarobillSoapTest {
         assertThat(BarobillSoap.byteLength("가나다abc")).isEqualTo(9);
         assertThat(BarobillSoap.truncateBytes("가나다라", 5)).isEqualTo("가나");
     }
+
+    @Test
+    void 조립된_XML_본문으로_요청을_만든다() {
+        String xml = BarobillSoap.buildEnvelopeXml("SendATKakaotalkEx",
+                BarobillSoap.element("CERTKEY", "K") + "<KakaotalkMessage>" + BarobillSoap.element("Message", "a&b")
+                        + "</KakaotalkMessage>");
+
+        assertThat(xml).contains("<SendATKakaotalkEx xmlns=\"http://ws.baroservice.com/\">");
+        assertThat(xml).contains("<CERTKEY>K</CERTKEY><KakaotalkMessage><Message>a&amp;b</Message></KakaotalkMessage>");
+    }
+
+    @Test
+    void 템플릿_목록_응답을_파싱한다() {
+        String xml = "<?xml version=\"1.0\"?><soap:Envelope xmlns:soap=\"x\"><soap:Body>"
+                + "<GetKakaotalkTemplatesResponse xmlns=\"http://ws.baroservice.com/\"><GetKakaotalkTemplatesResult>"
+                + "<KakaotalkTemplate><ChannelId>@ch</ChannelId><TemplateName>T1</TemplateName>"
+                + "<TemplateContent>안녕 #{받는분}</TemplateContent><TemplateTitle></TemplateTitle>"
+                + "<Buttons><KakaotalkButton><Name>사진</Name><ButtonType>WL</ButtonType>"
+                + "<Url1>https://x/#{사진링크}</Url1><Url2></Url2></KakaotalkButton></Buttons></KakaotalkTemplate>"
+                + "<KakaotalkTemplate><TemplateName>T2</TemplateName><TemplateContent>c2</TemplateContent></KakaotalkTemplate>"
+                + "</GetKakaotalkTemplatesResult></GetKakaotalkTemplatesResponse></soap:Body></soap:Envelope>";
+
+        var templates = BarobillSoap.parseTemplates(xml);
+
+        assertThat(templates).hasSize(2);
+        assertThat(templates.get(0).templateName()).isEqualTo("T1");
+        assertThat(templates.get(0).content()).isEqualTo("안녕 #{받는분}");
+        assertThat(templates.get(0).buttons()).hasSize(1);
+        assertThat(templates.get(0).buttons().get(0).url1()).isEqualTo("https://x/#{사진링크}");
+        assertThat(templates.get(1).buttons()).isEmpty();
+    }
+
+    @Test
+    void 파싱할_수_없는_템플릿_응답은_빈_목록이다() {
+        assertThat(BarobillSoap.parseTemplates("not xml")).isEmpty();
+        assertThat(BarobillSoap.parseTemplates(null)).isEmpty();
+        assertThat(BarobillSoap.parseTemplates("<!DOCTYPE a [<!ENTITY x SYSTEM \"file:///etc/passwd\">]><a>&x;</a>")).isEmpty();
+    }
 }
