@@ -1,5 +1,6 @@
 package com.greenlink.core.application.integration.service;
 
+import com.greenlink.core.application.common.BusinessNumber;
 import com.greenlink.core.application.common.SecretMask;
 import com.greenlink.core.application.integration.dto.CompanySmsIntegrationResult;
 import com.greenlink.core.application.integration.dto.SaveCompanySmsIntegrationCommand;
@@ -30,11 +31,12 @@ public class CompanySmsIntegrationService implements GetCompanySmsIntegrationUse
     @Override
     @Transactional
     public CompanySmsIntegrationResult save(SaveCompanySmsIntegrationCommand command) {
+        String corpNum = BusinessNumber.normalize(command.corpNum());
         CompanyIntegration integration = repository.findByCompanyId(command.companyId())
                 .orElseGet(() -> CompanyIntegration.create(command.companyId(), command.provider(), command.apiKey(),
-                        command.senderNumber(), command.userId(), command.corpNum()));
+                        command.senderNumber(), command.userId(), corpNum));
         String apiKey = SecretMask.resolveKey(command.apiKey(), integration.getApiKey(), integration.getProvider(), command.provider());
-        integration.update(command.provider(), apiKey, command.senderNumber(), command.userId(), command.corpNum());
+        integration.update(command.provider(), apiKey, command.senderNumber(), command.userId(), corpNum);
         integration.updateAlimtalk(command.alimtalkEnabled(), command.alimtalkTemplateFuneral(),
                 command.alimtalkTemplateWedding(), command.alimtalkTemplateEtc(), command.alimtalkSenderKey());
         return toResult(repository.save(integration));

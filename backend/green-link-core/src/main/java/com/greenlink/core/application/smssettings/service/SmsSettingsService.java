@@ -1,5 +1,6 @@
 package com.greenlink.core.application.smssettings.service;
 
+import com.greenlink.core.application.common.BusinessNumber;
 import com.greenlink.core.application.common.SecretMask;
 import com.greenlink.core.application.smssettings.dto.SaveSmsSettingsCommand;
 import com.greenlink.core.application.smssettings.dto.SmsSettingsResult;
@@ -32,7 +33,7 @@ public class SmsSettingsService implements GetSmsSettingsUseCase, SaveSmsSetting
         String apiKey = SecretMask.resolveKey(command.apiKey(), settings.getApiKey(), settings.getProvider(), command.provider());
         settings.update(command.senderNumber(), command.senderName(),
                 command.templateFuneral(), command.templateWedding(), command.templateOthers(),
-                command.provider(), apiKey, command.userId(), command.corpNum());
+                command.provider(), apiKey, command.userId(), BusinessNumber.normalize(command.corpNum()));
         return toResult(repository.save(settings));
     }
 

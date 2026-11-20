@@ -110,7 +110,7 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
                 <div className="space-y-1.5">
                   <Label>사업자번호</Label>
                   <Input
-                    placeholder="000-00-00000"
+                    placeholder="숫자 10자리 (하이픈 입력 가능)"
                     value={corpNum}
                     onChange={(e) => setCorpNum(e.target.value)}
                   />
