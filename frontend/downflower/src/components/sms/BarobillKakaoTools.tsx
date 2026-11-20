@@ -76,10 +76,19 @@ export function BarobillKakaoTools(props: Props) {
   }
 
   function handleOpen(type: KakaoUrlType) {
+    const popup = window.open('', '_blank')
+    if (popup) popup.opener = null
     return run(async () => {
-      const r = await fetchBarobillKakaoManagementUrl(companyId, type)
-      if (r.code !== 0 || !r.url) throw new Error(r.message ?? '관리 페이지 주소를 불러오지 못했습니다.')
-      window.open(r.url, '_blank', 'noopener,noreferrer')
+      try {
+        const r = await fetchBarobillKakaoManagementUrl(companyId, type)
+        if (r.code !== 0 || !r.url) throw new Error(r.message ?? '관리 페이지 주소를 불러오지 못했습니다.')
+        if (!r.url.startsWith('https://')) throw new Error('올바르지 않은 관리 페이지 주소입니다.')
+        if (!popup) throw new Error('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.')
+        popup.location.href = r.url
+      } catch (e) {
+        popup?.close()
+        throw e
+      }
     })
   }
 
