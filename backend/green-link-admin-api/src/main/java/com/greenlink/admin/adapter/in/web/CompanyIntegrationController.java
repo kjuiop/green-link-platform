@@ -32,6 +32,7 @@ public class CompanyIntegrationController {
                                                             @RequestBody SaveCompanySmsIntegrationCommand command) {
         SaveCompanySmsIntegrationCommand cmd = new SaveCompanySmsIntegrationCommand(
                 companyId, command.provider(), command.apiKey(), command.senderNumber(),
+                command.userId(), command.corpNum(),
                 command.alimtalkEnabled(), command.alimtalkTemplateFuneral(),
                 command.alimtalkTemplateWedding(), command.alimtalkTemplateEtc(),
                 command.alimtalkSenderKey());

@@ -23,7 +23,7 @@ export async function fetchCompaniesPaged(page = 0, size = 20): Promise<PageResu
   return res.json()
 }
 
-export type SmsProvider = 'ALIGO' | 'MESSAGEME'
+export type SmsProvider = 'ALIGO' | 'MESSAGEME' | 'BAROBILL'
 
 export type CompanySmsIntegration = {
   id: number
@@ -31,6 +31,8 @@ export type CompanySmsIntegration = {
   provider: SmsProvider
   apiKey: string | null
   senderNumber: string | null
+  userId: string | null
+  corpNum: string | null
   alimtalkEnabled: boolean
   alimtalkTemplateFuneral: string | null
   alimtalkTemplateWedding: string | null
@@ -49,6 +51,8 @@ export type SaveCompanySmsIntegrationData = {
   provider: SmsProvider
   apiKey: string
   senderNumber: string
+  userId: string
+  corpNum: string
   alimtalkEnabled: boolean
   alimtalkTemplateFuneral: string
   alimtalkTemplateWedding: string

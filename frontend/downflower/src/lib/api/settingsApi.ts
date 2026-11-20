@@ -11,6 +11,7 @@ export type SmsSettingsResult = {
   provider: SmsProvider
   apiKey: string | null
   userId: string | null
+  corpNum: string | null
 }
 
 export async function fetchSmsSettings(): Promise<SmsSettingsResult> {
@@ -26,5 +27,17 @@ export async function saveSmsSettings(data: Omit<SmsSettingsResult, 'id'>): Prom
     body: JSON.stringify(data),
   })
   if (!res.ok) throw new Error('문자 설정 저장에 실패했습니다.')
+  return res.json()
+}
+
+export type BarobillQueryResult = { code: number; message: string }
+
+export async function checkBarobillSender(companyId?: number): Promise<BarobillQueryResult> {
+  const query = companyId ? `?companyId=${companyId}` : ''
+  const res = await fetchWithAuth(`/api/admin/sms/barobill/sender-check${query}`, { headers: authBearerHeader() })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message ?? '발신번호 확인에 실패했습니다.')
+  }
   return res.json()
 }

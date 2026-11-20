@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { fetchSmsSettings, saveSmsSettings } from '@/lib/api/settingsApi'
 import type { SmsProvider } from '@/lib/api/companyApi'
+import { BarobillSenderCheck } from '@/components/sms/BarobillSenderCheck'
 
 type EventType = '장례식' | '결혼식' | '기타'
 
@@ -23,6 +24,7 @@ const VARIABLES = [
 const PROVIDERS: { value: SmsProvider; label: string }[] = [
   { value: 'ALIGO', label: '알리고 (Aligo)' },
   { value: 'MESSAGEME', label: '메세지미 (MessageMe)' },
+  { value: 'BAROBILL', label: '바로빌 (Barobill)' },
 ]
 
 export default function SettingsMessagesPage() {
@@ -32,6 +34,7 @@ export default function SettingsMessagesPage() {
   const [provider, setProvider] = useState<SmsProvider>('ALIGO')
   const [apiKey, setApiKey] = useState('')
   const [userId, setUserId] = useState('')
+  const [corpNum, setCorpNum] = useState('')
   const [templates, setTemplates] = useState<Record<EventType, string>>({
     장례식: '',
     결혼식: '',
@@ -50,6 +53,7 @@ export default function SettingsMessagesPage() {
         setProvider(data.provider ?? 'ALIGO')
         setApiKey(data.apiKey ?? '')
         setUserId(data.userId ?? '')
+        setCorpNum(data.corpNum ?? '')
         setTemplates({
           장례식: data.templateFuneral ?? '',
           결혼식: data.templateWedding ?? '',
@@ -73,6 +77,7 @@ export default function SettingsMessagesPage() {
         provider,
         apiKey,
         userId,
+        corpNum,
       })
       setSaveResult('success')
       setTimeout(() => setSaveResult('idle'), 2000)
@@ -140,26 +145,40 @@ export default function SettingsMessagesPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>API Key</Label>
+              <Label>{provider === 'BAROBILL' ? '연동인증키 (CERTKEY)' : 'API Key'}</Label>
               <Input
-                placeholder={provider === 'ALIGO' ? '알리고 API Key' : '메세지미 API Key'}
+                placeholder={
+                  provider === 'ALIGO' ? '알리고 API Key' : provider === 'BAROBILL' ? '바로빌 연동인증키' : '메세지미 API Key'
+                }
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 disabled={loading}
               />
             </div>
-            {provider === 'ALIGO' && (
+            {(provider === 'ALIGO' || provider === 'BAROBILL') && (
               <div className="space-y-1.5">
-                <Label>User ID</Label>
+                <Label>{provider === 'BAROBILL' ? '바로빌 아이디' : 'User ID'}</Label>
                 <Input
-                  placeholder="알리고 User ID"
+                  placeholder={provider === 'BAROBILL' ? '바로빌 회원 아이디' : '알리고 User ID'}
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
                   disabled={loading}
                 />
               </div>
             )}
+            {provider === 'BAROBILL' && (
+              <div className="space-y-1.5">
+                <Label>사업자번호</Label>
+                <Input
+                  placeholder="000-00-00000"
+                  value={corpNum}
+                  onChange={(e) => setCorpNum(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            )}
           </div>
+          {provider === 'BAROBILL' && <BarobillSenderCheck disabled={loading} />}
         </CardContent>
       </Card>
 
