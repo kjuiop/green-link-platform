@@ -1,5 +1,9 @@
 package com.greenlink.admin.adapter.out.sms;
 
+import com.greenlink.core.domain.sms.model.KakaoButton;
+import com.greenlink.core.domain.sms.model.KakaoChannel;
+import com.greenlink.core.domain.sms.model.KakaoTemplate;
+import com.greenlink.core.domain.sms.port.BarobillKakaoGateway.KakaoLookup;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -49,14 +53,41 @@ final class BarobillSoap {
         return "<" + name + ">" + escape(value) + "</" + name + ">";
     }
 
-    record KakaotalkButton(String name, String buttonType, String url1, String url2) {}
+    /** 응답을 파싱할 수 없으면 IllegalArgumentException. 첫 요소의 ChannelId 가 음수 코드면 오류 응답으로 본다. */
+    static KakaoLookup<KakaoChannel> parseChannels(String xml) {
+        NodeList nodes = elements(xml, "KakaotalkChannel");
+        List<KakaoChannel> channels = new ArrayList<>();
+        for (int i = 0; i < nodes.getLength(); i++) {
+            Element c = (Element) nodes.item(i);
+            String id = text(c, "ChannelId").trim();
+            if (isErrorCode(id)) return KakaoLookup.error(Integer.parseInt(id));
+            channels.add(new KakaoChannel(id, text(c, "ChannelName"), intText(c, "Status")));
+        }
+        return KakaoLookup.ok(channels);
+    }
 
-    record KakaotalkTemplate(String templateName, String title, String content, List<KakaotalkButton> buttons) {}
+    /** 응답을 파싱할 수 없으면 IllegalArgumentException. TemplateName 이 음수 코드면 오류 응답으로 본다. */
+    static KakaoLookup<KakaoTemplate> parseTemplates(String xml) {
+        NodeList nodes = elements(xml, "KakaotalkTemplate");
+        List<KakaoTemplate> templates = new ArrayList<>();
+        for (int i = 0; i < nodes.getLength(); i++) {
+            Element t = (Element) nodes.item(i);
+            String name = text(t, "TemplateName").trim();
+            if (isErrorCode(name)) return KakaoLookup.error(Integer.parseInt(name));
+            List<KakaoButton> buttons = new ArrayList<>();
+            NodeList btnNodes = t.getElementsByTagNameNS("*", "KakaotalkButton");
+            for (int j = 0; j < btnNodes.getLength(); j++) {
+                Element b = (Element) btnNodes.item(j);
+                buttons.add(new KakaoButton(text(b, "Name"), text(b, "ButtonType"), text(b, "Url1"), text(b, "Url2")));
+            }
+            templates.add(new KakaoTemplate(name, text(t, "TemplateTitle"), text(t, "TemplateContent"),
+                    intText(t, "Status"), buttons));
+        }
+        return KakaoLookup.ok(templates);
+    }
 
-    /** GetKakaotalkTemplates 응답에서 템플릿 목록을 추출한다. 파싱할 수 없으면 빈 목록. */
-    static List<KakaotalkTemplate> parseTemplates(String xml) {
-        List<KakaotalkTemplate> templates = new ArrayList<>();
-        if (xml == null || xml.isBlank()) return templates;
+    private static NodeList elements(String xml, String tag) {
+        if (xml == null || xml.isBlank()) throw new IllegalArgumentException("empty response");
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setNamespaceAware(true);
@@ -64,23 +95,18 @@ final class BarobillSoap {
             factory.setXIncludeAware(false);
             factory.setExpandEntityReferences(false);
             Document doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));
-            NodeList nodes = doc.getElementsByTagNameNS("*", "KakaotalkTemplate");
-            for (int i = 0; i < nodes.getLength(); i++) {
-                Element t = (Element) nodes.item(i);
-                List<KakaotalkButton> buttons = new ArrayList<>();
-                NodeList btnNodes = t.getElementsByTagNameNS("*", "KakaotalkButton");
-                for (int j = 0; j < btnNodes.getLength(); j++) {
-                    Element b = (Element) btnNodes.item(j);
-                    buttons.add(new KakaotalkButton(text(b, "Name"), text(b, "ButtonType"),
-                            text(b, "Url1"), text(b, "Url2")));
-                }
-                templates.add(new KakaotalkTemplate(text(t, "TemplateName"), text(t, "TemplateTitle"),
-                        text(t, "TemplateContent"), buttons));
-            }
+            return doc.getElementsByTagNameNS("*", tag);
         } catch (Exception e) {
-            return new ArrayList<>();
+            throw new IllegalArgumentException("invalid response", e);
         }
-        return templates;
+    }
+
+    private static int intText(Element parent, String tag) {
+        try {
+            return Integer.parseInt(text(parent, tag).trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     private static String text(Element parent, String tag) {

@@ -1,6 +1,10 @@
 package com.greenlink.core.application.sms.usecase;
 
+import com.greenlink.core.application.sms.dto.BarobillKakaoChannelsResult;
+import com.greenlink.core.application.sms.dto.BarobillKakaoTemplatesResult;
 import com.greenlink.core.application.sms.dto.BarobillQueryResult;
+import com.greenlink.core.application.sms.dto.BarobillUrlResult;
+import com.greenlink.core.domain.sms.model.KakaoUrlType;
 
 public interface BarobillQueryUseCase {
 
@@ -8,4 +12,11 @@ public interface BarobillQueryUseCase {
     BarobillQueryResult checkSenderNumber(Long companyId);
 
     BarobillQueryResult getSendState(Long companyId, String sendKey);
+
+    /** 알림톡은 발주사 단위만 지원하므로 companyId 가 필수다. */
+    BarobillKakaoChannelsResult getKakaoChannels(Long companyId);
+
+    BarobillKakaoTemplatesResult getKakaoTemplates(Long companyId, String channelId);
+
+    BarobillUrlResult getKakaoManagementUrl(Long companyId, KakaoUrlType type);
 }

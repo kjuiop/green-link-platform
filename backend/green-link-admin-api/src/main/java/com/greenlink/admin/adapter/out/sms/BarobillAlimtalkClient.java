@@ -1,10 +1,16 @@
 package com.greenlink.admin.adapter.out.sms;
 
-import com.greenlink.admin.adapter.out.sms.BarobillSoap.KakaotalkButton;
-import com.greenlink.admin.adapter.out.sms.BarobillSoap.KakaotalkTemplate;
 import com.greenlink.core.domain.sms.model.AlimtalkRequest;
 import com.greenlink.core.domain.sms.model.AlimtalkRequest.AlimtalkVariables;
+import com.greenlink.core.domain.sms.model.KakaoButton;
+import com.greenlink.core.domain.sms.model.KakaoChannel;
+import com.greenlink.core.domain.sms.model.KakaoTemplate;
+import com.greenlink.core.domain.sms.model.KakaoUrlType;
+import com.greenlink.core.domain.sms.model.SmsAccount;
 import com.greenlink.core.domain.sms.port.AlimtalkClient;
+import com.greenlink.core.domain.sms.port.BarobillKakaoGateway;
+import com.greenlink.core.global.exception.BusinessException;
+import com.greenlink.core.global.exception.sms.SmsErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
@@ -19,9 +25,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @Component
-public class BarobillAlimtalkClient implements AlimtalkClient {
+public class BarobillAlimtalkClient implements AlimtalkClient, BarobillKakaoGateway {
 
     private static final Logger log = LoggerFactory.getLogger(BarobillAlimtalkClient.class);
 
@@ -40,7 +47,14 @@ public class BarobillAlimtalkClient implements AlimtalkClient {
             return fail("바로빌 알림톡 계정 정보가 설정되지 않았습니다.");
         }
         try {
-            KakaotalkTemplate template = findTemplate(req);
+            SmsAccount account = new SmsAccount("BAROBILL", req.apiKey(), null, req.userId(), req.corpNum());
+            KakaoLookup<KakaoTemplate> lookup = getTemplates(account, req.senderKey());
+            if (lookup.errorCode() != 0) {
+                return fail("바로빌 오류 (" + lookup.errorCode() + ")");
+            }
+            KakaoTemplate template = lookup.items().stream()
+                    .filter(t -> req.templateCode().equals(t.templateName()))
+                    .findFirst().orElse(null);
             if (template == null) {
                 return fail("바로빌 알림톡 템플릿을 찾을 수 없습니다: " + req.templateCode());
             }
@@ -50,7 +64,7 @@ public class BarobillAlimtalkClient implements AlimtalkClient {
             String title = apply(template.title(), values);
             StringBuilder buttons = new StringBuilder();
             boolean unresolved = containsPlaceholder(message) || containsPlaceholder(title);
-            for (KakaotalkButton b : template.buttons()) {
+            for (KakaoButton b : template.buttons()) {
                 String url1 = apply(b.url1(), values);
                 String url2 = apply(b.url2(), values);
                 unresolved |= containsPlaceholder(url1) || containsPlaceholder(url2);
@@ -88,21 +102,58 @@ public class BarobillAlimtalkClient implements AlimtalkClient {
             if (result.isEmpty()) return fail("바로빌 응답이 올바르지 않습니다.");
             if (BarobillSoap.isErrorCode(result)) return fail("바로빌 오류 (" + result + ")");
             return new AlimtalkSendResult(true, false, result);
+        } catch (BusinessException e) {
+            return fail("바로빌 서버와 통신할 수 없습니다.");
         } catch (Exception e) {
             log.warn("[바로빌 알림톡 발송 실패] {}", e.getClass().getSimpleName());
             return fail(describe(e));
         }
     }
 
-    private KakaotalkTemplate findTemplate(AlimtalkRequest req) {
-        String inner = BarobillSoap.element("CERTKEY", req.apiKey())
-                + BarobillSoap.element("CorpNum", digits(req.corpNum()))
-                + BarobillSoap.element("ChannelId", req.senderKey());
-        String xml = call("GetKakaotalkTemplates", inner).orElse("");
-        return BarobillSoap.parseTemplates(xml).stream()
-                .filter(t -> req.templateCode().equals(t.templateName()))
-                .findFirst()
-                .orElse(null);
+    @Override
+    public KakaoLookup<KakaoChannel> getChannels(SmsAccount account) {
+        String inner = BarobillSoap.element("CERTKEY", account.apiKey())
+                + BarobillSoap.element("CorpNum", digits(account.corpNum()));
+        return query("GetKakaotalkChannels", () -> BarobillSoap.parseChannels(callBody("GetKakaotalkChannels", inner)));
+    }
+
+    @Override
+    public KakaoLookup<KakaoTemplate> getTemplates(SmsAccount account, String channelId) {
+        String inner = BarobillSoap.element("CERTKEY", account.apiKey())
+                + BarobillSoap.element("CorpNum", digits(account.corpNum()))
+                + BarobillSoap.element("ChannelId", channelId);
+        return query("GetKakaotalkTemplates", () -> BarobillSoap.parseTemplates(callBody("GetKakaotalkTemplates", inner)));
+    }
+
+    @Override
+    public KakaoUrl getManagementUrl(SmsAccount account, KakaoUrlType type) {
+        String method = switch (type) {
+            case CHANNEL -> "GetKakaotalkChannelManagementURL";
+            case TEMPLATE -> "GetKakaotalkTemplateManagementURL";
+            case HISTORY -> "GetKakaotalkHistoryURL";
+        };
+        String inner = BarobillSoap.element("CERTKEY", account.apiKey())
+                + BarobillSoap.element("CorpNum", digits(account.corpNum()))
+                + BarobillSoap.element("ID", account.userId());
+        return query(method, () -> {
+            String result = BarobillSoap.parseResult(callBody(method, inner), method).orElse("");
+            if (result.isEmpty()) throw new IllegalStateException("empty result");
+            if (BarobillSoap.isErrorCode(result)) return new KakaoUrl(Integer.parseInt(result), null);
+            return new KakaoUrl(0, result);
+        });
+    }
+
+    private <T> T query(String method, Supplier<T> action) {
+        try {
+            return action.get();
+        } catch (Exception e) {
+            log.warn("[바로빌 알림톡 조회 실패] method={} error={}", method, e.getClass().getSimpleName());
+            throw new BusinessException(SmsErrorCode.BAROBILL_UNAVAILABLE);
+        }
+    }
+
+    private String callBody(String method, String innerXml) {
+        return call(method, innerXml).orElseThrow(() -> new IllegalStateException("empty response"));
     }
 
     private Optional<String> call(String method, String innerXml) {

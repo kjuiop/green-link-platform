@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class BarobillSoapTest {
 
@@ -70,20 +71,61 @@ class BarobillSoapTest {
     }
 
     @Test
+    void 채널_목록_응답을_파싱한다() {
+        String xml = "<soap:Envelope xmlns:soap=\"x\"><soap:Body>"
+                + "<GetKakaotalkChannelsResponse xmlns=\"http://ws.baroservice.com/\"><GetKakaotalkChannelsResult>"
+                + "<KakaotalkChannel><ChannelId>@ch1</ChannelId><ChannelName>온우림</ChannelName><Status>1</Status></KakaotalkChannel>"
+                + "<KakaotalkChannel><ChannelId>@ch2</ChannelId><ChannelName>두번째</ChannelName><Status>0</Status></KakaotalkChannel>"
+                + "</GetKakaotalkChannelsResult></GetKakaotalkChannelsResponse></soap:Body></soap:Envelope>";
+
+        var r = BarobillSoap.parseChannels(xml);
+
+        assertThat(r.errorCode()).isZero();
+        assertThat(r.items()).hasSize(2);
+        assertThat(r.items().get(0).channelId()).isEqualTo("@ch1");
+        assertThat(r.items().get(0).channelName()).isEqualTo("온우림");
+        assertThat(r.items().get(0).status()).isEqualTo(1);
+    }
+
+    @Test
+    void 채널이_없는_빈_응답은_빈_목록이다() {
+        String xml = "<R><GetKakaotalkChannelsResult /></R>";
+
+        var r = BarobillSoap.parseChannels(xml);
+
+        assertThat(r.errorCode()).isZero();
+        assertThat(r.items()).isEmpty();
+    }
+
+    @Test
+    void 채널_조회_오류코드는_오류로_판정한다() {
+        String xml = "<R><GetKakaotalkChannelsResult><KakaotalkChannel><ChannelId>-10002</ChannelId>"
+                + "</KakaotalkChannel></GetKakaotalkChannelsResult></R>";
+
+        var r = BarobillSoap.parseChannels(xml);
+
+        assertThat(r.errorCode()).isEqualTo(-10002);
+        assertThat(r.items()).isEmpty();
+    }
+
+    @Test
     void 템플릿_목록_응답을_파싱한다() {
         String xml = "<?xml version=\"1.0\"?><soap:Envelope xmlns:soap=\"x\"><soap:Body>"
                 + "<GetKakaotalkTemplatesResponse xmlns=\"http://ws.baroservice.com/\"><GetKakaotalkTemplatesResult>"
-                + "<KakaotalkTemplate><ChannelId>@ch</ChannelId><TemplateName>T1</TemplateName>"
+                + "<KakaotalkTemplate><ChannelId>@ch</ChannelId><TemplateName>T1</TemplateName><Status>3</Status>"
                 + "<TemplateContent>안녕 #{받는분}</TemplateContent><TemplateTitle></TemplateTitle>"
                 + "<Buttons><KakaotalkButton><Name>사진</Name><ButtonType>WL</ButtonType>"
                 + "<Url1>https://x/#{사진링크}</Url1><Url2></Url2></KakaotalkButton></Buttons></KakaotalkTemplate>"
                 + "<KakaotalkTemplate><TemplateName>T2</TemplateName><TemplateContent>c2</TemplateContent></KakaotalkTemplate>"
                 + "</GetKakaotalkTemplatesResult></GetKakaotalkTemplatesResponse></soap:Body></soap:Envelope>";
 
-        var templates = BarobillSoap.parseTemplates(xml);
+        var r = BarobillSoap.parseTemplates(xml);
 
+        assertThat(r.errorCode()).isZero();
+        var templates = r.items();
         assertThat(templates).hasSize(2);
         assertThat(templates.get(0).templateName()).isEqualTo("T1");
+        assertThat(templates.get(0).status()).isEqualTo(3);
         assertThat(templates.get(0).content()).isEqualTo("안녕 #{받는분}");
         assertThat(templates.get(0).buttons()).hasSize(1);
         assertThat(templates.get(0).buttons().get(0).url1()).isEqualTo("https://x/#{사진링크}");
@@ -91,9 +133,23 @@ class BarobillSoapTest {
     }
 
     @Test
-    void 파싱할_수_없는_템플릿_응답은_빈_목록이다() {
-        assertThat(BarobillSoap.parseTemplates("not xml")).isEmpty();
-        assertThat(BarobillSoap.parseTemplates(null)).isEmpty();
-        assertThat(BarobillSoap.parseTemplates("<!DOCTYPE a [<!ENTITY x SYSTEM \"file:///etc/passwd\">]><a>&x;</a>")).isEmpty();
+    void 템플릿_조회_오류코드는_오류로_판정한다() {
+        String xml = "<R><GetKakaotalkTemplatesResult><KakaotalkTemplate><TemplateName>-60001</TemplateName>"
+                + "</KakaotalkTemplate></GetKakaotalkTemplatesResult></R>";
+
+        var r = BarobillSoap.parseTemplates(xml);
+
+        assertThat(r.errorCode()).isEqualTo(-60001);
+        assertThat(r.items()).isEmpty();
+    }
+
+    @Test
+    void 파싱할_수_없는_조회_응답은_예외다() {
+        assertThatThrownBy(() -> BarobillSoap.parseTemplates("not xml")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> BarobillSoap.parseTemplates(null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> BarobillSoap.parseChannels("")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> BarobillSoap.parseTemplates(
+                "<!DOCTYPE a [<!ENTITY x SYSTEM \"file:///etc/passwd\">]><a>&x;</a>"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

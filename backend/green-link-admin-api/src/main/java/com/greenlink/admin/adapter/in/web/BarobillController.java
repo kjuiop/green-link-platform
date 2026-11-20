@@ -1,7 +1,11 @@
 package com.greenlink.admin.adapter.in.web;
 
+import com.greenlink.core.application.sms.dto.BarobillKakaoChannelsResult;
+import com.greenlink.core.application.sms.dto.BarobillKakaoTemplatesResult;
 import com.greenlink.core.application.sms.dto.BarobillQueryResult;
+import com.greenlink.core.application.sms.dto.BarobillUrlResult;
 import com.greenlink.core.application.sms.usecase.BarobillQueryUseCase;
+import com.greenlink.core.domain.sms.model.KakaoUrlType;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.sms.SmsErrorCode;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +36,26 @@ public class BarobillController {
                                                          @RequestParam String sendKey,
                                                          @RequestParam(required = false) Long companyId) {
         return ResponseEntity.ok(queryUseCase.getSendState(resolveCompanyId(auth, companyId), sendKey));
+    }
+
+    @GetMapping("/kakao/channels")
+    public ResponseEntity<BarobillKakaoChannelsResult> kakaoChannels(Authentication auth,
+                                                                     @RequestParam(required = false) Long companyId) {
+        return ResponseEntity.ok(queryUseCase.getKakaoChannels(resolveCompanyId(auth, companyId)));
+    }
+
+    @GetMapping("/kakao/templates")
+    public ResponseEntity<BarobillKakaoTemplatesResult> kakaoTemplates(Authentication auth,
+                                                                       @RequestParam String channelId,
+                                                                       @RequestParam(required = false) Long companyId) {
+        return ResponseEntity.ok(queryUseCase.getKakaoTemplates(resolveCompanyId(auth, companyId), channelId));
+    }
+
+    @GetMapping("/kakao/management-url")
+    public ResponseEntity<BarobillUrlResult> kakaoManagementUrl(Authentication auth,
+                                                                @RequestParam KakaoUrlType type,
+                                                                @RequestParam(required = false) Long companyId) {
+        return ResponseEntity.ok(queryUseCase.getKakaoManagementUrl(resolveCompanyId(auth, companyId), type));
     }
 
     /** 슈퍼관리자는 요청한 업체(없으면 운영자 기본 계정), 발주사는 항상 본인 업체. */
