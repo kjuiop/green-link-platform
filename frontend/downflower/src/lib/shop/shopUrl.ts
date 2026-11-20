@@ -6,3 +6,8 @@ export function shopPath(slug: string, sub = ''): string {
 export function shopUrl(slug: string, origin: string, sub = ''): string {
   return `${origin}${shopPath(slug, sub)}`
 }
+
+// 공개 쇼핑몰은 별도 앱(Vercel 프로젝트)이므로 환경변수가 우선이다. 미설정 시 현재 origin.
+export function shopOrigin(): string {
+  return (process.env.NEXT_PUBLIC_SHOP_ORIGIN ?? '').replace(/\/+$/, '') || window.location.origin
+}

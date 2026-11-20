@@ -19,7 +19,7 @@ import {
   type SaveShopSettingsData,
   type ShopSettings,
 } from '@/lib/api/shopApi'
-import { shopUrl } from '@/lib/shop/shopUrl'
+import { shopOrigin, shopUrl } from '@/lib/shop/shopUrl'
 
 const EMPTY: SaveShopSettingsData = {
   slug: '',
@@ -89,7 +89,7 @@ export default function ShopSettingsPage() {
     load()
   }, [scope.ready, load])
 
-  const publicUrl = settings?.exists && settings.slug ? shopUrl(settings.slug, window.location.origin) : ''
+  const publicUrl = settings?.exists && settings.slug ? shopUrl(settings.slug, shopOrigin()) : ''
 
   useEffect(() => {
     if (!publicUrl) {
