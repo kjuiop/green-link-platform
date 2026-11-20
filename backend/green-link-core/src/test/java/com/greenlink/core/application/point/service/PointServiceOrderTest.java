@@ -183,6 +183,7 @@ class PointServiceOrderTest {
         final List<PointTransaction> saved = new ArrayList<>();
 
         public PointTransaction save(PointTransaction t) { saved.add(t); return t; }
+        public Optional<PointTransaction> findById(Long id) { throw new UnsupportedOperationException(); }
         public Page<PointTransaction> findByCompanyId(Long companyId, Pageable pageable) { throw new UnsupportedOperationException(); }
         public boolean existsOrderTransaction(Long orderId) {
             return saved.stream().anyMatch(t -> orderId.equals(t.getOrderId()) && t.getType() != PointTransactionType.CHARGE);

@@ -26,6 +26,7 @@ public class Company {
     private BusinessStatus businessStatus = BusinessStatus.OPEN;
     private long vendorFee = DEFAULT_VENDOR_FEE;
     private boolean faxEnabled;
+    private String taxInvoiceEmail;
     private List<CompanyRegion> regions = List.of();
     private List<CompanyCapability> capabilities = List.of();
 
@@ -137,6 +138,14 @@ public class Company {
         this.faxEnabled = faxEnabled;
     }
 
+    public void restoreTaxInvoiceEmail(String taxInvoiceEmail) {
+        this.taxInvoiceEmail = taxInvoiceEmail;
+    }
+
+    public void changeTaxInvoiceEmail(String taxInvoiceEmail) {
+        this.taxInvoiceEmail = taxInvoiceEmail == null || taxInvoiceEmail.isBlank() ? null : taxInvoiceEmail.trim();
+    }
+
     public void changeFaxSetting(boolean faxEnabled, String faxNumber) {
         String digits = faxNumber == null ? "" : faxNumber.replaceAll("[^0-9]", "");
         if (faxEnabled && digits.isEmpty()) {
@@ -169,6 +178,7 @@ public class Company {
     public BusinessStatus getBusinessStatus() { return businessStatus; }
     public long getVendorFee() { return vendorFee; }
     public boolean isFaxEnabled() { return faxEnabled; }
+    public String getTaxInvoiceEmail() { return taxInvoiceEmail; }
     public List<CompanyRegion> getRegions() { return regions; }
     public List<CompanyCapability> getCapabilities() { return capabilities; }
 }

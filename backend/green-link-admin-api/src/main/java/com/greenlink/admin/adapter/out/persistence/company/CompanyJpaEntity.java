@@ -72,6 +72,9 @@ public class CompanyJpaEntity extends BaseJpaEntity {
     @Column(name = "fax_enabled", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
     private boolean faxEnabled;
 
+    @Column(name = "tax_invoice_email", length = 255)
+    private String taxInvoiceEmail;
+
     protected CompanyJpaEntity() {}
 
     public static CompanyJpaEntity from(Company company) {
@@ -96,6 +99,7 @@ public class CompanyJpaEntity extends BaseJpaEntity {
         e.businessStatus = company.getBusinessStatus() != null ? company.getBusinessStatus() : BusinessStatus.OPEN;
         e.vendorFee = company.getVendorFee();
         e.faxEnabled = company.isFaxEnabled();
+        e.taxInvoiceEmail = company.getTaxInvoiceEmail();
         return e;
     }
 
@@ -104,6 +108,7 @@ public class CompanyJpaEntity extends BaseJpaEntity {
                 address, detailAddress, type, status, displayYn, businessRegUrl, bankBookUrl,
                 bankName, accountNumber, accountHolder, businessStatus, vendorFee);
         company.restoreFaxEnabled(faxEnabled);
+        company.restoreTaxInvoiceEmail(taxInvoiceEmail);
         return company;
     }
 }
