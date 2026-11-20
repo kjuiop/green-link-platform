@@ -12,6 +12,7 @@ import { createOrder, fetchOrderingCompanies, uploadReferencePhotos, OrderingCom
 import { fetchAdminPointList, fetchMyPoint } from '@/lib/api/pointApi'
 import VendorSelectModal from '@/components/common/VendorSelectModal'
 import { fetchCoupangOrder, approveCoupangOrder, CoupangOrder } from '@/lib/api/coupangApi'
+import { fetchShopOrder, approveShopOrder, type ShopOrder } from '@/lib/api/shopApi'
 
 
 export default function NewOrderPage() {
@@ -136,6 +137,39 @@ export default function NewOrderPage() {
       .catch((e) => setCoupangLoadError(e instanceof Error ? e.message : '쿠팡 주문을 불러오지 못했습니다.'))
   }, [coupangOrderId])
 
+  // 쇼핑몰 주문 승인 모드 (?shopOrderId=)
+  const [shopOrder, setShopOrder] = useState<ShopOrder | null>(null)
+  const [shopLoadError, setShopLoadError] = useState('')
+  const [shopOrderId, setShopOrderId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setShopOrderId(new URLSearchParams(window.location.search).get('shopOrderId'))
+  }, [])
+
+  useEffect(() => {
+    if (!shopOrderId) return
+    fetchShopOrder(Number(shopOrderId))
+      .then((o) => {
+        setShopOrder(o)
+        setOrderingCompanyId(String(o.companyId))
+        setOrdererName(o.ordererName ?? '')
+        setOrdererPhone(formatPhone(o.ordererPhone ?? ''))
+        setRecipientName(o.recipientName ?? '')
+        setRecipientPhone(formatPhone(o.recipientPhone ?? ''))
+        setAddress(o.address ?? '')
+        setAddressDetail(o.addressDetail ?? '')
+        if (o.deliveryDate) setDeliveryDate(o.deliveryDate)
+        if (o.deliveryTime) setDeliveryTimeCustom(o.deliveryTime)
+        if (o.eventType === '장례식' || o.eventType === '결혼식' || o.eventType === '기타') setSelectedEventType(o.eventType)
+        if (o.placeName) setVenueName(o.placeName)
+        if (o.ribbonLeft) setRibbonLefts([o.ribbonLeft])
+        if (o.ribbonRight) setRibbonRights([o.ribbonRight])
+        if (o.memo) setAdminMemo(`[쇼핑몰 요청사항] ${o.memo}`)
+        setSendPhotoToRecipient(false)
+      })
+      .catch((e) => setShopLoadError(e instanceof Error ? e.message : '쇼핑몰 주문을 불러오지 못했습니다.'))
+  }, [shopOrderId])
+
   async function handleSubmit() {
     const next: typeof errors = {}
     if (!vendorId) next.vendorId = '수주업체와 상품을 선택해주세요.'
@@ -203,11 +237,13 @@ export default function NewOrderPage() {
       }
       const created = coupangOrder
         ? await approveCoupangOrder(coupangOrder.id, payload)
-        : await createOrder(payload)
+        : shopOrder
+          ? await approveShopOrder(shopOrder.id, payload)
+          : await createOrder(payload)
       if (referenceItems.length > 0) {
         await uploadReferencePhotos(String(created.id), referenceItems.map((i) => i.file)).catch(() => {})
       }
-      router.push(coupangOrder ? '/coupang/orders' : '/orders')
+      router.push(coupangOrder ? '/coupang/orders' : shopOrder ? '/shop/orders' : '/orders')
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : '발주 등록에 실패했습니다.')
     } finally {
@@ -217,7 +253,7 @@ export default function NewOrderPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">{coupangOrderId ? '쿠팡 주문 승인 발주' : '신규 발주'}</h1>
+      <h1 className="text-xl font-bold">{coupangOrderId ? '쿠팡 주문 승인 발주' : shopOrderId ? '쇼핑몰 주문 승인 발주' : '신규 발주'}</h1>
 
       {coupangLoadError && (
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{coupangLoadError}</div>
@@ -241,6 +277,27 @@ export default function NewOrderPage() {
         </Card>
       )}
 
+      {shopLoadError && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{shopLoadError}</div>
+      )}
+      {shopOrder && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="space-y-1 py-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-1">
+              <span className="font-semibold text-green-800">쇼핑몰 주문 {shopOrder.orderNo}</span>
+              <span className="text-xs text-gray-500">고객 희망 {shopOrder.deliveryDate ?? '-'} {shopOrder.deliveryTime ?? ''}</span>
+            </div>
+            {shopOrder.items.map((it, i) => (
+              <p key={i} className="text-gray-700">{it.name} × {it.quantity} ({it.unitPrice.toLocaleString()}원)</p>
+            ))}
+            <p className="font-medium text-gray-800">고객 결제 예정 합계 {shopOrder.totalPrice.toLocaleString()}원</p>
+            <p className="text-xs text-gray-500">
+              수주업체·상품과 배송시간을 확인한 뒤 승인하면 발주가 생성됩니다. 발주 금액은 수주업체 상품 단가로 계산되며 판매가와 무관합니다.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         <div className="space-y-4">
         {/* 기본정보 */}
@@ -259,7 +316,7 @@ export default function NewOrderPage() {
                 <select
                   value={orderingCompanyId}
                   onChange={(e) => setOrderingCompanyId(e.target.value)}
-                  disabled={!!coupangOrderId}
+                  disabled={!!coupangOrderId || !!shopOrderId}
                   className={`w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700 ${errors.orderingCompanyId ? 'border-red-500' : ''}`}
                 >
                   <option value="">선택하세요</option>
@@ -851,13 +908,13 @@ export default function NewOrderPage() {
       )}
 
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={() => router.push(coupangOrderId ? '/coupang/orders' : '/orders')}>취소</Button>
+        <Button variant="outline" onClick={() => router.push(coupangOrderId ? '/coupang/orders' : shopOrderId ? '/shop/orders' : '/orders')}>취소</Button>
         <Button
           className="bg-green-700 hover:bg-green-800"
           onClick={handleSubmit}
-          disabled={submitting || pointInsufficient || (!!coupangOrderId && !coupangOrder)}
+          disabled={submitting || pointInsufficient || (!!coupangOrderId && !coupangOrder) || (!!shopOrderId && !shopOrder)}
         >
-          {submitting ? '등록 중...' : coupangOrderId ? '승인 및 발주 등록' : '발주 등록'}
+          {submitting ? '등록 중...' : coupangOrderId || shopOrderId ? '승인 및 발주 등록' : '발주 등록'}
         </Button>
       </div>
 
