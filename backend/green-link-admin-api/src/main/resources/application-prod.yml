@@ -13,3 +13,6 @@ logging:
     rollingpolicy:
       max-file-size: 10MB
       max-history: 30
+
+barobill:
+  url: ${BAROBILL_URL:https://ws.baroservice.com/SMS.asmx}

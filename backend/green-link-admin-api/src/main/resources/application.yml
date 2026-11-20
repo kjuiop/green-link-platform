@@ -41,7 +41,7 @@ aligo:
   url: https://apis.aligo.in/send/
 
 barobill:
-  # 운영 전환 시 BAROBILL_URL=https://ws.baroservice.com/SMS.asmx
+  # 프로필(dev/prod)별 기본값이 있으며, BAROBILL_URL 환경변수로 덮어쓸 수 있음
   url: ${BAROBILL_URL:https://testws.baroservice.com/SMS.asmx}
 
 coupang:
