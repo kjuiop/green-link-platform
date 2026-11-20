@@ -38,6 +38,11 @@ public class FaxSettingsService implements FaxSettingsUseCase {
         if (port != null && (port < 1 || port > 65535)) {
             throw new BusinessException(FaxErrorCode.FAX_FTP_PORT_INVALID);
         }
+        if (tooLong(command.faxSenderNumber(), 20) || tooLong(faxUrl, 200) || tooLong(command.ftpHost(), 100)
+                || tooLong(command.ftpUsername(), 100) || tooLong(command.ftpPassword(), 200)
+                || tooLong(command.ftpDirectory(), 200)) {
+            throw new BusinessException(FaxErrorCode.FAX_SETTINGS_TOO_LONG);
+        }
         SmsSettings settings = repository.get();
         String password = SecretMask.isMasked(command.ftpPassword()) ? settings.getFtpPassword() : blankToNull(command.ftpPassword());
         settings.withFax(
@@ -67,6 +72,10 @@ public class FaxSettingsService implements FaxSettingsUseCase {
         } catch (URISyntaxException e) {
             throw new BusinessException(FaxErrorCode.FAX_URL_INVALID);
         }
+    }
+
+    private boolean tooLong(String s, int max) {
+        return s != null && s.trim().length() > max;
     }
 
     private String blankToNull(String s) {

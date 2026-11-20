@@ -27,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 
@@ -258,5 +259,17 @@ class OrderFaxServiceTest {
         assertThatThrownBy(() -> service.resend(10L))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(FaxErrorCode.FAX_NOT_ALLOWED));
+    }
+
+    @Test
+    void 수동_재발송이_동시에_들어오면_진행중_오류로_응답한다() {
+        Order order = order(OrderStatus.ACCEPTED, "서울");
+        stubEnvironment(order);
+        given(faxMessageRepository.findMaxSequence(10L)).willReturn(0);
+        given(faxMessageRepository.saveIfAbsent(any())).willThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> service.resend(10L))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(FaxErrorCode.FAX_IN_PROGRESS));
     }
 }

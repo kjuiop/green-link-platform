@@ -21,6 +21,7 @@ import com.greenlink.core.global.exception.fax.FaxErrorCode;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -74,7 +75,12 @@ public class OrderFaxService implements DispatchOrderFaxUseCase {
 
     @Override
     public FaxMessageResult resend(Long orderId) {
-        Pending pending = tx.execute(status -> prepare(orderId, true));
+        Pending pending;
+        try {
+            pending = tx.execute(status -> prepare(orderId, true));
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(FaxErrorCode.FAX_IN_PROGRESS);
+        }
         if (pending == null) {
             throw new BusinessException(FaxErrorCode.FAX_NOT_CONFIGURED);
         }

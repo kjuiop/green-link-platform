@@ -10,7 +10,9 @@ public enum FaxErrorCode implements ErrorCode {
     FAX_NOT_CONFIGURED(400, "FAX_004", "팩스 연동 설정(바로빌 계정·팩스 발신번호·FTP)이 완료되지 않았습니다."),
     FAX_NUMBER_REQUIRED(400, "FAX_005", "팩스 연동 시 팩스번호를 입력해야 합니다."),
     FAX_URL_INVALID(400, "FAX_006", "팩스 API URL은 바로빌(baroservice.com)의 https 주소여야 합니다."),
-    FAX_FTP_PORT_INVALID(400, "FAX_007", "FTP 포트는 1~65535 범위여야 합니다.");
+    FAX_FTP_PORT_INVALID(400, "FAX_007", "FTP 포트는 1~65535 범위여야 합니다."),
+    FAX_SETTINGS_TOO_LONG(400, "FAX_008", "팩스 설정 값이 허용 길이를 초과했습니다."),
+    FAX_IN_PROGRESS(409, "FAX_009", "이미 팩스 발송이 진행 중입니다. 잠시 후 다시 시도해 주세요.");
 
     private final int status;
     private final String code;

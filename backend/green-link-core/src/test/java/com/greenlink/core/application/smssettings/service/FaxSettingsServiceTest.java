@@ -85,4 +85,13 @@ class FaxSettingsServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(FaxErrorCode.FAX_FTP_PORT_INVALID));
     }
+
+    @Test
+    void 컬럼_길이를_넘는_값은_거부한다() {
+        assertThatThrownBy(() -> new FaxSettingsService(repository).save(new SaveFaxSettingsCommand(
+                "0212345678", null, "h".repeat(101), 21, "u", "p", null)))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(FaxErrorCode.FAX_SETTINGS_TOO_LONG));
+        verify(repository, never()).save(any());
+    }
 }
