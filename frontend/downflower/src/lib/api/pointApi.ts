@@ -18,6 +18,8 @@ export interface PointTransaction {
   memberLoginId: string | null
   orderId: number | null
   createdAt: string
+  taxInvoiceStatus?: 'ISSUING' | 'SUCCESS' | 'FAILED' | null
+  taxInvoiceFailReason?: string | null
 }
 
 async function errorMessage(res: Response, fallback: string): Promise<string> {

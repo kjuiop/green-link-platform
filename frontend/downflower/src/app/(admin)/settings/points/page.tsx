@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Pagination } from '@/components/ui/Pagination'
 import { PointTransactionTable, formatPoint } from '@/components/point/PointTransactionTable'
+import { TaxInvoiceDialog } from '@/components/point/TaxInvoiceDialog'
+import { Badge } from '@/components/ui/badge'
 import { Search } from 'lucide-react'
 import {
   fetchAdminPointList,
@@ -44,6 +46,7 @@ export default function AdminPointPage() {
   const [historyTotalPages, setHistoryTotalPages] = useState(0)
   const [historyTotalElements, setHistoryTotalElements] = useState(0)
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [invoiceTargetId, setInvoiceTargetId] = useState<number | null>(null)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -56,7 +59,7 @@ export default function AdminPointPage() {
 
   useEffect(() => { load() }, [load])
 
-  useEffect(() => {
+  const loadHistory = useCallback(() => {
     if (!historyTarget) return
     setHistoryLoading(true)
     fetchAdminPointTransactions(historyTarget.companyId, historyPage, HISTORY_PAGE_SIZE)
@@ -68,6 +71,37 @@ export default function AdminPointPage() {
       .catch(() => setTransactions([]))
       .finally(() => setHistoryLoading(false))
   }, [historyTarget, historyPage])
+
+  useEffect(() => { loadHistory() }, [loadHistory])
+
+  function renderInvoice(t: PointTransaction) {
+    if (t.type !== 'CHARGE') return <span className="text-gray-300">-</span>
+    if (t.taxInvoiceStatus === 'SUCCESS') {
+      return <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700">발행 완료</Badge>
+    }
+    if (t.taxInvoiceStatus === 'ISSUING') {
+      return (
+        <div className="flex items-center gap-1">
+          <Badge variant="outline" className="border-orange-200 bg-orange-50 text-orange-700">발행 중</Badge>
+          <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setInvoiceTargetId(t.id)}>
+            확인
+          </Button>
+        </div>
+      )
+    }
+    return (
+      <div className="flex items-center gap-1">
+        {t.taxInvoiceStatus === 'FAILED' && (
+          <Badge variant="outline" title={t.taxInvoiceFailReason ?? undefined} className="border-red-200 bg-red-50 text-red-600">
+            발행 실패
+          </Badge>
+        )}
+        <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setInvoiceTargetId(t.id)}>
+          {t.taxInvoiceStatus === 'FAILED' ? '재시도' : '계산서 발행'}
+        </Button>
+      </div>
+    )
+  }
 
   const displayed = search.trim()
     ? companies.filter((c) => c.companyName.includes(search.trim()))
@@ -216,7 +250,7 @@ export default function AdminPointPage() {
           <DialogHeader>
             <DialogTitle>포인트 이력 - {historyTarget?.companyName}</DialogTitle>
           </DialogHeader>
-          <PointTransactionTable transactions={transactions} loading={historyLoading} />
+          <PointTransactionTable transactions={transactions} loading={historyLoading} renderInvoice={renderInvoice} />
           <Pagination
             page={historyPage}
             totalPages={historyTotalPages}
@@ -226,6 +260,15 @@ export default function AdminPointPage() {
           />
         </DialogContent>
       </Dialog>
+
+      {invoiceTargetId !== null && (
+        <TaxInvoiceDialog
+          key={invoiceTargetId}
+          transactionId={invoiceTargetId}
+          onClose={() => setInvoiceTargetId(null)}
+          onDone={() => { setInvoiceTargetId(null); loadHistory() }}
+        />
+      )}
     </div>
   )
 }

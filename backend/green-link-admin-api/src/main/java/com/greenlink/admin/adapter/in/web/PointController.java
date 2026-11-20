@@ -8,6 +8,8 @@ import com.greenlink.core.application.point.usecase.ChargePointUseCase;
 import com.greenlink.core.application.point.usecase.GetAdminPointListUseCase;
 import com.greenlink.core.application.point.usecase.GetMyPointUseCase;
 import com.greenlink.core.application.point.usecase.GetPointTransactionsUseCase;
+import com.greenlink.core.application.taxinvoice.dto.TaxInvoiceResult;
+import com.greenlink.core.application.taxinvoice.usecase.GetTaxInvoiceStatusUseCase;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -16,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 public class PointController {
@@ -26,15 +29,18 @@ public class PointController {
     private final GetAdminPointListUseCase getAdminPointListUseCase;
     private final GetMyPointUseCase getMyPointUseCase;
     private final GetPointTransactionsUseCase getPointTransactionsUseCase;
+    private final GetTaxInvoiceStatusUseCase getTaxInvoiceStatusUseCase;
 
     public PointController(ChargePointUseCase chargePointUseCase,
                            GetAdminPointListUseCase getAdminPointListUseCase,
                            GetMyPointUseCase getMyPointUseCase,
-                           GetPointTransactionsUseCase getPointTransactionsUseCase) {
+                           GetPointTransactionsUseCase getPointTransactionsUseCase,
+                           GetTaxInvoiceStatusUseCase getTaxInvoiceStatusUseCase) {
         this.chargePointUseCase = chargePointUseCase;
         this.getAdminPointListUseCase = getAdminPointListUseCase;
         this.getMyPointUseCase = getMyPointUseCase;
         this.getPointTransactionsUseCase = getPointTransactionsUseCase;
+        this.getTaxInvoiceStatusUseCase = getTaxInvoiceStatusUseCase;
     }
 
     @GetMapping("/api/admin/points")
@@ -56,8 +62,21 @@ public class PointController {
             @PathVariable Long companyId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(getPointTransactionsUseCase.getTransactions(
-                companyId, pageRequest(page, size)));
+        PageResult<PointTransactionResult> result = getPointTransactionsUseCase.getTransactions(
+                companyId, pageRequest(page, size));
+        List<Long> chargeIds = result.content().stream()
+                .filter(t -> "CHARGE".equals(t.type()))
+                .map(PointTransactionResult::id)
+                .toList();
+        Map<Long, TaxInvoiceResult> invoices = getTaxInvoiceStatusUseCase.getByPointTransactionIds(chargeIds);
+        List<PointTransactionResult> enriched = result.content().stream()
+                .map(t -> {
+                    TaxInvoiceResult inv = invoices.get(t.id());
+                    return inv == null ? t : t.withTaxInvoice(inv.status(), inv.failReason());
+                })
+                .toList();
+        return ResponseEntity.ok(new PageResult<>(enriched, result.page(), result.size(),
+                result.totalElements(), result.totalPages(), result.totalAmount()));
     }
 
     @GetMapping("/api/points/my")

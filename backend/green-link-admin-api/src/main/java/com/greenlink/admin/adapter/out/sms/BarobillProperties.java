@@ -20,4 +20,8 @@ public record BarobillProperties(String url) {
     public String faxUrl() {
         return url.replaceFirst("(?i)SMS\\.asmx", "FAX.asmx");
     }
+
+    public String taxInvoiceUrl() {
+        return url.replaceFirst("(?i)SMS\\.asmx", "TI.asmx");
+    }
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { PointTransaction } from '@/lib/api/pointApi'
@@ -20,10 +21,13 @@ function formatDateTime(s: string) {
 export function PointTransactionTable({
   transactions,
   loading,
+  renderInvoice,
 }: {
   transactions: PointTransaction[]
   loading: boolean
+  renderInvoice?: (t: PointTransaction) => ReactNode
 }) {
+  const colCount = renderInvoice ? 7 : 6
   return (
     <div className="rounded-lg border bg-white">
       <Table>
@@ -35,16 +39,17 @@ export function PointTransactionTable({
             <TableHead className="text-right">잔액</TableHead>
             <TableHead>사용 계정</TableHead>
             <TableHead>내역</TableHead>
+            {renderInvoice && <TableHead>계산서</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-400">불러오는 중...</TableCell>
+              <TableCell colSpan={colCount} className="py-10 text-center text-sm text-gray-400">불러오는 중...</TableCell>
             </TableRow>
           ) : transactions.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="py-10 text-center text-sm text-gray-400">포인트 이력이 없습니다.</TableCell>
+              <TableCell colSpan={colCount} className="py-10 text-center text-sm text-gray-400">포인트 이력이 없습니다.</TableCell>
             </TableRow>
           ) : (
             transactions.map((t) => {
@@ -66,6 +71,7 @@ export function PointTransactionTable({
                   <TableCell className="text-right text-sm text-gray-700">{formatPoint(t.balanceAfter)}</TableCell>
                   <TableCell className="text-sm text-gray-600">{t.memberLoginId ?? (t.type === 'CHARGE' ? '관리자' : '-')}</TableCell>
                   <TableCell className="text-sm text-gray-600">{t.memo ?? '-'}</TableCell>
+                  {renderInvoice && <TableCell>{renderInvoice(t)}</TableCell>}
                 </TableRow>
               )
             })

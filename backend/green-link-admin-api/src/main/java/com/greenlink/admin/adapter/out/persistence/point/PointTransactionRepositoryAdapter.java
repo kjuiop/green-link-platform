@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 
 @Component
 public class PointTransactionRepositoryAdapter implements PointTransactionRepository {
@@ -21,6 +22,11 @@ public class PointTransactionRepositoryAdapter implements PointTransactionReposi
     @Override
     public PointTransaction save(PointTransaction transaction) {
         return jpaRepository.save(PointTransactionJpaEntity.from(transaction)).toDomain();
+    }
+
+    @Override
+    public Optional<PointTransaction> findById(Long id) {
+        return jpaRepository.findById(id).map(PointTransactionJpaEntity::toDomain);
     }
 
     @Override

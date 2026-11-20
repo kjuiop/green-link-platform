@@ -4,8 +4,11 @@ import com.greenlink.core.domain.point.model.PointTransaction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Optional;
+
 public interface PointTransactionRepository {
     PointTransaction save(PointTransaction transaction);
+    Optional<PointTransaction> findById(Long id);
     Page<PointTransaction> findByCompanyId(Long companyId, Pageable pageable);
     boolean existsOrderTransaction(Long orderId);
     boolean existsSettle(Long orderId);
