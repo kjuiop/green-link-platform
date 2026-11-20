@@ -10,9 +10,15 @@ import com.greenlink.core.domain.shop.model.ShopOrderStatus;
 import com.greenlink.core.domain.shop.port.ShopOrderRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.shop.ShopErrorCode;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class ShopOrderQueryService implements QueryShopOrdersUseCase {
@@ -31,8 +37,13 @@ public class ShopOrderQueryService implements QueryShopOrdersUseCase {
                                             int page, int size) {
         Long companyId = callerCompanyId != null ? callerCompanyId : filterCompanyId;
         int safeSize = Math.min(Math.max(size, 1), 100);
-        return PageResult.of(orderRepository.search(companyId, status, PageRequest.of(Math.max(page, 0), safeSize))
-                .map(ShopOrderResult::from));
+        Page<ShopOrder> result = orderRepository.search(companyId, status, PageRequest.of(Math.max(page, 0), safeSize));
+        List<Long> linkedIds = result.getContent().stream()
+                .map(ShopOrder::getLinkedOrderId).filter(Objects::nonNull).distinct().toList();
+        Map<Long, Long> amounts = linkedIds.isEmpty() ? Map.of()
+                : linkedOrderRepository.findAllByIds(linkedIds).stream()
+                        .collect(Collectors.toMap(Order::getId, Order::getTotalAmount));
+        return PageResult.of(result.map(o -> ShopOrderResult.from(o, o.getLinkedOrderId() == null ? null : amounts.get(o.getLinkedOrderId()))));
     }
 
     @Override

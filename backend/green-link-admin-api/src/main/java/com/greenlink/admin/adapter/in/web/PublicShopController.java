@@ -51,7 +51,8 @@ public class PublicShopController {
     private String clientIp(HttpServletRequest http) {
         String forwarded = http.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
+            String[] hops = forwarded.split(",");
+            return hops[hops.length - 1].trim();
         }
         return http.getRemoteAddr();
     }
