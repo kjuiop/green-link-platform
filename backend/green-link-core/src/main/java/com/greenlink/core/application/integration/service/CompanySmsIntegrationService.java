@@ -33,7 +33,7 @@ public class CompanySmsIntegrationService implements GetCompanySmsIntegrationUse
         CompanyIntegration integration = repository.findByCompanyId(command.companyId())
                 .orElseGet(() -> CompanyIntegration.create(command.companyId(), command.provider(), command.apiKey(),
                         command.senderNumber(), command.userId(), command.corpNum()));
-        String apiKey = SecretMask.isMasked(command.apiKey()) ? integration.getApiKey() : command.apiKey();
+        String apiKey = SecretMask.resolveKey(command.apiKey(), integration.getApiKey(), integration.getProvider(), command.provider());
         integration.update(command.provider(), apiKey, command.senderNumber(), command.userId(), command.corpNum());
         integration.updateAlimtalk(command.alimtalkEnabled(), command.alimtalkTemplateFuneral(),
                 command.alimtalkTemplateWedding(), command.alimtalkTemplateEtc(), command.alimtalkSenderKey());

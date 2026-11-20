@@ -10,7 +10,6 @@ import com.greenlink.core.domain.smssettings.port.SmsSettingsRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.sms.SmsErrorCode;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class BarobillQueryService implements BarobillQueryUseCase {
@@ -28,7 +27,6 @@ public class BarobillQueryService implements BarobillQueryUseCase {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public BarobillQueryResult checkSenderNumber(Long companyId) {
         SmsAccount account = resolveAccount(companyId);
         if (account.senderNumber() == null || account.senderNumber().isBlank()) {
@@ -44,7 +42,6 @@ public class BarobillQueryService implements BarobillQueryUseCase {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public BarobillQueryResult getSendState(Long companyId, String sendKey) {
         if (sendKey == null || sendKey.isBlank()) {
             throw new BusinessException(SmsErrorCode.BAROBILL_NOT_CONFIGURED);
@@ -59,16 +56,14 @@ public class BarobillQueryService implements BarobillQueryUseCase {
     }
 
     private SmsAccount resolveAccount(Long companyId) {
-        SmsSettings global = smsSettingsRepository.get();
-        SmsAccount account = null;
+        SmsAccount account;
         if (companyId != null) {
             account = companyIntegrationRepository.findByCompanyId(companyId)
-                    .map(ci -> new SmsAccount(ci.getProvider(), ci.getApiKey(),
-                            ci.getSenderNumber() != null ? ci.getSenderNumber() : global.getSenderNumber(),
+                    .map(ci -> new SmsAccount(ci.getProvider(), ci.getApiKey(), ci.getSenderNumber(),
                             ci.getUserId(), ci.getCorpNum()))
-                    .orElse(null);
-        }
-        if (account == null) {
+                    .orElseThrow(() -> new BusinessException(SmsErrorCode.BAROBILL_NOT_CONFIGURED));
+        } else {
+            SmsSettings global = smsSettingsRepository.get();
             account = new SmsAccount(global.getProvider(), global.getApiKey(), global.getSenderNumber(),
                     global.getUserId(), global.getCorpNum());
         }

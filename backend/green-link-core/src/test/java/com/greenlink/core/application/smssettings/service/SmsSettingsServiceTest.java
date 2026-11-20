@@ -69,4 +69,17 @@ class SmsSettingsServiceTest {
         verify(repository).save(saved.capture());
         assertThat(saved.getValue().getApiKey()).isEqualTo("NEW-KEY");
     }
+
+    @Test
+    void 제공사가_바뀌면_마스킹된_키로_기존_키를_이어받지_않는다() {
+        given(repository.get()).willReturn(barobill());
+        given(repository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        new SmsSettingsService(repository).save(new SaveSmsSettingsCommand(
+                "02-000-0000", "온우림", "f", "w", "o", "ALIGO", "****1234", "aligo_id", null));
+
+        ArgumentCaptor<SmsSettings> saved = ArgumentCaptor.forClass(SmsSettings.class);
+        verify(repository).save(saved.capture());
+        assertThat(saved.getValue().getApiKey()).isNull();
+    }
 }

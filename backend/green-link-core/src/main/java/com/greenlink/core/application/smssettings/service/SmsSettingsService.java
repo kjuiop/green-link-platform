@@ -29,7 +29,7 @@ public class SmsSettingsService implements GetSmsSettingsUseCase, SaveSmsSetting
     @Transactional
     public SmsSettingsResult save(SaveSmsSettingsCommand command) {
         SmsSettings settings = repository.get();
-        String apiKey = SecretMask.isMasked(command.apiKey()) ? settings.getApiKey() : command.apiKey();
+        String apiKey = SecretMask.resolveKey(command.apiKey(), settings.getApiKey(), settings.getProvider(), command.provider());
         settings.update(command.senderNumber(), command.senderName(),
                 command.templateFuneral(), command.templateWedding(), command.templateOthers(),
                 command.provider(), apiKey, command.userId(), command.corpNum());
