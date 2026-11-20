@@ -8,6 +8,7 @@ import com.greenlink.core.domain.sms.port.SmsClientFactory;
 import com.greenlink.core.domain.sms.port.SmsMessageRepository;
 import com.greenlink.core.domain.smssettings.model.SmsSettings;
 import com.greenlink.core.domain.smssettings.port.SmsSettingsRepository;
+import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.integration.port.CompanyIntegrationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ class SmsServiceNotifyTest {
     @Mock SmsClientFactory smsClientFactory;
     @Mock SmsSettingsRepository smsSettingsRepository;
     @Mock CompanyIntegrationRepository companyIntegrationRepository;
+    @Mock CompanyRepository companyRepository;
     @Mock SmsClient smsClient;
     @Mock SmsSettings settings;
     @Mock Order order;
@@ -40,7 +42,7 @@ class SmsServiceNotifyTest {
     @BeforeEach
     void setUp() throws Exception {
         smsService = new SmsService(orderRepository, smsMessageRepository, smsClientFactory,
-                smsSettingsRepository, companyIntegrationRepository);
+                smsSettingsRepository, companyIntegrationRepository, companyRepository);
         Field f = SmsService.class.getDeclaredField("portalBaseUrl");
         f.setAccessible(true);
         f.set(smsService, "https://dev.onurim.com");

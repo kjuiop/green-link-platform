@@ -32,7 +32,6 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
   const [apiKey, setApiKey] = useState(initialIntegration?.apiKey ?? '')
   const [senderNumber, setSenderNumber] = useState(initialIntegration?.senderNumber ?? '')
   const [userId, setUserId] = useState(initialIntegration?.userId ?? '')
-  const [corpNum, setCorpNum] = useState(initialIntegration?.corpNum ?? '')
   const [alimtalkEnabled, setAlimtalkEnabled] = useState(initialIntegration?.alimtalkEnabled ?? false)
   const [alimtalkTemplateFuneral, setAlimtalkTemplateFuneral] = useState(initialIntegration?.alimtalkTemplateFuneral ?? '')
   const [alimtalkTemplateWedding, setAlimtalkTemplateWedding] = useState(initialIntegration?.alimtalkTemplateWedding ?? '')
@@ -46,7 +45,7 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
     setSaveResult('idle')
     try {
       const data: SaveCompanySmsIntegrationData = {
-        provider, apiKey, senderNumber, userId, corpNum,
+        provider, apiKey, senderNumber, userId,
         alimtalkEnabled,
         alimtalkTemplateFuneral,
         alimtalkTemplateWedding,
@@ -106,24 +105,14 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
               />
             </div>
             {provider === 'BAROBILL' && (
-              <>
-                <div className="space-y-1.5">
-                  <Label>사업자번호</Label>
-                  <Input
-                    placeholder="숫자 10자리 (하이픈 입력 가능)"
-                    value={corpNum}
-                    onChange={(e) => setCorpNum(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>바로빌 아이디</Label>
-                  <Input
-                    placeholder="바로빌 회원 아이디"
-                    value={userId}
-                    onChange={(e) => setUserId(e.target.value)}
-                  />
-                </div>
-              </>
+              <div className="space-y-1.5">
+                <Label>바로빌 아이디</Label>
+                <Input
+                  placeholder="바로빌 회원 아이디"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                />
+              </div>
             )}
           </div>
           {provider === 'BAROBILL' && <BarobillSenderCheck companyId={companyId} />}

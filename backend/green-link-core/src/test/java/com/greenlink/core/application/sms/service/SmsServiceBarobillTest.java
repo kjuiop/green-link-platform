@@ -1,5 +1,7 @@
 package com.greenlink.core.application.sms.service;
 
+import com.greenlink.core.domain.company.model.Company;
+import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.integration.model.CompanyIntegration;
 import com.greenlink.core.domain.integration.port.CompanyIntegrationRepository;
 import com.greenlink.core.domain.order.model.Order;
@@ -40,14 +42,16 @@ class SmsServiceBarobillTest {
     @Mock SmsClientFactory smsClientFactory;
     @Mock CompanyIntegrationRepository companyIntegrationRepository;
     @Mock SmsSettingsRepository smsSettingsRepository;
+    @Mock CompanyRepository companyRepository;
     @Mock Order order;
+    @Mock Company company;
 
     SmsService smsService;
 
     @BeforeEach
     void setUp() {
         smsService = new SmsService(orderRepository, smsMessageRepository, smsClientFactory,
-                smsSettingsRepository, companyIntegrationRepository);
+                smsSettingsRepository, companyIntegrationRepository, companyRepository);
         SmsSettings global = SmsSettings.of(1L, "02-000-0000", "온우림", "f", "w", "o",
                 "BAROBILL", "GLOBAL-KEY", "global_id", "1111111111");
         given(smsMessageRepository.findAllByOrderId(1L)).willReturn(List.of());
@@ -62,7 +66,9 @@ class SmsServiceBarobillTest {
     @Test
     void 업체별_바로빌_계정이_있으면_그_계정으로_발송한다() {
         given(companyIntegrationRepository.findByCompanyId(10L)).willReturn(Optional.of(
-                CompanyIntegration.create(10L, "BAROBILL", "COMPANY-KEY", "031-111-1111", "company_id", "2222222222")));
+                CompanyIntegration.create(10L, "BAROBILL", "COMPANY-KEY", "031-111-1111", "company_id")));
+        given(companyRepository.findById(10L)).willReturn(Optional.of(company));
+        given(company.getBusinessNo()).willReturn("222-22-22222");
         given(smsClient.sendWithAccount(any(), any(), any(), any(), any(), any(), any()))
                 .willReturn(new SmsResult(true, "SK-1", null));
 

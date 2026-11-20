@@ -21,8 +21,8 @@ class CompanySmsIntegrationServiceTest {
 
     @Mock CompanyIntegrationRepository repository;
 
-    private SaveCompanySmsIntegrationCommand command(String corpNum) {
-        return new SaveCompanySmsIntegrationCommand(10L, "BAROBILL", "KEY", "031-111-1111", "baro_id", corpNum,
+    private SaveCompanySmsIntegrationCommand command(String apiKey) {
+        return new SaveCompanySmsIntegrationCommand(10L, "BAROBILL", apiKey, "031-111-1111", "baro_id",
                 false, null, null, null, null);
     }
 
@@ -35,17 +35,21 @@ class CompanySmsIntegrationServiceTest {
     }
 
     @Test
-    void 신규_계정도_사업자번호에서_하이픈을_제거해_저장한다() {
+    void 신규_계정은_입력값_그대로_저장한다() {
         given(repository.findByCompanyId(10L)).willReturn(Optional.empty());
 
-        assertThat(savedAfter(command("476-86-02607")).getCorpNum()).isEqualTo("4768602607");
+        CompanyIntegration saved = savedAfter(command("NEW-KEY"));
+
+        assertThat(saved.getApiKey()).isEqualTo("NEW-KEY");
+        assertThat(saved.getUserId()).isEqualTo("baro_id");
+        assertThat(saved.getSenderNumber()).isEqualTo("031-111-1111");
     }
 
     @Test
-    void 기존_계정_수정_시에도_하이픈을_제거해_저장한다() {
+    void 마스킹된_키가_다시_저장되면_기존_키를_유지한다() {
         given(repository.findByCompanyId(10L)).willReturn(Optional.of(
-                CompanyIntegration.create(10L, "BAROBILL", "KEY", "031-111-1111", "baro_id", "1111111111")));
+                CompanyIntegration.create(10L, "BAROBILL", "ABCDEFGH-1234", "031-111-1111", "baro_id")));
 
-        assertThat(savedAfter(command("476-86-02607")).getCorpNum()).isEqualTo("4768602607");
+        assertThat(savedAfter(command("****1234")).getApiKey()).isEqualTo("ABCDEFGH-1234");
     }
 }
