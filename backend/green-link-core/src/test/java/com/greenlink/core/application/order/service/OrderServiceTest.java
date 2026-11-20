@@ -182,6 +182,7 @@ class OrderServiceTest {
 
         assertThat(result.status()).isEqualTo("ACCEPTED");
         verify(recordOrderHistoryUseCase).record(eq(1L), eq(OrderHistoryAction.STATUS_CHANGED), any());
+        verify(eventPublisher).publishEvent(new com.greenlink.core.application.fax.event.OrderFaxRequestedEvent(1L));
     }
 
     @Test
@@ -198,6 +199,7 @@ class OrderServiceTest {
         OrderResult result = service.updateOrderStatus(1L, "reject");
 
         assertThat(result.status()).isEqualTo("REJECTED");
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
 
     @Test

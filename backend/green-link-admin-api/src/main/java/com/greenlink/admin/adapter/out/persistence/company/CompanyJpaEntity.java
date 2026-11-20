@@ -69,6 +69,9 @@ public class CompanyJpaEntity extends BaseJpaEntity {
     @Column(name = "vendor_fee", nullable = false, columnDefinition = "BIGINT DEFAULT 3000")
     private long vendorFee = Company.DEFAULT_VENDOR_FEE;
 
+    @Column(name = "fax_enabled", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean faxEnabled;
+
     protected CompanyJpaEntity() {}
 
     public static CompanyJpaEntity from(Company company) {
@@ -92,12 +95,15 @@ public class CompanyJpaEntity extends BaseJpaEntity {
         e.accountHolder = company.getAccountHolder();
         e.businessStatus = company.getBusinessStatus() != null ? company.getBusinessStatus() : BusinessStatus.OPEN;
         e.vendorFee = company.getVendorFee();
+        e.faxEnabled = company.isFaxEnabled();
         return e;
     }
 
     public Company toDomain() {
-        return Company.of(id, businessNo, companyName, ceoName, phone, faxNumber,
+        Company company = Company.of(id, businessNo, companyName, ceoName, phone, faxNumber,
                 address, detailAddress, type, status, displayYn, businessRegUrl, bankBookUrl,
                 bankName, accountNumber, accountHolder, businessStatus, vendorFee);
+        company.restoreFaxEnabled(faxEnabled);
+        return company;
     }
 }

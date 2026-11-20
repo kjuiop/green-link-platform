@@ -39,6 +39,26 @@ public class SmsSettingsJpaEntity extends BaseJpaEntity {
     @Column(length = 10)
     private String corpNum;
 
+    @Column(length = 20)
+    private String faxSenderNumber;
+
+    @Column(length = 200)
+    private String faxUrl;
+
+    @Column(length = 100)
+    private String ftpHost;
+
+    private Integer ftpPort;
+
+    @Column(length = 100)
+    private String ftpUsername;
+
+    @Column(length = 200)
+    private String ftpPassword;
+
+    @Column(length = 200)
+    private String ftpDirectory;
+
     protected SmsSettingsJpaEntity() {}
 
     public void update(String senderNumber, String senderName,
@@ -55,8 +75,21 @@ public class SmsSettingsJpaEntity extends BaseJpaEntity {
         this.corpNum = corpNum;
     }
 
+    public void updateFax(String faxSenderNumber, String faxUrl, String ftpHost, Integer ftpPort,
+                          String ftpUsername, String ftpPassword, String ftpDirectory) {
+        this.faxSenderNumber = faxSenderNumber;
+        this.faxUrl = faxUrl;
+        this.ftpHost = ftpHost;
+        this.ftpPort = ftpPort;
+        this.ftpUsername = ftpUsername;
+        this.ftpPassword = ftpPassword;
+        this.ftpDirectory = ftpDirectory;
+    }
+
     public SmsSettings toDomain() {
-        return SmsSettings.of(id, senderNumber, senderName, templateFuneral, templateWedding, templateOthers,
+        SmsSettings s = SmsSettings.of(id, senderNumber, senderName, templateFuneral, templateWedding, templateOthers,
                 provider, apiKey, userId, corpNum);
+        s.withFax(faxSenderNumber, faxUrl, ftpHost, ftpPort, ftpUsername, ftpPassword, ftpDirectory);
+        return s;
     }
 }

@@ -16,4 +16,8 @@ public record BarobillProperties(String url) {
     public String kakaotalkUrl() {
         return url.replaceFirst("(?i)SMS\\.asmx", "KAKAOTALK.asmx");
     }
+
+    public String faxUrl() {
+        return url.replaceFirst("(?i)SMS\\.asmx", "FAX.asmx");
+    }
 }

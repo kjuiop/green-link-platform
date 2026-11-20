@@ -38,6 +38,8 @@ public class SmsSettingsRepositoryAdapter implements SmsSettingsRepository {
         entity.update(settings.getSenderNumber(), settings.getSenderName(),
                 settings.getTemplateFuneral(), settings.getTemplateWedding(), settings.getTemplateOthers(),
                 settings.getProvider(), settings.getApiKey(), settings.getUserId(), settings.getCorpNum());
+        entity.updateFax(settings.getFaxSenderNumber(), settings.getFaxUrl(), settings.getFtpHost(),
+                settings.getFtpPort(), settings.getFtpUsername(), settings.getFtpPassword(), settings.getFtpDirectory());
         return jpaRepository.save(entity).toDomain();
     }
 }
