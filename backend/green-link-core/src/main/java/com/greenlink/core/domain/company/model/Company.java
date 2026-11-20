@@ -25,6 +25,7 @@ public class Company {
     private String accountHolder;
     private BusinessStatus businessStatus = BusinessStatus.OPEN;
     private long vendorFee = DEFAULT_VENDOR_FEE;
+    private boolean faxEnabled;
     private List<CompanyRegion> regions = List.of();
     private List<CompanyCapability> capabilities = List.of();
 
@@ -132,6 +133,23 @@ public class Company {
         this.vendorFee = fee;
     }
 
+    public void restoreFaxEnabled(boolean faxEnabled) {
+        this.faxEnabled = faxEnabled;
+    }
+
+    public void changeFaxSetting(boolean faxEnabled, String faxNumber) {
+        String digits = faxNumber == null ? "" : faxNumber.replaceAll("[^0-9]", "");
+        if (faxEnabled && digits.isEmpty()) {
+            throw new IllegalArgumentException("팩스 연동 시 팩스번호가 필요합니다.");
+        }
+        this.faxEnabled = faxEnabled;
+        this.faxNumber = digits.isEmpty() ? null : digits;
+    }
+
+    public boolean canReceiveFax() {
+        return faxEnabled && faxNumber != null && !faxNumber.replaceAll("[^0-9]", "").isEmpty();
+    }
+
     public Long getId() { return id; }
     public String getBusinessNo() { return businessNo; }
     public String getCompanyName() { return companyName; }
@@ -150,6 +168,7 @@ public class Company {
     public String getAccountHolder() { return accountHolder; }
     public BusinessStatus getBusinessStatus() { return businessStatus; }
     public long getVendorFee() { return vendorFee; }
+    public boolean isFaxEnabled() { return faxEnabled; }
     public List<CompanyRegion> getRegions() { return regions; }
     public List<CompanyCapability> getCapabilities() { return capabilities; }
 }

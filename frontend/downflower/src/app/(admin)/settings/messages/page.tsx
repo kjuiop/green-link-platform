@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { fetchSmsSettings, saveSmsSettings } from '@/lib/api/settingsApi'
 import type { SmsProvider } from '@/lib/api/companyApi'
 import { BarobillSenderCheck } from '@/components/sms/BarobillSenderCheck'
+import { BarobillFaxSettings } from '@/components/sms/BarobillFaxSettings'
 
 type EventType = '장례식' | '결혼식' | '기타'
 
@@ -181,6 +182,8 @@ export default function SettingsMessagesPage() {
           {provider === 'BAROBILL' && <BarobillSenderCheck disabled={loading} />}
         </CardContent>
       </Card>
+
+      {provider === 'BAROBILL' && <BarobillFaxSettings />}
 
       {/* 이벤트별 문자 템플릿 */}
       <Card>

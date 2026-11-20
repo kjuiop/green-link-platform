@@ -37,6 +37,7 @@ import com.greenlink.core.domain.sms.model.SmsStatus;
 import com.greenlink.core.domain.sms.port.SmsMessageRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.order.OrderErrorCode;
+import com.greenlink.core.application.fax.event.OrderFaxRequestedEvent;
 import com.greenlink.core.application.order.event.OrderCreatedEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -515,6 +516,10 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
 
         syncPoint(saved);
 
+        if (saved.getStatus() == OrderStatus.ACCEPTED) {
+            eventPublisher.publishEvent(new OrderFaxRequestedEvent(saved.getId()));
+        }
+
         if (!Objects.equals(previousVendorId, cmd.vendorId())) {
             String vendorPhone = resolveVendorPhone(saved.getVendorId());
             if (vendorPhone != null && !vendorPhone.isBlank()) {
@@ -631,6 +636,9 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         recordOrderHistoryUseCase.record(saved.getId(), OrderHistoryAction.STATUS_CHANGED,
                 "상태 변경: " + STATUS_LABEL.getOrDefault(saved.getStatus(), saved.getStatus().name()));
         syncPoint(saved);
+        if ("accept".equalsIgnoreCase(action)) {
+            eventPublisher.publishEvent(new OrderFaxRequestedEvent(saved.getId()));
+        }
         return toResult(saved);
     }
 

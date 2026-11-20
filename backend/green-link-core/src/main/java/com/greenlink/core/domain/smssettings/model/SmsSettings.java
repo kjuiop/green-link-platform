@@ -12,6 +12,13 @@ public class SmsSettings {
     private String apiKey;
     private String userId;
     private String corpNum;
+    private String faxSenderNumber;
+    private String faxUrl;
+    private String ftpHost;
+    private Integer ftpPort;
+    private String ftpUsername;
+    private String ftpPassword;
+    private String ftpDirectory;
 
     private SmsSettings() {}
 
@@ -59,6 +66,17 @@ public class SmsSettings {
         this.corpNum = corpNum;
     }
 
+    public void withFax(String faxSenderNumber, String faxUrl, String ftpHost, Integer ftpPort,
+                        String ftpUsername, String ftpPassword, String ftpDirectory) {
+        this.faxSenderNumber = faxSenderNumber;
+        this.faxUrl = faxUrl;
+        this.ftpHost = ftpHost;
+        this.ftpPort = ftpPort;
+        this.ftpUsername = ftpUsername;
+        this.ftpPassword = ftpPassword;
+        this.ftpDirectory = ftpDirectory;
+    }
+
     public String resolveTemplate(String eventType) {
         if ("장례식".equals(eventType)) return templateFuneral;
         if ("결혼식".equals(eventType)) return templateWedding;
@@ -75,4 +93,11 @@ public class SmsSettings {
     public String getApiKey() { return apiKey; }
     public String getUserId() { return userId; }
     public String getCorpNum() { return corpNum; }
+    public String getFaxSenderNumber() { return faxSenderNumber; }
+    public String getFaxUrl() { return faxUrl; }
+    public String getFtpHost() { return ftpHost; }
+    public Integer getFtpPort() { return ftpPort; }
+    public String getFtpUsername() { return ftpUsername; }
+    public String getFtpPassword() { return ftpPassword; }
+    public String getFtpDirectory() { return ftpDirectory; }
 }
