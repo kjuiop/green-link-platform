@@ -15,6 +15,7 @@ import {
   CompanyInfo,
 } from '@/lib/api/companyApi'
 import { BarobillSenderCheck } from '@/components/sms/BarobillSenderCheck'
+import { BarobillKakaoTools } from '@/components/sms/BarobillKakaoTools'
 
 const PROVIDERS: { value: SmsProvider; label: string }[] = [
   { value: 'MESSAGEME', label: '메세지미 (MessageMe)' },
@@ -131,6 +132,19 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
             <span className="text-sm">알림톡 발송 활성화</span>
           </label>
           {alimtalkEnabled && (
+            provider === 'BAROBILL' ? (
+              <BarobillKakaoTools
+                companyId={companyId}
+                senderKey={alimtalkSenderKey}
+                onSenderKeyChange={setAlimtalkSenderKey}
+                templateFuneral={alimtalkTemplateFuneral}
+                templateWedding={alimtalkTemplateWedding}
+                templateEtc={alimtalkTemplateEtc}
+                onTemplateFuneralChange={setAlimtalkTemplateFuneral}
+                onTemplateWeddingChange={setAlimtalkTemplateWedding}
+                onTemplateEtcChange={setAlimtalkTemplateEtc}
+              />
+            ) : (
             <div className="space-y-3">
               <p className="text-xs text-gray-400">
                 메시지미에 등록된 알림톡 전송키와 템플릿 코드를 입력하세요. 발송 실패 시 SMS로 자동 전환됩니다.
@@ -197,6 +211,7 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
                 />
               </div>
             </div>
+            )
           )}
         </div>
 

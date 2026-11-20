@@ -2,7 +2,11 @@ package com.greenlink.admin.adapter.out.sms;
 
 import com.greenlink.core.domain.sms.model.AlimtalkRequest;
 import com.greenlink.core.domain.sms.model.AlimtalkRequest.AlimtalkVariables;
+import com.greenlink.core.domain.sms.model.KakaoUrlType;
+import com.greenlink.core.domain.sms.model.SmsAccount;
 import com.greenlink.core.domain.sms.port.AlimtalkClient.AlimtalkSendResult;
+import com.greenlink.core.global.exception.BusinessException;
+import com.greenlink.core.global.exception.sms.SmsErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -12,6 +16,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
@@ -147,7 +152,92 @@ class BarobillAlimtalkClientTest {
         AlimtalkSendResult result = client.send(request());
 
         assertThat(result.success()).isFalse();
-        assertThat(result.resultCode()).isEqualTo("바로빌 응답 오류 (HTTP 500)");
+        assertThat(result.resultCode()).isEqualTo("바로빌 서버와 통신할 수 없습니다.");
+    }
+
+    @Test
+    void 템플릿_조회가_오류코드면_발송하지_않고_실패한다() {
+        server.expect(requestTo(URL)).andRespond(withSuccess(
+                "<R><GetKakaotalkTemplatesResult><KakaotalkTemplate><TemplateName>-60001</TemplateName>"
+                        + "</KakaotalkTemplate></GetKakaotalkTemplatesResult></R>", MediaType.TEXT_XML));
+
+        AlimtalkSendResult result = client.send(request());
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.resultCode()).isEqualTo("바로빌 오류 (-60001)");
+        server.verify();
+    }
+
+    private static SmsAccount account() {
+        return new SmsAccount("BAROBILL", "CERT-KEY", null, "baro_id", "123-45-67890");
+    }
+
+    @Test
+    void 채널_목록을_조회한다() {
+        server.expect(requestTo(URL))
+                .andExpect(header("SOAPAction", "\"http://ws.baroservice.com/GetKakaotalkChannels\""))
+                .andExpect(content().string(allOf(
+                        containsString("<CERTKEY>CERT-KEY</CERTKEY>"),
+                        containsString("<CorpNum>1234567890</CorpNum>"))))
+                .andRespond(withSuccess("<R><GetKakaotalkChannelsResult><KakaotalkChannel><ChannelId>@ch</ChannelId>"
+                        + "<ChannelName>온우림</ChannelName><Status>1</Status></KakaotalkChannel>"
+                        + "</GetKakaotalkChannelsResult></R>", MediaType.TEXT_XML));
+
+        var r = client.getChannels(account());
+
+        assertThat(r.errorCode()).isZero();
+        assertThat(r.items()).extracting("channelId").containsExactly("@ch");
+        server.verify();
+    }
+
+    @Test
+    void 템플릿_목록을_채널_기준으로_조회한다() {
+        expectTemplateLookup("내용", "https://x.com/#{사진링크}");
+
+        var r = client.getTemplates(account(), "@channel");
+
+        assertThat(r.items()).extracting("templateName").containsExactly("OTHER", "TPL_ETC");
+        server.verify();
+    }
+
+    @Test
+    void 관리_페이지_주소를_조회한다() {
+        server.expect(requestTo(URL))
+                .andExpect(header("SOAPAction", "\"http://ws.baroservice.com/GetKakaotalkTemplateManagementURL\""))
+                .andExpect(content().string(allOf(
+                        containsString("<CERTKEY>CERT-KEY</CERTKEY>"),
+                        containsString("<CorpNum>1234567890</CorpNum>"),
+                        containsString("<ID>baro_id</ID>"))))
+                .andRespond(withSuccess("<R><GetKakaotalkTemplateManagementURLResult>https://testwww.baroservice.com/x?t=1"
+                        + "</GetKakaotalkTemplateManagementURLResult></R>", MediaType.TEXT_XML));
+
+        var r = client.getManagementUrl(account(), KakaoUrlType.TEMPLATE);
+
+        assertThat(r.errorCode()).isZero();
+        assertThat(r.url()).isEqualTo("https://testwww.baroservice.com/x?t=1");
+        server.verify();
+    }
+
+    @Test
+    void 관리_페이지_주소_조회가_오류코드면_주소를_비운다() {
+        server.expect(requestTo(URL))
+                .andExpect(header("SOAPAction", "\"http://ws.baroservice.com/GetKakaotalkHistoryURL\""))
+                .andRespond(withSuccess("<R><GetKakaotalkHistoryURLResult>-10002</GetKakaotalkHistoryURLResult></R>",
+                        MediaType.TEXT_XML));
+
+        var r = client.getManagementUrl(account(), KakaoUrlType.HISTORY);
+
+        assertThat(r.errorCode()).isEqualTo(-10002);
+        assertThat(r.url()).isNull();
+    }
+
+    @Test
+    void 조회_중_통신_오류는_BAROBILL_UNAVAILABLE이다() {
+        server.expect(requestTo(URL)).andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+
+        assertThatThrownBy(() -> client.getChannels(account()))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(SmsErrorCode.BAROBILL_UNAVAILABLE));
     }
 
     @Test
