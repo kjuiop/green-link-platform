@@ -30,6 +30,9 @@ export interface SettlementOrder {
   orderAmount: number
   extraCost: number | null
   vendorAmount: number | null
+  orderingFeeDiscountType: 'NONE' | 'PERCENT' | 'FIXED' | null
+  orderingDiscountAmount: number | null
+  orderingSettlementAmount: number | null
 }
 
 /** 발주금액 = 주문금액 + 추가비용 */

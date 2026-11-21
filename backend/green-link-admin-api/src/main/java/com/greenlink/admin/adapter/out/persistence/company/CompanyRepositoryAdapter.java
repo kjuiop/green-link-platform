@@ -121,6 +121,32 @@ public class CompanyRepositoryAdapter implements CompanyRepository {
     }
 
     @Override
+    public Page<Company> searchOrderingCompanies(String keyword, Pageable pageable) {
+        BooleanBuilder where = new BooleanBuilder()
+            .and(companyJpaEntity.displayYn.isTrue())
+            .and(companyJpaEntity.type.in(CompanyType.ORDERING, CompanyType.BOTH));
+        if (keyword != null && !keyword.isBlank()) {
+            where.and(companyJpaEntity.companyName.containsIgnoreCase(keyword.trim()));
+        }
+        List<Company> content = queryFactory
+            .selectFrom(companyJpaEntity)
+            .where(where)
+            .orderBy(companyJpaEntity.companyName.asc(), companyJpaEntity.id.asc())
+            .offset(pageable.getOffset())
+            .limit(pageable.getPageSize())
+            .fetch()
+            .stream()
+            .map(CompanyJpaEntity::toDomain)
+            .toList();
+        Long total = queryFactory
+            .select(companyJpaEntity.count())
+            .from(companyJpaEntity)
+            .where(where)
+            .fetchOne();
+        return new org.springframework.data.domain.PageImpl<>(content, pageable, total != null ? total : 0L);
+    }
+
+    @Override
     @Transactional
     public void saveRegions(Long companyId, List<CompanyRegion> regions) {
         regionJpaRepository.deleteAllByCompanyId(companyId);

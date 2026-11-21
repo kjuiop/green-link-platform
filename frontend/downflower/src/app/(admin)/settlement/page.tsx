@@ -35,18 +35,34 @@ function formatDateTime(v: string | null) {
 }
 
 function OrderingTable({ orders }: { orders: SettlementOrder[] }) {
-  const total = orders.reduce((s, o) => s + totalAmountOf(o), 0)
+  const hasDiscount = orders.some((o) => o.orderingFeeDiscountType && o.orderingFeeDiscountType !== 'NONE')
+  const grossTotal = orders.reduce((s, o) => s + totalAmountOf(o), 0)
+  const discountTotal = hasDiscount ? orders.reduce((s, o) => s + (o.orderingDiscountAmount ?? 0), 0) : 0
+  const settlementTotal = hasDiscount ? orders.reduce((s, o) => s + (o.orderingSettlementAmount ?? totalAmountOf(o)), 0) : 0
+
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card>
           <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-gray-500">발주 건수</CardTitle></CardHeader>
           <CardContent className="pb-3"><p className="text-2xl font-bold">{orders.length}건</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-gray-500">발주금액 합계</CardTitle></CardHeader>
-          <CardContent className="pb-3"><p className="text-xl font-bold">{formatKRW(total)}</p></CardContent>
+          <CardContent className="pb-3"><p className="text-xl font-bold">{formatKRW(grossTotal)}</p></CardContent>
         </Card>
+        {hasDiscount && (
+          <Card>
+            <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-gray-500">수수료 감면 합계</CardTitle></CardHeader>
+            <CardContent className="pb-3"><p className="text-xl font-bold text-gray-500">-{formatKRW(discountTotal)}</p></CardContent>
+          </Card>
+        )}
+        {hasDiscount && (
+          <Card>
+            <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-blue-600">정산금액 합계</CardTitle></CardHeader>
+            <CardContent className="pb-3"><p className="text-xl font-bold text-blue-700">{formatKRW(settlementTotal)}</p></CardContent>
+          </Card>
+        )}
       </div>
       <div className="rounded-lg border bg-white">
         <Table>
@@ -59,12 +75,14 @@ function OrderingTable({ orders }: { orders: SettlementOrder[] }) {
               <TableHead>장소</TableHead>
               <TableHead>주문자</TableHead>
               <TableHead className="text-right">발주금액</TableHead>
+              {hasDiscount && <TableHead className="text-right">수수료 감면</TableHead>}
+              {hasDiscount && <TableHead className="text-right">정산금액</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {orders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center text-sm text-gray-400">해당 기간에 발주 내역이 없습니다.</TableCell>
+                <TableCell colSpan={hasDiscount ? 9 : 7} className="py-10 text-center text-sm text-gray-400">해당 기간에 발주 내역이 없습니다.</TableCell>
               </TableRow>
             ) : orders.map((o) => (
               <TableRow key={o.orderId}>
@@ -75,6 +93,8 @@ function OrderingTable({ orders }: { orders: SettlementOrder[] }) {
                 <TableCell className="text-sm">{o.placeName}</TableCell>
                 <TableCell className="text-sm">{o.ordererName}</TableCell>
                 <TableCell className="text-right text-sm font-medium">{formatKRW(totalAmountOf(o))}</TableCell>
+                {hasDiscount && <TableCell className="text-right text-sm text-gray-500">-{formatKRW(o.orderingDiscountAmount ?? 0)}</TableCell>}
+                {hasDiscount && <TableCell className="text-right text-sm font-medium text-blue-700">{formatKRW(o.orderingSettlementAmount ?? totalAmountOf(o))}</TableCell>}
               </TableRow>
             ))}
           </TableBody>
