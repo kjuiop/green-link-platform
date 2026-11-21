@@ -54,6 +54,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/sms/message-log': MessageSquare,
   '/sms/alimtalk-log': MessageSquare,
   '/customer-orders': ShoppingCart,
+  '/customer-orders/listing': ShoppingCart,
+  '/customer-orders/integration-settings': SlidersHorizontal,
   '/integration-settings': SlidersHorizontal,
   '/coupang': ShoppingCart,
   '/coupang/orders': ShoppingCart,
@@ -64,7 +66,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/shop/orders': Store,
 }
 
-const CUSTOMER_ORDERS_URL = '/customer-orders'
+const CUSTOMER_ORDERS_URL = '/customer-orders/listing'
 
 function isActive(pathname: string, url: string): boolean {
   if (url === '/orders') return (
