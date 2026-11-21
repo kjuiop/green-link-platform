@@ -101,7 +101,7 @@ export default function CoupangSettingsPage() {
   const expiring = credential && !credential.expired && credential.daysUntilExpire !== null && credential.daysUntilExpire <= 14
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 p-4 md:p-6">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-lg font-bold">쿠팡 연동 설정</h1>
         <CompanySelect scope={scope} />
@@ -123,7 +123,7 @@ export default function CoupangSettingsPage() {
         </div>
       )}
 
-      <Card>
+      <Card className="max-w-2xl">
         <CardContent className="space-y-4 pt-6">
           {loading ? (
             <p className="text-sm text-gray-400">불러오는 중…</p>
