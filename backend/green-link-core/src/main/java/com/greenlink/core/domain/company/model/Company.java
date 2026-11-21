@@ -25,6 +25,8 @@ public class Company {
     private String accountHolder;
     private BusinessStatus businessStatus = BusinessStatus.OPEN;
     private long vendorFee = DEFAULT_VENDOR_FEE;
+    private OrderingFeeDiscountType orderingFeeDiscountType = OrderingFeeDiscountType.NONE;
+    private long orderingFeeDiscountValue = 0L;
     private boolean faxEnabled;
     private String taxInvoiceEmail;
     private List<CompanyRegion> regions = List.of();
@@ -134,6 +136,27 @@ public class Company {
         this.vendorFee = fee;
     }
 
+    public void changeOrderingFeeDiscount(OrderingFeeDiscountType type, long value) {
+        if (value < 0) throw new IllegalArgumentException("감면 값은 0 이상이어야 합니다.");
+        if (type == OrderingFeeDiscountType.PERCENT && value > 100)
+            throw new IllegalArgumentException("퍼센트는 100 이하여야 합니다.");
+        this.orderingFeeDiscountType = type != null ? type : OrderingFeeDiscountType.NONE;
+        this.orderingFeeDiscountValue = value;
+    }
+
+    public void restoreOrderingFeeDiscount(OrderingFeeDiscountType type, long value) {
+        this.orderingFeeDiscountType = type != null ? type : OrderingFeeDiscountType.NONE;
+        this.orderingFeeDiscountValue = value;
+    }
+
+    public long calcOrderingDiscount(long totalAmount) {
+        return switch (orderingFeeDiscountType) {
+            case NONE -> 0L;
+            case FIXED -> Math.min(orderingFeeDiscountValue, totalAmount);
+            case PERCENT -> Math.round(totalAmount * orderingFeeDiscountValue / 100.0);
+        };
+    }
+
     public void restoreFaxEnabled(boolean faxEnabled) {
         this.faxEnabled = faxEnabled;
     }
@@ -177,6 +200,8 @@ public class Company {
     public String getAccountHolder() { return accountHolder; }
     public BusinessStatus getBusinessStatus() { return businessStatus; }
     public long getVendorFee() { return vendorFee; }
+    public OrderingFeeDiscountType getOrderingFeeDiscountType() { return orderingFeeDiscountType; }
+    public long getOrderingFeeDiscountValue() { return orderingFeeDiscountValue; }
     public boolean isFaxEnabled() { return faxEnabled; }
     public String getTaxInvoiceEmail() { return taxInvoiceEmail; }
     public List<CompanyRegion> getRegions() { return regions; }

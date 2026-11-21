@@ -1,5 +1,8 @@
 package com.greenlink.core.application.settlement.dto;
 
+import com.greenlink.core.domain.company.model.Company;
+import com.greenlink.core.domain.settlement.port.SettlementQueryPort;
+
 public record SettlementOrderResult(
         Long orderId,
         String orderNumber,
@@ -10,10 +13,31 @@ public record SettlementOrderResult(
         String deliveredAt,
         long orderAmount,
         Long vendorAmount,
-        Long extraCost
+        Long extraCost,
+        String orderingFeeDiscountType,
+        long orderingDiscountAmount,
+        long orderingSettlementAmount
 ) {
-    /** 발주금액 = 주문금액 + 추가비용 */
     public long totalAmount() {
         return orderAmount + (extraCost != null ? extraCost : 0L);
+    }
+
+    public static SettlementOrderResult forVendor(SettlementQueryPort.OrderSettlementRaw r, String counterpartName) {
+        long total = r.orderAmount() + (r.extraCost() != null ? r.extraCost() : 0L);
+        return new SettlementOrderResult(
+                r.orderId(), r.orderNumber(), counterpartName,
+                r.productName(), r.placeName(), r.ordererName(), r.completedAt(),
+                r.orderAmount(), r.vendorAmount(), r.extraCost(),
+                "NONE", 0L, total);
+    }
+
+    public static SettlementOrderResult forOrdering(SettlementQueryPort.OrderSettlementRaw r, String counterpartName, Company orderingCompany) {
+        long total = r.orderAmount() + (r.extraCost() != null ? r.extraCost() : 0L);
+        long discount = orderingCompany.calcOrderingDiscount(total);
+        return new SettlementOrderResult(
+                r.orderId(), r.orderNumber(), counterpartName,
+                r.productName(), r.placeName(), r.ordererName(), r.completedAt(),
+                r.orderAmount(), r.vendorAmount(), r.extraCost(),
+                orderingCompany.getOrderingFeeDiscountType().name(), discount, total - discount);
     }
 }

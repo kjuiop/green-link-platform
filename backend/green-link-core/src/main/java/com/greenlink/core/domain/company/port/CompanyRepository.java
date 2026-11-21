@@ -23,6 +23,7 @@ public interface CompanyRepository {
     Optional<Company> findByCompanyName(String companyName);
     Page<Company> findAllDisplayed(Pageable pageable);
     Page<Company> searchVendorCompanies(String keyword, Pageable pageable);
+    Page<Company> searchOrderingCompanies(String keyword, Pageable pageable);
 
     void saveRegions(Long companyId, List<CompanyRegion> regions);
     void saveCapabilities(Long companyId, List<CompanyCapability> capabilities);
