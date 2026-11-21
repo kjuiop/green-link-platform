@@ -16,7 +16,8 @@ public record SettlementOrderResult(
         Long extraCost,
         String orderingFeeDiscountType,
         long orderingDiscountAmount,
-        long orderingSettlementAmount
+        long orderingSettlementAmount,
+        Long vendorFee
 ) {
     public long totalAmount() {
         return orderAmount + (extraCost != null ? extraCost : 0L);
@@ -28,16 +29,17 @@ public record SettlementOrderResult(
                 r.orderId(), r.orderNumber(), counterpartName,
                 r.productName(), r.placeName(), r.ordererName(), r.completedAt(),
                 r.orderAmount(), r.vendorAmount(), r.extraCost(),
-                "NONE", 0L, total);
+                "NONE", 0L, total, r.vendorFee());
     }
 
     public static SettlementOrderResult forOrdering(SettlementQueryPort.OrderSettlementRaw r, String counterpartName, Company orderingCompany) {
         long total = r.orderAmount() + (r.extraCost() != null ? r.extraCost() : 0L);
-        long discount = orderingCompany.calcOrderingDiscount(total);
+        long vendorFee = r.vendorFee() != null ? r.vendorFee() : 0L;
+        long discount = orderingCompany.calcOrderingDiscount(vendorFee);
         return new SettlementOrderResult(
                 r.orderId(), r.orderNumber(), counterpartName,
                 r.productName(), r.placeName(), r.ordererName(), r.completedAt(),
                 r.orderAmount(), r.vendorAmount(), r.extraCost(),
-                orderingCompany.getOrderingFeeDiscountType().name(), discount, total - discount);
+                orderingCompany.getOrderingFeeDiscountType().name(), discount, total - discount, null);
     }
 }

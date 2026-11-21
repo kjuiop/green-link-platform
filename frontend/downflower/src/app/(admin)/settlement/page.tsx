@@ -134,8 +134,12 @@ function OrderingTable({ orders }: { orders: SettlementOrder[] }) {
 }
 
 function VendorTable({ orders }: { orders: SettlementOrder[] }) {
-  const total = orders.reduce((s, o) => s + (o.vendorAmount ?? 0), 0)
-  const feeTotal = orders.reduce((s, o) => s + (totalAmountOf(o) - (o.vendorAmount ?? 0)), 0)
+  const feeTotal = orders.reduce((s, o) => s + (o.vendorFee ?? 0), 0)
+  const total = orders.reduce((s, o) => {
+    const gross = totalAmountOf(o)
+    const fee = o.vendorFee ?? 0
+    return s + (o.vendorAmount ?? (gross - fee))
+  }, 0)
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -174,7 +178,8 @@ function VendorTable({ orders }: { orders: SettlementOrder[] }) {
               </TableRow>
             ) : orders.map((o) => {
               const gross = totalAmountOf(o)
-              const fee = gross - (o.vendorAmount ?? 0)
+              const fee = o.vendorFee ?? 0
+              const settlement = o.vendorAmount ?? (gross - fee)
               return (
                 <TableRow key={o.orderId}>
                   <TableCell className="text-sm">{formatDateTime(o.deliveredAt)}</TableCell>
@@ -185,7 +190,7 @@ function VendorTable({ orders }: { orders: SettlementOrder[] }) {
                   <TableCell className="text-sm">{o.ordererName}</TableCell>
                   <TableCell className="text-right text-sm">{formatKRW(gross)}</TableCell>
                   <TableCell className="text-right text-sm text-gray-500">-{formatKRW(fee)}</TableCell>
-                  <TableCell className="text-right text-sm font-medium text-blue-700">{formatKRW(o.vendorAmount ?? 0)}</TableCell>
+                  <TableCell className="text-right text-sm font-medium text-blue-700">{formatKRW(settlement)}</TableCell>
                 </TableRow>
               )
             })}
