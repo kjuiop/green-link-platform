@@ -191,13 +191,13 @@ function CustomerOrdersContent() {
       {showCoupangTools && credential?.expired && (
         <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           쿠팡 Open API 키가 만료되어 자동 수집이 중단되었습니다.{' '}
-          <Link href="/integration-settings?market=coupang" className="underline">재등록하기</Link>
+          <Link href="/customer-orders/integration-settings?market=coupang" className="underline">재등록하기</Link>
         </div>
       )}
       {showCoupangTools && expiring && credential && (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
           쿠팡 Open API 키가 {credential.daysUntilExpire}일 후 만료됩니다.{' '}
-          <Link href="/integration-settings?market=coupang" className="underline">설정 확인</Link>
+          <Link href="/customer-orders/integration-settings?market=coupang" className="underline">설정 확인</Link>
         </div>
       )}
       {showCoupangTools && credential?.lastError && (

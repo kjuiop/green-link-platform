@@ -212,7 +212,7 @@ export function ShopSettingsPanel({ scope }: ShopSettingsPanelProps) {
             </div>
             <p className="text-xs text-gray-400">
               공개하려면 노출 중인 상품이 1개 이상 있어야 합니다.{' '}
-              <Link href="/customer-orders?channel=SHOP&sub=products" className="underline">상품 관리</Link>
+              <Link href="/customer-orders/listing?channel=SHOP&sub=products" className="underline">상품 관리</Link>
             </p>
           </CardContent>
         </Card>
