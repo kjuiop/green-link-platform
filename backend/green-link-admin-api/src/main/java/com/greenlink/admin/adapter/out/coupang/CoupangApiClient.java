@@ -52,6 +52,11 @@ public class CoupangApiClient implements CoupangApiPort {
         this.baseUrl = baseUrl;
     }
 
+    // 쿠팡은 시간대가 없으면 400을 반환하며, '+'는 공백으로 해석되므로 %2B로 인코딩해야 한다.
+    static String queryTime(LocalDateTime time) {
+        return time.format(QUERY_TIME) + "%2B09:00";
+    }
+
     @Override
     public List<CoupangOrderSheet> fetchNewOrderSheets(CoupangCredentialSecret secret,
                                                        LocalDateTime from, LocalDateTime to) {
@@ -59,8 +64,8 @@ public class CoupangApiClient implements CoupangApiPort {
         List<CoupangOrderSheet> result = new ArrayList<>();
         String nextToken = null;
         for (int page = 0; page < MAX_PAGES; page++) {
-            String query = "createdAtFrom=" + from.format(QUERY_TIME)
-                    + "&createdAtTo=" + to.format(QUERY_TIME)
+            String query = "createdAtFrom=" + queryTime(from)
+                    + "&createdAtTo=" + queryTime(to)
                     + "&searchType=timeFrame&status=ACCEPT&maxPerPage=" + PAGE_SIZE
                     + (nextToken == null || nextToken.isBlank() ? "" : "&nextToken=" + URLEncoder.encode(nextToken, StandardCharsets.UTF_8));
             JsonNode body = get(secret, path, query);
