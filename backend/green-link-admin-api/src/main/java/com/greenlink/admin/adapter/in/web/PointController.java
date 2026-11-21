@@ -80,23 +80,36 @@ public class PointController {
     }
 
     @GetMapping("/api/points/my")
-    public ResponseEntity<CompanyPointResult> getMyPoint(Authentication auth) {
-        if (!(auth.getDetails() instanceof Long companyId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        return ResponseEntity.ok(getMyPointUseCase.getMyPoint(companyId));
+    public ResponseEntity<CompanyPointResult> getMyPoint(
+            @RequestParam(required = false) Long companyId,
+            Authentication auth) {
+        return ResponseEntity.ok(getMyPointUseCase.getMyPoint(resolveCompanyId(auth, companyId)));
     }
 
     @GetMapping("/api/points/my/transactions")
     public ResponseEntity<PageResult<PointTransactionResult>> getMyTransactions(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) Long companyId,
             Authentication auth) {
-        if (!(auth.getDetails() instanceof Long companyId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
         return ResponseEntity.ok(getPointTransactionsUseCase.getTransactions(
-                companyId, pageRequest(page, size)));
+                resolveCompanyId(auth, companyId), pageRequest(page, size)));
+    }
+
+    private Long resolveCompanyId(Authentication auth, Long paramCompanyId) {
+        boolean isSuperAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+        if (isSuperAdmin) {
+            if (paramCompanyId == null) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.BAD_REQUEST, "companyId는 필수입니다.");
+            }
+            return paramCompanyId;
+        }
+        if (auth.getDetails() instanceof Long cid) {
+            return cid;
+        }
+        throw new org.springframework.security.access.AccessDeniedException("회사 정보가 없습니다.");
     }
 
     private static PageRequest pageRequest(int page, int size) {

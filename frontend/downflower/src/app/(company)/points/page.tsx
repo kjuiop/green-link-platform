@@ -10,10 +10,15 @@ import {
   CompanyPoint,
   PointTransaction,
 } from '@/lib/api/pointApi'
+import { usePointScope } from '@/components/point/usePointScope'
+import { PointCompanySelect } from '@/components/point/PointCompanySelect'
 
 const PAGE_SIZE = 20
 
 export default function MyPointPage() {
+  const scope = usePointScope()
+  const companyId = scope.selectedId
+
   const [point, setPoint] = useState<CompanyPoint | null>(null)
   const [transactions, setTransactions] = useState<PointTransaction[]>([])
   const [page, setPage] = useState(0)
@@ -22,10 +27,11 @@ export default function MyPointPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const load = useCallback(() => {
+  const load = useCallback((targetPage: number) => {
+    if (scope.isSuperAdmin && !companyId) return
     setLoading(true)
     setError('')
-    Promise.all([fetchMyPoint(), fetchMyPointTransactions(page, PAGE_SIZE)])
+    Promise.all([fetchMyPoint(companyId), fetchMyPointTransactions(targetPage, PAGE_SIZE, companyId)])
       .then(([p, tx]) => {
         setPoint(p)
         setTransactions(tx.content)
@@ -34,13 +40,33 @@ export default function MyPointPage() {
       })
       .catch((e) => setError(e instanceof Error ? e.message : '포인트 정보를 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
-  }, [page])
+  }, [scope.isSuperAdmin, companyId])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    if (!scope.ready) return
+    setPoint(null)
+    setTransactions([])
+    setPage(0)
+    load(0)
+  }, [scope.ready, load])
+
+  const changePage = (p: number) => {
+    setPage(p)
+    load(p)
+  }
+
+  if (!scope.ready) return null
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">포인트관리</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">포인트관리</h1>
+        <PointCompanySelect scope={scope} />
+      </div>
+
+      {scope.isSuperAdmin && !companyId && (
+        <p className="rounded-md bg-yellow-50 px-3 py-2 text-sm text-yellow-700">회사를 선택해주세요.</p>
+      )}
 
       <div className="grid max-w-xl gap-3 sm:grid-cols-2">
         <Card>
@@ -72,7 +98,7 @@ export default function MyPointPage() {
         totalPages={totalPages}
         totalElements={totalElements}
         size={PAGE_SIZE}
-        onPageChange={setPage}
+        onPageChange={changePage}
       />
     </div>
   )

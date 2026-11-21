@@ -57,14 +57,16 @@ export async function fetchAdminPointTransactions(
   return res.json()
 }
 
-export async function fetchMyPoint(): Promise<CompanyPoint> {
-  const res = await fetchWithAuth('/api/points/my', { headers: authHeaders() })
+export async function fetchMyPoint(companyId?: number | null): Promise<CompanyPoint> {
+  const qs = companyId ? `?companyId=${companyId}` : ''
+  const res = await fetchWithAuth(`/api/points/my${qs}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('포인트 조회에 실패했습니다.')
   return res.json()
 }
 
-export async function fetchMyPointTransactions(page = 0, size = 20): Promise<PageResult<PointTransaction>> {
+export async function fetchMyPointTransactions(page = 0, size = 20, companyId?: number | null): Promise<PageResult<PointTransaction>> {
   const params = new URLSearchParams({ page: String(page), size: String(size) })
+  if (companyId) params.set('companyId', String(companyId))
   const res = await fetchWithAuth(`/api/points/my/transactions?${params}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('포인트 이력 조회에 실패했습니다.')
   return res.json()
