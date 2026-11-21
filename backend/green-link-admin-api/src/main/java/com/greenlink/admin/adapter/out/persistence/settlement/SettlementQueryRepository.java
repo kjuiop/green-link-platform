@@ -22,7 +22,7 @@ public class SettlementQueryRepository implements SettlementQueryPort {
     @Override
     public List<CompanySettlementRaw> sumByVendorCompany(String fromDate, String toDate) {
         QOrderJpaEntity o = QOrderJpaEntity.orderJpaEntity;
-        NumberExpression<Long> orderTotal = vendorNetTotal(o);
+        NumberExpression<Long> orderTotal = orderTotal(o);
         return queryFactory
                 .select(o.vendorCompanyId,
                         o.count(),
@@ -86,7 +86,7 @@ public class SettlementQueryRepository implements SettlementQueryPort {
                 .orderBy(o.completedAt.asc())
                 .fetch()
                 .stream()
-                .map(e -> { Order o2 = e.toDomain(); return toRaw(o2, o2.getOrderingCompanyId(), o2.getAmount() - nvl(o2.getVendorFee())); })
+                .map(e -> { Order o2 = e.toDomain(); return toRaw(o2, o2.getOrderingCompanyId(), o2.getAmount()); })
                 .toList();
     }
 
@@ -112,18 +112,13 @@ public class SettlementQueryRepository implements SettlementQueryPort {
                 o.getId(), o.getOrderNumber(), counterpartCompanyId,
                 o.getProductName(), o.getPlaceName(), o.getOrdererName(),
                 o.getCompletedAt(), orderAmount, o.getVendorAmount(),
-                o.getExtraCost()
+                o.getExtraCost(), o.getVendorFee()
         );
     }
 
-    /** 발주금액 = 주문금액 + 추가비용 */
+    /** 발주금액 = 수주금액 = 주문금액 + 추가비용 */
     private static NumberExpression<Long> orderTotal(QOrderJpaEntity o) {
         return o.amount.add(o.extraCost.coalesce(0L));
-    }
-
-    /** 수주사 몫 = 상품금액 − 수수료 + 추가비용 */
-    private static NumberExpression<Long> vendorNetTotal(QOrderJpaEntity o) {
-        return o.amount.subtract(o.vendorFee.coalesce(0L)).add(o.extraCost.coalesce(0L));
     }
 
     private static long nvl(Long v) { return v != null ? v : 0L; }

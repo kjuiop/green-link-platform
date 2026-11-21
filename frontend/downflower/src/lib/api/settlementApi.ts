@@ -30,6 +30,7 @@ export interface SettlementOrder {
   orderAmount: number
   extraCost: number | null
   vendorAmount: number | null
+  vendorFee: number | null
   orderingFeeDiscountType: 'NONE' | 'PERCENT' | 'FIXED' | null
   orderingDiscountAmount: number | null
   orderingSettlementAmount: number | null
