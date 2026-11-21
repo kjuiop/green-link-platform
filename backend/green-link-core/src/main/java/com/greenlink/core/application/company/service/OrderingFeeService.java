@@ -8,7 +8,8 @@ import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.model.OrderingFeeDiscountType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.global.exception.BusinessException;
-import com.greenlink.core.global.exception.vendor.VendorErrorCode;
+import com.greenlink.core.global.exception.company.CompanyErrorCode;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +34,7 @@ public class OrderingFeeService implements ManageOrderingFeeUseCase {
     public OrderingFeeResult updateOrderingFee(Long companyId, OrderingFeeDiscountType discountType, long discountValue) {
         Company company = companyRepository.findById(companyId)
                 .filter(c -> c.getType() == CompanyType.ORDERING || c.getType() == CompanyType.BOTH)
-                .orElseThrow(() -> new BusinessException(VendorErrorCode.VENDOR_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(CompanyErrorCode.ORDERING_COMPANY_NOT_FOUND));
         company.changeOrderingFeeDiscount(discountType, discountValue);
         return OrderingFeeResult.from(companyRepository.save(company));
     }

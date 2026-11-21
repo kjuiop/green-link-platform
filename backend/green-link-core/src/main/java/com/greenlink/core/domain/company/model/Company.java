@@ -152,7 +152,7 @@ public class Company {
     public long calcOrderingDiscount(long totalAmount) {
         return switch (orderingFeeDiscountType) {
             case NONE -> 0L;
-            case FIXED -> orderingFeeDiscountValue;
+            case FIXED -> Math.min(orderingFeeDiscountValue, totalAmount);
             case PERCENT -> Math.round(totalAmount * orderingFeeDiscountValue / 100.0);
         };
     }
