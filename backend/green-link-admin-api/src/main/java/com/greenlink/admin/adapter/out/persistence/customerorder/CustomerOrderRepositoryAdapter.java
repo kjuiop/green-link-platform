@@ -9,6 +9,7 @@ import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.coupang.CoupangErrorCode;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -28,6 +29,7 @@ public class CustomerOrderRepositoryAdapter implements CustomerOrderRepository {
     }
 
     @Override
+    @Transactional
     public boolean insertIfAbsent(CustomerOrder order) {
         CustomerOrder.CoupangMeta meta = order.getCoupangMeta();
         if (meta != null && detailJpaRepository.existsByCoupangOrderIdAndCoupangShipmentBoxId(
