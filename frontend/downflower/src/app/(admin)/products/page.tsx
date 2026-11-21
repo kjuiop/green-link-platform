@@ -19,6 +19,8 @@ import {
   changeVendorProductSetting,
   deleteVendorProduct,
 } from '@/lib/api/productApi'
+import { useVendorProductScope } from '@/components/product/useVendorProductScope'
+import { ProductCompanySelect } from '@/components/product/ProductCompanySelect'
 
 const PAGE_SIZE = 20
 
@@ -34,6 +36,9 @@ function isBase(product: VendorProduct) {
 }
 
 export default function VendorProductsPage() {
+  const scope = useVendorProductScope()
+  const companyId = scope.selectedId
+
   const [result, setResult] = useState<PageResult<VendorProduct> | null>(null)
   const [page, setPage] = useState(0)
   const [keywordInput, setKeywordInput] = useState('')
@@ -55,33 +60,40 @@ export default function VendorProductsPage() {
   const [deleting, setDeleting] = useState(false)
 
   const fetchPage = useCallback((p: number, k: string) => {
-    fetchVendorProducts(k, p, PAGE_SIZE)
+    if (scope.isSuperAdmin && !companyId) {
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    setPageError('')
+    fetchVendorProducts(k, p, PAGE_SIZE, companyId)
       .then(setResult)
       .catch((e: Error) => setPageError(e.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [scope.isSuperAdmin, companyId])
 
   useEffect(() => {
-    fetchPage(page, keyword)
-  }, [page, keyword, fetchPage])
+    if (!scope.ready) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(0)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setKeyword('')
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setKeywordInput('')
+    fetchPage(0, '')
+  }, [scope.ready, fetchPage])
 
-  const refresh = () => {
-    setLoading(true)
-    setPageError('')
-    fetchPage(page, keyword)
-  }
+  const refresh = () => fetchPage(page, keyword)
 
   const changePage = (p: number) => {
-    setLoading(true)
-    setPageError('')
     setPage(p)
+    fetchPage(p, keyword)
   }
 
   const handleSearch = () => {
-    setLoading(true)
-    setPageError('')
     setPage(0)
     setKeyword(keywordInput)
+    fetchPage(0, keywordInput)
   }
 
   const openRegister = () => {
@@ -127,11 +139,11 @@ export default function VendorProductsPage() {
     }
     try {
       if (editTarget) {
-        await updateVendorProduct(editTarget.id, req)
+        await updateVendorProduct(editTarget.id, req, companyId)
         setOwnModalOpen(false)
         refresh()
       } else {
-        await createVendorProduct(req)
+        await createVendorProduct(req, companyId)
         setOwnModalOpen(false)
         if (page !== 0) changePage(0)
         else refresh()
@@ -151,7 +163,7 @@ export default function VendorProductsPage() {
     setModalSaving(true)
     setModalError('')
     try {
-      await changeVendorProductSetting(priceTarget.id, rawPrice, priceTarget.enabled)
+      await changeVendorProductSetting(priceTarget.id, rawPrice, priceTarget.enabled, companyId)
       setPriceTarget(null)
       refresh()
     } catch (e: unknown) {
@@ -164,7 +176,7 @@ export default function VendorProductsPage() {
   const handleToggle = async (product: VendorProduct) => {
     setPageError('')
     try {
-      await changeVendorProductSetting(product.id, product.price, !product.enabled)
+      await changeVendorProductSetting(product.id, product.price, !product.enabled, companyId)
       refresh()
     } catch (e: unknown) {
       setPageError(e instanceof Error ? e.message : '사용 여부 변경에 실패했습니다.')
@@ -175,7 +187,7 @@ export default function VendorProductsPage() {
     if (!deleteTarget) return
     setDeleting(true)
     try {
-      await deleteVendorProduct(deleteTarget.id)
+      await deleteVendorProduct(deleteTarget.id, companyId)
       setDeleteTarget(null)
       refresh()
     } catch (e: unknown) {
@@ -208,6 +220,8 @@ export default function VendorProductsPage() {
       </>
     )
 
+  if (!scope.ready) return null
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -215,10 +229,17 @@ export default function VendorProductsPage() {
           <h1 className="text-xl font-bold">상품 관리</h1>
           <p className="mt-1 text-xs text-gray-500">기본상품은 가격과 사용 여부만 변경할 수 있고, 직접 등록한 상품은 자유롭게 관리할 수 있습니다.</p>
         </div>
-        <Button className="bg-green-700 hover:bg-green-800" onClick={openRegister}>
-          상품 등록
-        </Button>
+        <div className="flex items-center gap-3">
+          <ProductCompanySelect scope={scope} />
+          <Button className="bg-green-700 hover:bg-green-800" onClick={openRegister} disabled={scope.isSuperAdmin && !companyId}>
+            상품 등록
+          </Button>
+        </div>
       </div>
+
+      {scope.isSuperAdmin && !companyId && (
+        <p className="rounded-md bg-yellow-50 px-3 py-2 text-sm text-yellow-700">수주사를 선택해주세요.</p>
+      )}
 
       <div className="flex gap-2">
         <Input

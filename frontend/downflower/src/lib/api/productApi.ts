@@ -115,29 +115,33 @@ export async function deleteBaseProduct(id: string): Promise<void> {
 
 // ── 수주사 상품 ──────────────────────────────────────────────────────────
 
-export async function fetchVendorProducts(keyword: string, page = 0, size = 20): Promise<PageResult<VendorProduct>> {
+export async function fetchVendorProducts(keyword: string, page = 0, size = 20, companyId?: number | null): Promise<PageResult<VendorProduct>> {
   const qs = new URLSearchParams({ page: String(page), size: String(size) })
   if (keyword.trim()) qs.set('keyword', keyword.trim())
+  if (companyId) qs.set('companyId', String(companyId))
   const res = await fetchWithAuth(`/api/vendor/products?${qs}`, { headers: authHeaders() })
   if (!res.ok) throw new Error(await errorMessage(res, '상품 목록을 불러오지 못했습니다.'))
   const data: PageResult<BackendVendorProduct> = await res.json()
   return { ...data, content: data.content.map(toVendorProduct) }
 }
 
-export async function createVendorProduct(req: ProductRequest): Promise<VendorProduct> {
-  const res = await fetchWithAuth('/api/vendor/products', { method: 'POST', headers: authHeaders(), body: body(req) })
+export async function createVendorProduct(req: ProductRequest, companyId?: number | null): Promise<VendorProduct> {
+  const qs = companyId ? `?companyId=${companyId}` : ''
+  const res = await fetchWithAuth(`/api/vendor/products${qs}`, { method: 'POST', headers: authHeaders(), body: body(req) })
   if (!res.ok) throw new Error(await errorMessage(res, '상품 등록에 실패했습니다.'))
   return toVendorProduct(await res.json())
 }
 
-export async function updateVendorProduct(id: string, req: ProductRequest): Promise<VendorProduct> {
-  const res = await fetchWithAuth(`/api/vendor/products/${id}`, { method: 'PUT', headers: authHeaders(), body: body(req) })
+export async function updateVendorProduct(id: string, req: ProductRequest, companyId?: number | null): Promise<VendorProduct> {
+  const qs = companyId ? `?companyId=${companyId}` : ''
+  const res = await fetchWithAuth(`/api/vendor/products/${id}${qs}`, { method: 'PUT', headers: authHeaders(), body: body(req) })
   if (!res.ok) throw new Error(await errorMessage(res, '상품 수정에 실패했습니다.'))
   return toVendorProduct(await res.json())
 }
 
-export async function changeVendorProductSetting(id: string, price: number, enabled: boolean): Promise<VendorProduct> {
-  const res = await fetchWithAuth(`/api/vendor/products/${id}/setting`, {
+export async function changeVendorProductSetting(id: string, price: number, enabled: boolean, companyId?: number | null): Promise<VendorProduct> {
+  const qs = companyId ? `?companyId=${companyId}` : ''
+  const res = await fetchWithAuth(`/api/vendor/products/${id}/setting${qs}`, {
     method: 'PATCH',
     headers: authHeaders(),
     body: JSON.stringify({ price, enabled }),
@@ -146,7 +150,8 @@ export async function changeVendorProductSetting(id: string, price: number, enab
   return toVendorProduct(await res.json())
 }
 
-export async function deleteVendorProduct(id: string): Promise<void> {
-  const res = await fetchWithAuth(`/api/vendor/products/${id}`, { method: 'DELETE', headers: authHeaders() })
+export async function deleteVendorProduct(id: string, companyId?: number | null): Promise<void> {
+  const qs = companyId ? `?companyId=${companyId}` : ''
+  const res = await fetchWithAuth(`/api/vendor/products/${id}${qs}`, { method: 'DELETE', headers: authHeaders() })
   if (!res.ok) throw new Error(await errorMessage(res, '상품 삭제에 실패했습니다.'))
 }
