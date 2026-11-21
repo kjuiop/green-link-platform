@@ -21,6 +21,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,7 +49,7 @@ class CoupangOrderCollectServiceTest {
     @BeforeEach
     void setUp() {
         service = new CoupangOrderCollectService(credentialRepository, orderRepository, syncLogRepository,
-                apiPort, secretResolver, 10, 24);
+                apiPort, secretResolver, 10, 12);
     }
 
     private CoupangCredential credential(LocalDate issuedAt) {
@@ -64,7 +66,7 @@ class CoupangOrderCollectServiceTest {
         CoupangCredential credential = credential(LocalDate.now());
         given(credentialRepository.findByCompanyId(5L)).willReturn(Optional.of(credential));
         given(secretResolver.resolve(credential)).willReturn(new CoupangCredentialSecret("A001", "ak", "sk"));
-        given(apiPort.fetchNewOrderSheets(any(), any(), any())).willReturn(List.of(sheet(1), sheet(2)));
+        given(apiPort.fetchNewOrderSheets(any(), any(), any())).willReturn(List.of(sheet(1), sheet(2)), List.of());
         given(orderRepository.insertIfAbsent(any(CoupangOrder.class))).willReturn(true, false);
 
         CoupangSyncResult result = service.collect(5L, CoupangTriggerType.MANUAL);
@@ -76,6 +78,27 @@ class CoupangOrderCollectServiceTest {
         ArgumentCaptor<CoupangSyncLog> log = ArgumentCaptor.forClass(CoupangSyncLog.class);
         verify(syncLogRepository).save(log.capture());
         assertThat(log.getValue().isSuccess()).isTrue();
+    }
+
+    @Test
+    void 첫_수집은_24시간_미만의_연속된_조각으로_나눠_호출한다() {
+        CoupangCredential credential = credential(LocalDate.now());
+        given(credentialRepository.findByCompanyId(5L)).willReturn(Optional.of(credential));
+        given(secretResolver.resolve(credential)).willReturn(new CoupangCredentialSecret("A001", "ak", "sk"));
+        given(apiPort.fetchNewOrderSheets(any(), any(), any())).willReturn(List.of());
+
+        CoupangSyncResult result = service.collect(5L, CoupangTriggerType.MANUAL);
+
+        ArgumentCaptor<LocalDateTime> from = ArgumentCaptor.forClass(LocalDateTime.class);
+        ArgumentCaptor<LocalDateTime> to = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(apiPort, times(2)).fetchNewOrderSheets(any(), from.capture(), to.capture());
+        assertThat(from.getAllValues().get(0)).isEqualTo(result.from());
+        assertThat(to.getAllValues().get(0)).isEqualTo(from.getAllValues().get(1));
+        assertThat(to.getAllValues().get(1)).isEqualTo(result.to());
+        for (int i = 0; i < 2; i++) {
+            assertThat(Duration.between(from.getAllValues().get(i), to.getAllValues().get(i)))
+                    .isLessThan(Duration.ofDays(1));
+        }
     }
 
     @Test
