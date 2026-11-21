@@ -15,6 +15,7 @@ import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { OrderDetailPopup } from '@/components/common/OrderDetailPopup'
 import { highlightGrade } from '@/lib/utils/productName'
+import { fmtMinute } from '@/lib/utils/formatDateTime'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
 type DeletedFilter = '정상' | '삭제' | '전체'
@@ -531,7 +532,7 @@ export default function ReceivedOrdersPage() {
               <TableHead>수주금액</TableHead>
               <TableHead>
                 <div>배송현황</div>
-                <div className="text-[10px] font-normal text-gray-400">주문승인시간</div>
+                <div className="text-[10px] font-normal text-gray-400">승인 / 완료시간</div>
               </TableHead>
               <TableHead>
                 {canSeeMsgTime ? (
@@ -643,8 +644,15 @@ export default function ReceivedOrdersPage() {
                         </span>
                       )}
                     </div>
-                    {order.acceptedAt && (
-                      <div className="mt-0.5 text-[10px] text-gray-400">{order.acceptedAt.slice(0, 10)} {order.acceptedAt.slice(11, 16)}</div>
+                    {order.completedAt ? (
+                      <div className="mt-0.5 space-y-px text-[10px] leading-tight text-gray-400">
+                        {order.acceptedAt && <div>승인 {fmtMinute(order.acceptedAt)}</div>}
+                        <div>완료 {fmtMinute(order.completedAt)}</div>
+                      </div>
+                    ) : (
+                      order.acceptedAt && (
+                        <div className="mt-0.5 text-[10px] text-gray-400">{fmtMinute(order.acceptedAt)}</div>
+                      )
                     )}
                   </TableCell>
                   <TableCell>
@@ -762,6 +770,7 @@ export default function ReceivedOrdersPage() {
                   </span>
                   <span className="break-all">{order.placeName}</span>
                   <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
+                  {order.completedAt && <span>완료 {fmtMinute(order.completedAt)}</span>}
                 </div>
               </button>
               {!order.isDeleted && (order.status === '발주대기' || order.status === '수주거절' || order.status === '수주완료' || order.status === '배송완료') && (

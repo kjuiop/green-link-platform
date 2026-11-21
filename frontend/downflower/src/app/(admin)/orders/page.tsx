@@ -15,6 +15,7 @@ import { Plus, Download } from 'lucide-react'
 import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
 import { OrderDetailPopup } from '@/components/common/OrderDetailPopup'
 import VendorInfoPopup from '@/components/vendor/VendorInfoPopup'
+import { fmtMinute } from '@/lib/utils/formatDateTime'
 import { highlightGrade } from '@/lib/utils/productName'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
@@ -548,7 +549,7 @@ export default function OrdersPage() {
               <TableHead><div>상품명</div><div className="font-normal text-gray-400">발주금액</div></TableHead>
               <TableHead>
                 <div>배송현황</div>
-                <div className="text-[10px] font-normal text-gray-400">주문승인시간</div>
+                <div className="text-[10px] font-normal text-gray-400">승인 / 완료시간</div>
               </TableHead>
               <TableHead>
                 {canSeeMsgTime ? (
@@ -674,8 +675,15 @@ export default function OrdersPage() {
                         </span>
                       )}
                     </div>
-                    {order.acceptedAt && (
-                      <div className="mt-0.5 text-[10px] text-gray-400">{order.acceptedAt.slice(0, 10)} {order.acceptedAt.slice(11, 16)}</div>
+                    {order.completedAt ? (
+                      <div className="mt-0.5 space-y-px text-[10px] leading-tight text-gray-400">
+                        {order.acceptedAt && <div>승인 {fmtMinute(order.acceptedAt)}</div>}
+                        <div>완료 {fmtMinute(order.completedAt)}</div>
+                      </div>
+                    ) : (
+                      order.acceptedAt && (
+                        <div className="mt-0.5 text-[10px] text-gray-400">{fmtMinute(order.acceptedAt)}</div>
+                      )
                     )}
                   </TableCell>
                   <TableCell>
@@ -793,6 +801,7 @@ export default function OrdersPage() {
                   </span>
                   <span className="break-all">{order.placeName}</span>
                   <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
+                  {order.completedAt && <span>완료 {fmtMinute(order.completedAt)}</span>}
                 </div>
               </button>
             </div>
