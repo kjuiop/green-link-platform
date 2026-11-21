@@ -21,7 +21,8 @@ function formatKRW(n: number) {
 }
 
 function today() {
-  return new Date().toISOString().slice(0, 10)
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function firstDayOfMonth() {
@@ -151,6 +152,7 @@ export default function SettlementPage() {
   const [to, setTo] = useState(today())
   const [activeTab, setActiveTab] = useState<Tab>('ordering')
 
+  const [initialized, setInitialized] = useState(false)
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [companies, setCompanies] = useState<CompanyInfo[]>([])
   const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null)
@@ -166,17 +168,21 @@ export default function SettlementPage() {
 
   useEffect(() => {
     const role = localStorage.getItem('role') ?? ''
-    if (role !== 'SUPER_ADMIN') return
-    setIsSuperAdmin(true)
-    fetchCompanies()
-      .then((list) => {
-        setCompanies(list)
-        if (list.length > 0) {
-          setSelectedCompanyId(list[0].id)
-          setCompanyType(list[0].type)
-        }
-      })
-      .catch(() => {})
+    if (role === 'SUPER_ADMIN') {
+      setIsSuperAdmin(true)
+      fetchCompanies()
+        .then((list) => {
+          setCompanies(list)
+          if (list.length > 0) {
+            setSelectedCompanyId(list[0].id)
+            setCompanyType(list[0].type)
+          }
+        })
+        .catch(() => {})
+        .finally(() => setInitialized(true))
+    } else {
+      setInitialized(true)
+    }
   }, [])
 
   const load = useCallback(async () => {
@@ -210,14 +216,15 @@ export default function SettlementPage() {
   }, [isSuperAdmin, selectedCompanyId, companyType, from, to])
 
   useEffect(() => {
+    if (!initialized) return
     if (isSuperAdmin && !selectedCompanyId) return
     if (!isSuperAdmin) load()
-  }, [isSuperAdmin, selectedCompanyId, load])
+  }, [initialized, isSuperAdmin, selectedCompanyId, load])
 
   useEffect(() => {
-    if (!isSuperAdmin || !selectedCompanyId) return
+    if (!initialized || !isSuperAdmin || !selectedCompanyId) return
     load()
-  }, [isSuperAdmin, selectedCompanyId, from, to, load])
+  }, [initialized, isSuperAdmin, selectedCompanyId, from, to, load])
 
   function handleCompanyChange(id: number) {
     const c = companies.find((c) => c.id === id)
