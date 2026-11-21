@@ -6,6 +6,7 @@ import { SIDO_LIST } from '@/data/regions'
 import { PRODUCT_CATEGORIES, categoryLabel, type ProductCategory } from '@/lib/constants/productCategory'
 import { fetchAllProducts, fetchSellableVendorProducts, searchVendorsByProduct } from '@/lib/api/productApi'
 import { fetchVendorRecentPhotos, type VendorRecentPhoto } from '@/lib/api/vendorApi'
+import { formatRegions } from '@/lib/utils/formatRegions'
 import type { Product, VendorProduct, VendorSearchParams, VendorSearchResult } from '@/types/product'
 
 type Props = {
@@ -19,20 +20,6 @@ type DetailState = { vendorId: string; products: VendorProduct[]; photos: Vendor
 
 const selectClass =
   'h-8 w-full rounded border border-gray-200 bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-green-700 disabled:bg-gray-50 disabled:text-gray-400'
-
-const shortSido = (sido: string) => sido.replace(/(특별자치시|특별자치도|광역시|특별시|자치시|자치도|시|도)$/, '')
-
-function formatRegions(regions: { sido: string; sigungu: string }[]): string {
-  const grouped = new Map<string, string[]>()
-  for (const r of regions) {
-    const list = grouped.get(r.sido) ?? []
-    list.push(r.sigungu)
-    grouped.set(r.sido, list)
-  }
-  return [...grouped.entries()]
-    .map(([sido, list]) => `${shortSido(sido)} ${list.includes('전체') ? '전체' : list.join(', ')}`)
-    .join(' · ')
-}
 
 export default function VendorSelectModal({ open, onSelect, onClose }: Props) {
   if (!open) return null
