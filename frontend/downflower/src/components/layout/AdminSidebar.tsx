@@ -54,6 +54,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/sms/settings': SlidersHorizontal,
   '/sms/message-log': MessageSquare,
   '/sms/alimtalk-log': MessageSquare,
+  '/customer-orders': ShoppingCart,
   '/coupang': ShoppingCart,
   '/coupang/orders': ShoppingCart,
   '/coupang/settings': SlidersHorizontal,

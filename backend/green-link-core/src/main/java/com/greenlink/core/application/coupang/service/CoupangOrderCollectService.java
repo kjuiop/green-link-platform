@@ -4,15 +4,15 @@ import com.greenlink.core.application.coupang.dto.CoupangSyncResult;
 import com.greenlink.core.application.coupang.usecase.CollectCoupangOrdersUseCase;
 import com.greenlink.core.domain.coupang.model.CoupangCredential;
 import com.greenlink.core.domain.coupang.model.CoupangCredentialSecret;
-import com.greenlink.core.domain.coupang.model.CoupangOrder;
 import com.greenlink.core.domain.coupang.model.CoupangOrderSheet;
 import com.greenlink.core.domain.coupang.model.CoupangSyncLog;
 import com.greenlink.core.domain.coupang.model.CoupangTriggerType;
 import com.greenlink.core.domain.coupang.port.CoupangApiException;
 import com.greenlink.core.domain.coupang.port.CoupangApiPort;
 import com.greenlink.core.domain.coupang.port.CoupangCredentialRepository;
-import com.greenlink.core.domain.coupang.port.CoupangOrderRepository;
 import com.greenlink.core.domain.coupang.port.CoupangSyncLogRepository;
+import com.greenlink.core.domain.customerorder.model.CustomerOrder;
+import com.greenlink.core.domain.customerorder.port.CustomerOrderRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.coupang.CoupangErrorCode;
 import org.slf4j.Logger;
@@ -36,7 +36,7 @@ public class CoupangOrderCollectService implements CollectCoupangOrdersUseCase {
     private static final int MAX_CATCH_UP_DAYS = 7;
 
     private final CoupangCredentialRepository credentialRepository;
-    private final CoupangOrderRepository orderRepository;
+    private final CustomerOrderRepository orderRepository;
     private final CoupangSyncLogRepository syncLogRepository;
     private final CoupangApiPort apiPort;
     private final CoupangSecretResolver secretResolver;
@@ -46,7 +46,7 @@ public class CoupangOrderCollectService implements CollectCoupangOrdersUseCase {
     private final Set<Long> running = ConcurrentHashMap.newKeySet();
 
     public CoupangOrderCollectService(CoupangCredentialRepository credentialRepository,
-                                      CoupangOrderRepository orderRepository,
+                                      CustomerOrderRepository orderRepository,
                                       CoupangSyncLogRepository syncLogRepository,
                                       CoupangApiPort apiPort,
                                       CoupangSecretResolver secretResolver,
@@ -90,7 +90,7 @@ public class CoupangOrderCollectService implements CollectCoupangOrdersUseCase {
                 List<CoupangOrderSheet> sheets = apiPort.fetchNewOrderSheets(secret, cursor, chunkEnd);
                 fetched += sheets.size();
                 for (CoupangOrderSheet sheet : sheets) {
-                    if (orderRepository.insertIfAbsent(CoupangOrder.fromSheet(companyId, sheet))) {
+                    if (orderRepository.insertIfAbsent(CustomerOrder.fromCoupangSheet(companyId, sheet))) {
                         inserted++;
                     }
                 }
