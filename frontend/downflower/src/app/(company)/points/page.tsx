@@ -27,11 +27,11 @@ export default function MyPointPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const load = useCallback(() => {
+  const load = useCallback((targetPage: number) => {
     if (scope.isSuperAdmin && !companyId) return
     setLoading(true)
     setError('')
-    Promise.all([fetchMyPoint(companyId), fetchMyPointTransactions(page, PAGE_SIZE, companyId)])
+    Promise.all([fetchMyPoint(companyId), fetchMyPointTransactions(targetPage, PAGE_SIZE, companyId)])
       .then(([p, tx]) => {
         setPoint(p)
         setTransactions(tx.content)
@@ -40,20 +40,20 @@ export default function MyPointPage() {
       })
       .catch((e) => setError(e instanceof Error ? e.message : '포인트 정보를 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
-  }, [scope.isSuperAdmin, companyId, page])
+  }, [scope.isSuperAdmin, companyId])
 
   useEffect(() => {
     if (!scope.ready) return
     setPoint(null)
     setTransactions([])
     setPage(0)
-    load()
-  }, [scope.ready, scope.isSuperAdmin, companyId])
+    load(0)
+  }, [scope.ready, load])
 
-  useEffect(() => {
-    if (!scope.ready) return
-    load()
-  }, [page])
+  const changePage = (p: number) => {
+    setPage(p)
+    load(p)
+  }
 
   if (!scope.ready) return null
 
@@ -98,7 +98,7 @@ export default function MyPointPage() {
         totalPages={totalPages}
         totalElements={totalElements}
         size={PAGE_SIZE}
-        onPageChange={setPage}
+        onPageChange={changePage}
       />
     </div>
   )
