@@ -166,7 +166,7 @@ function VendorTable({ orders }: { orders: SettlementOrder[] }) {
               <TableHead>상품명</TableHead>
               <TableHead>장소</TableHead>
               <TableHead>주문자</TableHead>
-              <TableHead className="text-right">발주금액</TableHead>
+              <TableHead className="text-right">수주금액</TableHead>
               <TableHead className="text-right">수수료</TableHead>
               <TableHead className="text-right">정산금액</TableHead>
             </TableRow>
