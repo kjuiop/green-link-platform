@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Pagination } from '@/components/ui/Pagination'
@@ -65,13 +66,21 @@ const STATUS_COLOR: Record<CustomerOrderStatus, string> = {
   CANCELLED: 'bg-red-100 text-red-500',
 }
 
-export default function CustomerOrdersPage() {
+const VALID_CHANNELS: OrderChannel[] = ['COUPANG', 'SHOP', 'DIRECT']
+
+function CustomerOrdersContent() {
+  const searchParams = useSearchParams()
   const scope = useCoupangScope()
   const shopScope = useShopScope()
   const companyId = scope.selectedId
 
-  const [channel, setChannel] = useState<OrderChannel | null>(null)
-  const [shopSubTab, setShopSubTab] = useState<'orders' | 'products'>('orders')
+  const rawChannel = searchParams.get('channel')
+  const [channel, setChannel] = useState<OrderChannel | null>(
+    VALID_CHANNELS.includes(rawChannel as OrderChannel) ? (rawChannel as OrderChannel) : null
+  )
+  const [shopSubTab, setShopSubTab] = useState<'orders' | 'products'>(
+    searchParams.get('sub') === 'products' ? 'products' : 'orders'
+  )
   const [status, setStatus] = useState<CustomerOrderStatus | null>('PENDING')
   const [page, setPage] = useState(0)
   const [data, setData] = useState<PageResult<CustomerOrder> | null>(null)
@@ -338,5 +347,13 @@ export default function CustomerOrdersPage() {
         </>
       )}
     </div>
+  )
+}
+
+export default function CustomerOrdersPage() {
+  return (
+    <Suspense>
+      <CustomerOrdersContent />
+    </Suspense>
   )
 }
