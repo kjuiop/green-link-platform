@@ -4,6 +4,8 @@ import com.greenlink.core.domain.coupang.model.CoupangOrderSheet;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.time.LocalDateTime;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class CoupangApiClientParseTest {
@@ -31,5 +33,11 @@ class CoupangApiClientParseTest {
         assertThat(sheet.items()).hasSize(1);
         assertThat(sheet.items().get(0).quantity()).isEqualTo(2);
         assertThat(sheet.orderedAt()).isNotNull();
+    }
+
+    @Test
+    void 조회_시간에_KST_시간대를_인코딩해서_붙인다() {
+        assertThat(CoupangApiClient.queryTime(LocalDateTime.of(2026, 11, 21, 9, 5)))
+                .isEqualTo("2026-11-21T09:05%2B09:00");
     }
 }
