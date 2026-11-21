@@ -124,7 +124,7 @@ export function CoupangSettingsPanel({ scope }: CoupangSettingsPanelProps) {
         </div>
       )}
 
-      <Card className="max-w-2xl">
+      <Card>
         <CardContent className="space-y-4 pt-6">
           {loading ? (
             <p className="text-sm text-gray-400">불러오는 중…</p>

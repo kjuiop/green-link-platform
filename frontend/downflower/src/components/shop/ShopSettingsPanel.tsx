@@ -169,7 +169,7 @@ export function ShopSettingsPanel({ scope }: ShopSettingsPanelProps) {
   const exists = !!settings?.exists
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="space-y-4">
       <div className="flex justify-end">
         <ShopCompanySelect scope={scope} />
       </div>
