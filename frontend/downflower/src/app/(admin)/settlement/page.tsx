@@ -15,8 +15,6 @@ import {
 import { fetchCompanies, type CompanyInfo, type CompanyType } from '@/lib/api/companyApi'
 import { AccountInfoBanner } from '@/components/settlement/AccountInfoBanner'
 
-type Tab = 'ordering' | 'vendor'
-
 function formatKRW(n: number) {
   return n.toLocaleString('ko-KR') + '원'
 }
@@ -35,39 +33,116 @@ function formatDateTime(v: string | null) {
   return v ? v.replace('T', ' ').slice(0, 16) : '-'
 }
 
-function DiffCards({ vendorOrders, orderingOrders }: { vendorOrders: SettlementOrder[]; orderingOrders: SettlementOrder[] }) {
-  const vendorSum = vendorOrders.reduce((s, o) => s + totalAmountOf(o), 0)
-  const orderingSum = orderingOrders.reduce((s, o) => s + totalAmountOf(o), 0)
-  const diff = vendorSum - orderingSum
+function calcVendorSettlementTotal(orders: SettlementOrder[]): number {
+  return orders.reduce((s, o) => {
+    const gross = totalAmountOf(o)
+    const fee = o.vendorFee ?? 0
+    return s + (o.vendorAmount ?? (gross - fee))
+  }, 0)
+}
+
+function calcOrderingSettlementTotal(orders: SettlementOrder[]): number {
+  return orders.reduce((s, o) => s + (o.orderingSettlementAmount ?? totalAmountOf(o)), 0)
+}
+
+function deriveVendorFeeLabel(orders: SettlementOrder[]): string | null {
+  if (orders.length === 0) return null
+  const fee = orders[0].vendorFee
+  if (!fee || fee === 0) return null
+  return `수수료 ${fee.toLocaleString('ko-KR')}원/건`
+}
+
+function deriveOrderingDiscountLabel(orders: SettlementOrder[]): string | null {
+  if (orders.length === 0) return null
+  const first = orders[0]
+  if (!first.orderingFeeDiscountType || first.orderingFeeDiscountType === 'NONE') return null
+  if (first.orderingFeeDiscountType === 'FIXED') {
+    const amt = first.orderingDiscountAmount ?? 0
+    return amt > 0 ? `수수료 감면 ${amt.toLocaleString('ko-KR')}원/건` : null
+  }
+  if (first.orderingFeeDiscountType === 'PERCENT') {
+    const fee = first.vendorFee
+    const discount = first.orderingDiscountAmount ?? 0
+    if (fee && fee > 0) {
+      return `수수료 감면 ${Math.round((discount / fee) * 100)}%`
+    }
+    return '수수료 감면 적용중'
+  }
+  return null
+}
+
+function SectionHeader({ title, label }: { title: string; label?: string | null }) {
+  return (
+    <div className="flex items-center gap-2 pb-1">
+      <h2 className="text-sm font-semibold text-gray-700">{title}</h2>
+      {label && (
+        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">{label}</span>
+      )}
+    </div>
+  )
+}
+
+function BothSummaryCards({
+  vendorOrders,
+  orderingOrders,
+}: {
+  vendorOrders: SettlementOrder[]
+  orderingOrders: SettlementOrder[]
+}) {
+  const vendorTotal = calcVendorSettlementTotal(vendorOrders)
+  const orderingTotal = calcOrderingSettlementTotal(orderingOrders)
+  const net = vendorTotal - orderingTotal
+  const isPositive = net >= 0
+
   return (
     <div className="grid grid-cols-3 gap-3">
-      <Card>
-        <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-blue-600">수주금액 합계</CardTitle></CardHeader>
-        <CardContent className="pb-3"><p className="text-xl font-bold text-blue-700">{formatKRW(vendorSum)}</p></CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-gray-500">발주금액 합계</CardTitle></CardHeader>
-        <CardContent className="pb-3"><p className="text-xl font-bold text-gray-800">{formatKRW(orderingSum)}</p></CardContent>
-      </Card>
-      <Card className={diff < 0 ? 'border-red-200' : 'border-green-200'}>
+      <Card className="border-green-200">
         <CardHeader className="pb-1 pt-3">
-          <CardTitle className={`text-xs font-medium ${diff < 0 ? 'text-red-600' : 'text-green-600'}`}>차액 (수주−발주)</CardTitle>
+          <CardTitle className="text-xs font-medium text-green-600">수주 정산 합계</CardTitle>
         </CardHeader>
         <CardContent className="pb-3">
-          <p className={`text-xl font-bold ${diff < 0 ? 'text-red-600' : 'text-green-700'}`}>
-            {diff < 0 ? '-' : '+'}{formatKRW(Math.abs(diff))}
+          <p className="text-xl font-bold text-green-700">+{formatKRW(vendorTotal)}</p>
+          <p className="mt-0.5 text-xs text-gray-400">받을 금액</p>
+        </CardContent>
+      </Card>
+      <Card className="border-red-200">
+        <CardHeader className="pb-1 pt-3">
+          <CardTitle className="text-xs font-medium text-red-600">발주 정산 합계</CardTitle>
+        </CardHeader>
+        <CardContent className="pb-3">
+          <p className="text-xl font-bold text-red-700">-{formatKRW(orderingTotal)}</p>
+          <p className="mt-0.5 text-xs text-gray-400">낼 금액</p>
+        </CardContent>
+      </Card>
+      <Card className={isPositive ? 'border-blue-200' : 'border-orange-200'}>
+        <CardHeader className="pb-1 pt-3">
+          <CardTitle className={`text-xs font-medium ${isPositive ? 'text-blue-600' : 'text-orange-600'}`}>
+            순 정산 ({isPositive ? '받을 금액' : '낼 금액'})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pb-3">
+          <p className={`text-xl font-bold ${isPositive ? 'text-blue-700' : 'text-orange-700'}`}>
+            {isPositive ? '+' : '-'}{formatKRW(Math.abs(net))}
           </p>
+          <p className="mt-0.5 text-xs text-gray-400">수주 − 발주</p>
         </CardContent>
       </Card>
     </div>
   )
 }
 
-function OrderingTable({ orders }: { orders: SettlementOrder[] }) {
+function OrderingTable({
+  orders,
+  showPayBadge = false,
+}: {
+  orders: SettlementOrder[]
+  showPayBadge?: boolean
+}) {
   const hasDiscount = orders.some((o) => o.orderingFeeDiscountType && o.orderingFeeDiscountType !== 'NONE')
   const grossTotal = orders.reduce((s, o) => s + totalAmountOf(o), 0)
-  const discountTotal = hasDiscount ? orders.reduce((s, o) => s + (o.orderingDiscountAmount ?? 0), 0) : 0
-  const settlementTotal = hasDiscount ? orders.reduce((s, o) => s + (o.orderingSettlementAmount ?? totalAmountOf(o)), 0) : 0
+  const discountTotal = orders.reduce((s, o) => s + (o.orderingDiscountAmount ?? 0), 0)
+  const settlementTotal = calcOrderingSettlementTotal(orders)
+  const showSettlementCard = hasDiscount || showPayBadge
 
   return (
     <div className="space-y-3">
@@ -86,10 +161,21 @@ function OrderingTable({ orders }: { orders: SettlementOrder[] }) {
             <CardContent className="pb-3"><p className="text-xl font-bold text-gray-500">-{formatKRW(discountTotal)}</p></CardContent>
           </Card>
         )}
-        {hasDiscount && (
-          <Card>
-            <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-blue-600">정산금액 합계</CardTitle></CardHeader>
-            <CardContent className="pb-3"><p className="text-xl font-bold text-blue-700">{formatKRW(settlementTotal)}</p></CardContent>
+        {showSettlementCard && (
+          <Card className={showPayBadge ? 'border-red-200' : ''}>
+            <CardHeader className="pb-1 pt-3">
+              <CardTitle className={`flex items-center gap-1.5 text-xs font-medium ${showPayBadge ? 'text-red-600' : 'text-blue-600'}`}>
+                정산금액 합계
+                {showPayBadge && (
+                  <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-600">지급</span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pb-3">
+              <p className={`text-xl font-bold ${showPayBadge ? 'text-red-700' : 'text-blue-700'}`}>
+                {showPayBadge ? '-' : ''}{formatKRW(settlementTotal)}
+              </p>
+            </CardContent>
           </Card>
         )}
       </div>
@@ -133,13 +219,16 @@ function OrderingTable({ orders }: { orders: SettlementOrder[] }) {
   )
 }
 
-function VendorTable({ orders }: { orders: SettlementOrder[] }) {
+function VendorTable({
+  orders,
+  showReceiveBadge = false,
+}: {
+  orders: SettlementOrder[]
+  showReceiveBadge?: boolean
+}) {
   const feeTotal = orders.reduce((s, o) => s + (o.vendorFee ?? 0), 0)
-  const total = orders.reduce((s, o) => {
-    const gross = totalAmountOf(o)
-    const fee = o.vendorFee ?? 0
-    return s + (o.vendorAmount ?? (gross - fee))
-  }, 0)
+  const total = calcVendorSettlementTotal(orders)
+
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -147,9 +236,20 @@ function VendorTable({ orders }: { orders: SettlementOrder[] }) {
           <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-gray-500">수주 건수</CardTitle></CardHeader>
           <CardContent className="pb-3"><p className="text-2xl font-bold">{orders.length}건</p></CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-blue-600">정산금액 합계</CardTitle></CardHeader>
-          <CardContent className="pb-3"><p className="text-xl font-bold text-blue-700">{formatKRW(total)}</p></CardContent>
+        <Card className={showReceiveBadge ? 'border-green-200' : ''}>
+          <CardHeader className="pb-1 pt-3">
+            <CardTitle className={`flex items-center gap-1.5 text-xs font-medium ${showReceiveBadge ? 'text-green-600' : 'text-blue-600'}`}>
+              정산금액 합계
+              {showReceiveBadge && (
+                <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-semibold text-green-600">수취</span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pb-3">
+            <p className={`text-xl font-bold ${showReceiveBadge ? 'text-green-700' : 'text-blue-700'}`}>
+              {showReceiveBadge ? '+' : ''}{formatKRW(total)}
+            </p>
+          </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-gray-500">수수료 합계</CardTitle></CardHeader>
@@ -204,7 +304,6 @@ function VendorTable({ orders }: { orders: SettlementOrder[] }) {
 export default function SettlementPage() {
   const [from, setFrom] = useState(firstDayOfMonth())
   const [to, setTo] = useState(today())
-  const [activeTab, setActiveTab] = useState<Tab>('ordering')
 
   const [initialized, setInitialized] = useState(false)
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
@@ -217,8 +316,9 @@ export default function SettlementPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const showOrdering = companyType === 'ORDERING' || companyType === 'BOTH'
-  const showVendor = companyType === 'VENDOR' || companyType === 'BOTH'
+  const isBoth = companyType === 'BOTH'
+  const isOrderingOnly = companyType === 'ORDERING'
+  const isVendorOnly = companyType === 'VENDOR'
 
   useEffect(() => {
     const role = localStorage.getItem('role') ?? ''
@@ -260,7 +360,6 @@ export default function SettlementPage() {
         setCompanyType(result.companyType)
         setOrderingOrders(result.orderingOrders)
         setVendorOrders(result.vendorOrders)
-        if (result.companyType === 'VENDOR') setActiveTab('vendor')
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : '불러오지 못했습니다.')
@@ -285,11 +384,13 @@ export default function SettlementPage() {
     if (!c) return
     setSelectedCompanyId(id)
     setCompanyType(c.type)
-    setActiveTab(c.type === 'VENDOR' ? 'vendor' : 'ordering')
   }
 
-  const excelUrl = isSuperAdmin && selectedCompanyId && companyType
-    ? getSettlementExcelUrl(selectedCompanyId, from, to, activeTab === 'ordering' ? 'ORDERING' : 'VENDOR')
+  const vendorExcelUrl = isSuperAdmin && selectedCompanyId && (isBoth || isVendorOnly)
+    ? getSettlementExcelUrl(selectedCompanyId, from, to, 'VENDOR')
+    : null
+  const orderingExcelUrl = isSuperAdmin && selectedCompanyId && (isBoth || isOrderingOnly)
+    ? getSettlementExcelUrl(selectedCompanyId, from, to, 'ORDERING')
     : null
 
   return (
@@ -328,8 +429,13 @@ export default function SettlementPage() {
         <Button onClick={load} disabled={loading} className="bg-green-700 hover:bg-green-800">
           {loading ? '조회 중…' : '조회'}
         </Button>
-        {excelUrl && (
-          <a href={excelUrl} download>
+        {!isBoth && orderingExcelUrl && (
+          <a href={orderingExcelUrl} download>
+            <Button variant="outline">엑셀 다운로드</Button>
+          </a>
+        )}
+        {!isBoth && vendorExcelUrl && (
+          <a href={vendorExcelUrl} download>
             <Button variant="outline">엑셀 다운로드</Button>
           </a>
         )}
@@ -337,43 +443,43 @@ export default function SettlementPage() {
 
       {error && <p className="text-sm text-red-500">{error}</p>}
 
-      {/* 탭 */}
-      {companyType && (
-        <div className="flex gap-1 border-b">
-          {showOrdering && (
-            <button
-              onClick={() => setActiveTab('ordering')}
-              className={activeTab === 'ordering'
-                ? 'border-b-2 border-green-700 px-4 py-2 text-sm font-medium text-green-700'
-                : 'px-4 py-2 text-sm text-gray-500 hover:text-gray-900'}
-            >
-              발주 정산
-            </button>
-          )}
-          {showVendor && (
-            <button
-              onClick={() => setActiveTab('vendor')}
-              className={activeTab === 'vendor'
-                ? 'border-b-2 border-green-700 px-4 py-2 text-sm font-medium text-green-700'
-                : 'px-4 py-2 text-sm text-gray-500 hover:text-gray-900'}
-            >
-              수주 정산
-            </button>
-          )}
-        </div>
-      )}
-
-      {!isSuperAdmin && !loading && companyType === 'BOTH' && (
-        <DiffCards vendorOrders={vendorOrders} orderingOrders={orderingOrders} />
-      )}
-
       {loading ? (
         <p className="py-8 text-center text-sm text-gray-400">불러오는 중…</p>
       ) : companyType ? (
-        <>
-          {activeTab === 'ordering' && showOrdering && <OrderingTable orders={orderingOrders} />}
-          {activeTab === 'vendor' && showVendor && <VendorTable orders={vendorOrders} />}
-        </>
+        <div className="space-y-6">
+          {/* 수발주사: 순정산 요약 카드 + 두 섹션 통합 */}
+          {isBoth && (
+            <BothSummaryCards vendorOrders={vendorOrders} orderingOrders={orderingOrders} />
+          )}
+
+          {(isBoth || isVendorOnly) && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <SectionHeader title="수주 정산" label={deriveVendorFeeLabel(vendorOrders)} />
+                {isBoth && vendorExcelUrl && (
+                  <a href={vendorExcelUrl} download>
+                    <Button variant="outline" className="h-7 px-2 text-xs">수주 엑셀</Button>
+                  </a>
+                )}
+              </div>
+              <VendorTable orders={vendorOrders} showReceiveBadge={isVendorOnly} />
+            </div>
+          )}
+
+          {(isBoth || isOrderingOnly) && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <SectionHeader title="발주 정산" label={deriveOrderingDiscountLabel(orderingOrders)} />
+                {isBoth && orderingExcelUrl && (
+                  <a href={orderingExcelUrl} download>
+                    <Button variant="outline" className="h-7 px-2 text-xs">발주 엑셀</Button>
+                  </a>
+                )}
+              </div>
+              <OrderingTable orders={orderingOrders} showPayBadge={isOrderingOnly} />
+            </div>
+          )}
+        </div>
       ) : !isSuperAdmin ? (
         <p className="py-8 text-center text-sm text-gray-400">조회 버튼을 눌러주세요.</p>
       ) : (
