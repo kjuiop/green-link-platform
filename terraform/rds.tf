@@ -21,6 +21,7 @@ resource "aws_db_instance" "mysql" {
 
   publicly_accessible         = true
   allow_major_version_upgrade = true
+  apply_immediately           = true
   multi_az                    = false
 
   backup_retention_period = 7
