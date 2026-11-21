@@ -30,7 +30,6 @@ import { type MenuItem } from '@/types/menu'
 import { fetchMemberSummary } from '@/lib/api/memberApi'
 import { type MemberSummary } from '@/types/member'
 import { fetchCoupangPendingCount } from '@/lib/api/coupangApi'
-import { fetchShopPendingCount } from '@/lib/api/shopApi'
 
 const ICON_MAP: Record<string, LucideIcon> = {
   '/dashboard': LayoutDashboard,
@@ -55,6 +54,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/sms/message-log': MessageSquare,
   '/sms/alimtalk-log': MessageSquare,
   '/customer-orders': ShoppingCart,
+  '/integration-settings': SlidersHorizontal,
   '/coupang': ShoppingCart,
   '/coupang/orders': ShoppingCart,
   '/coupang/settings': SlidersHorizontal,
@@ -64,8 +64,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/shop/orders': Store,
 }
 
-const COUPANG_ORDERS_URL = '/coupang/orders'
-const SHOP_ORDERS_URL = '/shop/orders'
+const CUSTOMER_ORDERS_URL = '/customer-orders'
 
 function isActive(pathname: string, url: string): boolean {
   if (url === '/orders') return (
@@ -130,10 +129,9 @@ interface SidebarNavProps {
   memberLoginId?: string
   memberSummary?: MemberSummary | null
   coupangPending?: number
-  shopPending?: number
 }
 
-function SidebarNav({ menus, onNavClick, openId, onToggle, memberName, memberLoginId, memberSummary, coupangPending = 0, shopPending = 0 }: SidebarNavProps) {
+function SidebarNav({ menus, onNavClick, openId, onToggle, memberName, memberLoginId, memberSummary, coupangPending = 0 }: SidebarNavProps) {
   const pathname = usePathname()
 
   return (
@@ -191,14 +189,9 @@ function SidebarNav({ menus, onNavClick, openId, onToggle, memberName, memberLog
                         >
                           <ChildIcon className="h-3.5 w-3.5 shrink-0" />
                           {child.name}
-                          {child.url === COUPANG_ORDERS_URL && coupangPending > 0 && (
+                          {child.url === CUSTOMER_ORDERS_URL && coupangPending > 0 && (
                             <span className="ml-auto rounded-full bg-red-500 px-1.5 text-[10px] font-semibold leading-4 text-white">
                               {coupangPending > 99 ? '99+' : coupangPending}
-                            </span>
-                          )}
-                          {child.url === SHOP_ORDERS_URL && shopPending > 0 && (
-                            <span className="ml-auto rounded-full bg-red-500 px-1.5 text-[10px] font-semibold leading-4 text-white">
-                              {shopPending > 99 ? '99+' : shopPending}
                             </span>
                           )}
                         </Link>
@@ -224,6 +217,11 @@ function SidebarNav({ menus, onNavClick, openId, onToggle, memberName, memberLog
             >
               <Icon className="h-4 w-4 shrink-0" />
               {menu.name}
+              {menu.url === CUSTOMER_ORDERS_URL && coupangPending > 0 && (
+                <span className="ml-auto rounded-full bg-red-500 px-1.5 text-[10px] font-semibold leading-4 text-white">
+                  {coupangPending > 99 ? '99+' : coupangPending}
+                </span>
+              )}
             </Link>
           )
         })}
@@ -245,7 +243,6 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   const [memberLoginId, setMemberLoginId] = useState<string>('')
   const [memberSummary, setMemberSummary] = useState<MemberSummary | null>(null)
   const [coupangPending, setCoupangPending] = useState(0)
-  const [shopPending, setShopPending] = useState(0)
 
   useEffect(() => {
     setMemberName(localStorage.getItem('name') ?? '')
@@ -267,32 +264,24 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
     setOpenId(settingsMenu?.id ?? null)
   }, [menus, pathname])
 
-  const hasCoupangMenu = menus.some((m) => m.children?.some((c) => c.url === COUPANG_ORDERS_URL))
+  const hasCustomerOrderMenu = menus.some(
+    (m) => m.url === CUSTOMER_ORDERS_URL || m.children?.some((c) => c.url === CUSTOMER_ORDERS_URL)
+  )
 
   useEffect(() => {
-    if (!hasCoupangMenu) return
+    if (!hasCustomerOrderMenu) return
     const load = () => fetchCoupangPendingCount().then(setCoupangPending).catch(() => {})
     load()
     const timer = setInterval(load, 60000)
     return () => clearInterval(timer)
-  }, [hasCoupangMenu, pathname])
-
-  const hasShopMenu = menus.some((m) => m.children?.some((c) => c.url === SHOP_ORDERS_URL))
-
-  useEffect(() => {
-    if (!hasShopMenu) return
-    const load = () => fetchShopPendingCount().then(setShopPending).catch(() => {})
-    load()
-    const timer = setInterval(load, 60000)
-    return () => clearInterval(timer)
-  }, [hasShopMenu, pathname])
+  }, [hasCustomerOrderMenu, pathname])
 
   const handleToggle = (id: number) => setOpenId((prev) => (prev === id ? null : id))
 
   return (
     <>
       <aside className="hidden h-screen w-56 flex-col border-r bg-white md:flex">
-        <SidebarNav menus={menus} openId={openId} onToggle={handleToggle} memberName={memberName} memberLoginId={memberLoginId} memberSummary={memberSummary} coupangPending={coupangPending} shopPending={shopPending} />
+        <SidebarNav menus={menus} openId={openId} onToggle={handleToggle} memberName={memberName} memberLoginId={memberLoginId} memberSummary={memberSummary} coupangPending={coupangPending} />
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={(open) => { if (!open) onMobileClose?.() }}>
@@ -306,7 +295,6 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
             memberLoginId={memberLoginId}
             memberSummary={memberSummary}
             coupangPending={coupangPending}
-            shopPending={shopPending}
           />
         </SheetContent>
       </Sheet>
