@@ -27,8 +27,10 @@ public class CustomerOrderQueryRepository {
         QCustomerOrderJpaEntity order = QCustomerOrderJpaEntity.customerOrderJpaEntity;
         BooleanBuilder where = buildWhere(order, companyId, channel, status);
 
+        QCoupangOrderDetailJpaEntity detail = QCoupangOrderDetailJpaEntity.coupangOrderDetailJpaEntity;
         List<CustomerOrderJpaEntity> content = queryFactory
                 .selectFrom(order)
+                .leftJoin(order.coupangDetail, detail).fetchJoin()
                 .where(where)
                 .orderBy(order.orderedAt.desc(), order.id.desc())
                 .offset((long) page * size)
