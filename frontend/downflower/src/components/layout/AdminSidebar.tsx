@@ -21,6 +21,7 @@ import {
   Percent,
   ShoppingCart,
   Store,
+  MapPin,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -49,6 +50,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/settlement': Calculator,
   '/settings/points': Coins,
   '/settings/vendor-fees': Percent,
+  '/settings/region-guides': MapPin,
   '/points': Coins,
   '/sms/settings': SlidersHorizontal,
   '/sms/message-log': MessageSquare,
