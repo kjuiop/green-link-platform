@@ -51,7 +51,7 @@ public class CoupangOrderCollectService implements CollectCoupangOrdersUseCase {
                                       CoupangApiPort apiPort,
                                       CoupangSecretResolver secretResolver,
                                       @Value("${coupang.collect.overlap-minutes:10}") int overlapMinutes,
-                                      @Value("${coupang.collect.max-range-hours:24}") int maxRangeHours) {
+                                      @Value("${coupang.collect.max-range-hours:12}") int maxRangeHours) {
         this.credentialRepository = credentialRepository;
         this.orderRepository = orderRepository;
         this.syncLogRepository = syncLogRepository;

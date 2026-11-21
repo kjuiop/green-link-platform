@@ -51,7 +51,7 @@ coupang:
     enabled: ${COUPANG_COLLECT_ENABLED:false}
     interval-ms: 240000
     overlap-minutes: 10
-    max-range-hours: 24
+    max-range-hours: 12
   approve:
     verify-live: true
 
