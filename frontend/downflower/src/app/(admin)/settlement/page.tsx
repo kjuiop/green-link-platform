@@ -66,7 +66,7 @@ function deriveOrderingDiscountLabel(orders: SettlementOrder[]): string | null {
     if (fee && fee > 0) {
       return `수수료 감면 ${Math.round((discount / fee) * 100)}%`
     }
-    return '수수료 감면 적용중'
+    return '정률 감면'
   }
   return null
 }
