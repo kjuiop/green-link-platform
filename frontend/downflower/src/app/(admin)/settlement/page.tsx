@@ -13,6 +13,7 @@ import {
   type SettlementOrder,
 } from '@/lib/api/settlementApi'
 import { fetchCompanies, type CompanyInfo, type CompanyType } from '@/lib/api/companyApi'
+import { AccountInfoBanner } from '@/components/settlement/AccountInfoBanner'
 
 type Tab = 'ordering' | 'vendor'
 
@@ -32,6 +33,34 @@ function firstDayOfMonth() {
 
 function formatDateTime(v: string | null) {
   return v ? v.replace('T', ' ').slice(0, 16) : '-'
+}
+
+function DiffCards({ vendorOrders, orderingOrders }: { vendorOrders: SettlementOrder[]; orderingOrders: SettlementOrder[] }) {
+  const vendorSum = vendorOrders.reduce((s, o) => s + totalAmountOf(o), 0)
+  const orderingSum = orderingOrders.reduce((s, o) => s + totalAmountOf(o), 0)
+  const diff = vendorSum - orderingSum
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      <Card>
+        <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-blue-600">수주금액 합계</CardTitle></CardHeader>
+        <CardContent className="pb-3"><p className="text-xl font-bold text-blue-700">{formatKRW(vendorSum)}</p></CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-1 pt-3"><CardTitle className="text-xs font-medium text-gray-500">발주금액 합계</CardTitle></CardHeader>
+        <CardContent className="pb-3"><p className="text-xl font-bold text-gray-800">{formatKRW(orderingSum)}</p></CardContent>
+      </Card>
+      <Card className={diff < 0 ? 'border-red-200' : 'border-green-200'}>
+        <CardHeader className="pb-1 pt-3">
+          <CardTitle className={`text-xs font-medium ${diff < 0 ? 'text-red-600' : 'text-green-600'}`}>차액 (수주−발주)</CardTitle>
+        </CardHeader>
+        <CardContent className="pb-3">
+          <p className={`text-xl font-bold ${diff < 0 ? 'text-red-600' : 'text-green-700'}`}>
+            {diff < 0 ? '-' : '+'}{formatKRW(Math.abs(diff))}
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
 
 function OrderingTable({ orders }: { orders: SettlementOrder[] }) {
@@ -278,6 +307,8 @@ export default function SettlementPage() {
         )}
       </div>
 
+      {!isSuperAdmin && <AccountInfoBanner />}
+
       {/* 기간 필터 */}
       <div className="flex flex-wrap items-end gap-2 rounded-lg border bg-white p-4">
         <div>
@@ -325,6 +356,10 @@ export default function SettlementPage() {
             </button>
           )}
         </div>
+      )}
+
+      {!isSuperAdmin && !loading && companyType === 'BOTH' && (
+        <DiffCards vendorOrders={vendorOrders} orderingOrders={orderingOrders} />
       )}
 
       {loading ? (
