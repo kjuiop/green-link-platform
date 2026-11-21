@@ -42,7 +42,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/settings/messages': SlidersHorizontal,
   '/vendors': Users,
   '/settings/menus': Menu,
-  '/settings/products': Package,
+  '/settings/basic-products': Package,
   '/products': Package,
   '/settings/vendors': Users,
   '/community': Newspaper,
