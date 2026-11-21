@@ -68,7 +68,8 @@ public class VendorProductController {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
         if (isSuperAdmin) {
             if (paramCompanyId == null) {
-                throw new IllegalArgumentException("companyId는 필수입니다.");
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.BAD_REQUEST, "companyId는 필수입니다.");
             }
             return paramCompanyId;
         }
