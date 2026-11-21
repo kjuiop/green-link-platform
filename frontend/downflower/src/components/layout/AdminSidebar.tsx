@@ -261,6 +261,13 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   }, [])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handler = () => fetchMenusByRole().then(setMenus).catch(() => {})
+    window.addEventListener('menu-updated', handler)
+    return () => window.removeEventListener('menu-updated', handler)
+  }, [])
+
+  useEffect(() => {
     if (menus.length === 0) return
     const settingsMenu = menus.find((m) => m.children?.some((c) => pathname.startsWith(c.url)))
     setOpenId(settingsMenu?.id ?? null)
