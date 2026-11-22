@@ -9,7 +9,8 @@ public enum OrderErrorCode implements ErrorCode {
     INVALID_ORDER_STATUS(400, "ORDER_003", "유효하지 않은 주문 상태 값입니다."),
     INVALID_ORDER_ACTION(400, "ORDER_004", "유효하지 않은 주문 상태 변경 요청입니다."),
     SITE_PHOTO_REQUIRED(400, "ORDER_005", "배송사진을 1장 이상 업로드해야 배송완료 처리가 가능합니다."),
-    SETTLED_ORDER_AMOUNT_LOCKED(400, "ORDER_006", "정산이 완료된 주문은 금액을 수정할 수 없습니다.");
+    SETTLED_ORDER_AMOUNT_LOCKED(400, "ORDER_006", "정산이 완료된 주문은 금액을 수정할 수 없습니다."),
+    REFUND_ORDER_LOCKED(400, "ORDER_007", "환불요청 또는 환불완료 상태의 주문은 수정할 수 없습니다.");
 
     private final int status;
     private final String code;

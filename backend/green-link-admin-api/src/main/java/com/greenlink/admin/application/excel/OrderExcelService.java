@@ -144,6 +144,8 @@ public class OrderExcelService implements ExportOrderExcelUseCase {
             case DELIVERED -> "배송완료";
             case REJECTED -> "수주거절";
             case CANCELLED -> "주문취소";
+            case REFUND_REQUESTED -> "환불요청";
+            case REFUNDED -> "환불완료";
         };
     }
 }

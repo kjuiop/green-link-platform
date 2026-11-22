@@ -95,6 +95,7 @@ export default function MenuManagePage() {
       const updated = await fetchAllMenus()
       setMenus(updated)
       setForm(EMPTY_FORM)
+      window.dispatchEvent(new Event('menu-updated'))
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '저장에 실패했습니다.')
     } finally {
@@ -110,6 +111,7 @@ export default function MenuManagePage() {
       const updated = await fetchAllMenus()
       setMenus(updated)
       setForm(EMPTY_FORM)
+      window.dispatchEvent(new Event('menu-updated'))
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '삭제에 실패했습니다.')
     } finally {

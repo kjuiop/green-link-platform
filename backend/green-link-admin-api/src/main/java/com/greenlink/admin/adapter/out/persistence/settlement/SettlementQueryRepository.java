@@ -31,7 +31,7 @@ public class SettlementQueryRepository implements SettlementQueryPort {
                         orderTotal.sum(),
                         effectiveVendorAmount.sum())
                 .from(o)
-                .where(o.status.eq(OrderStatus.DELIVERED)
+                .where(o.status.in(OrderStatus.DELIVERED, OrderStatus.REFUND_REQUESTED)
                         .and(o.completedAt.goe(fromDate))
                         .and(o.completedAt.loe(toDate + "T23:59:59"))
                         .and(o.isDeleted.isFalse())
@@ -58,7 +58,7 @@ public class SettlementQueryRepository implements SettlementQueryPort {
                         orderTotal.sum(),
                         o.vendorAmount.coalesce(0L).sum())
                 .from(o)
-                .where(o.status.eq(OrderStatus.DELIVERED)
+                .where(o.status.in(OrderStatus.DELIVERED, OrderStatus.REFUND_REQUESTED)
                         .and(o.completedAt.goe(fromDate))
                         .and(o.completedAt.loe(toDate + "T23:59:59"))
                         .and(o.isDeleted.isFalse())
@@ -80,7 +80,7 @@ public class SettlementQueryRepository implements SettlementQueryPort {
         QOrderJpaEntity o = QOrderJpaEntity.orderJpaEntity;
         return queryFactory
                 .selectFrom(o)
-                .where(o.status.eq(OrderStatus.DELIVERED)
+                .where(o.status.in(OrderStatus.DELIVERED, OrderStatus.REFUND_REQUESTED)
                         .and(o.vendorCompanyId.eq(vendorCompanyId))
                         .and(o.completedAt.goe(fromDate))
                         .and(o.completedAt.loe(toDate + "T23:59:59"))
@@ -97,7 +97,7 @@ public class SettlementQueryRepository implements SettlementQueryPort {
         QOrderJpaEntity o = QOrderJpaEntity.orderJpaEntity;
         return queryFactory
                 .selectFrom(o)
-                .where(o.status.eq(OrderStatus.DELIVERED)
+                .where(o.status.in(OrderStatus.DELIVERED, OrderStatus.REFUND_REQUESTED)
                         .and(o.orderingCompanyId.eq(orderingCompanyId))
                         .and(o.completedAt.goe(fromDate))
                         .and(o.completedAt.loe(toDate + "T23:59:59"))

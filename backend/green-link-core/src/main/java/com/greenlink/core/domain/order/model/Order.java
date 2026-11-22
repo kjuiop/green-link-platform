@@ -50,6 +50,10 @@ public class Order {
     private Long createdByAdminId;
     private Long updatedByAdminId;
     private boolean isDeleted;
+    private String refundReason;
+    private String refundRequestedAt;
+    private String refundRejectReason;
+    private String refundDecidedAt;
 
     private Order() {}
 
@@ -283,8 +287,45 @@ public class Order {
         return head + suffix;
     }
 
-    public void softDelete() {
-        this.isDeleted = true;
+    public void assignRefundInfo(String refundReason, String refundRequestedAt, String refundRejectReason, String refundDecidedAt) {
+        this.refundReason = refundReason;
+        this.refundRequestedAt = refundRequestedAt;
+        this.refundRejectReason = refundRejectReason;
+        this.refundDecidedAt = refundDecidedAt;
+    }
+
+    public void requestRefund(String reason, String now) {
+        if (this.status != OrderStatus.DELIVERED) {
+            throw new IllegalStateException("배송완료 상태에서만 환불 요청이 가능합니다. 현재 상태: " + this.status);
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("환불 사유를 입력해주세요.");
+        }
+        this.status = OrderStatus.REFUND_REQUESTED;
+        this.refundReason = reason.trim();
+        this.refundRequestedAt = now;
+        this.refundRejectReason = null;
+        this.refundDecidedAt = null;
+    }
+
+    public void approveRefund(String now) {
+        if (this.status != OrderStatus.REFUND_REQUESTED) {
+            throw new IllegalStateException("환불요청 상태에서만 환불 승인이 가능합니다. 현재 상태: " + this.status);
+        }
+        this.status = OrderStatus.REFUNDED;
+        this.refundDecidedAt = now;
+    }
+
+    public void rejectRefund(String reason, String now) {
+        if (this.status != OrderStatus.REFUND_REQUESTED) {
+            throw new IllegalStateException("환불요청 상태에서만 환불 거절이 가능합니다. 현재 상태: " + this.status);
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("거절 사유를 입력해주세요.");
+        }
+        this.status = OrderStatus.DELIVERED;
+        this.refundRejectReason = reason.trim();
+        this.refundDecidedAt = now;
     }
 
     public void updateInfo(
@@ -405,4 +446,8 @@ public class Order {
     public Long getUpdatedByAdminId() { return updatedByAdminId; }
     public boolean isDeleted() { return isDeleted; }
     public String getPhotoToken() { return photoToken; }
+    public String getRefundReason() { return refundReason; }
+    public String getRefundRequestedAt() { return refundRequestedAt; }
+    public String getRefundRejectReason() { return refundRejectReason; }
+    public String getRefundDecidedAt() { return refundDecidedAt; }
 }

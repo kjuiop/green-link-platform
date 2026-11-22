@@ -42,6 +42,11 @@ public class PointTransaction {
         return orderTransaction(PointTransactionType.SETTLE, companyId, memberId, orderId, amount, balanceAfter, memo);
     }
 
+    public static PointTransaction restore(Long companyId, Long memberId, Long orderId,
+                                           long amount, long balanceAfter, String memo) {
+        return orderTransaction(PointTransactionType.RESTORE, companyId, memberId, orderId, amount, balanceAfter, memo);
+    }
+
     private static PointTransaction orderTransaction(PointTransactionType type, Long companyId, Long memberId,
                                                       Long orderId, long amount, long balanceAfter, String memo) {
         PointTransaction t = new PointTransaction();

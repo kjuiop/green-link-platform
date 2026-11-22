@@ -130,7 +130,7 @@ export default function CommunityPage() {
         {result && result.totalPages > 1 && (
           <div className="border-t px-4 py-3">
             <Pagination
-              page={result.number}
+              page={result.page}
               totalPages={result.totalPages}
               totalElements={result.totalElements}
               size={result.size}
@@ -170,7 +170,7 @@ export default function CommunityPage() {
         )}
         {result && result.totalPages > 1 && (
           <Pagination
-            page={result.number}
+            page={result.page}
             totalPages={result.totalPages}
             totalElements={result.totalElements}
             size={result.size}

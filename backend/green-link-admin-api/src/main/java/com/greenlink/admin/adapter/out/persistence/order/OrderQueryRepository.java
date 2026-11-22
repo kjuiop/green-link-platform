@@ -95,7 +95,14 @@ public class OrderQueryRepository {
                 )
             };
         }
-        return new OrderSpecifier[]{priorityGroup(order), order.deliveryDate.asc(), order.createdAt.desc()};
+        return new OrderSpecifier[]{priorityGroup(order), deliveredLatestFirst(order), order.deliveryDate.asc(), order.createdAt.desc()};
+    }
+
+    private OrderSpecifier<String> deliveredLatestFirst(QOrderJpaEntity order) {
+        return new CaseBuilder()
+                .when(order.status.eq(OrderStatus.DELIVERED)).then(order.completedAt)
+                .otherwise(com.querydsl.core.types.dsl.Expressions.nullExpression(String.class))
+                .desc();
     }
 
     private OrderSpecifier<Integer> priorityGroup(QOrderJpaEntity order) {

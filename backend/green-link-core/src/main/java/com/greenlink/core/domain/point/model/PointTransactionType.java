@@ -4,5 +4,6 @@ public enum PointTransactionType {
     CHARGE,
     USE,
     REFUND,
-    SETTLE
+    SETTLE,
+    RESTORE
 }

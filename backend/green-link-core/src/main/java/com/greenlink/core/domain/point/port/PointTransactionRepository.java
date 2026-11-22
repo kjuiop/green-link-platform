@@ -13,4 +13,6 @@ public interface PointTransactionRepository {
     boolean existsOrderTransaction(Long orderId);
     boolean existsSettle(Long orderId);
     long sumNetHeldByOrderId(Long orderId);
+    boolean existsRestore(Long orderId);
+    long sumSettleByOrderId(Long orderId);
 }

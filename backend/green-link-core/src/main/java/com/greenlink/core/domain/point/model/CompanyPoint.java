@@ -59,6 +59,15 @@ public class CompanyPoint {
         this.depositBalance -= amount;
     }
 
+    public void restore(long amount) {
+        if (amount <= 0) throw new IllegalArgumentException("복구 금액은 0보다 커야 합니다.");
+        try {
+            this.balance = Math.addExact(this.balance, amount);
+        } catch (ArithmeticException e) {
+            throw new IllegalArgumentException("복구 후 잔액이 허용 범위를 초과합니다.");
+        }
+    }
+
     public Long getId() { return id; }
     public Long getCompanyId() { return companyId; }
     public long getBalance() { return balance; }
