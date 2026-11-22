@@ -47,6 +47,8 @@ export function OrderActionButtons({ d }: { d: D }) {
   const [copied, setCopied] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  if (order.isDeleted) return null
+
   function copyShareLink() {
     if (!order.photoToken) return
     const url = `${window.location.origin}/delivery/${order.photoToken}`
@@ -108,7 +110,7 @@ export function OrderActionButtons({ d }: { d: D }) {
           <Button variant="outline" className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50" onClick={() => d.openRefundDialog('reject')}>환불 거절</Button>
         </>
       )}
-      {d.isSuperAdmin && !isEditing && !order.isDeleted && order.status !== '환불요청' && order.status !== '환불완료' && (
+      {d.isSuperAdmin && !isEditing && order.status !== '환불요청' && order.status !== '환불완료' && (
         <Button variant="outline" className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50" onClick={d.openDeleteConfirm}>
           <Trash2 className="h-3.5 w-3.5" />삭제
         </Button>
