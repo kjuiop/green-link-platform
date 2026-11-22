@@ -53,7 +53,7 @@ export default function OrderPopupWindowPage() {
           <div className="flex h-40 items-center justify-center text-sm text-gray-400">주문을 찾을 수 없습니다.</div>
         ) : (
           <div className="space-y-3 p-4">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 empty:hidden">
               <OrderActionButtons d={loaded} />
             </div>
 
