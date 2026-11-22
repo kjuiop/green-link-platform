@@ -133,6 +133,21 @@ public class PointService implements
     }
 
     @Override
+    @Transactional
+    public void restoreSettledOrder(Long companyId, Long orderId, String orderNumber, Long memberId) {
+        if (pointTransactionRepository.existsRestore(orderId)) return;
+        long settled = pointTransactionRepository.sumSettleByOrderId(orderId);
+        if (settled <= 0) return;
+        Long actorId = resolveActor(companyId, memberId);
+        CompanyPoint point = companyPointRepository.findByCompanyIdForUpdate(companyId)
+                .orElseGet(() -> CompanyPoint.init(companyId));
+        point.restore(settled);
+        companyPointRepository.save(point);
+        pointTransactionRepository.save(PointTransaction.restore(
+                companyId, actorId, orderId, settled, point.getBalance(), "배송완료 환불 " + orderNumber));
+    }
+
+    @Override
     public boolean isSettled(Long orderId) {
         return pointTransactionRepository.existsSettle(orderId);
     }

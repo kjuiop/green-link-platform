@@ -475,14 +475,53 @@ class OrderServiceTest {
     }
 
     @Test
-    void deleteOrder_syncsPointAsClosed() {
-        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.PENDING)));
+    void requestRefund_movesDeliveredToRefundRequested() {
+        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.DELIVERED)));
         given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
 
-        service.deleteOrder(1L);
+        OrderResult result = service.requestRefund(1L, "오배송", false);
 
-        verify(applyOrderPointUseCase).syncOrder(eq(ORDERING_COMPANY_ID), eq(1L), any(),
-                eq(OrderPointState.CLOSED), eq(50000L), any());
+        assertThat(result.status()).isEqualTo("REFUND_REQUESTED");
+        assertThat(result.refundReason()).isEqualTo("오배송");
+    }
+
+    @Test
+    void requestRefund_whenNotDelivered_throws() {
+        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.ACCEPTED)));
+
+        assertThatThrownBy(() -> service.requestRefund(1L, "오배송", false))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void approveRefund_restoresPointsAndMarksRefunded() {
+        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.REFUND_REQUESTED)));
+        given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
+
+        OrderResult result = service.approveRefund(1L, false);
+
+        assertThat(result.status()).isEqualTo("REFUNDED");
+        verify(applyOrderPointUseCase).restoreSettledOrder(eq(ORDERING_COMPANY_ID), eq(1L), any(), any());
+    }
+
+    @Test
+    void approveRefund_whenNotRequested_throwsAndDoesNotRestore() {
+        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.DELIVERED)));
+
+        assertThatThrownBy(() -> service.approveRefund(1L, false)).isInstanceOf(IllegalStateException.class);
+        verify(applyOrderPointUseCase, never()).restoreSettledOrder(any(), any(), any(), any());
+    }
+
+    @Test
+    void rejectRefund_returnsToDeliveredWithReason() {
+        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.REFUND_REQUESTED)));
+        given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
+
+        OrderResult result = service.rejectRefund(1L, "정상 배송", false);
+
+        assertThat(result.status()).isEqualTo("DELIVERED");
+        assertThat(result.refundRejectReason()).isEqualTo("정상 배송");
+        verify(applyOrderPointUseCase, never()).restoreSettledOrder(any(), any(), any(), any());
     }
 
     @Test

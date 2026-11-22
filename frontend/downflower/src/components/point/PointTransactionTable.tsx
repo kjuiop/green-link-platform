@@ -12,6 +12,7 @@ const TYPE_STYLE: Record<PointTransaction['type'], { label: string; badge: strin
   USE: { label: '예치', badge: 'border-orange-200 bg-orange-50 text-orange-700', text: 'text-orange-600', sign: '-' },
   REFUND: { label: '환불', badge: 'border-blue-200 bg-blue-50 text-blue-700', text: 'text-blue-600', sign: '+' },
   SETTLE: { label: '정산', badge: 'border-gray-200 bg-gray-50 text-gray-600', text: 'text-gray-500', sign: '' },
+  RESTORE: { label: '배송환불', badge: 'border-purple-200 bg-purple-50 text-purple-700', text: 'text-purple-600', sign: '+' },
 }
 
 function formatDateTime(s: string) {

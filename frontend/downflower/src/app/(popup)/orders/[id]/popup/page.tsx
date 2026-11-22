@@ -9,7 +9,7 @@ import {
   OrderActionButtons, SaveErrorBanner,
   BasicInfoCard, DeliveryInfoCard, RibbonCard, ContactCard, MemoCard,
   ReferenceImageCard, DeliveryPhotosCard, ReceiptConfirmationCard,
-  SmsHistoryCard, AlimtalkHistoryCard, HistoryCard, CompleteDialog, DeleteDialog,
+  SmsHistoryCard, AlimtalkHistoryCard, HistoryCard, CompleteDialog, RefundDialog, RefundInfoBanner,
 } from '@/components/common/OrderDetailSections'
 
 const WINDOW_OVERLAY = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
@@ -58,6 +58,7 @@ export default function OrderPopupWindowPage() {
             </div>
 
             <SaveErrorBanner d={loaded} />
+            <RefundInfoBanner d={loaded} />
 
             <div className="grid gap-3 sm:grid-cols-2">
               <BasicInfoCard d={loaded} />
@@ -79,7 +80,7 @@ export default function OrderPopupWindowPage() {
       {loaded && (
         <>
           <CompleteDialog d={loaded} overlayClassName={WINDOW_OVERLAY} />
-          <DeleteDialog d={loaded} overlayClassName={WINDOW_OVERLAY} />
+          <RefundDialog d={loaded} overlayClassName={WINDOW_OVERLAY} />
         </>
       )}
     </div>

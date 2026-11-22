@@ -60,7 +60,10 @@ public record OrderResult(
         Long createdByAdminId,
         Long updatedByAdminId,
         boolean isDelayed,
-        String photoToken
+        String photoToken,
+        String refundReason,
+        String refundRequestedAt,
+        String refundRejectReason
 ) {
 
     /** 수주사 시점 금액: 수수료를 제외한 상품금액·합계로 치환하고 수수료 정보는 숨긴다. */
@@ -93,6 +96,7 @@ public record OrderResult(
                 hasReceipt, receiptReceiverName, receiptReceiverRelation,
                 isDeleted, messageSentAt,
                 createdByAdminId, updatedByAdminId,
-                isDelayed, photoToken);
+                isDelayed, photoToken,
+                refundReason, refundRequestedAt, refundRejectReason);
     }
 }
