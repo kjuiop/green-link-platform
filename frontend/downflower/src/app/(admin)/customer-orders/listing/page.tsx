@@ -432,9 +432,11 @@ function CustomerOrdersContent() {
                       {o.deliveryMessage && <div>배송메시지: {o.deliveryMessage}</div>}
                     </div>
 
-                    <div className="flex justify-end pt-1">
-                      <OrderActions order={o} busy={busyId === o.id} onHoldToggle={handleHoldToggle} />
-                    </div>
+                    {(o.status === 'PENDING' || o.status === 'HELD') && (
+                      <div className="flex justify-end pt-1">
+                        <OrderActions order={o} busy={busyId === o.id} onHoldToggle={handleHoldToggle} />
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))
