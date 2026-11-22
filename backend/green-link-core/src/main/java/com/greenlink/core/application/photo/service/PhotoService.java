@@ -5,11 +5,13 @@ import com.greenlink.core.application.photo.dto.UploadPhotoCommand;
 import com.greenlink.core.application.photo.usecase.GetPhotosUseCase;
 import com.greenlink.core.application.photo.usecase.SelectPhotoUseCase;
 import com.greenlink.core.application.photo.usecase.UploadPhotoUseCase;
+import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.photo.model.Photo;
 import com.greenlink.core.domain.photo.model.PhotoType;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
 import com.greenlink.core.domain.photo.port.PhotoStorage;
 import com.greenlink.core.global.exception.BusinessException;
+import com.greenlink.core.global.exception.order.OrderErrorCode;
 import com.greenlink.core.global.exception.photo.PhotoErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,14 +23,17 @@ public class PhotoService implements UploadPhotoUseCase, SelectPhotoUseCase, Get
 
     private final PhotoRepository photoRepository;
     private final PhotoStorage photoStorage;
+    private final OrderRepository orderRepository;
 
-    public PhotoService(PhotoRepository photoRepository, PhotoStorage photoStorage) {
+    public PhotoService(PhotoRepository photoRepository, PhotoStorage photoStorage, OrderRepository orderRepository) {
         this.photoRepository = photoRepository;
         this.photoStorage = photoStorage;
+        this.orderRepository = orderRepository;
     }
 
     @Override
     public PhotoResult uploadPhoto(UploadPhotoCommand command) {
+        rejectIfOrderDeleted(command.orderId());
         PhotoType photoType;
         try {
             photoType = PhotoType.valueOf(command.photoType().toUpperCase());
@@ -51,6 +56,7 @@ public class PhotoService implements UploadPhotoUseCase, SelectPhotoUseCase, Get
     public PhotoResult selectPhoto(Long photoId, boolean selected) {
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new BusinessException(PhotoErrorCode.PHOTO_NOT_FOUND));
+        rejectIfOrderDeleted(photo.getOrderId());
         photo.toggleSendToCustomer(selected);
         return toResult(photoRepository.save(photo));
     }
@@ -82,5 +88,13 @@ public class PhotoService implements UploadPhotoUseCase, SelectPhotoUseCase, Get
                 photo.isSendToCustomer(),
                 photo.getUploadedAt()
         );
+    }
+
+    private void rejectIfOrderDeleted(Long orderId) {
+        orderRepository.findById(orderId).ifPresent(order -> {
+            if (order.isDeleted()) {
+                throw new BusinessException(OrderErrorCode.ORDER_NOT_FOUND);
+            }
+        });
     }
 }

@@ -138,7 +138,7 @@ public class OrderController {
     public ResponseEntity<OrderResult> getOne(@PathVariable Long id, Authentication auth) {
         boolean isVendor = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
-        OrderResult result = getOrderUseCase.getOrder(id);
+        OrderResult result = getOrderUseCase.getOrder(id, hasRole(auth, "ROLE_SUPER_ADMIN"));
         return ResponseEntity.ok(isVendor ? maskPhones(result).toVendorView() : result);
     }
 

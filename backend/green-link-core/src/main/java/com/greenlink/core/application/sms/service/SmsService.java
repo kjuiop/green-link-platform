@@ -116,6 +116,9 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+        if (order.isDeleted()) {
+            throw new BusinessException(OrderErrorCode.ORDER_NOT_FOUND);
+        }
         SmsSettings settings = smsSettingsRepository.get();
         String msg = buildMessage(order, settings);
         String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));

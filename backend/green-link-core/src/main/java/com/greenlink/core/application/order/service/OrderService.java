@@ -196,6 +196,16 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     }
 
     @Override
+    public OrderResult getOrder(Long id, boolean viewerIsSuperAdmin) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+        if (order.isDeleted() && !viewerIsSuperAdmin) {
+            throw new BusinessException(OrderErrorCode.ORDER_NOT_FOUND);
+        }
+        return toResult(order);
+    }
+
+    @Override
     public List<OrderResult> getOrders(OrderSearchCondition condition) {
         List<Order> orders = orderRepository.search(condition);
         Map<Long, VendorInfo> infoMap = buildVendorInfoMap();

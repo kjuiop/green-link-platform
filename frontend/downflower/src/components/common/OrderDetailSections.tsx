@@ -727,7 +727,7 @@ export function SmsHistoryCard({ d, className }: SectionProps) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">문자 발송 내역</CardTitle>
-          {hasSmsFailure && (
+          {hasSmsFailure && !d.order.isDeleted && (
             <button
               onClick={d.handleResend}
               disabled={resending}
