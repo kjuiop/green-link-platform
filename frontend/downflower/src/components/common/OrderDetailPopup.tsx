@@ -8,7 +8,7 @@ import {
   OrderActionButtons, SaveErrorBanner,
   BasicInfoCard, DeliveryInfoCard, RibbonCard, ContactCard, MemoCard,
   ReferenceImageCard, DeliveryPhotosCard, ReceiptConfirmationCard,
-  SmsHistoryCard, AlimtalkHistoryCard, HistoryCard, CompleteDialog, RefundDialog, RefundInfoBanner,
+  SmsHistoryCard, AlimtalkHistoryCard, HistoryCard, CompleteDialog, RefundDialog, DeleteDialog, RefundInfoBanner,
 } from '@/components/common/OrderDetailSections'
 
 interface Props {
@@ -141,6 +141,7 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
         <>
           <CompleteDialog d={loaded} overlayClassName={POPUP_OVERLAY} />
           <RefundDialog d={loaded} overlayClassName={POPUP_OVERLAY} />
+          <DeleteDialog d={loaded} overlayClassName={POPUP_OVERLAY} />
         </>
       )}
     </div>

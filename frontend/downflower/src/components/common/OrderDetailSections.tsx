@@ -9,7 +9,7 @@ import { PrintButton } from '@/components/common/PrintButton'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { ReferencePhotoSection } from '@/components/common/ReferencePhotoViewer'
 import { highlightGrade } from '@/lib/utils/productName'
-import { Pencil, X, Check } from 'lucide-react'
+import { Pencil, X, Check, Trash2 } from 'lucide-react'
 import { cn, RIBBON_PHRASES, formatPhone } from '@/lib/utils'
 import type { LoadedOrderDetail } from '@/components/common/useOrderDetail'
 import type { DeliveryTimeType } from '@/types/order'
@@ -107,6 +107,11 @@ export function OrderActionButtons({ d }: { d: D }) {
           <Button className="bg-purple-700 hover:bg-purple-800" onClick={() => d.openRefundDialog('approve')}>환불 승인</Button>
           <Button variant="outline" className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50" onClick={() => d.openRefundDialog('reject')}>환불 거절</Button>
         </>
+      )}
+      {d.isSuperAdmin && !isEditing && !order.isDeleted && order.status !== '환불요청' && order.status !== '환불완료' && (
+        <Button variant="outline" className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50" onClick={d.openDeleteConfirm}>
+          <Trash2 className="h-3.5 w-3.5" />삭제
+        </Button>
       )}
     </>
   )
@@ -851,6 +856,37 @@ export function CompleteDialog({ d, overlayClassName }: { d: D; overlayClassName
         <div className="flex justify-end gap-2 border-t px-5 py-4">
           <Button variant="outline" onClick={() => d.setCompleteDialogOpen(false)}>취소</Button>
           <Button className="bg-blue-700 hover:bg-blue-800" onClick={d.handleComplete} disabled={d.saving}>배송완료 처리</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function DeleteDialog({ d, overlayClassName }: { d: D; overlayClassName: string }) {
+  if (!d.confirmDelete) return null
+  const delivered = d.order.status === '배송완료'
+  return (
+    <div className={overlayClassName}>
+      <div className="w-full max-w-sm rounded-lg bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b px-5 py-4">
+          <h2 className="font-semibold">주문서 삭제</h2>
+          <button onClick={d.closeDeleteConfirm} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="space-y-1 p-5">
+          <p className="text-sm text-gray-700">정말 삭제하시겠습니까?</p>
+          <p className="text-xs text-gray-500">
+            {delivered
+              ? '삭제하면 발주사 포인트가 복구되고 정산에서 제외됩니다.'
+              : '삭제하면 예치된 발주사 포인트가 환불됩니다.'}
+          </p>
+          <p className="text-xs text-gray-400">삭제된 주문서는 목록에 표시되지 않습니다.</p>
+          {d.deleteError && <p className="pt-1 text-sm text-red-600">{d.deleteError}</p>}
+        </div>
+        <div className="flex justify-end gap-2 border-t px-5 py-4">
+          <Button variant="outline" onClick={d.closeDeleteConfirm} disabled={d.saving}>취소</Button>
+          <Button className="gap-1.5 bg-red-600 hover:bg-red-700" onClick={d.handleDelete} disabled={d.saving}>
+            <Trash2 className="h-3.5 w-3.5" />{d.saving ? '삭제 중…' : '삭제'}
+          </Button>
         </div>
       </div>
     </div>

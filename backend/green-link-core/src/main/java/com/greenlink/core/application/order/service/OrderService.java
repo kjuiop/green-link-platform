@@ -9,6 +9,7 @@ import com.greenlink.core.application.order.dto.OrderResult;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.application.order.dto.UpdateOrderCommand;
 import com.greenlink.core.application.order.usecase.CreateOrderUseCase;
+import com.greenlink.core.application.order.usecase.DeleteOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetDeliveryShareUseCase;
 import com.greenlink.core.application.order.usecase.GetOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
@@ -66,7 +67,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         GetOrdersUseCase, UpdateOrderUseCase, UpdateOrderStatusUseCase, RefundOrderUseCase,
-        GetDeliveryShareUseCase {
+        DeleteOrderUseCase, GetDeliveryShareUseCase {
 
     private static final Map<OrderStatus, String> STATUS_LABEL = Map.of(
             OrderStatus.PENDING,   "발주대기",
@@ -730,6 +731,27 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         recordOrderHistoryUseCase.record(id, OrderHistoryAction.STATUS_CHANGED,
                 "환불 거절: " + reason.trim() + proxySuffix(proxy));
         return toResult(saved);
+    }
+
+    @Override
+    @Transactional
+    public void deleteOrder(Long id) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+        if (order.isDeleted()) return;
+        if (order.getStatus() == OrderStatus.REFUND_REQUESTED || order.getStatus() == OrderStatus.REFUNDED) {
+            throw new BusinessException(OrderErrorCode.REFUND_ORDER_NOT_DELETABLE);
+        }
+        boolean delivered = order.getStatus() == OrderStatus.DELIVERED;
+        order.softDelete();
+        Order saved = orderRepository.save(order);
+        recordOrderHistoryUseCase.record(id, OrderHistoryAction.STATUS_CHANGED, "주문서 삭제 (슈퍼관리자)");
+        if (!delivered) {
+            syncPoint(saved);
+        } else if (saved.getOrderingCompanyId() != null) {
+            applyOrderPointUseCase.restoreSettledOrder(saved.getOrderingCompanyId(), saved.getId(),
+                    saved.getOrderNumber(), resolveCurrentAdminId());
+        }
     }
 
     private static void validateRefundReason(String reason) {
