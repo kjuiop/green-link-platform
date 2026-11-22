@@ -363,6 +363,10 @@ class OrderServiceTest {
 
     private void stubToResult() {
         given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
+        stubToResultReads();
+    }
+
+    private void stubToResultReads() {
         given(adminRepository.findById(anyLong())).willReturn(Optional.empty());
         given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
         given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
@@ -573,6 +577,10 @@ class OrderServiceTest {
 
         assertThatThrownBy(() -> service.updateOrderStatus(1L, "complete"))
                 .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+        for (String action : List.of("accept", "reject", "cancel")) {
+            assertThatThrownBy(() -> service.updateOrderStatus(1L, action))
+                    .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+        }
         assertThatThrownBy(() -> service.requestRefund(1L, "오배송", false))
                 .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
         assertThatThrownBy(() -> service.approveRefund(1L, false))
@@ -581,6 +589,64 @@ class OrderServiceTest {
                 .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
         verify(orderRepository, never()).save(any(Order.class));
         verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void updateOrder_onDeletedOrder_isRejectedAsNotFound() {
+        Order order = orderingOrder(1L, OrderStatus.ACCEPTED);
+        order.softDelete();
+        given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+        UpdateOrderCommand cmd = new UpdateOrderCommand(
+                1L, null, "장미꽃다발", 2, 60000L, null, null, null,
+                "2026-10-23", "FIXED", "14", "00", null,
+                "서울시 강남구", "101호", "생일", "그랜드볼룸", "A홀", null,
+                "축하합니다", "홍길동", null, "홍길동", "010-1234-5678",
+                "김영희", "010-9876-5432", true, true,
+                "SCHEDULED", "13", "00", null, null
+        );
+
+        assertThatThrownBy(() -> service.updateOrder(1L, cmd))
+                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void getOrder_deletedOrder_isHiddenFromNonSuperAdmin() {
+        Order order = orderingOrder(1L, OrderStatus.DELIVERED);
+        order.softDelete();
+        given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> service.getOrder(1L, false))
+                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    void getOrder_deletedOrder_isVisibleToSuperAdmin() {
+        Order order = orderingOrder(1L, OrderStatus.DELIVERED);
+        order.softDelete();
+        given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+        stubToResultReads();
+
+        OrderResult result = service.getOrder(1L, true);
+
+        assertThat(result.isDeleted()).isTrue();
+    }
+
+    @Test
+    void getOrder_normalOrder_isVisibleToEveryone() {
+        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.PENDING)));
+        stubToResultReads();
+
+        assertThat(service.getOrder(1L, false).isDeleted()).isFalse();
+        assertThat(service.getOrder(1L, true).isDeleted()).isFalse();
+    }
+
+    @Test
+    void getOrder_missingOrder_throwsNotFound() {
+        given(orderRepository.findById(9L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getOrder(9L, true))
+                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
     }
 
     @Test
