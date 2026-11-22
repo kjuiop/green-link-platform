@@ -513,6 +513,77 @@ class OrderServiceTest {
     }
 
     @Test
+    void deleteOrder_beforeDelivery_closesPointAndMarksDeleted() {
+        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.ACCEPTED)));
+        given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
+
+        service.deleteOrder(1L);
+
+        verify(orderRepository).save(argThat(Order::isDeleted));
+        verify(applyOrderPointUseCase).syncOrder(eq(ORDERING_COMPANY_ID), eq(1L), any(),
+                eq(OrderPointState.CLOSED), anyLong(), any());
+        verify(applyOrderPointUseCase, never()).restoreSettledOrder(any(), any(), any(), any());
+        verify(recordOrderHistoryUseCase).record(eq(1L), eq(OrderHistoryAction.STATUS_CHANGED),
+                argThat(d -> d.contains("주문서 삭제")));
+    }
+
+    @Test
+    void deleteOrder_afterDelivery_restoresSettledPoint() {
+        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.DELIVERED)));
+        given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
+
+        service.deleteOrder(1L);
+
+        verify(orderRepository).save(argThat(Order::isDeleted));
+        verify(applyOrderPointUseCase).restoreSettledOrder(eq(ORDERING_COMPANY_ID), eq(1L), any(), any());
+        verify(applyOrderPointUseCase, never()).syncOrder(any(), any(), any(), any(), anyLong(), any());
+    }
+
+    @Test
+    void deleteOrder_whenRefundRequestedOrRefunded_throws() {
+        for (OrderStatus status : List.of(OrderStatus.REFUND_REQUESTED, OrderStatus.REFUNDED)) {
+            given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, status)));
+
+            assertThatThrownBy(() -> service.deleteOrder(1L))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("삭제할 수 없습니다");
+        }
+        verify(orderRepository, never()).save(any(Order.class));
+        verify(applyOrderPointUseCase, never()).restoreSettledOrder(any(), any(), any(), any());
+    }
+
+    @Test
+    void deleteOrder_whenAlreadyDeleted_isNoOp() {
+        Order order = orderingOrder(1L, OrderStatus.DELIVERED);
+        order.softDelete();
+        given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+
+        service.deleteOrder(1L);
+
+        verify(orderRepository, never()).save(any(Order.class));
+        verify(applyOrderPointUseCase, never()).restoreSettledOrder(any(), any(), any(), any());
+        verify(applyOrderPointUseCase, never()).syncOrder(any(), any(), any(), any(), anyLong(), any());
+    }
+
+    @Test
+    void mutatingDeletedOrder_isRejectedAsNotFound() {
+        Order order = orderingOrder(1L, OrderStatus.ACCEPTED);
+        order.softDelete();
+        given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> service.updateOrderStatus(1L, "complete"))
+                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+        assertThatThrownBy(() -> service.requestRefund(1L, "오배송", false))
+                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+        assertThatThrownBy(() -> service.approveRefund(1L, false))
+                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+        assertThatThrownBy(() -> service.rejectRefund(1L, "정상 배송", false))
+                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+        verify(orderRepository, never()).save(any(Order.class));
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
     void rejectRefund_returnsToDeliveredWithReason() {
         given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.REFUND_REQUESTED)));
         given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));

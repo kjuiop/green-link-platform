@@ -9,6 +9,7 @@ import com.greenlink.core.application.order.dto.OrderResult;
 import com.greenlink.core.application.orderhistory.dto.OrderHistoryResult;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.application.order.usecase.CreateOrderUseCase;
+import com.greenlink.core.application.order.usecase.DeleteOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
 import com.greenlink.core.application.order.usecase.RefundOrderUseCase;
@@ -38,6 +39,7 @@ public class OrderController {
     private final UpdateOrderUseCase updateOrderUseCase;
     private final UpdateOrderStatusUseCase updateOrderStatusUseCase;
     private final RefundOrderUseCase refundOrderUseCase;
+    private final DeleteOrderUseCase deleteOrderUseCase;
     private final GetOrderHistoryUseCase getOrderHistoryUseCase;
     private final SendDeliveryMmsUseCase sendDeliveryMmsUseCase;
     private final SendDeliveryAlimtalkUseCase sendDeliveryAlimtalkUseCase;
@@ -48,6 +50,7 @@ public class OrderController {
                            UpdateOrderUseCase updateOrderUseCase,
                            UpdateOrderStatusUseCase updateOrderStatusUseCase,
                            RefundOrderUseCase refundOrderUseCase,
+                           DeleteOrderUseCase deleteOrderUseCase,
                            GetOrderHistoryUseCase getOrderHistoryUseCase,
                            SendDeliveryMmsUseCase sendDeliveryMmsUseCase,
                            SendDeliveryAlimtalkUseCase sendDeliveryAlimtalkUseCase) {
@@ -57,6 +60,7 @@ public class OrderController {
         this.updateOrderUseCase = updateOrderUseCase;
         this.updateOrderStatusUseCase = updateOrderStatusUseCase;
         this.refundOrderUseCase = refundOrderUseCase;
+        this.deleteOrderUseCase = deleteOrderUseCase;
         this.getOrderHistoryUseCase = getOrderHistoryUseCase;
         this.sendDeliveryMmsUseCase = sendDeliveryMmsUseCase;
         this.sendDeliveryAlimtalkUseCase = sendDeliveryAlimtalkUseCase;
@@ -209,6 +213,13 @@ public class OrderController {
                     .toList();
         }
         return ResponseEntity.ok(history);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(Authentication auth, @PathVariable Long id) {
+        if (!hasRole(auth, "ROLE_SUPER_ADMIN")) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        deleteOrderUseCase.deleteOrder(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/refund-request")

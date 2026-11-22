@@ -509,6 +509,18 @@ async function postRefundAction(id: string, path: string, reason: string | null,
   return toFrontend(await res.json())
 }
 
+export async function deleteOrder(id: string): Promise<void> {
+  const res = await fetchWithAuth(`/api/orders/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message ?? '주문서 삭제에 실패했습니다.')
+  }
+  refreshMemberSummary()
+}
+
 export function requestRefund(id: string, reason: string): Promise<Order> {
   return postRefundAction(id, 'refund-request', reason, '환불 요청에 실패했습니다.')
 }
