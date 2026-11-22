@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, X } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, X } from 'lucide-react'
 import { SIDO_LIST } from '@/data/regions'
 import { PRODUCT_CATEGORIES, categoryLabel, type ProductCategory } from '@/lib/constants/productCategory'
 import { fetchAllProducts, fetchSellableVendorProducts, searchVendorsByProduct } from '@/lib/api/productApi'
 import { fetchVendorRecentPhotos, type VendorRecentPhoto } from '@/lib/api/vendorApi'
+import { fetchActiveRegionGuides, type RegionGuide } from '@/lib/api/regionGuideApi'
+import RegionGuidePopup from '@/components/common/RegionGuidePopup'
 import { formatRegions } from '@/lib/utils/formatRegions'
 import type { Product, VendorProduct, VendorSearchParams, VendorSearchResult } from '@/types/product'
 
@@ -40,6 +42,8 @@ function VendorSelectModalBody({ onSelect, onClose }: Omit<Props, 'open'>) {
   const [detail, setDetail] = useState<DetailState | null>(null)
   const [showAllProducts, setShowAllProducts] = useState(false)
   const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null)
+  const [regionGuides, setRegionGuides] = useState<RegionGuide[]>([])
+  const [guideOpen, setGuideOpen] = useState(false)
 
   const searchKey = JSON.stringify([category, baseProductId, keyword, sido, sigungu])
   const searchLoading = search?.key !== searchKey
@@ -47,6 +51,7 @@ function VendorSelectModalBody({ onSelect, onClose }: Omit<Props, 'open'>) {
 
   useEffect(() => {
     fetchAllProducts().then(setBaseProducts).catch(() => {})
+    fetchActiveRegionGuides().then(setRegionGuides).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -81,6 +86,7 @@ function VendorSelectModalBody({ onSelect, onClose }: Omit<Props, 'open'>) {
     () => (category ? baseProducts.filter((p) => p.category === category) : baseProducts),
     [baseProducts, category],
   )
+  const sidoGuides = useMemo(() => regionGuides.filter((g) => g.sido === sido), [regionGuides, sido])
   const sigunguList = useMemo(() => SIDO_LIST.find((s) => s.name === sido)?.sigunguList ?? [], [sido])
 
   const handleCategoryChange = (value: string) => {
@@ -155,12 +161,23 @@ function VendorSelectModalBody({ onSelect, onClose }: Omit<Props, 'open'>) {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <select value={sido} onChange={(e) => handleSidoChange(e.target.value)} className={selectClass}>
-              <option value="">시·도 전체</option>
-              {SIDO_LIST.map((s) => (
-                <option key={s.name} value={s.name}>{s.name}</option>
-              ))}
-            </select>
+            <div className="flex gap-1.5">
+              <select value={sido} onChange={(e) => handleSidoChange(e.target.value)} className={selectClass}>
+                <option value="">시·도 전체</option>
+                {SIDO_LIST.map((s) => (
+                  <option key={s.name} value={s.name}>{s.name}</option>
+                ))}
+              </select>
+              {sido && sidoGuides.length > 0 && (
+                <button
+                  onClick={() => setGuideOpen(true)}
+                  className="flex h-8 shrink-0 items-center gap-1 rounded bg-red-600 px-2 text-xs font-medium text-white hover:bg-red-700"
+                >
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  화환반입안내
+                </button>
+              )}
+            </div>
             <select value={sigungu} onChange={(e) => setSigungu(e.target.value)} disabled={!sido} className={selectClass}>
               <option value="">시·군·구 전체</option>
               {sigunguList.map((sg) => (
@@ -304,6 +321,10 @@ function VendorSelectModalBody({ onSelect, onClose }: Omit<Props, 'open'>) {
           </div>
         </div>
       </div>
+
+      {guideOpen && sido && sidoGuides.length > 0 && (
+        <RegionGuidePopup sido={sido} guides={sidoGuides} onClose={() => setGuideOpen(false)} />
+      )}
 
       {expandedPhoto && (
         <div
