@@ -72,7 +72,7 @@ public class CustomerOrderRepositoryAdapter implements CustomerOrderRepository {
 
     @Override
     public CustomerOrderSlice findByCompany(Long companyId, OrderChannel channel,
-                                                   CustomerOrderStatus status, int page, int size) {
+                                            CustomerOrderStatus status, int page, int size) {
         return queryRepository.findByCompany(companyId, channel, status, page, size);
     }
 
