@@ -4,6 +4,7 @@ import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.customerorder.dto.CustomerOrderResult;
 import com.greenlink.core.application.customerorder.usecase.QueryCustomerOrdersUseCase;
 import com.greenlink.core.domain.customerorder.model.CustomerOrder;
+import com.greenlink.core.domain.customerorder.model.CustomerOrderSlice;
 import com.greenlink.core.domain.customerorder.model.CustomerOrderStatus;
 import com.greenlink.core.domain.customerorder.model.OrderChannel;
 import com.greenlink.core.domain.customerorder.port.CustomerOrderRepository;
@@ -27,11 +28,13 @@ public class CustomerOrderQueryService implements QueryCustomerOrdersUseCase {
                                                 CustomerOrderStatus status, int page, int size) {
         Long effectiveCompanyId = effectiveCompanyId(callerCompanyId, companyId);
         int safeSize = Math.min(Math.max(size, 1), 100);
-        PageResult<CustomerOrder> raw = orderRepository.findByCompany(
-                effectiveCompanyId, channel, status, Math.max(page, 0), safeSize);
+        int safePage = Math.max(page, 0);
+        CustomerOrderSlice slice = orderRepository.findByCompany(
+                effectiveCompanyId, channel, status, safePage, safeSize);
+        int totalPages = (int) ((slice.totalElements() + safeSize - 1) / safeSize);
         return new PageResult<>(
-                raw.content().stream().map(CustomerOrderResult::from).toList(),
-                raw.page(), raw.size(), raw.totalElements(), raw.totalPages(), raw.totalAmount()
+                slice.content().stream().map(CustomerOrderResult::from).toList(),
+                safePage, safeSize, slice.totalElements(), totalPages, 0L
         );
     }
 

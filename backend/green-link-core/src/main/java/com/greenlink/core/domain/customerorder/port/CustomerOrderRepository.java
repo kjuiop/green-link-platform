@@ -1,7 +1,7 @@
 package com.greenlink.core.domain.customerorder.port;
 
-import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.domain.customerorder.model.CustomerOrder;
+import com.greenlink.core.domain.customerorder.model.CustomerOrderSlice;
 import com.greenlink.core.domain.customerorder.model.CustomerOrderStatus;
 import com.greenlink.core.domain.customerorder.model.OrderChannel;
 
@@ -19,8 +19,8 @@ public interface CustomerOrderRepository {
 
     Optional<CustomerOrder> findById(Long id, Long callerCompanyId);
 
-    PageResult<CustomerOrder> findByCompany(Long companyId, OrderChannel channel,
-                                            CustomerOrderStatus status, int page, int size);
+    CustomerOrderSlice findByCompany(Long companyId, OrderChannel channel,
+                                     CustomerOrderStatus status, int page, int size);
 
     long countPending(Long companyId, OrderChannel channel);
 }

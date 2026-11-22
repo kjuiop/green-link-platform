@@ -1,14 +1,10 @@
 package com.greenlink.admin.adapter.out.persistence.customerorder;
 
-import com.greenlink.core.application.common.dto.PageResult;
-import com.greenlink.core.domain.customerorder.model.CustomerOrder;
+import com.greenlink.core.domain.customerorder.model.CustomerOrderSlice;
 import com.greenlink.core.domain.customerorder.model.CustomerOrderStatus;
 import com.greenlink.core.domain.customerorder.model.OrderChannel;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -22,8 +18,8 @@ public class CustomerOrderQueryRepository {
         this.queryFactory = queryFactory;
     }
 
-    public PageResult<CustomerOrder> findByCompany(Long companyId, OrderChannel channel,
-                                                   CustomerOrderStatus status, int page, int size) {
+    public CustomerOrderSlice findByCompany(Long companyId, OrderChannel channel,
+                                            CustomerOrderStatus status, int page, int size) {
         QCustomerOrderJpaEntity order = QCustomerOrderJpaEntity.customerOrderJpaEntity;
         BooleanBuilder where = buildWhere(order, companyId, channel, status);
 
@@ -43,12 +39,10 @@ public class CustomerOrderQueryRepository {
                 .where(where)
                 .fetchOne();
 
-        Page<CustomerOrder> resultPage = new PageImpl<>(
+        return new CustomerOrderSlice(
                 content.stream().map(CustomerOrderJpaEntity::toDomain).toList(),
-                PageRequest.of(page, size),
                 total != null ? total : 0L
         );
-        return PageResult.of(resultPage);
     }
 
     public long countPending(Long companyId, OrderChannel channel) {
