@@ -9,5 +9,7 @@ public interface ApplyOrderPointUseCase {
     void syncOrder(Long companyId, Long orderId, String orderNumber,
                    OrderPointState state, long totalAmount, Long memberId);
 
+    void restoreSettledOrder(Long companyId, Long orderId, String orderNumber, Long memberId);
+
     boolean isSettled(Long orderId);
 }

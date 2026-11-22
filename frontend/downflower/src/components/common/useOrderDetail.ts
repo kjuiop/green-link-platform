@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import {
-  fetchOrder, updateOrder, updateOrderStatus, deleteOrder,
+  fetchOrder, updateOrder, updateOrderStatus, requestRefund, approveRefund, rejectRefund,
   fetchOrderHistory, fetchReceiptConfirmation,
   fetchSmsMessages, fetchAlimtalkMessages, resendMms,
   OrderHistoryItem, ReceiptConfirmationResult, SmsMessageResult,
@@ -14,17 +14,21 @@ interface Options {
   onClose: () => void
 }
 
-export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options) {
+export function useOrderDetail(orderId: string, { onUpdated }: Options) {
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState<Order | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [refundDialog, setRefundDialog] = useState<'request' | 'approve' | 'reject' | null>(null)
+  const [refundReason, setRefundReason] = useState('')
+  const [refundError, setRefundError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
-  const canEdit = typeof window === 'undefined' || localStorage.getItem('role') !== 'VENDOR'
+  const role = typeof window === 'undefined' ? null : localStorage.getItem('role')
+  const canEdit = role !== 'VENDOR'
+  const canRequestRefund = role === 'SUPER_ADMIN' || role === 'ORDERING'
+  const canDecideRefund = role === 'SUPER_ADMIN' || role === 'VENDOR'
   const [saveError, setSaveError] = useState<string | null>(null)
   const [receiptConfirmation, setReceiptConfirmation] = useState<ReceiptConfirmationResult | null>(null)
   const [history, setHistory] = useState<OrderHistoryItem[]>([])
@@ -210,24 +214,40 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
     }
   }
 
-  async function handleDelete() {
-    try {
-      await deleteOrder(orderId)
-      onUpdated?.()
-      onClose()
-    } catch {
-      setDeleteError('삭제에 실패했습니다. 다시 시도해 주세요.')
+  function openRefundDialog(kind: 'request' | 'approve' | 'reject') {
+    setRefundReason('')
+    setRefundError(null)
+    setRefundDialog(kind)
+  }
+
+  function closeRefundDialog() {
+    setRefundDialog(null)
+    setRefundError(null)
+  }
+
+  async function submitRefund() {
+    if (!refundDialog) return
+    const reason = refundReason.trim()
+    if (refundDialog !== 'approve' && !reason) {
+      setRefundError('사유를 입력해 주세요.')
+      return
     }
-  }
-
-  function openDeleteConfirm() {
-    setConfirmDelete(true)
-    setDeleteError(null)
-  }
-
-  function closeDeleteConfirm() {
-    setConfirmDelete(false)
-    setDeleteError(null)
+    setSaving(true)
+    setRefundError(null)
+    try {
+      const updated = refundDialog === 'request' ? await requestRefund(orderId, reason)
+        : refundDialog === 'approve' ? await approveRefund(orderId)
+        : await rejectRefund(orderId, reason)
+      setOrder(updated)
+      setDraft(updated)
+      setHistory(await fetchOrderHistory(orderId).catch(() => []))
+      setRefundDialog(null)
+      onUpdated?.()
+    } catch (e) {
+      setRefundError(e instanceof Error ? e.message : '처리에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function refreshAfterDeliveryComplete() {
@@ -254,16 +274,18 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
   return {
     orderId,
     order, draft, setDraft, loading, loadError,
-    isEditing, saving, saveError, isSuperAdmin, canEdit,
+    isEditing, saving, saveError, isSuperAdmin,
+    canEdit: canEdit && order?.status !== '환불요청' && order?.status !== '환불완료',
+    canRequestRefund, canDecideRefund,
     receiptConfirmation, history, smsMessages, alimtalkMessages, resending,
     selectedProductId, setSelectedProductId,
     completeDialogOpen, setCompleteDialogOpen, selectedPhotoUrls,
-    confirmDelete, deleteError,
+    refundDialog, refundReason, setRefundReason, refundError,
     hasSitePhotos, hasPhotos, hasSmsFailure, hasAlimtalkFailure,
     startEdit, cancelEdit, saveEdit,
     openCompleteDialog, togglePhotoSelection, handleComplete,
-    handleAccept, handleReject, handleResend, handleDelete,
-    openDeleteConfirm, closeDeleteConfirm, refreshAfterDeliveryComplete,
+    handleAccept, handleReject, handleResend,
+    openRefundDialog, closeRefundDialog, submitRefund, refreshAfterDeliveryComplete,
     set,
   }
 }

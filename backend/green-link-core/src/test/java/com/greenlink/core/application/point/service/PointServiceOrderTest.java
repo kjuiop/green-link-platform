@@ -140,6 +140,39 @@ class PointServiceOrderTest {
     }
 
     @Test
+    void restoreSettledOrder_returnsSettledAmountToBalance() {
+        service.holdForNewOrder(COMPANY, ORDER, "DF-1", 40_000L, 9L);
+        sync(OrderPointState.DELIVERED, 40_000L);
+
+        service.restoreSettledOrder(COMPANY, ORDER, "DF-1", 9L);
+
+        assertThat(pointRepo.point.getBalance()).isEqualTo(100_000L);
+        assertThat(pointRepo.point.getDepositBalance()).isZero();
+        assertThat(txRepo.saved).extracting(PointTransaction::getType)
+                .containsExactly(PointTransactionType.USE, PointTransactionType.SETTLE, PointTransactionType.RESTORE);
+    }
+
+    @Test
+    void restoreSettledOrder_isIdempotent() {
+        service.holdForNewOrder(COMPANY, ORDER, "DF-1", 40_000L, 9L);
+        sync(OrderPointState.DELIVERED, 40_000L);
+
+        service.restoreSettledOrder(COMPANY, ORDER, "DF-1", 9L);
+        service.restoreSettledOrder(COMPANY, ORDER, "DF-1", 9L);
+
+        assertThat(pointRepo.point.getBalance()).isEqualTo(100_000L);
+        assertThat(txRepo.saved).filteredOn(t -> t.getType() == PointTransactionType.RESTORE).hasSize(1);
+    }
+
+    @Test
+    void restoreSettledOrder_withoutSettleHistory_doesNothing() {
+        service.restoreSettledOrder(COMPANY, ORDER, "DF-1", 9L);
+
+        assertThat(pointRepo.point.getBalance()).isEqualTo(100_000L);
+        assertThat(txRepo.saved).isEmpty();
+    }
+
+    @Test
     void syncOrder_legacyOrderWithoutHistory_isIgnored() {
         sync(OrderPointState.ACTIVE, 40_000L);
         sync(OrderPointState.DELIVERED, 40_000L);
@@ -190,6 +223,13 @@ class PointServiceOrderTest {
         }
         public boolean existsSettle(Long orderId) {
             return saved.stream().anyMatch(t -> orderId.equals(t.getOrderId()) && t.getType() == PointTransactionType.SETTLE);
+        }
+        public boolean existsRestore(Long orderId) {
+            return saved.stream().anyMatch(t -> orderId.equals(t.getOrderId()) && t.getType() == PointTransactionType.RESTORE);
+        }
+        public long sumSettleByOrderId(Long orderId) {
+            return saved.stream().filter(t -> orderId.equals(t.getOrderId()) && t.getType() == PointTransactionType.SETTLE)
+                    .mapToLong(PointTransaction::getAmount).sum();
         }
         public long sumNetHeldByOrderId(Long orderId) {
             return saved.stream().filter(t -> orderId.equals(t.getOrderId())).mapToLong(t ->
