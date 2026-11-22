@@ -142,7 +142,6 @@ function OrderingTable({
   const grossTotal = orders.reduce((s, o) => s + totalAmountOf(o), 0)
   const discountTotal = orders.reduce((s, o) => s + (o.orderingDiscountAmount ?? 0), 0)
   const settlementTotal = calcOrderingSettlementTotal(orders)
-  const showSettlementCard = hasDiscount || showPayBadge
 
   return (
     <div className="space-y-3">
@@ -161,23 +160,21 @@ function OrderingTable({
             <CardContent className="pb-3"><p className="text-xl font-bold text-gray-500">-{formatKRW(discountTotal)}</p></CardContent>
           </Card>
         )}
-        {showSettlementCard && (
-          <Card className={showPayBadge ? 'border-red-200' : ''}>
-            <CardHeader className="pb-1 pt-3">
-              <CardTitle className={`flex items-center gap-1.5 text-xs font-medium ${showPayBadge ? 'text-red-600' : 'text-blue-600'}`}>
-                정산금액 합계
-                {showPayBadge && (
-                  <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-600">지급</span>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pb-3">
-              <p className={`text-xl font-bold ${showPayBadge ? 'text-red-700' : 'text-blue-700'}`}>
-                {showPayBadge ? '-' : ''}{formatKRW(settlementTotal)}
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        <Card className={showPayBadge ? 'border-red-200' : ''}>
+          <CardHeader className="pb-1 pt-3">
+            <CardTitle className={`flex items-center gap-1.5 text-xs font-medium ${showPayBadge ? 'text-red-600' : 'text-blue-600'}`}>
+              정산금액 합계
+              {showPayBadge && (
+                <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-600">지급</span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pb-3">
+            <p className={`text-xl font-bold ${showPayBadge ? 'text-red-700' : 'text-blue-700'}`}>
+              {showPayBadge ? '-' : ''}{formatKRW(settlementTotal)}
+            </p>
+          </CardContent>
+        </Card>
       </div>
       <div className="rounded-lg border bg-white">
         <Table>
@@ -191,25 +188,25 @@ function OrderingTable({
               <TableHead>주문자</TableHead>
               <TableHead className="text-right">발주금액</TableHead>
               {hasDiscount && <TableHead className="text-right">수수료 감면</TableHead>}
-              {hasDiscount && <TableHead className="text-right">정산금액</TableHead>}
+              <TableHead className="text-right">정산금액</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {orders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={hasDiscount ? 9 : 7} className="py-10 text-center text-sm text-gray-400">해당 기간에 발주 내역이 없습니다.</TableCell>
+                <TableCell colSpan={hasDiscount ? 9 : 8} className="py-10 text-center text-sm text-gray-400">해당 기간에 발주 내역이 없습니다.</TableCell>
               </TableRow>
             ) : orders.map((o) => (
               <TableRow key={o.orderId}>
                 <TableCell className="text-sm">{formatDateTime(o.deliveredAt)}</TableCell>
                 <TableCell className="text-sm font-medium">{o.orderNumber}</TableCell>
                 <TableCell className="text-sm">{o.counterpartCompanyName || '-'}</TableCell>
-                <TableCell className="text-sm">{o.productName}</TableCell>
-                <TableCell className="text-sm">{o.placeName}</TableCell>
+                <TableCell className="max-w-[200px] whitespace-normal break-words text-sm">{o.productName}</TableCell>
+                <TableCell className="max-w-[200px] whitespace-normal break-words text-sm">{o.placeName}</TableCell>
                 <TableCell className="text-sm">{o.ordererName}</TableCell>
                 <TableCell className="text-right text-sm font-medium">{formatKRW(totalAmountOf(o))}</TableCell>
                 {hasDiscount && <TableCell className="text-right text-sm text-gray-500">-{formatKRW(o.orderingDiscountAmount ?? 0)}</TableCell>}
-                {hasDiscount && <TableCell className="text-right text-sm font-medium text-blue-700">{formatKRW(o.orderingSettlementAmount ?? totalAmountOf(o))}</TableCell>}
+                <TableCell className="text-right text-sm font-medium text-blue-700">{formatKRW(o.orderingSettlementAmount ?? totalAmountOf(o))}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -285,8 +282,8 @@ function VendorTable({
                   <TableCell className="text-sm">{formatDateTime(o.deliveredAt)}</TableCell>
                   <TableCell className="text-sm font-medium">{o.orderNumber}</TableCell>
                   <TableCell className="text-sm">{o.counterpartCompanyName || '-'}</TableCell>
-                  <TableCell className="text-sm">{o.productName}</TableCell>
-                  <TableCell className="text-sm">{o.placeName}</TableCell>
+                  <TableCell className="max-w-[200px] whitespace-normal break-words text-sm">{o.productName}</TableCell>
+                  <TableCell className="max-w-[200px] whitespace-normal break-words text-sm">{o.placeName}</TableCell>
                   <TableCell className="text-sm">{o.ordererName}</TableCell>
                   <TableCell className="text-right text-sm">{formatKRW(gross)}</TableCell>
                   <TableCell className="text-right text-sm text-gray-500">-{formatKRW(fee)}</TableCell>
