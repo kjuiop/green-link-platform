@@ -1,5 +1,6 @@
 package com.greenlink.admin.adapter.in.web;
 
+import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.post.dto.CreatePostCommand;
 import com.greenlink.core.application.post.dto.PostResult;
 import com.greenlink.core.application.post.dto.PostSummaryResult;
@@ -15,7 +16,6 @@ import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.post.model.PostSearchCondition;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.post.PostErrorCode;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -61,12 +61,12 @@ public class PostController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<PostSummaryResult>> getPosts(
+    public ResponseEntity<PageResult<PostSummaryResult>> getPosts(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Boolean noticeOnly,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         PostSearchCondition condition = new PostSearchCondition(keyword, noticeOnly);
-        return ResponseEntity.ok(getPostUseCase.getPosts(condition, pageable));
+        return ResponseEntity.ok(PageResult.of(getPostUseCase.getPosts(condition, pageable)));
     }
 
     @GetMapping("/{id}")

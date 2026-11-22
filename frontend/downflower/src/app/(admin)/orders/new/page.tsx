@@ -67,6 +67,7 @@ export default function NewOrderPage() {
 
   // 발주업체 (SUPER_ADMIN 전용)
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+  const [roleChecked, setRoleChecked] = useState(false)
   const [orderingCompanies, setOrderingCompanies] = useState<OrderingCompany[]>([])
   const [orderingCompanyId, setOrderingCompanyId] = useState('')
 
@@ -91,6 +92,7 @@ export default function NewOrderPage() {
   const pointInsufficient = availablePoint !== null && requiredPoint > availablePoint
 
   useEffect(() => {
+    if (!roleChecked) return
     if (isSuperAdmin) {
       if (!orderingCompanyId) { setAvailablePoint(null); return }
       fetchAdminPointList()
@@ -99,7 +101,7 @@ export default function NewOrderPage() {
     } else {
       fetchMyPoint().then((p) => setAvailablePoint(p.balance)).catch(() => setAvailablePoint(null))
     }
-  }, [isSuperAdmin, orderingCompanyId])
+  }, [roleChecked, isSuperAdmin, orderingCompanyId])
 
   useEffect(() => {
     const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null
@@ -107,6 +109,7 @@ export default function NewOrderPage() {
       setIsSuperAdmin(true)
       fetchOrderingCompanies().then(setOrderingCompanies).catch(() => {})
     }
+    setRoleChecked(true)
   }, [])
 
   // 쿠팡 주문 승인 모드 (?coupangOrderId=)

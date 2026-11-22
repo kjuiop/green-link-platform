@@ -34,7 +34,7 @@ export interface Post {
 
 export interface SpringPage<T> {
   content: T[]
-  number: number
+  page: number
   size: number
   totalElements: number
   totalPages: number
