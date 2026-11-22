@@ -446,8 +446,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     @Override
     @Transactional
     public OrderResult updateOrder(Long id, UpdateOrderCommand cmd) {
-        Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+        Order order = findActiveOrder(id);
 
         if (order.getStatus() == OrderStatus.REFUND_REQUESTED || order.getStatus() == OrderStatus.REFUNDED) {
             throw new BusinessException(OrderErrorCode.REFUND_ORDER_LOCKED);
@@ -625,8 +624,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     @Override
     @Transactional
     public OrderResult updateOrderStatus(Long id, String action) {
-        Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+        Order order = findActiveOrder(id);
 
         switch (action.toLowerCase()) {
             case "accept" -> order.accept(kstNow());
@@ -696,8 +694,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     @Transactional
     public OrderResult requestRefund(Long id, String reason, boolean proxy) {
         validateRefundReason(reason);
-        Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+        Order order = findActiveOrder(id);
         order.requestRefund(reason, kstNow());
         Order saved = orderRepository.save(order);
         recordOrderHistoryUseCase.record(id, OrderHistoryAction.STATUS_CHANGED,
@@ -708,8 +705,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     @Override
     @Transactional
     public OrderResult approveRefund(Long id, boolean proxy) {
-        Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+        Order order = findActiveOrder(id);
         order.approveRefund(kstNow());
         Order saved = orderRepository.save(order);
         recordOrderHistoryUseCase.record(id, OrderHistoryAction.STATUS_CHANGED, "환불 승인" + proxySuffix(proxy));
@@ -724,8 +720,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     @Transactional
     public OrderResult rejectRefund(Long id, String reason, boolean proxy) {
         validateRefundReason(reason);
-        Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+        Order order = findActiveOrder(id);
         order.rejectRefund(reason, kstNow());
         Order saved = orderRepository.save(order);
         recordOrderHistoryUseCase.record(id, OrderHistoryAction.STATUS_CHANGED,
@@ -752,6 +747,15 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
             applyOrderPointUseCase.restoreSettledOrder(saved.getOrderingCompanyId(), saved.getId(),
                     saved.getOrderNumber(), resolveCurrentAdminId());
         }
+    }
+
+    private Order findActiveOrder(Long id) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+        if (order.isDeleted()) {
+            throw new BusinessException(OrderErrorCode.ORDER_NOT_FOUND);
+        }
+        return order;
     }
 
     private static void validateRefundReason(String reason) {

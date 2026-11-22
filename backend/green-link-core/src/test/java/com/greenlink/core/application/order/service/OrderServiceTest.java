@@ -566,6 +566,24 @@ class OrderServiceTest {
     }
 
     @Test
+    void mutatingDeletedOrder_isRejectedAsNotFound() {
+        Order order = orderingOrder(1L, OrderStatus.ACCEPTED);
+        order.softDelete();
+        given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> service.updateOrderStatus(1L, "complete"))
+                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+        assertThatThrownBy(() -> service.requestRefund(1L, "오배송", false))
+                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+        assertThatThrownBy(() -> service.approveRefund(1L, false))
+                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+        assertThatThrownBy(() -> service.rejectRefund(1L, "정상 배송", false))
+                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+        verify(orderRepository, never()).save(any(Order.class));
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
     void rejectRefund_returnsToDeliveredWithReason() {
         given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.REFUND_REQUESTED)));
         given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
