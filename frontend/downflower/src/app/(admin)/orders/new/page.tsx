@@ -246,7 +246,7 @@ export default function NewOrderPage() {
       if (referenceItems.length > 0) {
         await uploadReferencePhotos(String(created.id), referenceItems.map((i) => i.file)).catch(() => {})
       }
-      router.push(coupangOrder ? '/coupang/orders' : shopOrder ? '/shop/orders' : '/orders')
+      router.push(coupangOrder ? '/customer-orders/listing?channel=COUPANG' : shopOrder ? '/shop/orders' : '/orders')
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : '발주 등록에 실패했습니다.')
     } finally {
@@ -911,7 +911,7 @@ export default function NewOrderPage() {
       )}
 
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={() => router.push(coupangOrderId ? '/coupang/orders' : shopOrderId ? '/shop/orders' : '/orders')}>취소</Button>
+        <Button variant="outline" onClick={() => router.push(coupangOrderId ? '/customer-orders/listing?channel=COUPANG' : shopOrderId ? '/shop/orders' : '/orders')}>취소</Button>
         <Button
           className="bg-green-700 hover:bg-green-800"
           onClick={handleSubmit}

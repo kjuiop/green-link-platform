@@ -1,5 +1,4 @@
 import { authHeaders, fetchWithAuth } from './fetchWithAuth'
-import { PageResult } from '@/types/page'
 
 export type CoupangOrderStatus = 'PENDING' | 'HELD' | 'APPROVED' | 'CANCELED'
 
@@ -124,20 +123,6 @@ export async function fetchCoupangSyncLogs(companyId?: number | null, limit = 10
   return res.json()
 }
 
-export async function fetchCoupangOrders(
-  companyId: number | null | undefined,
-  status: CoupangOrderStatus,
-  page = 0,
-  size = 20,
-): Promise<PageResult<CoupangOrder>> {
-  const res = await fetchWithAuth(
-    withCompany('/api/admin/coupang/orders', companyId, { status, page: String(page), size: String(size) }),
-    { headers: authHeaders() },
-  )
-  if (!res.ok) throw new Error(await errorMessage(res, '쿠팡 주문을 불러오지 못했습니다.'))
-  return res.json()
-}
-
 export async function fetchCoupangOrder(id: number): Promise<CoupangOrder> {
   const res = await fetchWithAuth(`/api/admin/coupang/orders/${id}`, { headers: authHeaders() })
   if (!res.ok) throw new Error(await errorMessage(res, '쿠팡 주문을 불러오지 못했습니다.'))
@@ -159,18 +144,6 @@ export async function collectCoupangOrders(companyId?: number | null): Promise<C
     headers: authHeaders(),
   })
   if (!res.ok) throw new Error(await errorMessage(res, '쿠팡 주문을 불러오지 못했습니다.'))
-  return res.json()
-}
-
-export async function holdCoupangOrder(id: number): Promise<CoupangOrder> {
-  const res = await fetchWithAuth(`/api/admin/coupang/orders/${id}/hold`, { method: 'POST', headers: authHeaders() })
-  if (!res.ok) throw new Error(await errorMessage(res, '보류 처리에 실패했습니다.'))
-  return res.json()
-}
-
-export async function releaseCoupangOrder(id: number): Promise<CoupangOrder> {
-  const res = await fetchWithAuth(`/api/admin/coupang/orders/${id}/release`, { method: 'POST', headers: authHeaders() })
-  if (!res.ok) throw new Error(await errorMessage(res, '보류 해제에 실패했습니다.'))
   return res.json()
 }
 

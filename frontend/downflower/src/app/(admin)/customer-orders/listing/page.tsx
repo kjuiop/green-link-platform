@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Pagination } from '@/components/ui/Pagination'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { CompanySelect } from '@/components/coupang/CompanySelect'
 import { useCoupangScope } from '@/components/coupang/useCoupangScope'
 import { useShopScope } from '@/components/shop/useShopScope'
@@ -21,7 +22,7 @@ import {
 import { collectCoupangOrders, fetchCoupangCredential, type CoupangCredential } from '@/lib/api/coupangApi'
 import { PageResult } from '@/types/page'
 
-const PAGE_SIZE = 20
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 
 const CHANNEL_TABS: { value: OrderChannel | null; label: string }[] = [
   { value: null, label: '전체' },
@@ -66,7 +67,37 @@ const STATUS_COLOR: Record<CustomerOrderStatus, string> = {
   CANCELLED: 'bg-red-100 text-red-500',
 }
 
+function itemSummary(o: CustomerOrder) {
+  const items = o.coupangMeta?.items ?? []
+  if (items.length === 0) return null
+  return { first: items[0], others: items.length - 1 }
+}
+
+function addressOf(o: CustomerOrder) {
+  return [o.receiverAddress, o.receiverAddressDetail].filter(Boolean).join(' ')
+}
+
 const VALID_CHANNELS: OrderChannel[] = ['COUPANG', 'SHOP', 'DIRECT']
+
+function OrderActions({ order, busy, onHoldToggle }: {
+  order: CustomerOrder
+  busy: boolean
+  onHoldToggle: (order: CustomerOrder) => void
+}) {
+  if (order.status !== 'PENDING' && order.status !== 'HELD') return null
+  return (
+    <div className="flex gap-2 whitespace-nowrap">
+      <Button variant="outline" size="sm" disabled={busy} onClick={() => onHoldToggle(order)}>
+        {order.status === 'PENDING' ? '보류' : '보류 해제'}
+      </Button>
+      {order.channel === 'COUPANG' && order.coupangMeta && (
+        <Link href={`/orders/new?coupangOrderId=${order.id}`}>
+          <Button size="sm" className="bg-green-700 hover:bg-green-800">발주서 작성·승인</Button>
+        </Link>
+      )}
+    </div>
+  )
+}
 
 function CustomerOrdersContent() {
   const searchParams = useSearchParams()
@@ -83,6 +114,7 @@ function CustomerOrdersContent() {
   )
   const [status, setStatus] = useState<CustomerOrderStatus | null>('PENDING')
   const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(20)
   const [data, setData] = useState<PageResult<CustomerOrder> | null>(null)
   const [credential, setCredential] = useState<CoupangCredential | null>(null)
   const [loading, setLoading] = useState(true)
@@ -98,7 +130,7 @@ function CustomerOrdersContent() {
     setLoading(true)
     try {
       const [orders, cred] = await Promise.all([
-        fetchCustomerOrders(companyId, channel, status, targetPage, PAGE_SIZE),
+        fetchCustomerOrders(companyId, channel, status, targetPage, pageSize),
         (channel === null || channel === 'COUPANG')
           ? fetchCoupangCredential(companyId).catch(() => null)
           : Promise.resolve(null),
@@ -110,7 +142,7 @@ function CustomerOrdersContent() {
     } finally {
       setLoading(false)
     }
-  }, [scope.isSuperAdmin, companyId, channel, status])
+  }, [scope.isSuperAdmin, companyId, channel, status, pageSize])
 
   useEffect(() => {
     if (!scope.ready) return
@@ -271,13 +303,102 @@ function CustomerOrdersContent() {
             ))}
           </div>
 
-          {loading ? (
-            <p className="py-8 text-center text-sm text-gray-400">불러오는 중…</p>
-          ) : !data || data.content.length === 0 ? (
-            <p className="py-8 text-center text-sm text-gray-400">해당 조건의 주문이 없습니다.</p>
-          ) : (
-            <div className="space-y-3">
-              {data.content.map((o) => (
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span className="text-gray-500">건수 <strong className="text-gray-900">{data?.totalElements ?? 0}</strong>건</span>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+            >
+              {PAGE_SIZE_OPTIONS.map((s) => (
+                <option key={s} value={s}>{s}개씩</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 데스크톱 테이블 */}
+          <div className="hidden rounded-lg border bg-white md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-24"><div>채널</div><div className="font-normal text-gray-400">상태</div></TableHead>
+                  <TableHead><div>주문번호</div><div className="font-normal text-gray-400">주문일시</div></TableHead>
+                  <TableHead>상품명</TableHead>
+                  <TableHead className="text-right">합계금액</TableHead>
+                  <TableHead>주문자</TableHead>
+                  <TableHead>받는 분</TableHead>
+                  <TableHead><div>배송지</div><div className="font-normal text-gray-400">배송메시지</div></TableHead>
+                  <TableHead>작업</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">불러오는 중…</TableCell>
+                  </TableRow>
+                ) : !data || data.content.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">해당 조건의 주문이 없습니다.</TableCell>
+                  </TableRow>
+                ) : (
+                  data.content.map((o) => {
+                    const summary = itemSummary(o)
+                    return (
+                      <TableRow key={o.id} className="[&>td]:py-2">
+                        <TableCell>
+                          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{CHANNEL_LABEL[o.channel]}</span>
+                          <div className="mt-1">
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[o.status]}`}>
+                              {STATUS_LABEL[o.status]}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-mono text-xs">{o.coupangMeta?.coupangOrderId ?? '-'}</div>
+                          <div className="text-xs text-gray-400">{formatDateTime(o.orderedAt)}</div>
+                        </TableCell>
+                        <TableCell className="max-w-[14rem] whitespace-normal break-words text-sm">
+                          {summary
+                            ? `${summary.first.name} × ${summary.first.quantity}${summary.others > 0 ? ` 외 ${summary.others}건` : ''}`
+                            : '-'}
+                        </TableCell>
+                        <TableCell className="text-right text-sm font-medium">{won(o.totalPrice)}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">{o.ordererName || '-'}</div>
+                          <div className="text-xs text-gray-400">{o.ordererPhone || ''}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">{o.receiverName || '-'}</div>
+                          <div className="text-xs text-gray-400">{o.receiverPhone || ''}</div>
+                        </TableCell>
+                        <TableCell className="max-w-[16rem] whitespace-normal break-words text-sm">
+                          <div>{addressOf(o) || '-'}</div>
+                          {o.deliveryMessage && <div className="text-xs text-gray-400">{o.deliveryMessage}</div>}
+                        </TableCell>
+                        <TableCell>
+                          <OrderActions order={o} busy={busyId === o.id} onHoldToggle={handleHoldToggle} />
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+            {data && (
+              <div className="border-t px-4 py-3">
+                <Pagination page={page} totalPages={data.totalPages} totalElements={data.totalElements} size={pageSize} onPageChange={changePage} />
+              </div>
+            )}
+          </div>
+
+          {/* 모바일 카드 */}
+          <div className="space-y-3 md:hidden">
+            {loading ? (
+              <p className="py-8 text-center text-sm text-gray-400">불러오는 중…</p>
+            ) : !data || data.content.length === 0 ? (
+              <p className="py-8 text-center text-sm text-gray-400">해당 조건의 주문이 없습니다.</p>
+            ) : (
+              data.content.map((o) => (
                 <Card key={o.id}>
                   <CardContent className="space-y-2 pt-4 text-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -304,46 +425,26 @@ function CustomerOrdersContent() {
                       </div>
                     )}
 
-                    <div className="grid gap-1 text-gray-600 md:grid-cols-2">
+                    <div className="grid gap-1 text-gray-600">
                       <div>주문자: {o.ordererName || '-'} {o.ordererPhone || ''}</div>
                       <div>받는 분: {o.receiverName || '-'} {o.receiverPhone || ''}</div>
-                      {(o.receiverAddress || o.receiverAddressDetail) && (
-                        <div className="md:col-span-2">주소: {o.receiverAddress} {o.receiverAddressDetail}</div>
-                      )}
-                      {o.deliveryMessage && (
-                        <div className="md:col-span-2">배송메시지: {o.deliveryMessage}</div>
-                      )}
+                      {addressOf(o) && <div>주소: {addressOf(o)}</div>}
+                      {o.deliveryMessage && <div>배송메시지: {o.deliveryMessage}</div>}
                     </div>
 
                     {(o.status === 'PENDING' || o.status === 'HELD') && (
-                      <div className="flex justify-end gap-2 pt-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={busyId === o.id}
-                          onClick={() => handleHoldToggle(o)}
-                        >
-                          {o.status === 'PENDING' ? '보류' : '보류 해제'}
-                        </Button>
-                        {o.channel === 'COUPANG' && o.coupangMeta && (
-                          <Link href={`/orders/new?coupangOrderId=${o.id}`}>
-                            <Button size="sm" className="bg-green-700 hover:bg-green-800">발주서 작성·승인</Button>
-                          </Link>
-                        )}
+                      <div className="flex justify-end pt-1">
+                        <OrderActions order={o} busy={busyId === o.id} onHoldToggle={handleHoldToggle} />
                       </div>
                     )}
                   </CardContent>
                 </Card>
-              ))}
-              <Pagination
-                page={page}
-                totalPages={data.totalPages}
-                totalElements={data.totalElements}
-                size={PAGE_SIZE}
-                onPageChange={changePage}
-              />
-            </div>
-          )}
+              ))
+            )}
+            {data && (
+              <Pagination page={page} totalPages={data.totalPages} totalElements={data.totalElements} size={pageSize} onPageChange={changePage} />
+            )}
+          </div>
         </>
       )}
     </div>
