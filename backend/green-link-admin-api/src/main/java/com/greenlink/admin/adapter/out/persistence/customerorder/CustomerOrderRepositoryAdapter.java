@@ -1,7 +1,7 @@
 package com.greenlink.admin.adapter.out.persistence.customerorder;
 
-import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.domain.customerorder.model.CustomerOrder;
+import com.greenlink.core.domain.customerorder.model.CustomerOrderSlice;
 import com.greenlink.core.domain.customerorder.model.CustomerOrderStatus;
 import com.greenlink.core.domain.customerorder.model.OrderChannel;
 import com.greenlink.core.domain.customerorder.port.CustomerOrderRepository;
@@ -71,7 +71,7 @@ public class CustomerOrderRepositoryAdapter implements CustomerOrderRepository {
     }
 
     @Override
-    public PageResult<CustomerOrder> findByCompany(Long companyId, OrderChannel channel,
+    public CustomerOrderSlice findByCompany(Long companyId, OrderChannel channel,
                                                    CustomerOrderStatus status, int page, int size) {
         return queryRepository.findByCompany(companyId, channel, status, page, size);
     }

@@ -3,14 +3,14 @@ package com.greenlink.core.application.coupang.service;
 import com.greenlink.core.application.coupang.dto.CoupangSyncResult;
 import com.greenlink.core.domain.coupang.model.CoupangCredential;
 import com.greenlink.core.domain.coupang.model.CoupangCredentialSecret;
-import com.greenlink.core.domain.coupang.model.CoupangOrder;
+import com.greenlink.core.domain.customerorder.model.CustomerOrder;
 import com.greenlink.core.domain.coupang.model.CoupangOrderSheet;
 import com.greenlink.core.domain.coupang.model.CoupangSyncLog;
 import com.greenlink.core.domain.coupang.model.CoupangTriggerType;
 import com.greenlink.core.domain.coupang.port.CoupangApiException;
 import com.greenlink.core.domain.coupang.port.CoupangApiPort;
 import com.greenlink.core.domain.coupang.port.CoupangCredentialRepository;
-import com.greenlink.core.domain.coupang.port.CoupangOrderRepository;
+import com.greenlink.core.domain.customerorder.port.CustomerOrderRepository;
 import com.greenlink.core.domain.coupang.port.CoupangSyncLogRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.coupang.CoupangErrorCode;
@@ -39,7 +39,7 @@ import static org.mockito.Mockito.verify;
 class CoupangOrderCollectServiceTest {
 
     @Mock CoupangCredentialRepository credentialRepository;
-    @Mock CoupangOrderRepository orderRepository;
+    @Mock CustomerOrderRepository orderRepository;
     @Mock CoupangSyncLogRepository syncLogRepository;
     @Mock CoupangApiPort apiPort;
     @Mock CoupangSecretResolver secretResolver;
@@ -67,7 +67,7 @@ class CoupangOrderCollectServiceTest {
         given(credentialRepository.findByCompanyId(5L)).willReturn(Optional.of(credential));
         given(secretResolver.resolve(credential)).willReturn(new CoupangCredentialSecret("A001", "ak", "sk"));
         given(apiPort.fetchNewOrderSheets(any(), any(), any())).willReturn(List.of(sheet(1), sheet(2)), List.of());
-        given(orderRepository.insertIfAbsent(any(CoupangOrder.class))).willReturn(true, false);
+        given(orderRepository.insertIfAbsent(any(CustomerOrder.class))).willReturn(true, false);
 
         CoupangSyncResult result = service.collect(5L, CoupangTriggerType.MANUAL);
 
