@@ -11,6 +11,14 @@ public class SmsSettings {
     private String provider;
     private String apiKey;
     private String userId;
+    private String corpNum;
+    private String faxSenderNumber;
+    private String faxUrl;
+    private String ftpHost;
+    private Integer ftpPort;
+    private String ftpUsername;
+    private String ftpPassword;
+    private String ftpDirectory;
 
     private SmsSettings() {}
 
@@ -29,7 +37,7 @@ public class SmsSettings {
 
     public static SmsSettings of(Long id, String senderNumber, String senderName,
                                   String templateFuneral, String templateWedding, String templateOthers,
-                                  String provider, String apiKey, String userId) {
+                                  String provider, String apiKey, String userId, String corpNum) {
         SmsSettings s = new SmsSettings();
         s.id = id;
         s.senderNumber = senderNumber;
@@ -40,12 +48,13 @@ public class SmsSettings {
         s.provider = provider != null ? provider : "ALIGO";
         s.apiKey = apiKey;
         s.userId = userId;
+        s.corpNum = corpNum;
         return s;
     }
 
     public void update(String senderNumber, String senderName,
                        String templateFuneral, String templateWedding, String templateOthers,
-                       String provider, String apiKey, String userId) {
+                       String provider, String apiKey, String userId, String corpNum) {
         this.senderNumber = senderNumber;
         this.senderName = senderName;
         this.templateFuneral = templateFuneral;
@@ -54,6 +63,18 @@ public class SmsSettings {
         this.provider = provider != null ? provider : "ALIGO";
         this.apiKey = apiKey;
         this.userId = userId;
+        this.corpNum = corpNum;
+    }
+
+    public void withFax(String faxSenderNumber, String faxUrl, String ftpHost, Integer ftpPort,
+                        String ftpUsername, String ftpPassword, String ftpDirectory) {
+        this.faxSenderNumber = faxSenderNumber;
+        this.faxUrl = faxUrl;
+        this.ftpHost = ftpHost;
+        this.ftpPort = ftpPort;
+        this.ftpUsername = ftpUsername;
+        this.ftpPassword = ftpPassword;
+        this.ftpDirectory = ftpDirectory;
     }
 
     public String resolveTemplate(String eventType) {
@@ -71,4 +92,12 @@ public class SmsSettings {
     public String getProvider() { return provider != null ? provider : "ALIGO"; }
     public String getApiKey() { return apiKey; }
     public String getUserId() { return userId; }
+    public String getCorpNum() { return corpNum; }
+    public String getFaxSenderNumber() { return faxSenderNumber; }
+    public String getFaxUrl() { return faxUrl; }
+    public String getFtpHost() { return ftpHost; }
+    public Integer getFtpPort() { return ftpPort; }
+    public String getFtpUsername() { return ftpUsername; }
+    public String getFtpPassword() { return ftpPassword; }
+    public String getFtpDirectory() { return ftpDirectory; }
 }

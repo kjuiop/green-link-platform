@@ -27,14 +27,16 @@ public class CompanyIntegrationRepositoryAdapter implements CompanyIntegrationRe
         CompanyIntegrationJpaEntity entity;
         if (existing.isPresent()) {
             entity = existing.get();
-            entity.update(integration.getProvider(), integration.getApiKey(), integration.getSenderNumber());
+            entity.update(integration.getProvider(), integration.getApiKey(), integration.getSenderNumber(),
+                    integration.getUserId());
             entity.updateAlimtalk(integration.isAlimtalkEnabled(), integration.getAlimtalkTemplateFuneral(),
                     integration.getAlimtalkTemplateWedding(), integration.getAlimtalkTemplateEtc(),
                     integration.getAlimtalkSenderKey());
         } else {
             entity = CompanyIntegrationJpaEntity.createNew(
                     integration.getCompanyId(), integration.getProvider(),
-                    integration.getApiKey(), integration.getSenderNumber());
+                    integration.getApiKey(), integration.getSenderNumber(),
+                    integration.getUserId());
             entity.updateAlimtalk(integration.isAlimtalkEnabled(), integration.getAlimtalkTemplateFuneral(),
                     integration.getAlimtalkTemplateWedding(), integration.getAlimtalkTemplateEtc(),
                     integration.getAlimtalkSenderKey());

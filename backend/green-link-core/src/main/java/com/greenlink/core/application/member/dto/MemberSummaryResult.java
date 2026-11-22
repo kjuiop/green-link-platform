@@ -4,5 +4,5 @@ public record MemberSummaryResult(
         String companyType,
         long orderingAmount,
         long vendorAmount,
-        Long depositBalance
+        long pointBalance
 ) {}

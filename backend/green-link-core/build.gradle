@@ -15,5 +15,6 @@ dependencies {
     // Pagination (Page, Pageable)
     implementation 'org.springframework.data:spring-data-commons'
 
+    testImplementation 'org.springframework.security:spring-security-core'
     testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.1'
 }

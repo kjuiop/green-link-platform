@@ -8,12 +8,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { cn, RIBBON_PHRASES, formatPhone } from '@/lib/utils'
-import { fetchVendors } from '@/lib/api/vendorApi'
 import { createOrder, fetchOrderingCompanies, uploadReferencePhotos, OrderingCompany } from '@/lib/api/orderApi'
-import { fetchAllProducts } from '@/lib/api/productApi'
-import { Vendor } from '@/types/vendor'
-import { Product } from '@/types/product'
+import { fetchAdminPointList, fetchMyPoint } from '@/lib/api/pointApi'
 import VendorSelectModal from '@/components/common/VendorSelectModal'
+import { fetchCoupangOrder, approveCoupangOrder, CoupangOrder } from '@/lib/api/coupangApi'
+import { fetchShopOrder, approveShopOrder, type ShopOrder } from '@/lib/api/shopApi'
 
 
 export default function NewOrderPage() {
@@ -21,7 +20,8 @@ export default function NewOrderPage() {
 
   // 기본정보
   const [vendorId, setVendorId] = useState('')
-  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
+  const [selectedVendorName, setSelectedVendorName] = useState('')
+  const [selectedProductId, setSelectedProductId] = useState('')
   const [vendorModalOpen, setVendorModalOpen] = useState(false)
   const [productName, setProductName] = useState('')
   const [quantity, setQuantity] = useState('1')
@@ -65,15 +65,10 @@ export default function NewOrderPage() {
     return () => referenceItems.forEach((item) => URL.revokeObjectURL(item.url))
   }, [])
 
-  // 업체 목록
-  const [vendors, setVendors] = useState<Vendor[]>([])
   // 발주업체 (SUPER_ADMIN 전용)
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [orderingCompanies, setOrderingCompanies] = useState<OrderingCompany[]>([])
   const [orderingCompanyId, setOrderingCompanyId] = useState('')
-  // 상품 목록
-  const [products, setProducts] = useState<Product[]>([])
-  const [selectedProductId, setSelectedProductId] = useState('')
 
   // 제출 상태
   const [errors, setErrors] = useState<{
@@ -91,10 +86,22 @@ export default function NewOrderPage() {
   }>({})
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [availablePoint, setAvailablePoint] = useState<number | null>(null)
+  const requiredPoint = (Number(amount) || 0) + (Number(extraCost) || 0)
+  const pointInsufficient = availablePoint !== null && requiredPoint > availablePoint
 
   useEffect(() => {
-    fetchVendors('ACTIVE').then((list) => setVendors(list.filter((v) => v.companyType !== 'ORDERING'))).catch(() => {})
-    fetchAllProducts().then(setProducts).catch(() => {})
+    if (isSuperAdmin) {
+      if (!orderingCompanyId) { setAvailablePoint(null); return }
+      fetchAdminPointList()
+        .then((list) => setAvailablePoint(list.find((c) => String(c.companyId) === orderingCompanyId)?.balance ?? 0))
+        .catch(() => setAvailablePoint(null))
+    } else {
+      fetchMyPoint().then((p) => setAvailablePoint(p.balance)).catch(() => setAvailablePoint(null))
+    }
+  }, [isSuperAdmin, orderingCompanyId])
+
+  useEffect(() => {
     const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null
     if (role === 'SUPER_ADMIN') {
       setIsSuperAdmin(true)
@@ -102,14 +109,73 @@ export default function NewOrderPage() {
     }
   }, [])
 
+  // 쿠팡 주문 승인 모드 (?coupangOrderId=)
+  const [coupangOrder, setCoupangOrder] = useState<CoupangOrder | null>(null)
+  const [coupangLoadError, setCoupangLoadError] = useState('')
+  const [coupangOrderId, setCoupangOrderId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setCoupangOrderId(new URLSearchParams(window.location.search).get('coupangOrderId'))
+  }, [])
+
+  useEffect(() => {
+    if (!coupangOrderId) return
+    fetchCoupangOrder(Number(coupangOrderId))
+      .then((o) => {
+        setCoupangOrder(o)
+        setOrderingCompanyId(String(o.companyId))
+        setOrdererName(o.ordererName ?? '')
+        setOrdererPhone(formatPhone(o.ordererPhone ?? ''))
+        setRecipientName(o.receiverName ?? '')
+        setRecipientPhone(formatPhone(o.receiverPhone ?? ''))
+        setAddress(o.receiverAddress ?? '')
+        setAddressDetail(o.receiverAddressDetail ?? '')
+        if (o.deliveryMessage) setAdminMemo(`[쿠팡 배송메시지] ${o.deliveryMessage}`)
+        setSendPhotoToOrderer(false)
+        setSendPhotoToRecipient(false)
+      })
+      .catch((e) => setCoupangLoadError(e instanceof Error ? e.message : '쿠팡 주문을 불러오지 못했습니다.'))
+  }, [coupangOrderId])
+
+  // 쇼핑몰 주문 승인 모드 (?shopOrderId=)
+  const [shopOrder, setShopOrder] = useState<ShopOrder | null>(null)
+  const [shopLoadError, setShopLoadError] = useState('')
+  const [shopOrderId, setShopOrderId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setShopOrderId(new URLSearchParams(window.location.search).get('shopOrderId'))
+  }, [])
+
+  useEffect(() => {
+    if (!shopOrderId) return
+    fetchShopOrder(Number(shopOrderId))
+      .then((o) => {
+        setShopOrder(o)
+        setOrderingCompanyId(String(o.companyId))
+        setOrdererName(o.ordererName ?? '')
+        setOrdererPhone(formatPhone(o.ordererPhone ?? ''))
+        setRecipientName(o.recipientName ?? '')
+        setRecipientPhone(formatPhone(o.recipientPhone ?? ''))
+        setAddress(o.address ?? '')
+        setAddressDetail(o.addressDetail ?? '')
+        if (o.deliveryDate) setDeliveryDate(o.deliveryDate)
+        if (o.deliveryTime) setDeliveryTimeCustom(o.deliveryTime)
+        if (o.eventType === '장례식' || o.eventType === '결혼식' || o.eventType === '기타') setSelectedEventType(o.eventType)
+        if (o.placeName) setVenueName(o.placeName)
+        if (o.ribbonLeft) setRibbonLefts([o.ribbonLeft])
+        if (o.ribbonRight) setRibbonRights([o.ribbonRight])
+        if (o.memo) setAdminMemo(`[쇼핑몰 요청사항] ${o.memo}`)
+        setSendPhotoToRecipient(false)
+      })
+      .catch((e) => setShopLoadError(e instanceof Error ? e.message : '쇼핑몰 주문을 불러오지 못했습니다.'))
+  }, [shopOrderId])
+
   async function handleSubmit() {
     const next: typeof errors = {}
-    if (!vendorId) next.vendorId = '수주업체를 선택해주세요.'
+    if (!vendorId) next.vendorId = '수주업체와 상품을 선택해주세요.'
     if (isSuperAdmin && !orderingCompanyId) next.orderingCompanyId = '발주업체를 선택해주세요.'
-    if (!productName.trim()) next.productName = '상품명을 입력해주세요.'
     if (!deliveryDate) next.deliveryDate = '배송날짜를 입력해주세요.'
     if (!deliveryHour && deliveryTimeType !== '3시간이내' && deliveryTimeType !== '직접입력') next.deliveryHour = '배송시간을 선택해주세요.'
-    if (!amount) next.amount = '발주금액을 입력해주세요.'
     if (!venueName.trim()) next.venueName = '장소를 입력해주세요.'
     if (!recipientName.trim()) next.recipientName = '받는 분 성함을 입력해주세요.'
     if (!(ribbonLefts[0] ?? '').trim()) next.ribbonLeft = '보내는이를 입력해주세요.'
@@ -126,10 +192,10 @@ export default function NewOrderPage() {
     setSubmitting(true)
     setSubmitError('')
     try {
-      const created = await createOrder({
+      const payload: Parameters<typeof createOrder>[0] = {
         vendorId: Number(vendorId),
         ...(isSuperAdmin && orderingCompanyId ? { orderingCompanyId: Number(orderingCompanyId) } : {}),
-        ...(selectedProductId && selectedProductId !== '__direct__' ? { productId: Number(selectedProductId) } : {}),
+        ...(selectedProductId ? { productId: Number(selectedProductId) } : {}),
         productName,
         quantity: Number(quantity) || 1,
         amount: Number(amount),
@@ -168,12 +234,16 @@ export default function NewOrderPage() {
         scheduledMessageMinute: scheduledMinute,
         adminMemo,
         vendorMemo,
-      })
+      }
+      const created = coupangOrder
+        ? await approveCoupangOrder(coupangOrder.id, payload)
+        : shopOrder
+          ? await approveShopOrder(shopOrder.id, payload)
+          : await createOrder(payload)
       if (referenceItems.length > 0) {
         await uploadReferencePhotos(String(created.id), referenceItems.map((i) => i.file)).catch(() => {})
       }
-      window.dispatchEvent(new Event('member-summary-refresh'))
-      router.push('/orders')
+      router.push(coupangOrder ? '/coupang/orders' : shopOrder ? '/shop/orders' : '/orders')
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : '발주 등록에 실패했습니다.')
     } finally {
@@ -183,7 +253,50 @@ export default function NewOrderPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">신규 발주</h1>
+      <h1 className="text-xl font-bold">{coupangOrderId ? '쿠팡 주문 승인 발주' : shopOrderId ? '쇼핑몰 주문 승인 발주' : '신규 발주'}</h1>
+
+      {coupangLoadError && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{coupangLoadError}</div>
+      )}
+      {coupangOrder && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="space-y-1 py-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-1">
+              <span className="font-semibold text-orange-800">쿠팡 주문 #{coupangOrder.orderId}</span>
+              <span className="text-xs text-gray-500">쿠팡 상태: {coupangOrder.coupangStatus ?? '-'}</span>
+            </div>
+            {coupangOrder.items.map((it, i) => (
+              <p key={i} className="text-gray-700">{it.name} × {it.quantity} ({it.salesPrice.toLocaleString()}원)</p>
+            ))}
+            <p className="font-medium text-gray-800">쿠팡 결제 합계 {coupangOrder.totalPrice.toLocaleString()}원</p>
+            <p className="text-xs text-gray-500">
+              수주업체·상품, 배송시간, 리본 문구를 입력한 뒤 승인하면 발주가 생성됩니다. 주문자/받는 분 번호는 쿠팡 안심번호일 수 있어
+              문자 발송 대상은 기본 해제되어 있습니다.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {shopLoadError && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{shopLoadError}</div>
+      )}
+      {shopOrder && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="space-y-1 py-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-1">
+              <span className="font-semibold text-green-800">쇼핑몰 주문 {shopOrder.orderNo}</span>
+              <span className="text-xs text-gray-500">고객 희망 {shopOrder.deliveryDate ?? '-'} {shopOrder.deliveryTime ?? ''}</span>
+            </div>
+            {shopOrder.items.map((it, i) => (
+              <p key={i} className="text-gray-700">{it.name} × {it.quantity} ({it.unitPrice.toLocaleString()}원)</p>
+            ))}
+            <p className="font-medium text-gray-800">고객 결제 예정 합계 {shopOrder.totalPrice.toLocaleString()}원</p>
+            <p className="text-xs text-gray-500">
+              수주업체·상품과 배송시간을 확인한 뒤 승인하면 발주가 생성됩니다. 발주 금액은 수주업체 상품 단가로 계산되며 판매가와 무관합니다.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         <div className="space-y-4">
@@ -203,6 +316,7 @@ export default function NewOrderPage() {
                 <select
                   value={orderingCompanyId}
                   onChange={(e) => setOrderingCompanyId(e.target.value)}
+                  disabled={!!coupangOrderId || !!shopOrderId}
                   className={`w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700 ${errors.orderingCompanyId ? 'border-red-500' : ''}`}
                 >
                   <option value="">선택하세요</option>
@@ -214,69 +328,29 @@ export default function NewOrderPage() {
               </div>
             )}
             <div className="space-y-1.5">
-              <Label>수주업체 *</Label>
+              <Label>수주업체 · 상품 *</Label>
               <button
                 type="button"
                 onClick={() => setVendorModalOpen(true)}
                 className={cn(
                   'w-full rounded-md border bg-white px-3 py-2 text-left text-sm focus:outline-none focus:ring-2 focus:ring-green-700',
                   errors.vendorId && 'border-red-500',
-                  !selectedVendor && 'text-gray-400',
+                  !vendorId && 'text-gray-400',
                 )}
               >
-                {selectedVendor ? selectedVendor.name : '업체 선택 (지도)'}
+                {vendorId ? (
+                  <span>
+                    <span className="font-medium">{selectedVendorName}</span>
+                    <span className="mx-1.5 text-gray-300">|</span>
+                    {productName} · {unitPrice.toLocaleString()}원
+                  </span>
+                ) : (
+                  '수주업체·상품 선택'
+                )}
               </button>
               {errors.vendorId && <p className="text-xs text-red-500">{errors.vendorId}</p>}
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>상품명 *</Label>
-                <select
-                  value={selectedProductId}
-                  onChange={(e) => {
-                    const id = e.target.value
-                    setSelectedProductId(id)
-                    if (id === '__direct__') {
-                      setProductName('')
-                      setUnitPrice(0)
-                      setAmount('')
-                    } else if (id === '') {
-                      setProductName('')
-                      setUnitPrice(0)
-                      setAmount('')
-                    } else {
-                      const found = products.find((p) => p.id === id)
-                      if (found) {
-                        setProductName(found.name)
-                        setUnitPrice(found.price)
-                        setAmount(String(found.price * (Number(quantity) || 1)))
-                      }
-                    }
-                    setErrors((prev) => ({ ...prev, productName: undefined }))
-                  }}
-                  className={cn(
-                    'w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700',
-                    errors.productName && 'border-red-500',
-                  )}
-                >
-                  <option value="">상품 선택</option>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} — {p.price.toLocaleString()}원
-                    </option>
-                  ))}
-                  <option value="__direct__">직접 입력</option>
-                </select>
-                {selectedProductId === '__direct__' && (
-                  <Input
-                    placeholder="예: 근조화환 3단"
-                    value={productName}
-                    onChange={(e) => { setProductName(e.target.value); setErrors((prev) => ({ ...prev, productName: undefined })) }}
-                    className={cn(errors.productName && 'border-red-500 focus-visible:ring-red-500')}
-                  />
-                )}
-                {errors.productName && <p className="text-xs text-red-500">{errors.productName}</p>}
-              </div>
               <div className="space-y-1.5">
                 <Label>수량 *</Label>
                 <Input
@@ -296,18 +370,18 @@ export default function NewOrderPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>발주금액 *</Label>
+              <Label>상품금액</Label>
               <Input
-                type="number"
-                placeholder="0"
-                value={amount}
-                onChange={(e) => { setAmount(e.target.value); setErrors((prev) => ({ ...prev, amount: undefined })) }}
-                className={cn(errors.amount && 'border-red-500 focus-visible:ring-red-500')}
+                type="text"
+                readOnly
+                tabIndex={-1}
+                placeholder="수주업체·상품을 선택하면 자동 계산됩니다"
+                value={amount ? Number(amount).toLocaleString() : ''}
+                className="bg-gray-50"
               />
-              {errors.amount && <p className="text-xs text-red-500">{errors.amount}</p>}
-              {unitPrice > 0 && Number(quantity) > 1 && (
+              {unitPrice > 0 && (
                 <p className="text-xs text-gray-400">
-                  단가 {unitPrice.toLocaleString()}원 × {quantity}개
+                  단가 {unitPrice.toLocaleString()}원 × {Number(quantity) || 1}개
                 </p>
               )}
             </div>
@@ -817,24 +891,43 @@ export default function NewOrderPage() {
         <p className="text-sm text-red-500">{submitError}</p>
       )}
 
+      {availablePoint !== null && (
+        <div className={cn('rounded-md border px-3 py-2 text-sm', pointInsufficient ? 'border-red-200 bg-red-50 text-red-600' : 'bg-gray-50 text-gray-700')}>
+          <div className="flex justify-between">
+            <span>보유 포인트</span>
+            <span className="font-medium">{availablePoint.toLocaleString()} P</span>
+          </div>
+          <div className="flex justify-between">
+            <span>예치 예정 (상품금액 + 추가비용)</span>
+            <span className="font-medium">{requiredPoint.toLocaleString()} P</span>
+          </div>
+          {pointInsufficient && (
+            <p className="mt-1 text-xs">포인트가 부족합니다. 충전 후 발주해주세요.</p>
+          )}
+        </div>
+      )}
+
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={() => router.push('/orders')}>취소</Button>
+        <Button variant="outline" onClick={() => router.push(coupangOrderId ? '/coupang/orders' : shopOrderId ? '/shop/orders' : '/orders')}>취소</Button>
         <Button
           className="bg-green-700 hover:bg-green-800"
           onClick={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || pointInsufficient || (!!coupangOrderId && !coupangOrder) || (!!shopOrderId && !shopOrder)}
         >
-          {submitting ? '등록 중...' : '발주 등록'}
+          {submitting ? '등록 중...' : coupangOrderId || shopOrderId ? '승인 및 발주 등록' : '발주 등록'}
         </Button>
       </div>
 
       <VendorSelectModal
         open={vendorModalOpen}
-        vendors={vendors}
-        onSelect={(v) => {
-          setSelectedVendor(v)
-          setVendorId(v.id)
-          setErrors((prev) => ({ ...prev, vendorId: undefined }))
+        onSelect={(v, product) => {
+          setVendorId(v.vendorId)
+          setSelectedVendorName(v.companyName)
+          setSelectedProductId(product.id)
+          setProductName(product.name)
+          setUnitPrice(product.price)
+          setAmount(String(product.price * (Number(quantity) || 1)))
+          setErrors((prev) => ({ ...prev, vendorId: undefined, amount: undefined }))
           setVendorModalOpen(false)
         }}
         onClose={() => setVendorModalOpen(false)}

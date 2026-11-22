@@ -14,10 +14,13 @@ import {
   saveCompanySmsIntegration,
   CompanyInfo,
 } from '@/lib/api/companyApi'
+import { BarobillSenderCheck } from '@/components/sms/BarobillSenderCheck'
+import { BarobillKakaoTools } from '@/components/sms/BarobillKakaoTools'
 
 const PROVIDERS: { value: SmsProvider; label: string }[] = [
   { value: 'MESSAGEME', label: '메세지미 (MessageMe)' },
   { value: 'ALIGO', label: '알리고 (Aligo)' },
+  { value: 'BAROBILL', label: '바로빌 (Barobill)' },
 ]
 
 type FormProps = {
@@ -29,6 +32,7 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
   const [provider, setProvider] = useState<SmsProvider>(initialIntegration?.provider ?? 'MESSAGEME')
   const [apiKey, setApiKey] = useState(initialIntegration?.apiKey ?? '')
   const [senderNumber, setSenderNumber] = useState(initialIntegration?.senderNumber ?? '')
+  const [userId, setUserId] = useState(initialIntegration?.userId ?? '')
   const [alimtalkEnabled, setAlimtalkEnabled] = useState(initialIntegration?.alimtalkEnabled ?? false)
   const [alimtalkTemplateFuneral, setAlimtalkTemplateFuneral] = useState(initialIntegration?.alimtalkTemplateFuneral ?? '')
   const [alimtalkTemplateWedding, setAlimtalkTemplateWedding] = useState(initialIntegration?.alimtalkTemplateWedding ?? '')
@@ -42,7 +46,7 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
     setSaveResult('idle')
     try {
       const data: SaveCompanySmsIntegrationData = {
-        provider, apiKey, senderNumber,
+        provider, apiKey, senderNumber, userId,
         alimtalkEnabled,
         alimtalkTemplateFuneral,
         alimtalkTemplateWedding,
@@ -86,9 +90,9 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>API Key</Label>
+              <Label>{provider === 'BAROBILL' ? '연동인증키 (CERTKEY)' : 'API Key'}</Label>
               <Input
-                placeholder="API Key 입력"
+                placeholder={provider === 'BAROBILL' ? '바로빌 연동인증키 입력' : 'API Key 입력'}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
               />
@@ -101,7 +105,18 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
                 onChange={(e) => setSenderNumber(e.target.value)}
               />
             </div>
+            {provider === 'BAROBILL' && (
+              <div className="space-y-1.5">
+                <Label>바로빌 아이디</Label>
+                <Input
+                  placeholder="바로빌 회원 아이디"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                />
+              </div>
+            )}
           </div>
+          {provider === 'BAROBILL' && <BarobillSenderCheck companyId={companyId} />}
         </div>
 
         {/* 알림톡 설정 */}
@@ -117,6 +132,19 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
             <span className="text-sm">알림톡 발송 활성화</span>
           </label>
           {alimtalkEnabled && (
+            provider === 'BAROBILL' ? (
+              <BarobillKakaoTools
+                companyId={companyId}
+                senderKey={alimtalkSenderKey}
+                onSenderKeyChange={setAlimtalkSenderKey}
+                templateFuneral={alimtalkTemplateFuneral}
+                templateWedding={alimtalkTemplateWedding}
+                templateEtc={alimtalkTemplateEtc}
+                onTemplateFuneralChange={setAlimtalkTemplateFuneral}
+                onTemplateWeddingChange={setAlimtalkTemplateWedding}
+                onTemplateEtcChange={setAlimtalkTemplateEtc}
+              />
+            ) : (
             <div className="space-y-3">
               <p className="text-xs text-gray-400">
                 메시지미에 등록된 알림톡 전송키와 템플릿 코드를 입력하세요. 발송 실패 시 SMS로 자동 전환됩니다.
@@ -183,6 +211,7 @@ function SmsIntegrationForm({ companyId, initialIntegration }: FormProps) {
                 />
               </div>
             </div>
+            )
           )}
         </div>
 

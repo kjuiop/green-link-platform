@@ -17,6 +17,11 @@ import {
   Package,
   Newspaper,
   Calculator,
+  Coins,
+  Percent,
+  ShoppingCart,
+  Store,
+  MapPin,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -25,6 +30,7 @@ import { fetchMenusByRole } from '@/lib/api/menuApi'
 import { type MenuItem } from '@/types/menu'
 import { fetchMemberSummary } from '@/lib/api/memberApi'
 import { type MemberSummary } from '@/types/member'
+import { fetchCoupangPendingCount } from '@/lib/api/coupangApi'
 
 const ICON_MAP: Record<string, LucideIcon> = {
   '/dashboard': LayoutDashboard,
@@ -36,16 +42,33 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/settings/messages': SlidersHorizontal,
   '/vendors': Users,
   '/settings/menus': Menu,
-  '/settings/products': Package,
+  '/settings/basic-products': Package,
   '/products': Package,
   '/settings/vendors': Users,
   '/community': Newspaper,
   '/settings/settlement': Calculator,
   '/settlement': Calculator,
+  '/settings/points': Coins,
+  '/settings/vendor-fees': Percent,
+  '/settings/region-guides': MapPin,
+  '/points': Coins,
   '/sms/settings': SlidersHorizontal,
   '/sms/message-log': MessageSquare,
   '/sms/alimtalk-log': MessageSquare,
+  '/customer-orders': ShoppingCart,
+  '/customer-orders/listing': ShoppingCart,
+  '/customer-orders/integration-settings': SlidersHorizontal,
+  '/integration-settings': SlidersHorizontal,
+  '/coupang': ShoppingCart,
+  '/coupang/orders': ShoppingCart,
+  '/coupang/settings': SlidersHorizontal,
+  '/shop': Store,
+  '/shop/settings': SlidersHorizontal,
+  '/shop/products': Package,
+  '/shop/orders': Store,
 }
+
+const CUSTOMER_ORDERS_URL = '/customer-orders/listing'
 
 function isActive(pathname: string, url: string): boolean {
   if (url === '/orders') return (
@@ -93,14 +116,10 @@ function MemberInfoCard({ summary, name, loginId }: { summary: MemberSummary; na
           <span className="font-medium">{summary.vendorAmount.toLocaleString()}원</span>
         </div>
       )}
-      {isOrdering && (
-        <div className="flex justify-between pt-0.5">
-          <span className="text-green-200">예치금 잔액</span>
-          <span className="text-green-200">
-            {summary.depositBalance != null ? `${summary.depositBalance.toLocaleString()}원` : '-'}
-          </span>
-        </div>
-      )}
+      <div className={cn('flex justify-between pt-0.5', (isOrdering || isVendor) && 'mt-0.5 border-t border-green-600')}>
+        <span>포인트</span>
+        <span className="font-medium">{summary.pointBalance.toLocaleString()} P</span>
+      </div>
     </div>
   )
 }
@@ -113,9 +132,10 @@ interface SidebarNavProps {
   memberName?: string
   memberLoginId?: string
   memberSummary?: MemberSummary | null
+  coupangPending?: number
 }
 
-function SidebarNav({ menus, onNavClick, openId, onToggle, memberName, memberLoginId, memberSummary }: SidebarNavProps) {
+function SidebarNav({ menus, onNavClick, openId, onToggle, memberName, memberLoginId, memberSummary, coupangPending = 0 }: SidebarNavProps) {
   const pathname = usePathname()
 
   return (
@@ -173,6 +193,11 @@ function SidebarNav({ menus, onNavClick, openId, onToggle, memberName, memberLog
                         >
                           <ChildIcon className="h-3.5 w-3.5 shrink-0" />
                           {child.name}
+                          {child.url === CUSTOMER_ORDERS_URL && coupangPending > 0 && (
+                            <span className="ml-auto rounded-full bg-red-500 px-1.5 text-[10px] font-semibold leading-4 text-white">
+                              {coupangPending > 99 ? '99+' : coupangPending}
+                            </span>
+                          )}
                         </Link>
                       )
                     })}
@@ -196,6 +221,11 @@ function SidebarNav({ menus, onNavClick, openId, onToggle, memberName, memberLog
             >
               <Icon className="h-4 w-4 shrink-0" />
               {menu.name}
+              {menu.url === CUSTOMER_ORDERS_URL && coupangPending > 0 && (
+                <span className="ml-auto rounded-full bg-red-500 px-1.5 text-[10px] font-semibold leading-4 text-white">
+                  {coupangPending > 99 ? '99+' : coupangPending}
+                </span>
+              )}
             </Link>
           )
         })}
@@ -216,6 +246,7 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   const [memberName, setMemberName] = useState<string>('')
   const [memberLoginId, setMemberLoginId] = useState<string>('')
   const [memberSummary, setMemberSummary] = useState<MemberSummary | null>(null)
+  const [coupangPending, setCoupangPending] = useState(0)
 
   useEffect(() => {
     setMemberName(localStorage.getItem('name') ?? '')
@@ -237,12 +268,24 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
     setOpenId(settingsMenu?.id ?? null)
   }, [menus, pathname])
 
+  const hasCustomerOrderMenu = menus.some(
+    (m) => m.url === CUSTOMER_ORDERS_URL || m.children?.some((c) => c.url === CUSTOMER_ORDERS_URL)
+  )
+
+  useEffect(() => {
+    if (!hasCustomerOrderMenu) return
+    const load = () => fetchCoupangPendingCount().then(setCoupangPending).catch(() => {})
+    load()
+    const timer = setInterval(load, 60000)
+    return () => clearInterval(timer)
+  }, [hasCustomerOrderMenu, pathname])
+
   const handleToggle = (id: number) => setOpenId((prev) => (prev === id ? null : id))
 
   return (
     <>
       <aside className="hidden h-screen w-56 flex-col border-r bg-white md:flex">
-        <SidebarNav menus={menus} openId={openId} onToggle={handleToggle} memberName={memberName} memberLoginId={memberLoginId} memberSummary={memberSummary} />
+        <SidebarNav menus={menus} openId={openId} onToggle={handleToggle} memberName={memberName} memberLoginId={memberLoginId} memberSummary={memberSummary} coupangPending={coupangPending} />
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={(open) => { if (!open) onMobileClose?.() }}>
@@ -255,6 +298,7 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
             memberName={memberName}
             memberLoginId={memberLoginId}
             memberSummary={memberSummary}
+            coupangPending={coupangPending}
           />
         </SheetContent>
       </Sheet>

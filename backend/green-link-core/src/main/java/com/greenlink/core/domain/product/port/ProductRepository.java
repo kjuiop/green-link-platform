@@ -1,6 +1,7 @@
 package com.greenlink.core.domain.product.port;
 
 import com.greenlink.core.domain.product.model.Product;
+import com.greenlink.core.domain.product.model.ProductCategory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -9,9 +10,14 @@ import java.util.Optional;
 
 public interface ProductRepository {
     Product save(Product product);
-    Optional<Product> findById(Long id);
-    Page<Product> findAll(Pageable pageable);
-    List<Product> findAll();
+    List<Product> saveAll(List<Product> products);
+    Optional<Product> findByIdAndCompanyId(Long id, Long companyId);
+    Page<Product> search(Long companyId, String keyword, boolean enabledOnly, Pageable pageable);
+    List<Product> findAllByBaseProductId(Long baseProductId);
+    List<Long> findBaseProductIdsByCompanyId(Long companyId);
     void delete(Long id);
-    boolean existsById(Long id);
+    void deleteAllByBaseProductId(Long baseProductId);
+    List<VendorMatch> findVendorMatches(ProductCategory category, Long baseProductId, String keyword);
+
+    record VendorMatch(Long companyId, long productCount, long minPrice) {}
 }

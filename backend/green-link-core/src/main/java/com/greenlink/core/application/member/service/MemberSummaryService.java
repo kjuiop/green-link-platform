@@ -11,6 +11,8 @@ import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.domain.order.port.OrderRepository;
+import com.greenlink.core.domain.point.model.CompanyPoint;
+import com.greenlink.core.domain.point.port.CompanyPointRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.member.MemberErrorCode;
 import org.springframework.stereotype.Service;
@@ -26,10 +28,13 @@ public class MemberSummaryService implements GetMemberSummaryUseCase, GetMyAccou
 
     private final CompanyRepository companyRepository;
     private final OrderRepository orderRepository;
+    private final CompanyPointRepository companyPointRepository;
 
-    public MemberSummaryService(CompanyRepository companyRepository, OrderRepository orderRepository) {
+    public MemberSummaryService(CompanyRepository companyRepository, OrderRepository orderRepository,
+                                CompanyPointRepository companyPointRepository) {
         this.companyRepository = companyRepository;
         this.orderRepository = orderRepository;
+        this.companyPointRepository = companyPointRepository;
     }
 
     @Override
@@ -65,10 +70,13 @@ public class MemberSummaryService implements GetMemberSummaryUseCase, GetMyAccou
                     companyId,
                     null, null
             );
-            vendorAmount = orderRepository.sumAmount(vendorCondition);
+            vendorAmount = orderRepository.sumAmount(vendorCondition) - orderRepository.sumVendorFee(vendorCondition);
         }
 
-        return new MemberSummaryResult(type.name(), orderingAmount, vendorAmount, null);
+        long pointBalance = companyPointRepository.findByCompanyId(companyId)
+                .map(CompanyPoint::getBalance).orElse(0L);
+
+        return new MemberSummaryResult(type.name(), orderingAmount, vendorAmount, pointBalance);
     }
 
     @Override

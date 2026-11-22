@@ -56,6 +56,11 @@ public class OrderRepositoryAdapter implements OrderRepository {
     }
 
     @Override
+    public long sumVendorFee(OrderSearchCondition condition) {
+        return queryRepository.sumVendorFee(condition);
+    }
+
+    @Override
     public Order save(Order order) {
         return jpaRepository.save(OrderJpaEntity.from(order)).toDomain();
     }

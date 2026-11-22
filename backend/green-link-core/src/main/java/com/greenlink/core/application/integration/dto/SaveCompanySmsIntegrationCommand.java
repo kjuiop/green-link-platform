@@ -5,6 +5,7 @@ public record SaveCompanySmsIntegrationCommand(
         String provider,
         String apiKey,
         String senderNumber,
+        String userId,
         boolean alimtalkEnabled,
         String alimtalkTemplateFuneral,
         String alimtalkTemplateWedding,

@@ -118,7 +118,7 @@ export function SaveErrorBanner({ d }: { d: D }) {
 }
 
 export function BasicInfoCard({ d, className }: SectionProps) {
-  const { order, draft, isEditing, products, vendors, selectedProductId, set } = d
+  const { order, draft, isEditing, set } = d
   const [vendorModalOpen, setVendorModalOpen] = useState(false)
   return (
     <Card className={className}>
@@ -126,54 +126,44 @@ export function BasicInfoCard({ d, className }: SectionProps) {
       <CardContent className="space-y-3 text-sm">
         {isEditing ? (
           <>
-            <Field label="상품명">
-              <select
-                value={selectedProductId}
-                onChange={(e) => {
-                  const productId = e.target.value
-                  d.setSelectedProductId(productId)
-                  if (productId !== '__direct__') {
-                    const found = products.find((p) => p.id === productId)
-                    set('productName', found ? found.name : '')
-                  }
-                }}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            <Field label="수주업체 · 상품">
+              <button
+                type="button"
+                onClick={() => setVendorModalOpen(true)}
+                className="flex h-9 w-full items-center rounded-md border border-input bg-background px-3 text-left text-sm hover:bg-gray-50"
               >
-                <option value="">상품 선택</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-                <option value="__direct__">직접 입력</option>
-              </select>
-              {selectedProductId === '__direct__' && (
-                <Input className="mt-1.5" placeholder="상품명 직접 입력" value={draft.productName} onChange={(e) => set('productName', e.target.value)} />
-              )}
+                {draft.vendorName ? (
+                  <span className="truncate">
+                    <span className="font-medium">{draft.vendorName}</span>
+                    <span className="mx-1.5 text-gray-300">|</span>
+                    {draft.productName}
+                  </span>
+                ) : (
+                  <span className="text-gray-400">수주업체·상품 선택</span>
+                )}
+              </button>
+              <VendorSelectModal
+                open={vendorModalOpen}
+                onSelect={(v, product) => {
+                  d.setDraft((prev) => prev ? {
+                    ...prev,
+                    vendorId: v.vendorId,
+                    vendorName: v.companyName,
+                    productName: product.name,
+                    amount: product.price * (prev.quantity || 1),
+                  } : prev)
+                  d.setSelectedProductId(product.id)
+                  setVendorModalOpen(false)
+                }}
+                onClose={() => setVendorModalOpen(false)}
+              />
             </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="수량">
-                <Input type="number" value={draft.quantity} onChange={(e) => set('quantity', Number(e.target.value))} />
-              </Field>
-              <Field label="수주업체">
-                <button
-                  type="button"
-                  onClick={() => setVendorModalOpen(true)}
-                  className="flex h-9 w-full items-center rounded-md border border-input bg-background px-3 text-sm hover:bg-gray-50"
-                >
-                  {draft.vendorName || <span className="text-gray-400">업체 선택 (지도)</span>}
-                </button>
-                <VendorSelectModal
-                  open={vendorModalOpen}
-                  vendors={vendors}
-                  onSelect={(v) => {
-                    d.setDraft((prev) => prev ? { ...prev, vendorId: v.id, vendorName: v.name } : prev)
-                    setVendorModalOpen(false)
-                  }}
-                  onClose={() => setVendorModalOpen(false)}
-                />
-              </Field>
-            </div>
-            <Field label="발주금액">
-              <Input type="number" value={draft.amount} onChange={(e) => set('amount', Number(e.target.value))} />
+            <Field label="수량">
+              <Input type="number" value={draft.quantity} onChange={(e) => set('quantity', Number(e.target.value))} />
+            </Field>
+            <Field label="상품금액">
+              <Input type="text" readOnly tabIndex={-1} value={draft.amount.toLocaleString()} className="bg-gray-50" />
+              <p className="mt-1 text-xs text-gray-400">상품·수량을 바꾸면 저장 시 수수료를 포함해 다시 계산됩니다.</p>
             </Field>
             <Field label="추가비용">
               <Input

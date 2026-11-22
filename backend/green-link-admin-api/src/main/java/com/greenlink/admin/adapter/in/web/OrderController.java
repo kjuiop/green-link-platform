@@ -23,7 +23,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -117,7 +119,9 @@ public class OrderController {
                 receiverName, messageStatus, ribbonLeft, resolvedDeleted,
                 address, recipientName, vendorName, orderingCompanyName, sortBy, sortDir,
                 resolvedCompletedAtFrom, resolvedCompletedAtTo);
-        PageResult<OrderResult> result = getOrdersUseCase.getOrdersPaged(condition, PageRequest.of(page, size));
+        PageResult<OrderResult> result = isVendor
+                ? getOrdersUseCase.getVendorOrdersPaged(condition, PageRequest.of(page, size))
+                : getOrdersUseCase.getOrdersPaged(condition, PageRequest.of(page, size));
         if (isVendor) {
             List<OrderResult> masked = result.content().stream().map(OrderController::maskPhones).toList();
             result = new PageResult<>(masked, result.page(), result.size(), result.totalElements(), result.totalPages(), result.totalAmount());
@@ -130,7 +134,7 @@ public class OrderController {
         boolean isVendor = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
         OrderResult result = getOrderUseCase.getOrder(id);
-        return ResponseEntity.ok(isVendor ? maskPhones(result) : result);
+        return ResponseEntity.ok(isVendor ? maskPhones(result).toVendorView() : result);
     }
 
     @PostMapping
@@ -171,7 +175,8 @@ public class OrderController {
     }
 
     @PutMapping("/{id}/status")
-    public ResponseEntity<OrderResult> updateStatus(@PathVariable Long id,
+    public ResponseEntity<OrderResult> updateStatus(Authentication auth,
+                                                    @PathVariable Long id,
                                                     @RequestBody @Valid UpdateOrderStatusRequest req) {
         OrderResult result = updateOrderStatusUseCase.updateOrderStatus(id, req.action());
         if ("complete".equalsIgnoreCase(req.action())) {
@@ -186,7 +191,9 @@ public class OrderController {
                 // 알림톡 발송 실패는 배송완료 처리를 막지 않음
             }
         }
-        return ResponseEntity.ok(result);
+        boolean isVendor = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
+        return ResponseEntity.ok(isVendor ? result.toVendorView() : result);
     }
 
     @GetMapping("/{id}/history")
@@ -197,7 +204,7 @@ public class OrderController {
         if (isVendor) {
             history = history.stream()
                     .map(h -> new OrderHistoryResult(h.id(), h.orderId(), h.action(),
-                            maskPhone(h.detail()), h.actorCompany(), h.actorName(), h.actorAdminId(), h.createdAt()))
+                            hideFeeAmounts(maskPhone(h.detail())), h.actorCompany(), h.actorName(), h.actorAdminId(), h.createdAt()))
                     .toList();
         }
         return ResponseEntity.ok(history);
@@ -214,6 +221,15 @@ public class OrderController {
         return ResponseEntity.noContent().build();
     }
 
+    private static String hideFeeAmounts(String detail) {
+        if (detail == null || detail.isBlank()) return detail;
+        String filtered = Arrays.stream(detail.split("\\n"))
+                .filter(line -> !line.startsWith("상품금액:") && !line.startsWith("발주금액:"))
+                .map(line -> line.startsWith("상품:") ? line.replaceAll("\\s\\d+x(\\d+)", " x$1") : line)
+                .collect(Collectors.joining("\n"));
+        return filtered.isBlank() ? "금액 정보 변경" : filtered;
+    }
+
     private static String maskPhone(String phone) {
         if (phone == null || phone.isBlank()) return phone;
         return phone.replaceAll("(\\d{2,3})-?(\\d{3,4})-?(\\d{4})", "$1-****-$3");
@@ -224,7 +240,7 @@ public class OrderController {
                 r.id(), r.orderNumber(), r.vendorId(), r.vendorCompanyId(), r.vendorName(), r.vendorPhone(),
                 r.orderingCompanyId(), r.orderingCompanyName(), r.orderingCompanyPhone(),
                 r.status(), r.productId(), r.productName(), r.quantity(), r.amount(),
-                r.vendorAmount(), r.extraCost(), r.totalAmount(), r.items(), r.deliveryDate(), r.deliveryTimeType(), r.deliveryTimeHour(),
+                r.vendorAmount(), r.extraCost(), r.totalAmount(), r.vendorFee(), r.items(), r.deliveryDate(), r.deliveryTimeType(), r.deliveryTimeHour(),
                 r.deliveryTimeMinute(), r.deliveryTimeCustom(), r.address(), r.addressDetail(),
                 r.eventType(), r.placeName(), r.roomName(), r.eventInfo(),
                 r.ribbonLeft(), r.ribbonRight(), r.ribbonExtras(),

@@ -24,6 +24,9 @@ public class CompanyIntegrationJpaEntity extends BaseJpaEntity {
     @Column(length = 20)
     private String senderNumber;
 
+    @Column(length = 100)
+    private String userId;
+
     @Column(nullable = false)
     private boolean alimtalkEnabled = false;
 
@@ -41,19 +44,22 @@ public class CompanyIntegrationJpaEntity extends BaseJpaEntity {
 
     protected CompanyIntegrationJpaEntity() {}
 
-    static CompanyIntegrationJpaEntity createNew(Long companyId, String provider, String apiKey, String senderNumber) {
+    static CompanyIntegrationJpaEntity createNew(Long companyId, String provider, String apiKey, String senderNumber,
+                                                  String userId) {
         CompanyIntegrationJpaEntity e = new CompanyIntegrationJpaEntity();
         e.companyId = companyId;
         e.provider = provider;
         e.apiKey = apiKey;
         e.senderNumber = senderNumber;
+        e.userId = userId;
         return e;
     }
 
-    void update(String provider, String apiKey, String senderNumber) {
+    void update(String provider, String apiKey, String senderNumber, String userId) {
         this.provider = provider;
         this.apiKey = apiKey;
         this.senderNumber = senderNumber;
+        this.userId = userId;
     }
 
     void updateAlimtalk(boolean enabled, String templateFuneral, String templateWedding,
@@ -66,7 +72,7 @@ public class CompanyIntegrationJpaEntity extends BaseJpaEntity {
     }
 
     CompanyIntegration toDomain() {
-        return CompanyIntegration.of(id, companyId, provider, apiKey, senderNumber,
+        return CompanyIntegration.of(id, companyId, provider, apiKey, senderNumber, userId,
                 alimtalkEnabled, alimtalkTemplateFuneral, alimtalkTemplateWedding,
                 alimtalkTemplateEtc, alimtalkSenderKey);
     }

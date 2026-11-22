@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { fetchVendor, fetchVendorRecentPhotos, VendorRecentPhoto } from '@/lib/api/vendorApi'
 import { Vendor } from '@/types/vendor'
+import { formatRegions } from '@/lib/utils/formatRegions'
+import { categoryLabel } from '@/lib/constants/productCategory'
 
 type Props = {
   vendorId: string | null
@@ -67,12 +69,12 @@ export default function VendorInfoPopup({ vendorId, onClose }: Props) {
                 <InfoRow label="주소" value={[vendor.address, vendor.detailAddress].filter(Boolean).join(' ')} className="col-span-2" />
                 <InfoRow
                   label="서비스 지역"
-                  value={vendor.regions?.map((r) => r.sigungu ?? r.sido).join(', ')}
+                  value={vendor.regions?.length ? formatRegions(vendor.regions) : undefined}
                   className="col-span-2"
                 />
                 <InfoRow
                   label="가능 상품"
-                  value={vendor.capabilities?.join(', ')}
+                  value={vendor.capabilities?.length ? vendor.capabilities.map(categoryLabel).join(', ') : undefined}
                   className="col-span-2"
                 />
               </div>

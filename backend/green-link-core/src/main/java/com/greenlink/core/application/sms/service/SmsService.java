@@ -2,8 +2,11 @@ package com.greenlink.core.application.sms.service;
 
 import com.greenlink.core.application.common.dto.PageResult;
 import com.greenlink.core.application.sms.dto.SmsMessageResult;
+import com.greenlink.core.application.common.BusinessNumber;
+import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.integration.model.CompanyIntegration;
 import com.greenlink.core.domain.integration.port.CompanyIntegrationRepository;
+import com.greenlink.core.domain.sms.model.SmsAccount;
 import com.greenlink.core.domain.sms.model.SmsResult;
 import com.greenlink.core.application.sms.usecase.GetSmsMessagesUseCase;
 import com.greenlink.core.application.sms.usecase.ResendMmsUseCase;
@@ -43,6 +46,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     private final SmsClientFactory smsClientFactory;
     private final SmsSettingsRepository smsSettingsRepository;
     private final CompanyIntegrationRepository companyIntegrationRepository;
+    private final CompanyRepository companyRepository;
 
     @Value("${app.portal-base-url:}")
     private String portalBaseUrl;
@@ -51,12 +55,14 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
                       SmsMessageRepository smsMessageRepository,
                       SmsClientFactory smsClientFactory,
                       SmsSettingsRepository smsSettingsRepository,
-                      CompanyIntegrationRepository companyIntegrationRepository) {
+                      CompanyIntegrationRepository companyIntegrationRepository,
+                      CompanyRepository companyRepository) {
         this.orderRepository = orderRepository;
         this.smsMessageRepository = smsMessageRepository;
         this.smsClientFactory = smsClientFactory;
         this.smsSettingsRepository = smsSettingsRepository;
         this.companyIntegrationRepository = companyIntegrationRepository;
+        this.companyRepository = companyRepository;
     }
 
     @Override
@@ -83,7 +89,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         String rdate = schedule[0];
         String rtime = schedule[1];
 
-        CompanyConfig companyConfig = resolveCompanyConfig(order.getOrderingCompanyId(), settings);
+        SmsAccount companyConfig = resolveCompanyConfig(order.getOrderingCompanyId(), settings);
 
         boolean ordererValid = order.isSendPhotoToOrderer() && isValidPhone(order.getOrdererPhone());
         boolean recipientValid = order.isSendPhotoToRecipient() && isValidPhone(order.getRecipientPhone());
@@ -114,7 +120,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         String msg = buildMessage(order, settings);
         String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
-        CompanyConfig companyConfig = resolveCompanyConfig(order.getOrderingCompanyId(), settings);
+        SmsAccount companyConfig = resolveCompanyConfig(order.getOrderingCompanyId(), settings);
 
         for (SmsMessage m : failed) {
             sendAndRecord(orderId, m.getReceiver(), msg, m.getImageUrl(), companyConfig, now, null, null, order.getOrderingCompanyId());
@@ -171,8 +177,8 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
             String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             String msg = buildNotificationMessage(order, vendorName, orderingCompanyName);
 
-            CompanyConfig companyConfig = new CompanyConfig(settings.getProvider(), settings.getApiKey(), settings.getSenderNumber());
-            SmsClient client = smsClientFactory.getByProvider(companyConfig.provider);
+            SmsAccount companyConfig = toAccount(settings);
+            SmsClient client = smsClientFactory.getByProvider(companyConfig.provider());
 
             SmsMessage smsMessage = SmsMessage.createNotification(orderId, vendorPhone, msg);
             smsMessage.setCompanyId(order.getOrderingCompanyId());
@@ -193,26 +199,40 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         }
     }
 
-    private CompanyConfig resolveCompanyConfig(Long companyId, SmsSettings fallback) {
+    private SmsAccount resolveCompanyConfig(Long companyId, SmsSettings fallback) {
         if (companyId != null) {
             return companyIntegrationRepository.findByCompanyId(companyId)
-                    .map(ci -> new CompanyConfig(ci.getProvider(), ci.getApiKey(),
-                            ci.getSenderNumber() != null ? ci.getSenderNumber() : fallback.getSenderNumber()))
-                    .orElseGet(() -> new CompanyConfig(fallback.getProvider(), fallback.getApiKey(), fallback.getSenderNumber()));
+                    .map(ci -> new SmsAccount(ci.getProvider(), ci.getApiKey(),
+                            ci.getSenderNumber() != null ? ci.getSenderNumber() : fallback.getSenderNumber(),
+                            ci.getUserId(), companyBusinessNo(companyId)))
+                    .orElseGet(() -> toAccount(fallback));
         }
-        return new CompanyConfig(fallback.getProvider(), fallback.getApiKey(), fallback.getSenderNumber());
+        return toAccount(fallback);
     }
 
-    private SmsResult dispatchSend(SmsClient client, CompanyConfig config,
+    private String companyBusinessNo(Long companyId) {
+        return companyRepository.findById(companyId)
+                .map(c -> BusinessNumber.normalize(c.getBusinessNo()))
+                .orElse(null);
+    }
+
+    private SmsAccount toAccount(SmsSettings s) {
+        return new SmsAccount(s.getProvider(), s.getApiKey(), s.getSenderNumber(), s.getUserId(), s.getCorpNum());
+    }
+
+    private SmsResult dispatchSend(SmsClient client, SmsAccount config,
                                    String receiver, String msg, String imageUrl,
                                    String rdate, String rtime, String title) {
-        if ("MESSAGEME".equalsIgnoreCase(config.provider)) {
+        if ("MESSAGEME".equalsIgnoreCase(config.provider())) {
             String sendReserve = (rdate != null && !rdate.isBlank()) ? "1" : "0";
             String sendReserveDate = formatReserveDate(rdate, rtime);
-            return client.sendWithCredentials(config.apiKey, config.senderNumber,
+            return client.sendWithCredentials(config.apiKey(), config.senderNumber(),
                     receiver, msg, imageUrl, sendReserve, sendReserveDate);
         }
-        return client.send(receiver, msg, imageUrl, config.senderNumber, rdate, rtime, title);
+        if ("BAROBILL".equalsIgnoreCase(config.provider())) {
+            return client.sendWithAccount(config, receiver, msg, imageUrl, rdate, rtime, title);
+        }
+        return client.send(receiver, msg, imageUrl, config.senderNumber(), rdate, rtime, title);
     }
 
     private String formatReserveDate(String rdate, String rtime) {
@@ -226,20 +246,20 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
     }
 
     private void sendAndRecord(Long orderId, String receiver, String msg, String imageUrl,
-                               CompanyConfig companyConfig, String sentAt, String rdate, String rtime,
+                               SmsAccount companyConfig, String sentAt, String rdate, String rtime,
                                Long companyId) {
-        SmsClient client = smsClientFactory.getByProvider(companyConfig.provider);
+        SmsClient client = smsClientFactory.getByProvider(companyConfig.provider());
         SmsMessage smsMessage = SmsMessage.create(orderId, receiver, msg, imageUrl);
         smsMessage.setCompanyId(companyId);
         try {
             SmsResult result = dispatchSend(client, companyConfig, receiver, msg, imageUrl, rdate, rtime, null);
             String fallbackReason = null;
             boolean reserved = rdate != null && !rdate.isBlank();
-            if (reserved && result.rejectedByProvider() && "ALIGO".equalsIgnoreCase(companyConfig.provider)) {
+            if (reserved && result.rejectedByProvider() && "ALIGO".equalsIgnoreCase(companyConfig.provider())) {
                 org.slf4j.LoggerFactory.getLogger(SmsService.class)
                         .warn("알리고 예약발송 거절 → 즉시발송 폴백 orderId={} rdate={} rtime={} reason={}", orderId, rdate, rtime, result.failReason());
                 fallbackReason = result.failReason();
-                result = client.send(receiver, msg, imageUrl, companyConfig.senderNumber, null, null, null);
+                result = client.send(receiver, msg, imageUrl, companyConfig.senderNumber(), null, null, null);
             }
             if (result.success() && fallbackReason != null) {
                 smsMessage.markSuccessWithFallback(result.msgId(), sentAt, fallbackReason);
@@ -254,8 +274,6 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
         smsMessageRepository.save(smsMessage);
     }
 
-    private record CompanyConfig(String provider, String apiKey, String senderNumber) {}
-
     private String buildNotificationMessage(Order order, String vendorName, String orderingCompanyName) {
         String deliveryInfo = order.getDeliveryDate() != null ? order.getDeliveryDate() : "-";
         if (order.getDeliveryTimeCustom() != null && !order.getDeliveryTimeCustom().isBlank()) {
@@ -268,8 +286,8 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
             address += " " + order.getAddressDetail();
         }
         String link = (portalBaseUrl != null && !portalBaseUrl.isBlank())
-                ? portalBaseUrl + "/vendor/orders/" + order.getId()
-                : "/vendor/orders/" + order.getId();
+                ? portalBaseUrl + "/orders/" + order.getId() + "/popup"
+                : "/orders/" + order.getId() + "/popup";
 
         String orderingLine = (orderingCompanyName != null && !orderingCompanyName.isBlank())
                 ? "발주사: " + orderingCompanyName + "\n" : "";
@@ -289,7 +307,7 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
                 + "배송지: " + address + "\n"
                 + "배송요구일: " + deliveryInfo + "\n"
                 + "상품명: " + order.getProductName() + " / " + order.getQuantity() + "개\n"
-                + "발주금액: " + String.format("%,d", order.getAmount()) + "원\n\n"
+                + "발주금액: " + String.format("%,d", order.getTotalAmount()) + "원\n\n"
                 + "수주 확인 및 승인/거절:\n"
                 + link;
     }

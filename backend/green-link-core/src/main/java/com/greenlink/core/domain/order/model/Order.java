@@ -17,6 +17,7 @@ public class Order {
     private Long vendorAmount;
     private Long extraCost;
     private long totalAmount;
+    private Long vendorFee;
     private String deliveryDate;
     private String deliveryTimeType;
     private String deliveryTimeHour;
@@ -361,6 +362,14 @@ public class Order {
     public String getProductName() { return productName; }
     public int getQuantity() { return quantity; }
     public long getAmount() { return amount; }
+    public void assignVendorFee(Long vendorFee) {
+        if (vendorFee != null && vendorFee < 0) {
+            throw new IllegalArgumentException("수수료는 0 이상이어야 합니다.");
+        }
+        this.vendorFee = vendorFee;
+    }
+
+    public Long getVendorFee() { return vendorFee; }
     public Long getVendorAmount() { return vendorAmount; }
     public Long getExtraCost() { return extraCost; }
     public long getTotalAmount() { return totalAmount; }

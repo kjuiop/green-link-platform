@@ -43,6 +43,10 @@ resource "aws_security_group" "ec2" {
   }
 
   tags = { Name = "${var.project_name}-ec2-sg" }
+
+  lifecycle {
+    ignore_changes = [ingress]
+  }
 }
 
 resource "aws_security_group" "rds" {
@@ -74,4 +78,8 @@ resource "aws_security_group" "rds" {
   }
 
   tags = { Name = "${var.project_name}-rds-sg" }
+
+  lifecycle {
+    ignore_changes = [ingress]
+  }
 }

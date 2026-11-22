@@ -1,0 +1,132 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { fetchMyAccess, submitAccessRequest } from '@/lib/api/accessApi'
+import { clearSession, setSession } from '@/lib/session'
+import { useSession } from '@/lib/useSession'
+import type { AccessStatus } from '@/types/auth'
+
+const MESSAGE: Record<Exclude<AccessStatus, 'APPROVED'>, { title: string; body: string }> = {
+  NONE: {
+    title: '쇼핑몰 관리 권한이 없습니다',
+    body: '쇼핑몰 연동을 신청하면 최고관리자의 승인 후 이용할 수 있습니다.',
+  },
+  PENDING: {
+    title: '승인 대기 중',
+    body: '쇼핑몰 연동 신청이 접수되었습니다. 최고관리자의 승인 후 이용할 수 있습니다.',
+  },
+  REJECTED: {
+    title: '연동 신청이 거절되었습니다',
+    body: '거절 사유를 확인하고 필요하면 다시 신청할 수 있습니다.',
+  },
+}
+
+export default function AccessPage() {
+  const router = useRouter()
+  const { session, loading } = useSession()
+  const [rejectReason, setRejectReason] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
+
+  useEffect(() => {
+    if (loading) return
+    if (!session) router.replace('/login')
+    else if (session.accessStatus === 'APPROVED') router.replace('/dashboard')
+  }, [loading, session, router])
+
+  useEffect(() => {
+    if (!session || session.accessStatus === 'APPROVED') return
+    let cancelled = false
+    fetchMyAccess(session)
+      .then((result) => {
+        if (cancelled) return
+        setRejectReason(result.rejectReason)
+        setError('')
+        if (result.accessStatus !== session.accessStatus) {
+          setSession({ ...session, accessStatus: result.accessStatus })
+        }
+      })
+      .catch(() => { if (!cancelled) setError('신청 상태를 확인하지 못했습니다.') })
+      .finally(() => { if (!cancelled) setChecking(false) })
+    return () => { cancelled = true }
+  }, [session, reloadKey])
+
+  if (loading || !session) return null
+  const status = session.accessStatus
+  if (status === 'APPROVED') return null
+
+  const currentSession = session
+  const message = MESSAGE[status]
+
+  async function handleSubmit() {
+    if (submitting) return
+    setError('')
+    setSubmitting(true)
+    try {
+      await submitAccessRequest(currentSession)
+      setSession({ ...currentSession, accessStatus: 'PENDING' })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '신청에 실패했습니다.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  function handleRefresh() {
+    if (checking) return
+    setChecking(true)
+    setReloadKey((key) => key + 1)
+  }
+
+  function handleLogout() {
+    clearSession()
+    router.replace('/login')
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+      <div className="w-full max-w-sm space-y-4">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-green-700">🛍️ 쇼핑몰 관리</h1>
+          <p className="mt-1 text-sm text-gray-500">{session.name} ({session.loginId})</p>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{message.title}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">{message.body}</p>
+            {status === 'REJECTED' && rejectReason && (
+              <p className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-600">
+                거절 사유: {rejectReason}
+              </p>
+            )}
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            {(status === 'NONE' || status === 'REJECTED') && (
+              <Button
+                className="w-full bg-green-700 hover:bg-green-800"
+                onClick={handleSubmit}
+                disabled={submitting}
+              >
+                {submitting ? '신청 중...' : status === 'REJECTED' ? '다시 신청' : '연동 신청'}
+              </Button>
+            )}
+            {status === 'PENDING' && (
+              <Button className="w-full" variant="outline" onClick={handleRefresh} disabled={checking}>
+                {checking ? '확인 중...' : '상태 새로고침'}
+              </Button>
+            )}
+            <Button variant="ghost" className="w-full" onClick={handleLogout}>
+              로그아웃
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}

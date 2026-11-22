@@ -4,6 +4,9 @@ import java.util.List;
 
 public class Company {
 
+    public static final long DEFAULT_VENDOR_FEE = 3000L;
+    public static final long MAX_VENDOR_FEE = 10_000_000L;
+
     private Long id;
     private String businessNo;
     private String companyName;
@@ -21,6 +24,11 @@ public class Company {
     private String accountNumber;
     private String accountHolder;
     private BusinessStatus businessStatus = BusinessStatus.OPEN;
+    private long vendorFee = DEFAULT_VENDOR_FEE;
+    private OrderingFeeDiscountType orderingFeeDiscountType = OrderingFeeDiscountType.NONE;
+    private long orderingFeeDiscountValue = 0L;
+    private boolean faxEnabled;
+    private String taxInvoiceEmail;
     private List<CompanyRegion> regions = List.of();
     private List<CompanyCapability> capabilities = List.of();
 
@@ -51,6 +59,18 @@ public class Company {
                               String businessRegUrl, String bankBookUrl,
                               String bankName, String accountNumber, String accountHolder,
                               BusinessStatus businessStatus) {
+        return of(id, businessNo, companyName, ceoName, phone, faxNumber, address, detailAddress,
+                type, status, displayYn, businessRegUrl, bankBookUrl, bankName, accountNumber,
+                accountHolder, businessStatus, DEFAULT_VENDOR_FEE);
+    }
+
+    public static Company of(Long id, String businessNo, String companyName,
+                              String ceoName, String phone, String faxNumber,
+                              String address, String detailAddress,
+                              CompanyType type, CompanyStatus status, boolean displayYn,
+                              String businessRegUrl, String bankBookUrl,
+                              String bankName, String accountNumber, String accountHolder,
+                              BusinessStatus businessStatus, long vendorFee) {
         Company c = new Company();
         c.id = id;
         c.businessNo = businessNo;
@@ -69,6 +89,7 @@ public class Company {
         c.accountNumber = accountNumber;
         c.accountHolder = accountHolder;
         c.businessStatus = businessStatus != null ? businessStatus : BusinessStatus.OPEN;
+        c.vendorFee = vendorFee;
         return c;
     }
 
@@ -108,6 +129,59 @@ public class Company {
         this.businessStatus = status;
     }
 
+    public void changeVendorFee(long fee) {
+        if (fee < 0 || fee > MAX_VENDOR_FEE) {
+            throw new IllegalArgumentException("수수료는 0원 이상 " + MAX_VENDOR_FEE + "원 이하여야 합니다.");
+        }
+        this.vendorFee = fee;
+    }
+
+    public void changeOrderingFeeDiscount(OrderingFeeDiscountType type, long value) {
+        if (value < 0) throw new IllegalArgumentException("감면 값은 0 이상이어야 합니다.");
+        if (type == OrderingFeeDiscountType.PERCENT && value > 100)
+            throw new IllegalArgumentException("퍼센트는 100 이하여야 합니다.");
+        this.orderingFeeDiscountType = type != null ? type : OrderingFeeDiscountType.NONE;
+        this.orderingFeeDiscountValue = value;
+    }
+
+    public void restoreOrderingFeeDiscount(OrderingFeeDiscountType type, long value) {
+        this.orderingFeeDiscountType = type != null ? type : OrderingFeeDiscountType.NONE;
+        this.orderingFeeDiscountValue = value;
+    }
+
+    public long calcOrderingDiscount(long totalAmount) {
+        return switch (orderingFeeDiscountType) {
+            case NONE -> 0L;
+            case FIXED -> Math.min(orderingFeeDiscountValue, totalAmount);
+            case PERCENT -> Math.round(totalAmount * orderingFeeDiscountValue / 100.0);
+        };
+    }
+
+    public void restoreFaxEnabled(boolean faxEnabled) {
+        this.faxEnabled = faxEnabled;
+    }
+
+    public void restoreTaxInvoiceEmail(String taxInvoiceEmail) {
+        this.taxInvoiceEmail = taxInvoiceEmail;
+    }
+
+    public void changeTaxInvoiceEmail(String taxInvoiceEmail) {
+        this.taxInvoiceEmail = taxInvoiceEmail == null || taxInvoiceEmail.isBlank() ? null : taxInvoiceEmail.trim();
+    }
+
+    public void changeFaxSetting(boolean faxEnabled, String faxNumber) {
+        String digits = faxNumber == null ? "" : faxNumber.replaceAll("[^0-9]", "");
+        if (faxEnabled && digits.isEmpty()) {
+            throw new IllegalArgumentException("팩스 연동 시 팩스번호가 필요합니다.");
+        }
+        this.faxEnabled = faxEnabled;
+        this.faxNumber = digits.isEmpty() ? null : digits;
+    }
+
+    public boolean canReceiveFax() {
+        return faxEnabled && faxNumber != null && !faxNumber.replaceAll("[^0-9]", "").isEmpty();
+    }
+
     public Long getId() { return id; }
     public String getBusinessNo() { return businessNo; }
     public String getCompanyName() { return companyName; }
@@ -125,6 +199,11 @@ public class Company {
     public String getAccountNumber() { return accountNumber; }
     public String getAccountHolder() { return accountHolder; }
     public BusinessStatus getBusinessStatus() { return businessStatus; }
+    public long getVendorFee() { return vendorFee; }
+    public OrderingFeeDiscountType getOrderingFeeDiscountType() { return orderingFeeDiscountType; }
+    public long getOrderingFeeDiscountValue() { return orderingFeeDiscountValue; }
+    public boolean isFaxEnabled() { return faxEnabled; }
+    public String getTaxInvoiceEmail() { return taxInvoiceEmail; }
     public List<CompanyRegion> getRegions() { return regions; }
     public List<CompanyCapability> getCapabilities() { return capabilities; }
 }

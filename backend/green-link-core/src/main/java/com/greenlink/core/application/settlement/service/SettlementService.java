@@ -159,9 +159,10 @@ public class SettlementService implements
 
     @Override
     public List<SettlementOrderResult> getAdminSettlementDetail(Long companyId, AdminSettlementQuery query) {
-        List<SettlementQueryPort.OrderSettlementRaw> raws = query.type() == SettlementType.VENDOR
-                ? settlementQueryPort.findDeliveredOrdersByVendorCompany(companyId, query.fromDate(), query.toDate())
-                : settlementQueryPort.findDeliveredOrdersByOrderingCompany(companyId, query.fromDate(), query.toDate());
+        boolean isOrdering = query.type() == SettlementType.ORDERING;
+        List<SettlementQueryPort.OrderSettlementRaw> raws = isOrdering
+                ? settlementQueryPort.findDeliveredOrdersByOrderingCompany(companyId, query.fromDate(), query.toDate())
+                : settlementQueryPort.findDeliveredOrdersByVendorCompany(companyId, query.fromDate(), query.toDate());
 
         List<Long> counterpartIds = raws.stream()
                 .map(SettlementQueryPort.OrderSettlementRaw::counterpartCompanyId)
@@ -170,19 +171,19 @@ public class SettlementService implements
         Map<Long, String> nameMap = companyRepository.findAllByIdIn(counterpartIds).stream()
                 .collect(Collectors.toMap(Company::getId, Company::getCompanyName));
 
+        if (isOrdering) {
+            Company orderingCompany = companyRepository.findById(companyId)
+                    .orElseThrow(() -> new IllegalStateException("Company not found: " + companyId));
+            return raws.stream()
+                    .map(r -> SettlementOrderResult.forOrdering(r,
+                            r.counterpartCompanyId() != null ? nameMap.getOrDefault(r.counterpartCompanyId(), "") : "",
+                            orderingCompany))
+                    .toList();
+        }
+
         return raws.stream()
-                .map(r -> new SettlementOrderResult(
-                        r.orderId(),
-                        r.orderNumber(),
-                        r.counterpartCompanyId() != null ? nameMap.getOrDefault(r.counterpartCompanyId(), "") : "",
-                        r.productName(),
-                        r.placeName(),
-                        r.ordererName(),
-                        r.completedAt(),
-                        r.orderAmount(),
-                        r.vendorAmount(),
-                        r.extraCost()
-                ))
+                .map(r -> SettlementOrderResult.forVendor(r,
+                        r.counterpartCompanyId() != null ? nameMap.getOrDefault(r.counterpartCompanyId(), "") : ""))
                 .toList();
     }
 
@@ -212,36 +213,39 @@ public class SettlementService implements
         CompanyType type = company.getType();
 
         List<SettlementOrderResult> vendorOrders = type == CompanyType.VENDOR || type == CompanyType.BOTH
-                ? toOrderResults(settlementQueryPort.findDeliveredOrdersByVendorCompany(companyId, fromDate, toDate))
+                ? toVendorOrderResults(settlementQueryPort.findDeliveredOrdersByVendorCompany(companyId, fromDate, toDate))
                 : List.of();
 
         List<SettlementOrderResult> orderingOrders = type == CompanyType.ORDERING || type == CompanyType.BOTH
-                ? toOrderResults(settlementQueryPort.findDeliveredOrdersByOrderingCompany(companyId, fromDate, toDate))
+                ? toOrderingOrderResults(settlementQueryPort.findDeliveredOrdersByOrderingCompany(companyId, fromDate, toDate), company)
                 : List.of();
 
         return new MySettlementResult(type.name(), vendorOrders, orderingOrders);
     }
 
-    private List<SettlementOrderResult> toOrderResults(List<SettlementQueryPort.OrderSettlementRaw> raws) {
+    private List<SettlementOrderResult> toVendorOrderResults(List<SettlementQueryPort.OrderSettlementRaw> raws) {
+        Map<Long, String> nameMap = buildNameMap(raws);
+        return raws.stream()
+                .map(r -> SettlementOrderResult.forVendor(r,
+                        r.counterpartCompanyId() != null ? nameMap.getOrDefault(r.counterpartCompanyId(), "") : ""))
+                .toList();
+    }
+
+    private List<SettlementOrderResult> toOrderingOrderResults(List<SettlementQueryPort.OrderSettlementRaw> raws, Company orderingCompany) {
+        Map<Long, String> nameMap = buildNameMap(raws);
+        return raws.stream()
+                .map(r -> SettlementOrderResult.forOrdering(r,
+                        r.counterpartCompanyId() != null ? nameMap.getOrDefault(r.counterpartCompanyId(), "") : "",
+                        orderingCompany))
+                .toList();
+    }
+
+    private Map<Long, String> buildNameMap(List<SettlementQueryPort.OrderSettlementRaw> raws) {
         List<Long> counterpartIds = raws.stream()
                 .map(SettlementQueryPort.OrderSettlementRaw::counterpartCompanyId)
                 .filter(id -> id != null)
                 .distinct().toList();
-        Map<Long, String> nameMap = companyRepository.findAllByIdIn(counterpartIds).stream()
+        return companyRepository.findAllByIdIn(counterpartIds).stream()
                 .collect(Collectors.toMap(Company::getId, Company::getCompanyName));
-        return raws.stream()
-                .map(r -> new SettlementOrderResult(
-                        r.orderId(),
-                        r.orderNumber(),
-                        r.counterpartCompanyId() != null ? nameMap.getOrDefault(r.counterpartCompanyId(), "") : "",
-                        r.productName(),
-                        r.placeName(),
-                        r.ordererName(),
-                        r.completedAt(),
-                        r.orderAmount(),
-                        r.vendorAmount(),
-                        r.extraCost()
-                ))
-                .toList();
     }
 }

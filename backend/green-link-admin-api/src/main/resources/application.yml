@@ -40,6 +40,26 @@ aligo:
   sender: ${ALIGO_SENDER:1855-4400}
   url: https://apis.aligo.in/send/
 
+barobill:
+  # 프로필(dev/prod)별 기본값이 있으며, BAROBILL_URL 환경변수로 덮어쓸 수 있음
+  url: ${BAROBILL_URL:https://testws.baroservice.com/SMS.asmx}
+
+coupang:
+  base-url: https://api-gateway.coupang.com
+  credential-key: ${COUPANG_CRED_KEY:}
+  collect:
+    enabled: ${COUPANG_COLLECT_ENABLED:false}
+    interval-ms: 240000
+    overlap-minutes: 10
+    max-range-hours: 12
+  approve:
+    verify-live: true
+
+shop:
+  public:
+    # 쇼핑몰 앱(Vercel) 서버가 실제 고객 IP를 X-Shop-Client-Ip 로 전달할 때 쓰는 공유 시크릿. 비우면 비활성
+    proxy-secret: ${SHOP_PROXY_SECRET:}
+
 app:
   portal-base-url: ${PORTAL_BASE_URL:https://green-link-platform.vercel.app}
 
