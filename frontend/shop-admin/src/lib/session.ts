@@ -1,6 +1,8 @@
-import type { Session } from '@/types/auth'
+import type { AccessStatus, Session, ShopRole } from '@/types/auth'
 
 const KEY = 'shopAdminSession'
+const ROLES: ShopRole[] = ['SUPER_ADMIN', 'SHOP_ADMIN']
+const ACCESS_STATUSES: AccessStatus[] = ['APPROVED', 'PENDING', 'NONE']
 export const SESSION_EVENT = 'shop-admin-session'
 
 export function readSessionRaw(): string | null {
@@ -10,7 +12,11 @@ export function readSessionRaw(): string | null {
 export function parseSession(raw: string | null): Session | null {
   if (!raw) return null
   try {
-    return JSON.parse(raw) as Session
+    const parsed = JSON.parse(raw) as Partial<Session> | null
+    if (!parsed || typeof parsed !== 'object') return null
+    if (!parsed.role || !ROLES.includes(parsed.role)) return null
+    if (!parsed.accessStatus || !ACCESS_STATUSES.includes(parsed.accessStatus)) return null
+    return parsed as Session
   } catch {
     return null
   }

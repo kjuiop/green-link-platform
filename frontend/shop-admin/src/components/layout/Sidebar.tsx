@@ -38,10 +38,11 @@ function isActive(pathname: string, url: string): boolean {
 interface SidebarNavProps {
   session: Session
   menus: MenuItem[] | null
+  menuError?: boolean
   onNavClick?: () => void
 }
 
-function SidebarNav({ session, menus, onNavClick }: SidebarNavProps) {
+function SidebarNav({ session, menus, menuError, onNavClick }: SidebarNavProps) {
   const pathname = usePathname()
 
   return (
@@ -72,6 +73,8 @@ function SidebarNav({ session, menus, onNavClick }: SidebarNavProps) {
             <Skeleton className="h-6 w-full" />
             <Skeleton className="h-6 w-full" />
           </div>
+        ) : menuError ? (
+          <p className="px-4 py-2 text-xs text-red-500">메뉴를 불러오지 못했습니다.</p>
         ) : (
           menus.map((menu) => {
             const Icon = ICON_MAP[menu.icon] ?? Settings
@@ -107,25 +110,26 @@ interface SidebarProps {
 
 export function Sidebar({ session, mobileOpen, onMobileClose }: SidebarProps) {
   const [menus, setMenus] = useState<MenuItem[] | null>(null)
+  const [menuError, setMenuError] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     fetchMenusByRole(session.role)
       .then((result) => { if (!cancelled) setMenus(result) })
-      .catch(() => { if (!cancelled) setMenus([]) })
+      .catch(() => { if (!cancelled) { setMenus([]); setMenuError(true) } })
     return () => { cancelled = true }
   }, [session.role])
 
   return (
     <>
       <aside className="hidden h-screen w-56 shrink-0 flex-col border-r bg-white md:flex">
-        <SidebarNav session={session} menus={menus} />
+        <SidebarNav session={session} menus={menus} menuError={menuError} />
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={(open) => { if (!open) onMobileClose() }}>
         <SheetContent side="left" className="w-56 p-0" showCloseButton={false}>
           <SheetTitle className="sr-only">메뉴</SheetTitle>
-          <SidebarNav session={session} menus={menus} onNavClick={onMobileClose} />
+          <SidebarNav session={session} menus={menus} menuError={menuError} onNavClick={onMobileClose} />
         </SheetContent>
       </Sheet>
     </>

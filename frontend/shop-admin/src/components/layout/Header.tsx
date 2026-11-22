@@ -38,7 +38,7 @@ export function Header({ session, onMenuOpen }: HeaderProps) {
       </button>
       <div className="flex-1" />
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex items-center gap-2 rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+        <DropdownMenuTrigger aria-label="사용자 메뉴" className="flex items-center gap-2 rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
           <User className="h-5 w-5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
