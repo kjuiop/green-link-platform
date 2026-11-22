@@ -3,7 +3,7 @@
 온우림 관리자 앱(`frontend/downflower`), 고객용 쇼핑몰(`frontend/shop`)과 별개의 Next 16 앱.
 쇼핑몰 관리자가 상품·주문·쇼핑몰 설정을 관리하는 백오피스이며, Vercel 별도 프로젝트로 배포한다 (Root Directory = `frontend/shop-admin`).
 
-현재는 **Mock 데이터** 단계다. 로그인·대시보드만 구현되어 있고 백엔드(shop-api)와는 연결되지 않는다.
+현재는 **Mock 데이터** 단계다. 로그인·대시보드·연동 신청·관리자 관리(신청 승인)만 구현되어 있고 백엔드(shop-api)와는 연결되지 않는다.
 
 ## 개발
 ```bash
@@ -20,10 +20,18 @@ npm run build
 |---|---|---|
 | `admin` | 최고관리자 (SUPER_ADMIN) | 대시보드 (전체 범위), `설정` 메뉴 노출 |
 | `shop` | 쇼핑몰 관리자 (승인됨) | 대시보드 (회사 범위), `설정` 메뉴 없음 |
-| `pending` | 연동 승인 대기 | `/access` 안내 |
-| `new` | 권한 없음 (신청 전) | `/access` 안내 |
+| `pending` | 연동 승인 대기 | `/access` 안내 (상태 새로고침) |
+| `new` | 권한 없음 (신청 전) | `/access`에서 연동 신청 가능 |
+| `rejected` | 신청 거절됨 | `/access`에 거절 사유 표시, 다시 신청 가능 |
 
 그 외 아이디는 로그인 실패. 세션은 `localStorage`(`shopAdminSession`)에만 저장된다.
+
+### 연동 신청 시나리오
+1. `new` 로그인 → `/access`에서 "연동 신청" → 대기 안내
+2. 로그아웃 → `admin` 로그인 → 설정 > 관리자 관리에서 `new` 승인(또는 거절 사유 입력)
+3. `new` 재로그인 → 대시보드 (대기 화면에서는 "상태 새로고침"으로 진입)
+
+관리자 목록·신청 상태는 `localStorage`(`shopAdminMockAdmins`)에 저장된다. 초기화하려면 이 키를 삭제한다.
 
 ## 구조
 - `src/lib/api/*` : 화면이 호출하는 API 계층. 실 연동 시 **이 파일들 내부만** `fetch`로 교체한다.

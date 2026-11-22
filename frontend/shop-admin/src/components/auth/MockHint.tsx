@@ -1,8 +1,9 @@
 const ACCOUNTS = [
-  { id: 'admin', desc: '최고관리자' },
+  { id: 'admin', desc: '최고관리자 (설정 > 관리자 관리에서 승인)' },
   { id: 'shop', desc: '쇼핑몰 관리자 (승인됨)' },
   { id: 'pending', desc: '승인 대기' },
-  { id: 'new', desc: '권한 없음 (신청 전)' },
+  { id: 'new', desc: '권한 없음 — 로그인 후 연동 신청' },
+  { id: 'rejected', desc: '신청 거절됨 — 사유 확인 후 다시 신청' },
 ]
 
 export function MockHint() {
