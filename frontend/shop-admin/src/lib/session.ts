@@ -2,7 +2,7 @@ import type { AccessStatus, Session, ShopRole } from '@/types/auth'
 
 const KEY = 'shopAdminSession'
 const ROLES: ShopRole[] = ['SUPER_ADMIN', 'SHOP_ADMIN']
-const ACCESS_STATUSES: AccessStatus[] = ['APPROVED', 'PENDING', 'NONE']
+const ACCESS_STATUSES: AccessStatus[] = ['APPROVED', 'PENDING', 'REJECTED', 'NONE']
 export const SESSION_EVENT = 'shop-admin-session'
 
 export function readSessionRaw(): string | null {
