@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import {
-  fetchOrder, updateOrder, updateOrderStatus, requestRefund, approveRefund, rejectRefund,
+  fetchOrder, updateOrder, updateOrderStatus, deleteOrder, requestRefund, approveRefund, rejectRefund,
   fetchOrderHistory, fetchReceiptConfirmation,
   fetchSmsMessages, fetchAlimtalkMessages, resendMms,
   OrderHistoryItem, ReceiptConfirmationResult, SmsMessageResult,
@@ -14,7 +14,7 @@ interface Options {
   onClose: () => void
 }
 
-export function useOrderDetail(orderId: string, { onUpdated }: Options) {
+export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options) {
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -23,6 +23,8 @@ export function useOrderDetail(orderId: string, { onUpdated }: Options) {
   const [refundDialog, setRefundDialog] = useState<'request' | 'approve' | 'reject' | null>(null)
   const [refundReason, setRefundReason] = useState('')
   const [refundError, setRefundError] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
   const role = typeof window === 'undefined' ? null : localStorage.getItem('role')
@@ -250,6 +252,30 @@ export function useOrderDetail(orderId: string, { onUpdated }: Options) {
     }
   }
 
+  function openDeleteConfirm() {
+    setConfirmDelete(true)
+    setDeleteError(null)
+  }
+
+  function closeDeleteConfirm() {
+    setConfirmDelete(false)
+    setDeleteError(null)
+  }
+
+  async function handleDelete() {
+    setSaving(true)
+    setDeleteError(null)
+    try {
+      await deleteOrder(orderId)
+      onUpdated?.()
+      onClose()
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : '삭제에 실패했습니다.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function refreshAfterDeliveryComplete() {
     try {
       const [updated, receipt, sms, alimtalk] = await Promise.all([
@@ -281,11 +307,13 @@ export function useOrderDetail(orderId: string, { onUpdated }: Options) {
     selectedProductId, setSelectedProductId,
     completeDialogOpen, setCompleteDialogOpen, selectedPhotoUrls,
     refundDialog, refundReason, setRefundReason, refundError,
+    confirmDelete, deleteError,
     hasSitePhotos, hasPhotos, hasSmsFailure, hasAlimtalkFailure,
     startEdit, cancelEdit, saveEdit,
     openCompleteDialog, togglePhotoSelection, handleComplete,
     handleAccept, handleReject, handleResend,
-    openRefundDialog, closeRefundDialog, submitRefund, refreshAfterDeliveryComplete,
+    openRefundDialog, closeRefundDialog, submitRefund,
+    openDeleteConfirm, closeDeleteConfirm, handleDelete, refreshAfterDeliveryComplete,
     set,
   }
 }

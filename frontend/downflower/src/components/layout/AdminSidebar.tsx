@@ -60,7 +60,6 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/customer-orders/integration-settings': SlidersHorizontal,
   '/integration-settings': SlidersHorizontal,
   '/coupang': ShoppingCart,
-  '/coupang/orders': ShoppingCart,
   '/coupang/settings': SlidersHorizontal,
   '/shop': Store,
   '/shop/settings': SlidersHorizontal,
