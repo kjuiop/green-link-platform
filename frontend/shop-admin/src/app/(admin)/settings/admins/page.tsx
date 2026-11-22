@@ -128,6 +128,7 @@ export default function AdminsPage() {
               key={f.value}
               size="sm"
               variant={filter === f.value ? 'default' : 'outline'}
+              aria-pressed={filter === f.value}
               className={cn(filter === f.value && 'bg-green-700 hover:bg-green-800')}
               onClick={() => changeFilter(f.value)}
             >
@@ -215,6 +216,7 @@ export default function AdminsPage() {
                               <Input
                                 className="min-w-48 flex-1 bg-white"
                                 placeholder="거절 사유를 입력하세요"
+                                aria-label="거절 사유"
                                 maxLength={200}
                                 value={reason}
                                 onChange={(e) => { setReason(e.target.value); setActionError('') }}

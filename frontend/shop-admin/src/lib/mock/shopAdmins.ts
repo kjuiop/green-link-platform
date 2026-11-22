@@ -29,12 +29,24 @@ function save(rows: ShopAdmin[]) {
   localStorage.setItem(KEY, JSON.stringify(rows))
 }
 
+const STATUSES: ShopAdminStatus[] = ['PENDING', 'APPROVED', 'REJECTED']
+
+function isShopAdmin(value: unknown): value is ShopAdmin {
+  if (!value || typeof value !== 'object') return false
+  const row = value as Partial<ShopAdmin>
+  return typeof row.id === 'number'
+    && typeof row.loginId === 'string'
+    && typeof row.name === 'string'
+    && !!row.status
+    && STATUSES.includes(row.status)
+}
+
 function load(): ShopAdmin[] {
   try {
     const raw = localStorage.getItem(KEY)
     if (raw) {
       const parsed: unknown = JSON.parse(raw)
-      if (Array.isArray(parsed)) return parsed as ShopAdmin[]
+      if (Array.isArray(parsed) && parsed.every(isShopAdmin)) return parsed
     }
   } catch {
     // 손상된 값은 시드로 복구한다
