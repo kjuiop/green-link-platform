@@ -14,7 +14,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
-import { fetchMenusByRole } from '@/lib/api/menuApi'
+import { fetchMenus } from '@/lib/api/menuApi'
 import type { Session } from '@/types/auth'
 import type { MenuItem } from '@/types/menu'
 
@@ -114,7 +114,7 @@ export function Sidebar({ session, mobileOpen, onMobileClose }: SidebarProps) {
 
   useEffect(() => {
     let cancelled = false
-    fetchMenusByRole(session.role)
+    fetchMenus()
       .then((result) => { if (!cancelled) setMenus(result) })
       .catch(() => { if (!cancelled) { setMenus([]); setMenuError(true) } })
     return () => { cancelled = true }

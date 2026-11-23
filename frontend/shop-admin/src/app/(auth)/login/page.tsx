@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { MockHint } from '@/components/auth/MockHint'
 import { login } from '@/lib/api/authApi'
 import { getSession, setSession } from '@/lib/session'
+import { markTokenFresh } from '@/lib/useTokenRefresh'
 import type { Session } from '@/types/auth'
 
 function homeOf(session: Session): string {
@@ -36,6 +36,7 @@ export default function LoginPage() {
     try {
       const session = await login(loginId, password)
       setSession(session)
+      markTokenFresh()
       router.push(homeOf(session))
     } catch (e) {
       setError(e instanceof Error ? e.message : '서버 연결에 실패했습니다.')
@@ -90,8 +91,6 @@ export default function LoginPage() {
             </Button>
           </CardContent>
         </Card>
-
-        <MockHint />
       </div>
     </div>
   )

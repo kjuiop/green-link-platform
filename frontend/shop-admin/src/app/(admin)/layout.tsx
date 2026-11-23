@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSession } from '@/lib/useSession'
+import { useTokenRefresh } from '@/lib/useTokenRefresh'
 
 function FullScreenSkeleton() {
   return (
@@ -31,6 +32,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter()
   const { session, loading } = useSession()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  useTokenRefresh(!!session && session.accessStatus === 'APPROVED')
 
   useEffect(() => {
     if (loading) return
