@@ -61,9 +61,8 @@ public record OrderResult(
         Long updatedByAdminId,
         boolean isDelayed,
         String photoToken,
-        String refundReason,
-        String refundRequestedAt,
-        String refundRejectReason
+        long adjustAmount,
+        PendingAdjustment pendingAdjustment
 ) {
 
     /** 수주사 시점 금액: 수수료를 제외한 상품금액·합계로 치환하고 수수료 정보는 숨긴다. */
@@ -97,6 +96,40 @@ public record OrderResult(
                 isDeleted, messageSentAt,
                 createdByAdminId, updatedByAdminId,
                 isDelayed, photoToken,
-                refundReason, refundRequestedAt, refundRejectReason);
+                adjustAmount, pendingAdjustment != null ? pendingAdjustment.toVendorView(vendorFee) : null);
+    }
+
+    public OrderResult withPendingAdjustment(PendingAdjustment pending) {
+        return copyWith(vendorAmount, pending);
+    }
+
+    /** 발주사 시점: 수주사 정산금액을 숨긴다. */
+    public OrderResult toOrderingView() {
+        return copyWith(null, pendingAdjustment);
+    }
+
+    public OrderResult withVendorAmount(Long newVendorAmount) {
+        return copyWith(newVendorAmount, pendingAdjustment);
+    }
+
+    private OrderResult copyWith(Long newVendorAmount, PendingAdjustment pending) {
+        return new OrderResult(
+                id, orderNumber, vendorId, vendorCompanyId, vendorName, vendorPhone,
+                orderingCompanyId, orderingCompanyName, orderingCompanyPhone,
+                status, productId, productName, quantity, amount,
+                newVendorAmount, extraCost, totalAmount, vendorFee, items, deliveryDate, deliveryTimeType, deliveryTimeHour,
+                deliveryTimeMinute, deliveryTimeCustom, address, addressDetail,
+                eventType, placeName, roomName, eventInfo,
+                ribbonLeft, ribbonRight, ribbonExtras,
+                ordererName, ordererPhone, recipientName, recipientPhone,
+                sendPhotoToOrderer, sendPhotoToRecipient,
+                messageSchedule, scheduledMessageHour, scheduledMessageMinute,
+                adminMemo, vendorMemo, acceptedAt, completedAt,
+                createdAt, messageStatus, referencePhotoCount,
+                hasReceipt, receiptReceiverName, receiptReceiverRelation,
+                isDeleted, messageSentAt,
+                createdByAdminId, updatedByAdminId,
+                isDelayed, photoToken,
+                adjustAmount, pending);
     }
 }

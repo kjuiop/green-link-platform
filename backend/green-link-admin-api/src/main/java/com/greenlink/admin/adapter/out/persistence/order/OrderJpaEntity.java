@@ -60,6 +60,9 @@ public class OrderJpaEntity extends BaseJpaEntity {
     @Column(name = "vendor_fee")
     private Long vendorFee;
 
+    @Column(name = "adjust_amount")
+    private Long adjustAmount;
+
     @Column(nullable = false, length = 16)
     private String deliveryDate;
 
@@ -147,18 +150,6 @@ public class OrderJpaEntity extends BaseJpaEntity {
     @Column(name = "photo_token", length = 36, unique = true)
     private String photoToken;
 
-    @Column(name = "refund_reason", length = 500)
-    private String refundReason;
-
-    @Column(name = "refund_requested_at", length = 30)
-    private String refundRequestedAt;
-
-    @Column(name = "refund_reject_reason", length = 500)
-    private String refundRejectReason;
-
-    @Column(name = "refund_decided_at", length = 30)
-    private String refundDecidedAt;
-
     protected OrderJpaEntity() {}
 
     public static OrderJpaEntity from(Order order) {
@@ -179,6 +170,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
         e.extraCost = order.getExtraCost();
         e.totalAmount = order.getTotalAmount();
         e.vendorFee = order.getVendorFee();
+        e.adjustAmount = order.getAdjustAmount() != 0L ? order.getAdjustAmount() : null;
         e.deliveryDate = order.getDeliveryDate();
         e.deliveryTimeType = order.getDeliveryTimeType();
         e.deliveryTimeHour = order.getDeliveryTimeHour();
@@ -208,10 +200,6 @@ public class OrderJpaEntity extends BaseJpaEntity {
         e.completedAt = order.getCompletedAt();
         e.isDeleted = order.isDeleted();
         e.photoToken = order.getPhotoToken();
-        e.refundReason = order.getRefundReason();
-        e.refundRequestedAt = order.getRefundRequestedAt();
-        e.refundRejectReason = order.getRefundRejectReason();
-        e.refundDecidedAt = order.getRefundDecidedAt();
         return e;
     }
 
@@ -264,7 +252,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
                 photoToken
         );
         order.assignVendorFee(vendorFee);
-        order.assignRefundInfo(refundReason, refundRequestedAt, refundRejectReason, refundDecidedAt);
+        order.assignAdjustAmount(adjustAmount);
         return order;
     }
 }

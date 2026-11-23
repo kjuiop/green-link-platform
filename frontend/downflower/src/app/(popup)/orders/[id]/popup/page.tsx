@@ -9,7 +9,8 @@ import {
   OrderActionButtons, SaveErrorBanner,
   BasicInfoCard, DeliveryInfoCard, RibbonCard, ContactCard, MemoCard,
   ReferenceImageCard, DeliveryPhotosCard, ReceiptConfirmationCard,
-  SmsHistoryCard, AlimtalkHistoryCard, HistoryCard, CompleteDialog, RefundDialog, DeleteDialog, RefundInfoBanner,
+  SmsHistoryCard, AlimtalkHistoryCard, HistoryCard, CompleteDialog, DeleteDialog,
+  AdjustmentInfoBanner, AdjustmentHistoryCard, AdjustmentDialog,
 } from '@/components/common/OrderDetailSections'
 
 const WINDOW_OVERLAY = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
@@ -53,12 +54,12 @@ export default function OrderPopupWindowPage() {
           <div className="flex h-40 items-center justify-center text-sm text-gray-400">주문을 찾을 수 없습니다.</div>
         ) : (
           <div className="space-y-3 p-4">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 empty:hidden">
               <OrderActionButtons d={loaded} />
             </div>
 
             <SaveErrorBanner d={loaded} />
-            <RefundInfoBanner d={loaded} />
+            <AdjustmentInfoBanner d={loaded} />
 
             <div className="grid gap-3 sm:grid-cols-2">
               <BasicInfoCard d={loaded} />
@@ -71,6 +72,7 @@ export default function OrderPopupWindowPage() {
               <ReceiptConfirmationCard d={loaded} className="sm:col-span-2" />
               <SmsHistoryCard d={loaded} className="sm:col-span-2" />
               <AlimtalkHistoryCard d={loaded} className="sm:col-span-2" />
+              <AdjustmentHistoryCard d={loaded} className="sm:col-span-2" />
               <HistoryCard d={loaded} className="sm:col-span-2" />
             </div>
           </div>
@@ -80,7 +82,7 @@ export default function OrderPopupWindowPage() {
       {loaded && (
         <>
           <CompleteDialog d={loaded} overlayClassName={WINDOW_OVERLAY} />
-          <RefundDialog d={loaded} overlayClassName={WINDOW_OVERLAY} />
+          <AdjustmentDialog d={loaded} overlayClassName={WINDOW_OVERLAY} />
           <DeleteDialog d={loaded} overlayClassName={WINDOW_OVERLAY} />
         </>
       )}

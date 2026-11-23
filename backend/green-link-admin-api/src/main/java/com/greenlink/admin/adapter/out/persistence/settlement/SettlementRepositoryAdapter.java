@@ -31,6 +31,11 @@ public class SettlementRepositoryAdapter implements SettlementRepository {
     }
 
     @Override
+    public boolean existsCompletedCovering(List<Long> companyIds, String date) {
+        return jpaRepository.existsByCompanyIdInAndFromDateLessThanEqualAndToDateGreaterThanEqual(companyIds, date, date);
+    }
+
+    @Override
     public Settlement save(Settlement settlement) {
         return jpaRepository.save(SettlementJpaEntity.from(settlement)).toDomain();
     }

@@ -31,7 +31,7 @@ public class SettlementQueryRepository implements SettlementQueryPort {
                         orderTotal.sum(),
                         effectiveVendorAmount.sum())
                 .from(o)
-                .where(o.status.in(OrderStatus.DELIVERED, OrderStatus.REFUND_REQUESTED)
+                .where(o.status.eq(OrderStatus.DELIVERED)
                         .and(o.completedAt.goe(fromDate))
                         .and(o.completedAt.loe(toDate + "T23:59:59"))
                         .and(o.isDeleted.isFalse())
@@ -58,7 +58,7 @@ public class SettlementQueryRepository implements SettlementQueryPort {
                         orderTotal.sum(),
                         o.vendorAmount.coalesce(0L).sum())
                 .from(o)
-                .where(o.status.in(OrderStatus.DELIVERED, OrderStatus.REFUND_REQUESTED)
+                .where(o.status.eq(OrderStatus.DELIVERED)
                         .and(o.completedAt.goe(fromDate))
                         .and(o.completedAt.loe(toDate + "T23:59:59"))
                         .and(o.isDeleted.isFalse())
@@ -80,7 +80,7 @@ public class SettlementQueryRepository implements SettlementQueryPort {
         QOrderJpaEntity o = QOrderJpaEntity.orderJpaEntity;
         return queryFactory
                 .selectFrom(o)
-                .where(o.status.in(OrderStatus.DELIVERED, OrderStatus.REFUND_REQUESTED)
+                .where(o.status.eq(OrderStatus.DELIVERED)
                         .and(o.vendorCompanyId.eq(vendorCompanyId))
                         .and(o.completedAt.goe(fromDate))
                         .and(o.completedAt.loe(toDate + "T23:59:59"))
@@ -97,7 +97,7 @@ public class SettlementQueryRepository implements SettlementQueryPort {
         QOrderJpaEntity o = QOrderJpaEntity.orderJpaEntity;
         return queryFactory
                 .selectFrom(o)
-                .where(o.status.in(OrderStatus.DELIVERED, OrderStatus.REFUND_REQUESTED)
+                .where(o.status.eq(OrderStatus.DELIVERED)
                         .and(o.orderingCompanyId.eq(orderingCompanyId))
                         .and(o.completedAt.goe(fromDate))
                         .and(o.completedAt.loe(toDate + "T23:59:59"))
@@ -114,20 +114,20 @@ public class SettlementQueryRepository implements SettlementQueryPort {
                 o.getId(), o.getOrderNumber(), counterpartCompanyId,
                 o.getProductName(), o.getPlaceName(), o.getOrdererName(),
                 o.getCompletedAt(), orderAmount, o.getVendorAmount(),
-                o.getExtraCost(), o.getVendorFee()
+                o.getExtraCost(), o.getVendorFee(), o.getAdjustAmount()
         );
     }
 
-    /** 발주금액 = 수주금액 = 주문금액 + 추가비용 */
+    /** 발주금액 = 수주금액 = 주문금액 + 추가비용 + 조정금액 */
     private static NumberExpression<Long> orderTotal(QOrderJpaEntity o) {
-        return o.amount.add(o.extraCost.coalesce(0L));
+        return o.amount.add(o.extraCost.coalesce(0L)).add(o.adjustAmount.coalesce(0L));
     }
 
     /** 수주사 정산금액: vendorAmount 스냅샷 우선, null이면 발주금액 − vendorFee */
     private static NumberExpression<Long> effectiveVendorAmount(QOrderJpaEntity o) {
         return new CaseBuilder()
                 .when(o.vendorAmount.isNotNull()).then(o.vendorAmount)
-                .otherwise(o.amount.add(o.extraCost.coalesce(0L)).subtract(o.vendorFee.coalesce(0L)));
+                .otherwise(orderTotal(o).subtract(o.vendorFee.coalesce(0L)));
     }
 
     private static long nvl(Long v) { return v != null ? v : 0L; }

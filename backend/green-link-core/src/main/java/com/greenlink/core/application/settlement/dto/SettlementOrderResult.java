@@ -17,29 +17,30 @@ public record SettlementOrderResult(
         String orderingFeeDiscountType,
         long orderingDiscountAmount,
         long orderingSettlementAmount,
-        Long vendorFee
+        Long vendorFee,
+        long adjustAmount
 ) {
     public long totalAmount() {
-        return orderAmount + (extraCost != null ? extraCost : 0L);
+        return orderAmount + (extraCost != null ? extraCost : 0L) + adjustAmount;
     }
 
     public static SettlementOrderResult forVendor(SettlementQueryPort.OrderSettlementRaw r, String counterpartName) {
-        long total = r.orderAmount() + (r.extraCost() != null ? r.extraCost() : 0L);
+        long total = r.orderAmount() + (r.extraCost() != null ? r.extraCost() : 0L) + r.adjustAmount();
         return new SettlementOrderResult(
                 r.orderId(), r.orderNumber(), counterpartName,
                 r.productName(), r.placeName(), r.ordererName(), r.completedAt(),
                 r.orderAmount(), r.vendorAmount(), r.extraCost(),
-                "NONE", 0L, total, r.vendorFee());
+                "NONE", 0L, total, r.vendorFee(), r.adjustAmount());
     }
 
     public static SettlementOrderResult forOrdering(SettlementQueryPort.OrderSettlementRaw r, String counterpartName, Company orderingCompany) {
-        long total = r.orderAmount() + (r.extraCost() != null ? r.extraCost() : 0L);
+        long total = r.orderAmount() + (r.extraCost() != null ? r.extraCost() : 0L) + r.adjustAmount();
         long vendorFee = r.vendorFee() != null ? r.vendorFee() : 0L;
         long discount = orderingCompany.calcOrderingDiscount(vendorFee);
         return new SettlementOrderResult(
                 r.orderId(), r.orderNumber(), counterpartName,
                 r.productName(), r.placeName(), r.ordererName(), r.completedAt(),
-                r.orderAmount(), r.vendorAmount(), r.extraCost(),
-                orderingCompany.getOrderingFeeDiscountType().name(), discount, total - discount, null);
+                r.orderAmount(), null, r.extraCost(),
+                orderingCompany.getOrderingFeeDiscountType().name(), discount, total - discount, null, r.adjustAmount());
     }
 }

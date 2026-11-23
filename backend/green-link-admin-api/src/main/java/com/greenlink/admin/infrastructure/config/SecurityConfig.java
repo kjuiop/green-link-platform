@@ -38,6 +38,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/companies/search").permitAll()
                 .requestMatchers("/public/**").permitAll()
+                .requestMatchers("/internal/shop-auth/**").permitAll()
                 .requestMatchers("/api/vendor/products", "/api/vendor/products/**").hasAnyRole("SUPER_ADMIN", "VENDOR")
                 .requestMatchers("/api/vendor/**").hasRole("VENDOR")
                 .requestMatchers("/api/ordering/**").hasRole("ORDERING")

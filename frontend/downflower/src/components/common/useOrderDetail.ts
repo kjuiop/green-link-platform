@@ -2,12 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import {
-  fetchOrder, updateOrder, updateOrderStatus, deleteOrder, requestRefund, approveRefund, rejectRefund,
+  fetchOrder, updateOrder, updateOrderStatus, deleteOrder,
   fetchOrderHistory, fetchReceiptConfirmation,
+  fetchPriceAdjustments, requestPriceAdjustment, acceptPriceAdjustment, rejectPriceAdjustment,
   fetchSmsMessages, fetchAlimtalkMessages, resendMms,
   OrderHistoryItem, ReceiptConfirmationResult, SmsMessageResult,
 } from '@/lib/api/orderApi'
-import { Order } from '@/types/order'
+import { Order, PriceAdjustment } from '@/types/order'
+import { orderTotalOf } from '@/lib/utils/orderAmount'
+
+export type AdjustDialogMode = 'request' | 'decide' | 'confirmAccept' | 'reject'
 
 interface Options {
   onUpdated?: () => void
@@ -20,17 +24,19 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState<Order | null>(null)
-  const [refundDialog, setRefundDialog] = useState<'request' | 'approve' | 'reject' | null>(null)
-  const [refundReason, setRefundReason] = useState('')
-  const [refundError, setRefundError] = useState<string | null>(null)
+  const [adjustDialog, setAdjustDialog] = useState<AdjustDialogMode | null>(null)
+  const [adjustNewTotal, setAdjustNewTotal] = useState('')
+  const [adjustReason, setAdjustReason] = useState('')
+  const [adjustError, setAdjustError] = useState<string | null>(null)
+  const [adjustments, setAdjustments] = useState<PriceAdjustment[]>([])
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
   const role = typeof window === 'undefined' ? null : localStorage.getItem('role')
   const canEdit = role !== 'VENDOR'
-  const canRequestRefund = role === 'SUPER_ADMIN' || role === 'ORDERING'
-  const canDecideRefund = role === 'SUPER_ADMIN' || role === 'VENDOR'
+  const canRequestAdjust = role === 'SUPER_ADMIN' || role === 'ORDERING'
+  const canDecideAdjust = role === 'SUPER_ADMIN' || role === 'VENDOR'
   const [saveError, setSaveError] = useState<string | null>(null)
   const [receiptConfirmation, setReceiptConfirmation] = useState<ReceiptConfirmationResult | null>(null)
   const [history, setHistory] = useState<OrderHistoryItem[]>([])
@@ -48,13 +54,15 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
       fetchOrderHistory(orderId).catch(() => []),
       fetchSmsMessages(orderId).catch(() => []),
       fetchAlimtalkMessages(orderId).catch(() => []),
-    ]).then(([orderData, receipt, hist, sms, alimtalk]) => {
+      fetchPriceAdjustments(orderId).catch(() => []),
+    ]).then(([orderData, receipt, hist, sms, alimtalk, adjs]) => {
       setOrder(orderData)
       setDraft(orderData)
       setReceiptConfirmation(receipt)
       setHistory(hist)
       setSmsMessages(sms)
       setAlimtalkMessages(alimtalk)
+      setAdjustments(adjs)
     }).catch(() => setLoadError('발주 정보를 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
   }, [orderId])
@@ -96,7 +104,7 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
         productName: draft.productName,
         quantity: draft.quantity,
         amount: draft.amount,
-        vendorAmount: draft.vendorAmount,
+        ...(isSuperAdmin ? { vendorAmount: draft.vendorAmount } : {}),
         extraCost: draft.extraCost,
         deliveryDate: draft.deliveryAt.slice(0, 10),
         deliveryTimeType: draft.deliveryTimeType ?? '',
@@ -216,37 +224,62 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
     }
   }
 
-  function openRefundDialog(kind: 'request' | 'approve' | 'reject') {
-    setRefundReason('')
-    setRefundError(null)
-    setRefundDialog(kind)
+  function openAdjustDialog(mode: AdjustDialogMode) {
+    setAdjustNewTotal(mode === 'request' && order ? String(orderTotalOf(order)) : '')
+    setAdjustReason('')
+    setAdjustError(null)
+    setAdjustDialog(mode)
   }
 
-  function closeRefundDialog() {
-    setRefundDialog(null)
-    setRefundError(null)
+  function closeAdjustDialog() {
+    setAdjustDialog(null)
+    setAdjustError(null)
   }
 
-  async function submitRefund() {
-    if (!refundDialog) return
-    const reason = refundReason.trim()
-    if (refundDialog !== 'approve' && !reason) {
-      setRefundError('사유를 입력해 주세요.')
+  async function submitAdjust() {
+    if (!adjustDialog || !order) return
+    const reason = adjustReason.trim()
+    const pendingId = order.pendingAdjustment?.id
+    if (adjustDialog === 'request') {
+      const next = Number(adjustNewTotal)
+      if (adjustNewTotal.trim() === '' || !Number.isFinite(next) || next < 0) {
+        setAdjustError('조정 후 발주금액을 0원 이상으로 입력해 주세요.')
+        return
+      }
+      if (next === orderTotalOf(order)) {
+        setAdjustError('현재 발주금액과 같습니다.')
+        return
+      }
+      if (!reason) {
+        setAdjustError('조정 사유를 입력해 주세요.')
+        return
+      }
+    }
+    if (adjustDialog === 'reject' && !reason) {
+      setAdjustError('거절 사유를 입력해 주세요.')
       return
     }
+    if ((adjustDialog === 'confirmAccept' || adjustDialog === 'reject') && pendingId == null) return
     setSaving(true)
-    setRefundError(null)
+    setAdjustError(null)
     try {
-      const updated = refundDialog === 'request' ? await requestRefund(orderId, reason)
-        : refundDialog === 'approve' ? await approveRefund(orderId)
-        : await rejectRefund(orderId, reason)
+      if (adjustDialog === 'request') await requestPriceAdjustment(orderId, Number(adjustNewTotal), reason)
+      else if (adjustDialog === 'confirmAccept') await acceptPriceAdjustment(orderId, pendingId!)
+      else if (adjustDialog === 'reject') await rejectPriceAdjustment(orderId, pendingId!, reason)
+      else return
+      const [updated, hist, adjs] = await Promise.all([
+        fetchOrder(orderId),
+        fetchOrderHistory(orderId).catch(() => []),
+        fetchPriceAdjustments(orderId).catch(() => []),
+      ])
       setOrder(updated)
       setDraft(updated)
-      setHistory(await fetchOrderHistory(orderId).catch(() => []))
-      setRefundDialog(null)
+      setHistory(hist)
+      setAdjustments(adjs)
+      setAdjustDialog(null)
       onUpdated?.()
     } catch (e) {
-      setRefundError(e instanceof Error ? e.message : '처리에 실패했습니다.')
+      setAdjustError(e instanceof Error ? e.message : '처리에 실패했습니다.')
     } finally {
       setSaving(false)
     }
@@ -301,18 +334,18 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
     orderId,
     order, draft, setDraft, loading, loadError,
     isEditing, saving, saveError, isSuperAdmin,
-    canEdit: canEdit && order?.status !== '환불요청' && order?.status !== '환불완료',
-    canRequestRefund, canDecideRefund,
+    canEdit,
+    canRequestAdjust, canDecideAdjust,
+    adjustDialog, adjustNewTotal, setAdjustNewTotal, adjustReason, setAdjustReason, adjustError, adjustments,
     receiptConfirmation, history, smsMessages, alimtalkMessages, resending,
     selectedProductId, setSelectedProductId,
     completeDialogOpen, setCompleteDialogOpen, selectedPhotoUrls,
-    refundDialog, refundReason, setRefundReason, refundError,
     confirmDelete, deleteError,
     hasSitePhotos, hasPhotos, hasSmsFailure, hasAlimtalkFailure,
     startEdit, cancelEdit, saveEdit,
     openCompleteDialog, togglePhotoSelection, handleComplete,
     handleAccept, handleReject, handleResend,
-    openRefundDialog, closeRefundDialog, submitRefund,
+    openAdjustDialog, closeAdjustDialog, submitAdjust,
     openDeleteConfirm, closeDeleteConfirm, handleDelete, refreshAfterDeliveryComplete,
     set,
   }

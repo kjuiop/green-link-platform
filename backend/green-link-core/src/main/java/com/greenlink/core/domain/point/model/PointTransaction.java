@@ -47,6 +47,16 @@ public class PointTransaction {
         return orderTransaction(PointTransactionType.RESTORE, companyId, memberId, orderId, amount, balanceAfter, memo);
     }
 
+    public static PointTransaction adjustUse(Long companyId, Long memberId, Long orderId,
+                                             long amount, long balanceAfter, String memo) {
+        return orderTransaction(PointTransactionType.ADJUST_USE, companyId, memberId, orderId, amount, balanceAfter, memo);
+    }
+
+    public static PointTransaction adjustRestore(Long companyId, Long memberId, Long orderId,
+                                                 long amount, long balanceAfter, String memo) {
+        return orderTransaction(PointTransactionType.ADJUST_RESTORE, companyId, memberId, orderId, amount, balanceAfter, memo);
+    }
+
     private static PointTransaction orderTransaction(PointTransactionType type, Long companyId, Long memberId,
                                                       Long orderId, long amount, long balanceAfter, String memo) {
         PointTransaction t = new PointTransaction();

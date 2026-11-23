@@ -8,7 +8,8 @@ import {
   OrderActionButtons, SaveErrorBanner,
   BasicInfoCard, DeliveryInfoCard, RibbonCard, ContactCard, MemoCard,
   ReferenceImageCard, DeliveryPhotosCard, ReceiptConfirmationCard,
-  SmsHistoryCard, AlimtalkHistoryCard, HistoryCard, CompleteDialog, RefundDialog, DeleteDialog, RefundInfoBanner,
+  SmsHistoryCard, AlimtalkHistoryCard, HistoryCard, CompleteDialog, DeleteDialog,
+  AdjustmentInfoBanner, AdjustmentHistoryCard, AdjustmentDialog,
 } from '@/components/common/OrderDetailSections'
 
 interface Props {
@@ -113,12 +114,12 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
           <div className="flex h-40 items-center justify-center text-sm text-gray-400">주문을 찾을 수 없습니다.</div>
         ) : (
           <div className="space-y-3 p-4">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 empty:hidden">
               <OrderActionButtons d={loaded} />
             </div>
 
             <SaveErrorBanner d={loaded} />
-            <RefundInfoBanner d={loaded} />
+            <AdjustmentInfoBanner d={loaded} />
 
             <div className="grid gap-3 sm:grid-cols-2">
               <BasicInfoCard d={loaded} />
@@ -131,6 +132,7 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
               <ReceiptConfirmationCard d={loaded} className="sm:col-span-2" />
               <SmsHistoryCard d={loaded} className="sm:col-span-2" />
               <AlimtalkHistoryCard d={loaded} className="sm:col-span-2" />
+              <AdjustmentHistoryCard d={loaded} className="sm:col-span-2" />
               <HistoryCard d={loaded} className="sm:col-span-2" />
             </div>
           </div>
@@ -140,7 +142,7 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
       {loaded && (
         <>
           <CompleteDialog d={loaded} overlayClassName={POPUP_OVERLAY} />
-          <RefundDialog d={loaded} overlayClassName={POPUP_OVERLAY} />
+          <AdjustmentDialog d={loaded} overlayClassName={POPUP_OVERLAY} />
           <DeleteDialog d={loaded} overlayClassName={POPUP_OVERLAY} />
         </>
       )}

@@ -15,7 +15,7 @@ public class SettlementExcelService implements ExportSettlementExcelUseCase {
 
     private static final String[] HEADERS = {
             "주문번호", "상대업체", "상품명", "배송지", "주문자", "배송완료일",
-            "주문금액", "추가비용", "발주금액", "정산금액"
+            "주문금액", "추가비용", "조정금액", "발주금액", "정산금액"
     };
 
     @Override
@@ -42,8 +42,9 @@ public class SettlementExcelService implements ExportSettlementExcelUseCase {
                 row.createCell(5).setCellValue(nullToEmpty(o.deliveredAt()));
                 row.createCell(6).setCellValue(o.orderAmount());
                 row.createCell(7).setCellValue(o.extraCost() != null ? o.extraCost() : 0L);
-                row.createCell(8).setCellValue(o.totalAmount());
-                row.createCell(9).setCellValue(o.vendorAmount() != null ? o.vendorAmount() : 0L);
+                row.createCell(8).setCellValue(o.adjustAmount());
+                row.createCell(9).setCellValue(o.totalAmount());
+                row.createCell(10).setCellValue(o.vendorAmount() != null ? o.vendorAmount() : 0L);
             }
 
             for (int i = 0; i < HEADERS.length; i++) {

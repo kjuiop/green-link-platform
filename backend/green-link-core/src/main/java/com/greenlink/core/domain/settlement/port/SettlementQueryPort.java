@@ -22,6 +22,7 @@ public interface SettlementQueryPort {
             long orderAmount,
             Long vendorAmount,
             Long extraCost,
-            Long vendorFee
+            Long vendorFee,
+            long adjustAmount
     ) {}
 }

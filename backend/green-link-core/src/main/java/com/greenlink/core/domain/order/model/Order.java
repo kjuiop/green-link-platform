@@ -1,5 +1,8 @@
 package com.greenlink.core.domain.order.model;
 
+import com.greenlink.core.global.exception.BusinessException;
+import com.greenlink.core.global.exception.order.OrderErrorCode;
+
 import java.util.List;
 
 public class Order {
@@ -18,6 +21,7 @@ public class Order {
     private Long extraCost;
     private long totalAmount;
     private Long vendorFee;
+    private Long adjustAmount;
     private String deliveryDate;
     private String deliveryTimeType;
     private String deliveryTimeHour;
@@ -50,10 +54,6 @@ public class Order {
     private Long createdByAdminId;
     private Long updatedByAdminId;
     private boolean isDeleted;
-    private String refundReason;
-    private String refundRequestedAt;
-    private String refundRejectReason;
-    private String refundDecidedAt;
 
     private Order() {}
 
@@ -281,7 +281,7 @@ public class Order {
         this.quantity = items.stream().mapToInt(OrderItem::getQuantity).sum();
         this.amount = items.stream().mapToLong(OrderItem::getAmount).sum();
         this.extraCost = extraCost;
-        this.totalAmount = this.amount + (extraCost != null ? extraCost : 0L);
+        this.totalAmount = this.amount + (extraCost != null ? extraCost : 0L) + getAdjustAmount();
     }
 
     private static String representativeName(String firstName, int others) {
@@ -289,47 +289,6 @@ public class Order {
         int max = 100 - suffix.length();
         String head = firstName.length() > max ? firstName.substring(0, max) : firstName;
         return head + suffix;
-    }
-
-    public void assignRefundInfo(String refundReason, String refundRequestedAt, String refundRejectReason, String refundDecidedAt) {
-        this.refundReason = refundReason;
-        this.refundRequestedAt = refundRequestedAt;
-        this.refundRejectReason = refundRejectReason;
-        this.refundDecidedAt = refundDecidedAt;
-    }
-
-    public void requestRefund(String reason, String now) {
-        if (this.status != OrderStatus.DELIVERED) {
-            throw new IllegalStateException("배송완료 상태에서만 환불 요청이 가능합니다. 현재 상태: " + this.status);
-        }
-        if (reason == null || reason.isBlank()) {
-            throw new IllegalArgumentException("환불 사유를 입력해주세요.");
-        }
-        this.status = OrderStatus.REFUND_REQUESTED;
-        this.refundReason = reason.trim();
-        this.refundRequestedAt = now;
-        this.refundRejectReason = null;
-        this.refundDecidedAt = null;
-    }
-
-    public void approveRefund(String now) {
-        if (this.status != OrderStatus.REFUND_REQUESTED) {
-            throw new IllegalStateException("환불요청 상태에서만 환불 승인이 가능합니다. 현재 상태: " + this.status);
-        }
-        this.status = OrderStatus.REFUNDED;
-        this.refundDecidedAt = now;
-    }
-
-    public void rejectRefund(String reason, String now) {
-        if (this.status != OrderStatus.REFUND_REQUESTED) {
-            throw new IllegalStateException("환불요청 상태에서만 환불 거절이 가능합니다. 현재 상태: " + this.status);
-        }
-        if (reason == null || reason.isBlank()) {
-            throw new IllegalArgumentException("거절 사유를 입력해주세요.");
-        }
-        this.status = OrderStatus.DELIVERED;
-        this.refundRejectReason = reason.trim();
-        this.refundDecidedAt = now;
     }
 
     public void updateInfo(
@@ -414,6 +373,24 @@ public class Order {
         this.vendorFee = vendorFee;
     }
 
+    public void assignAdjustAmount(Long adjustAmount) {
+        this.adjustAmount = adjustAmount;
+    }
+
+    public long getAdjustAmount() { return adjustAmount != null ? adjustAmount : 0L; }
+
+    public void applyAdjustment(long delta) {
+        if (this.status != OrderStatus.DELIVERED) {
+            throw new BusinessException(OrderErrorCode.ADJUST_ONLY_DELIVERED);
+        }
+        long next = this.totalAmount + delta;
+        if (next < 0) {
+            throw new BusinessException(OrderErrorCode.ADJUST_INVALID_AMOUNT);
+        }
+        this.adjustAmount = getAdjustAmount() + delta;
+        this.totalAmount = next;
+    }
+
     public Long getVendorFee() { return vendorFee; }
     public Long getVendorAmount() { return vendorAmount; }
     public Long getExtraCost() { return extraCost; }
@@ -450,8 +427,4 @@ public class Order {
     public Long getUpdatedByAdminId() { return updatedByAdminId; }
     public boolean isDeleted() { return isDeleted; }
     public String getPhotoToken() { return photoToken; }
-    public String getRefundReason() { return refundReason; }
-    public String getRefundRequestedAt() { return refundRequestedAt; }
-    public String getRefundRejectReason() { return refundRejectReason; }
-    public String getRefundDecidedAt() { return refundDecidedAt; }
 }

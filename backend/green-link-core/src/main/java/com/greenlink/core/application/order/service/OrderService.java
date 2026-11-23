@@ -6,6 +6,7 @@ import com.greenlink.core.application.order.dto.DeliveryShareResult;
 import com.greenlink.core.application.order.dto.OrderItemCommand;
 import com.greenlink.core.application.order.dto.OrderItemResult;
 import com.greenlink.core.application.order.dto.OrderResult;
+import com.greenlink.core.application.order.dto.PendingAdjustment;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.application.order.dto.UpdateOrderCommand;
 import com.greenlink.core.application.order.usecase.CreateOrderUseCase;
@@ -13,7 +14,6 @@ import com.greenlink.core.application.order.usecase.DeleteOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetDeliveryShareUseCase;
 import com.greenlink.core.application.order.usecase.GetOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
-import com.greenlink.core.application.order.usecase.RefundOrderUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
 import com.greenlink.core.application.orderhistory.usecase.RecordOrderHistoryUseCase;
@@ -29,6 +29,8 @@ import com.greenlink.core.domain.order.model.OrderStatus;
 import com.greenlink.core.domain.order.port.OrderItemRepository;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
+import com.greenlink.core.domain.orderpriceadjustment.model.OrderPriceAdjustment;
+import com.greenlink.core.domain.orderpriceadjustment.port.OrderPriceAdjustmentRepository;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
 import com.greenlink.core.domain.receipt.port.ReceiptConfirmationRepository;
 import com.greenlink.core.domain.referencephoto.port.ReferencePhotoRepository;
@@ -66,7 +68,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
-        GetOrdersUseCase, UpdateOrderUseCase, UpdateOrderStatusUseCase, RefundOrderUseCase,
+        GetOrdersUseCase, UpdateOrderUseCase, UpdateOrderStatusUseCase,
         DeleteOrderUseCase, GetDeliveryShareUseCase {
 
     private static final Map<OrderStatus, String> STATUS_LABEL = Map.of(
@@ -74,9 +76,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
             OrderStatus.ACCEPTED,  "수주완료",
             OrderStatus.DELIVERED, "배송완료",
             OrderStatus.REJECTED,  "수주거절",
-            OrderStatus.CANCELLED, "주문취소",
-            OrderStatus.REFUND_REQUESTED, "환불요청",
-            OrderStatus.REFUNDED,  "환불완료"
+            OrderStatus.CANCELLED, "주문취소"
     );
 
     private final OrderRepository orderRepository;
@@ -91,6 +91,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     private final ApplicationEventPublisher eventPublisher;
     private final ApplyOrderPointUseCase applyOrderPointUseCase;
     private final OrderItemPricer orderItemPricer;
+    private final OrderPriceAdjustmentRepository priceAdjustmentRepository;
 
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository, PhotoRepository photoRepository,
                         ReceiptConfirmationRepository receiptConfirmationRepository,
@@ -100,7 +101,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                         ReferencePhotoRepository referencePhotoRepository,
                         ApplicationEventPublisher eventPublisher,
                         ApplyOrderPointUseCase applyOrderPointUseCase,
-                        OrderItemPricer orderItemPricer) {
+                        OrderItemPricer orderItemPricer,
+                        OrderPriceAdjustmentRepository priceAdjustmentRepository) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.photoRepository = photoRepository;
@@ -113,6 +115,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         this.eventPublisher = eventPublisher;
         this.applyOrderPointUseCase = applyOrderPointUseCase;
         this.orderItemPricer = orderItemPricer;
+        this.priceAdjustmentRepository = priceAdjustmentRepository;
     }
 
     @Override
@@ -196,6 +199,16 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     }
 
     @Override
+    public OrderResult getOrder(Long id, boolean viewerIsSuperAdmin) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+        if (order.isDeleted() && !viewerIsSuperAdmin) {
+            throw new BusinessException(OrderErrorCode.ORDER_NOT_FOUND);
+        }
+        return toResult(order);
+    }
+
+    @Override
     public List<OrderResult> getOrders(OrderSearchCondition condition) {
         List<Order> orders = orderRepository.search(condition);
         Map<Long, VendorInfo> infoMap = buildVendorInfoMap();
@@ -205,13 +218,15 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Map<Long, Long> refCountMap = orderIds.isEmpty() ? Map.of() : referencePhotoRepository.countByOrderIds(orderIds);
         Map<Long, ReceiptConfirmation> receiptMap = buildReceiptMap(orderIds);
         Map<Long, List<OrderItem>> itemsMap = orderIds.isEmpty() ? Map.of() : orderItemRepository.findAllByOrderIds(orderIds);
+        Map<Long, OrderPriceAdjustment> pendingMap = orderIds.isEmpty() ? Map.of() : priceAdjustmentRepository.findPendingByOrderIds(orderIds);
         return orders.stream()
                 .map(o -> {
                     VendorInfo v = infoMap.get(o.getVendorId());
                     OrderingInfo oi = o.getOrderingCompanyId() != null ? orderingInfoMap.get(o.getOrderingCompanyId()) : null;
                     int refCount = refCountMap.getOrDefault(o.getId(), 0L).intValue();
                     MessageInfo mi = msgInfoMap.getOrDefault(o.getId(), new MessageInfo("NONE", null));
-                    return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, mi.status(), mi.sentAt(), refCount, receiptMap.get(o.getId()), itemsMap.get(o.getId()));
+                    return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, mi.status(), mi.sentAt(), refCount, receiptMap.get(o.getId()), itemsMap.get(o.getId()))
+                            .withPendingAdjustment(toPending(pendingMap.get(o.getId())));
                 })
                 .toList();
     }
@@ -235,12 +250,14 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         Map<Long, ReceiptConfirmation> receiptMap = buildReceiptMap(orderIds);
         Map<Long, List<OrderItem>> itemsMap = orderIds.isEmpty() ? Map.of() : orderItemRepository.findAllByOrderIds(orderIds);
         Set<Long> sitePhotoOrderIds = photoRepository.findOrderIdsWithSitePhotoIn(orderIds);
+        Map<Long, OrderPriceAdjustment> pendingMap = orderIds.isEmpty() ? Map.of() : priceAdjustmentRepository.findPendingByOrderIds(orderIds);
         Page<OrderResult> resultPage = page.map(o -> {
             VendorInfo v = infoMap.get(o.getVendorId());
             OrderingInfo oi = o.getOrderingCompanyId() != null ? orderingInfoMap.get(o.getOrderingCompanyId()) : null;
             int refCount = refCountMap.getOrDefault(o.getId(), 0L).intValue();
             MessageInfo mi = msgInfoMap.getOrDefault(o.getId(), new MessageInfo("NONE", null));
-            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, mi.status(), mi.sentAt(), refCount, receiptMap.get(o.getId()), itemsMap.get(o.getId()), sitePhotoOrderIds);
+            return toResult(o, v != null ? v.name() : null, v != null ? v.phone() : null, oi != null ? oi.name() : null, oi != null ? oi.phone() : null, mi.status(), mi.sentAt(), refCount, receiptMap.get(o.getId()), itemsMap.get(o.getId()), sitePhotoOrderIds)
+                    .withPendingAdjustment(toPending(pendingMap.get(o.getId())));
         });
         long totalAmount = orderRepository.sumAmount(condition);
         return PageResult.of(resultPage, totalAmount);
@@ -362,10 +379,15 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 order.getUpdatedByAdminId(),
                 calcIsDelayed(order, sitePhotoOrderIds),
                 order.getPhotoToken(),
-                order.getRefundReason(),
-                order.getRefundRequestedAt(),
-                order.getRefundRejectReason()
+                order.getAdjustAmount(),
+                null
         );
+    }
+
+    private static PendingAdjustment toPending(OrderPriceAdjustment a) {
+        if (a == null) return null;
+        return new PendingAdjustment(a.getId(), a.getRequesterName(), a.isRequestedByProxy(), a.getRequestedAt(),
+                a.getBeforeTotal(), a.getAdjustAmount(), a.getAfterTotal(), a.getReason());
     }
 
     private boolean calcIsDelayed(Order order) {
@@ -448,9 +470,6 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     public OrderResult updateOrder(Long id, UpdateOrderCommand cmd) {
         Order order = findActiveOrder(id);
 
-        if (order.getStatus() == OrderStatus.REFUND_REQUESTED || order.getStatus() == OrderStatus.REFUNDED) {
-            throw new BusinessException(OrderErrorCode.REFUND_ORDER_LOCKED);
-        }
         Long previousVendorId = order.getVendorId();
         Long newVendorCompanyId = cmd.vendorId() != null
                 ? adminRepository.findById(cmd.vendorId()).map(Admin::getCompanyId).orElse(null)
@@ -468,11 +487,12 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
             newVendorFee = priced.vendorFee();
         }
         long newTotalAmount = items.stream().mapToLong(OrderItem::getAmount).sum()
-                + (cmd.extraCost() != null ? cmd.extraCost() : 0L);
-        if (order.getStatus() == OrderStatus.DELIVERED
-                && newTotalAmount != order.getTotalAmount()
-                && applyOrderPointUseCase.isSettled(id)) {
-            throw new BusinessException(OrderErrorCode.SETTLED_ORDER_AMOUNT_LOCKED);
+                + (cmd.extraCost() != null ? cmd.extraCost() : 0L)
+                + order.getAdjustAmount();
+        if (order.getStatus() == OrderStatus.DELIVERED && newTotalAmount != order.getTotalAmount()) {
+            throw new BusinessException(applyOrderPointUseCase.isSettled(id)
+                    ? OrderErrorCode.SETTLED_ORDER_AMOUNT_LOCKED
+                    : OrderErrorCode.DELIVERED_AMOUNT_LOCKED);
         }
         String changeDetail = buildChangeDetail(order, beforeItems, items, cmd);
 
@@ -547,7 +567,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         diff(lines, "상품금액", str(before.getAmount()), str(afterItems.stream().mapToLong(OrderItem::getAmount).sum()));
         diff(lines, "추가비용", str(before.getExtraCost()), str(after.extraCost()));
         diff(lines, "발주금액", str(before.getTotalAmount()),
-                str(afterItems.stream().mapToLong(OrderItem::getAmount).sum() + (after.extraCost() != null ? after.extraCost() : 0L)));
+                str(afterItems.stream().mapToLong(OrderItem::getAmount).sum() + (after.extraCost() != null ? after.extraCost() : 0L)
+                        + before.getAdjustAmount()));
         diff(lines, "배송예정일", before.getDeliveryDate(), after.deliveryDate());
         diff(lines, "배송시간유형", before.getDeliveryTimeType(), after.deliveryTimeType());
         diff(lines, "배송시간", deliveryTime(before.getDeliveryTimeHour(), before.getDeliveryTimeMinute(), before.getDeliveryTimeCustom()),
@@ -692,50 +713,12 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
 
     @Override
     @Transactional
-    public OrderResult requestRefund(Long id, String reason, boolean proxy) {
-        validateRefundReason(reason);
-        Order order = findActiveOrder(id);
-        order.requestRefund(reason, kstNow());
-        Order saved = orderRepository.save(order);
-        recordOrderHistoryUseCase.record(id, OrderHistoryAction.STATUS_CHANGED,
-                "환불 요청: " + reason.trim() + proxySuffix(proxy));
-        return toResult(saved);
-    }
-
-    @Override
-    @Transactional
-    public OrderResult approveRefund(Long id, boolean proxy) {
-        Order order = findActiveOrder(id);
-        order.approveRefund(kstNow());
-        Order saved = orderRepository.save(order);
-        recordOrderHistoryUseCase.record(id, OrderHistoryAction.STATUS_CHANGED, "환불 승인" + proxySuffix(proxy));
-        if (saved.getOrderingCompanyId() != null) {
-            applyOrderPointUseCase.restoreSettledOrder(saved.getOrderingCompanyId(), saved.getId(),
-                    saved.getOrderNumber(), resolveCurrentAdminId());
-        }
-        return toResult(saved);
-    }
-
-    @Override
-    @Transactional
-    public OrderResult rejectRefund(Long id, String reason, boolean proxy) {
-        validateRefundReason(reason);
-        Order order = findActiveOrder(id);
-        order.rejectRefund(reason, kstNow());
-        Order saved = orderRepository.save(order);
-        recordOrderHistoryUseCase.record(id, OrderHistoryAction.STATUS_CHANGED,
-                "환불 거절: " + reason.trim() + proxySuffix(proxy));
-        return toResult(saved);
-    }
-
-    @Override
-    @Transactional
     public void deleteOrder(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
         if (order.isDeleted()) return;
-        if (order.getStatus() == OrderStatus.REFUND_REQUESTED || order.getStatus() == OrderStatus.REFUNDED) {
-            throw new BusinessException(OrderErrorCode.REFUND_ORDER_NOT_DELETABLE);
+        if (priceAdjustmentRepository.findPendingByOrderId(id).isPresent()) {
+            throw new BusinessException(OrderErrorCode.ORDER_HAS_PENDING_ADJUST);
         }
         boolean delivered = order.getStatus() == OrderStatus.DELIVERED;
         order.softDelete();
@@ -756,19 +739,6 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
             throw new BusinessException(OrderErrorCode.ORDER_NOT_FOUND);
         }
         return order;
-    }
-
-    private static void validateRefundReason(String reason) {
-        if (reason == null || reason.isBlank()) {
-            throw new IllegalArgumentException("사유를 입력해주세요.");
-        }
-        if (reason.trim().length() > 500) {
-            throw new IllegalArgumentException("사유는 500자 이내로 입력해주세요.");
-        }
-    }
-
-    private static String proxySuffix(boolean proxy) {
-        return proxy ? " (관리자 대행)" : "";
     }
 
     private void syncPoint(Order order) {
@@ -815,6 +785,8 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
         int refCount = referencePhotoRepository.countByOrderIds(List.of(order.getId()))
                 .getOrDefault(order.getId(), 0L).intValue();
         ReceiptConfirmation receipt = receiptConfirmationRepository.findByOrderId(order.getId()).orElse(null);
+        PendingAdjustment pending = priceAdjustmentRepository.findPendingByOrderId(order.getId())
+                .map(OrderService::toPending).orElse(null);
         return toResult(order,
                 resolveVendorName(order.getVendorId()),
                 resolveVendorPhone(order.getVendorId()),
@@ -824,6 +796,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 messageSentAt,
                 refCount,
                 receipt,
-                orderItemRepository.findAllByOrderId(order.getId()));
+                orderItemRepository.findAllByOrderId(order.getId()))
+                .withPendingAdjustment(pending);
     }
 }

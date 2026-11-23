@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { fetchOrder, updateOrderStatus } from '@/lib/api/orderApi'
 import { formatPhone } from '@/lib/utils'
 import { Order } from '@/types/order'
+import { orderTotalOf } from '@/lib/utils/orderAmount'
 
 function buildDeliveryAddress(order: Order): string {
   const parts: string[] = []
@@ -152,7 +153,7 @@ export default function PrintOrderPage() {
             <tr>
               <td>상품명</td>
               <td>{order.productName} × {order.quantity}</td>
-              <td>발주금액: {(order.amount + (order.extraCost ?? 0)).toLocaleString()}원</td>
+              <td>발주금액: {orderTotalOf(order).toLocaleString()}원</td>
             </tr>
             <tr>
               <td>배달정보</td>

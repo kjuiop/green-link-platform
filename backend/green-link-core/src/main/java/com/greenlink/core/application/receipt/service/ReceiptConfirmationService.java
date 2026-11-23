@@ -9,9 +9,12 @@ import com.greenlink.core.application.receipt.usecase.AddReceiptPhotosUseCase;
 import com.greenlink.core.application.receipt.usecase.GetReceiptConfirmationUseCase;
 import com.greenlink.core.application.receipt.usecase.SaveReceiptConfirmationUseCase;
 import com.greenlink.core.application.receipt.usecase.UpdateReceiptInfoUseCase;
+import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.photo.port.PhotoStorage;
 import com.greenlink.core.domain.receipt.model.ReceiptConfirmation;
 import com.greenlink.core.domain.receipt.port.ReceiptConfirmationRepository;
+import com.greenlink.core.global.exception.BusinessException;
+import com.greenlink.core.global.exception.order.OrderErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,18 +28,22 @@ public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCas
     private final ReceiptConfirmationRepository repository;
     private final PhotoStorage photoStorage;
     private final RecordOrderHistoryUseCase recordOrderHistoryUseCase;
+    private final OrderRepository orderRepository;
 
     public ReceiptConfirmationService(ReceiptConfirmationRepository repository,
                                       PhotoStorage photoStorage,
-                                      RecordOrderHistoryUseCase recordOrderHistoryUseCase) {
+                                      RecordOrderHistoryUseCase recordOrderHistoryUseCase,
+                                      OrderRepository orderRepository) {
         this.repository = repository;
         this.photoStorage = photoStorage;
         this.recordOrderHistoryUseCase = recordOrderHistoryUseCase;
+        this.orderRepository = orderRepository;
     }
 
     @Override
     @Transactional
     public ReceiptConfirmationResult save(SaveReceiptConfirmationCommand command) {
+        rejectIfOrderDeleted(command.orderId());
         List<String> sitePhotoUrls = new ArrayList<>();
         List<String> storePhotoUrls = new ArrayList<>();
         List<String> uploadedKeys = new ArrayList<>();
@@ -69,6 +76,7 @@ public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCas
     @Override
     @Transactional
     public ReceiptConfirmationResult addPhotos(Long orderId, List<SaveReceiptConfirmationCommand.PhotoFile> photoFiles) {
+        rejectIfOrderDeleted(orderId);
         List<String> sitePhotoUrls = new ArrayList<>();
         List<String> storePhotoUrls = new ArrayList<>();
         List<String> uploadedKeys = new ArrayList<>();
@@ -104,6 +112,7 @@ public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCas
     @Override
     @Transactional
     public ReceiptConfirmationResult updateInfo(UpdateReceiptInfoCommand command) {
+        rejectIfOrderDeleted(command.orderId());
         ReceiptConfirmation updated = repository.updateReceiverInfo(
                 command.orderId(), command.receiverName(), command.receiverRelation(),
                 command.delivered(), command.memo(), command.confirmedAt());
@@ -115,6 +124,14 @@ public class ReceiptConfirmationService implements SaveReceiptConfirmationUseCas
     @Transactional(readOnly = true)
     public Optional<ReceiptConfirmationResult> getByOrderId(Long orderId) {
         return repository.findByOrderId(orderId).map(this::toResult);
+    }
+
+    private void rejectIfOrderDeleted(Long orderId) {
+        orderRepository.findById(orderId).ifPresent(order -> {
+            if (order.isDeleted()) {
+                throw new BusinessException(OrderErrorCode.ORDER_NOT_FOUND);
+            }
+        });
     }
 
     private ReceiptConfirmationResult toResult(ReceiptConfirmation rc) {

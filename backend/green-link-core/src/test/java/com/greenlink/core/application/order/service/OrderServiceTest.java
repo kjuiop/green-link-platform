@@ -15,6 +15,7 @@ import com.greenlink.core.domain.order.model.OrderStatus;
 import com.greenlink.core.domain.order.port.OrderItemRepository;
 import com.greenlink.core.domain.order.port.OrderRepository;
 import com.greenlink.core.domain.orderhistory.model.OrderHistoryAction;
+import com.greenlink.core.domain.orderpriceadjustment.port.OrderPriceAdjustmentRepository;
 import com.greenlink.core.domain.photo.port.PhotoRepository;
 import com.greenlink.core.domain.point.model.OrderPointState;
 import com.greenlink.core.domain.receipt.port.ReceiptConfirmationRepository;
@@ -58,6 +59,7 @@ class OrderServiceTest {
     @Mock ApplicationEventPublisher eventPublisher;
     @Mock ApplyOrderPointUseCase applyOrderPointUseCase;
     @Mock OrderItemPricer orderItemPricer;
+    @Mock OrderPriceAdjustmentRepository priceAdjustmentRepository;
 
     private OrderService service;
 
@@ -67,7 +69,7 @@ class OrderServiceTest {
                 receiptConfirmationRepository, recordOrderHistoryUseCase,
                 adminRepository, companyRepository,
                 smsMessageRepository, referencePhotoRepository, eventPublisher,
-                applyOrderPointUseCase, orderItemPricer);
+                applyOrderPointUseCase, orderItemPricer, priceAdjustmentRepository);
     }
 
     private CreateOrderCommand sampleCommand() {
@@ -330,6 +332,90 @@ class OrderServiceTest {
     }
 
     @Test
+    void updateOrder_delivered_whenTotalWouldChange_isBlocked() {
+        stubPricer(0L, 50000L);
+        given(orderRepository.findById(1L)).willReturn(Optional.of(savedOrder(1L, OrderStatus.DELIVERED)));
+
+        assertThatThrownBy(() -> service.updateOrder(1L, updateCommand(2, 1L)))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(OrderErrorCode.DELIVERED_AMOUNT_LOCKED));
+    }
+
+    @Test
+    void updateOrder_delivered_whenSettled_throwsSettledLockedError() {
+        stubPricer(0L, 50000L);
+        given(orderRepository.findById(1L)).willReturn(Optional.of(savedOrder(1L, OrderStatus.DELIVERED)));
+        given(applyOrderPointUseCase.isSettled(1L)).willReturn(true);
+
+        assertThatThrownBy(() -> service.updateOrder(1L, updateCommand(2, 1L)))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(OrderErrorCode.SETTLED_ORDER_AMOUNT_LOCKED));
+    }
+
+    @Test
+    void updateOrder_delivered_withAdjustment_keepsTotalWhenOnlyNonAmountFieldsChange() {
+        Order delivered = savedOrder(1L, OrderStatus.DELIVERED);
+        delivered.applyAdjustment(10000L);
+        given(orderRepository.findById(1L)).willReturn(Optional.of(delivered));
+        stubToResult();
+
+        OrderResult result = service.updateOrder(1L, updateCommand(1, 50000L));
+
+        assertThat(result.totalAmount()).isEqualTo(60000L);
+        assertThat(result.adjustAmount()).isEqualTo(10000L);
+    }
+
+    @Test
+    void pendingAdjustment_vendorView_subtractsFeeButKeepsDiffAndReason() {
+        var view = new com.greenlink.core.application.order.dto.PendingAdjustment(
+                1L, "요청자", false, "t", 50000L, 10000L, 60000L, "사유").toVendorView(3000L);
+
+        assertThat(view.beforeTotal()).isEqualTo(47000L);
+        assertThat(view.afterTotal()).isEqualTo(57000L);
+        assertThat(view.adjustAmount()).isEqualTo(10000L);
+        assertThat(view.reason()).isEqualTo("사유");
+    }
+
+    @Test
+    void toOrderingView_hidesOnlyVendorAmount() {
+        Order o = Order.of(
+                1L, "DF-20261022-0001", 1L, null, ORDERING_COMPANY_ID, OrderStatus.PENDING,
+                null, "장미꽃다발", 1, 50000L, 40000L, null, 50000L,
+                "2026-10-23", "FIXED", "14", "00", null,
+                "서울시 강남구", "101호", "생일", "그랜드볼룸", "A홀", null,
+                "축하합니다", "홍길동", null, "홍길동", "010-1234-5678",
+                "김영희", "010-9876-5432", true, true,
+                "SCHEDULED", "13", "00", null, null, null, null, "2026-10-22T10:00:00", null, null, false, null);
+        given(orderRepository.findById(1L)).willReturn(Optional.of(o));
+        stubToResultReads();
+
+        OrderResult full = service.getOrder(1L);
+        OrderResult view = full.toOrderingView();
+
+        assertThat(full.vendorAmount()).isEqualTo(40000L);
+        assertThat(view.vendorAmount()).isNull();
+        assertThat(view.totalAmount()).isEqualTo(full.totalAmount());
+        assertThat(view.orderNumber()).isEqualTo(full.orderNumber());
+        assertThat(full.withVendorAmount(7000L).vendorAmount()).isEqualTo(7000L);
+    }
+
+    @Test
+    void updateCommand_withVendorAmount_replacesOnlyVendorAmount() {
+        UpdateOrderCommand cmd = new UpdateOrderCommand(
+                1L, null, "상품", 1, 50000L, List.of(), 99999L, 1000L,
+                "2026-10-23", "FIXED", "14", "00", null, "주소", null, null, null, null, null,
+                null, null, null, null, null, null, null, false, false, null, null, null, null, null);
+
+        UpdateOrderCommand replaced = cmd.withVendorAmount(40000L);
+
+        assertThat(replaced.vendorAmount()).isEqualTo(40000L);
+        assertThat(replaced.extraCost()).isEqualTo(1000L);
+        assertThat(replaced.vendorId()).isEqualTo(1L);
+    }
+
+    @Test
     void getOrders_returnsResultList() {
         Order o = savedOrder(1L, OrderStatus.PENDING);
         given(orderRepository.search(any(OrderSearchCondition.class))).willReturn(List.of(o));
@@ -363,6 +449,10 @@ class OrderServiceTest {
 
     private void stubToResult() {
         given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
+        stubToResultReads();
+    }
+
+    private void stubToResultReads() {
         given(adminRepository.findById(anyLong())).willReturn(Optional.empty());
         given(smsMessageRepository.findAllByOrderId(any())).willReturn(List.of());
         given(referencePhotoRepository.countByOrderIds(any())).willReturn(Map.of());
@@ -475,44 +565,6 @@ class OrderServiceTest {
     }
 
     @Test
-    void requestRefund_movesDeliveredToRefundRequested() {
-        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.DELIVERED)));
-        given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
-
-        OrderResult result = service.requestRefund(1L, "오배송", false);
-
-        assertThat(result.status()).isEqualTo("REFUND_REQUESTED");
-        assertThat(result.refundReason()).isEqualTo("오배송");
-    }
-
-    @Test
-    void requestRefund_whenNotDelivered_throws() {
-        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.ACCEPTED)));
-
-        assertThatThrownBy(() -> service.requestRefund(1L, "오배송", false))
-                .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    void approveRefund_restoresPointsAndMarksRefunded() {
-        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.REFUND_REQUESTED)));
-        given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
-
-        OrderResult result = service.approveRefund(1L, false);
-
-        assertThat(result.status()).isEqualTo("REFUNDED");
-        verify(applyOrderPointUseCase).restoreSettledOrder(eq(ORDERING_COMPANY_ID), eq(1L), any(), any());
-    }
-
-    @Test
-    void approveRefund_whenNotRequested_throwsAndDoesNotRestore() {
-        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.DELIVERED)));
-
-        assertThatThrownBy(() -> service.approveRefund(1L, false)).isInstanceOf(IllegalStateException.class);
-        verify(applyOrderPointUseCase, never()).restoreSettledOrder(any(), any(), any(), any());
-    }
-
-    @Test
     void deleteOrder_beforeDelivery_closesPointAndMarksDeleted() {
         given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.ACCEPTED)));
         given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
@@ -540,14 +592,16 @@ class OrderServiceTest {
     }
 
     @Test
-    void deleteOrder_whenRefundRequestedOrRefunded_throws() {
-        for (OrderStatus status : List.of(OrderStatus.REFUND_REQUESTED, OrderStatus.REFUNDED)) {
-            given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, status)));
+    void deleteOrder_whenPendingAdjustmentExists_isBlocked() {
+        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.DELIVERED)));
+        given(priceAdjustmentRepository.findPendingByOrderId(1L)).willReturn(Optional.of(
+                com.greenlink.core.domain.orderpriceadjustment.model.OrderPriceAdjustment.request(
+                        1L, 5L, "요청자", false, "t", 50000L, 60000L, "사유")));
 
-            assertThatThrownBy(() -> service.deleteOrder(1L))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("삭제할 수 없습니다");
-        }
+        assertThatThrownBy(() -> service.deleteOrder(1L))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(OrderErrorCode.ORDER_HAS_PENDING_ADJUST));
         verify(orderRepository, never()).save(any(Order.class));
         verify(applyOrderPointUseCase, never()).restoreSettledOrder(any(), any(), any(), any());
     }
@@ -573,26 +627,70 @@ class OrderServiceTest {
 
         assertThatThrownBy(() -> service.updateOrderStatus(1L, "complete"))
                 .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
-        assertThatThrownBy(() -> service.requestRefund(1L, "오배송", false))
-                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
-        assertThatThrownBy(() -> service.approveRefund(1L, false))
-                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
-        assertThatThrownBy(() -> service.rejectRefund(1L, "정상 배송", false))
-                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+        for (String action : List.of("accept", "reject", "cancel")) {
+            assertThatThrownBy(() -> service.updateOrderStatus(1L, action))
+                    .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+        }
         verify(orderRepository, never()).save(any(Order.class));
         verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
-    void rejectRefund_returnsToDeliveredWithReason() {
-        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.REFUND_REQUESTED)));
-        given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
+    void updateOrder_onDeletedOrder_isRejectedAsNotFound() {
+        Order order = orderingOrder(1L, OrderStatus.ACCEPTED);
+        order.softDelete();
+        given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+        UpdateOrderCommand cmd = new UpdateOrderCommand(
+                1L, null, "장미꽃다발", 2, 60000L, null, null, null,
+                "2026-10-23", "FIXED", "14", "00", null,
+                "서울시 강남구", "101호", "생일", "그랜드볼룸", "A홀", null,
+                "축하합니다", "홍길동", null, "홍길동", "010-1234-5678",
+                "김영희", "010-9876-5432", true, true,
+                "SCHEDULED", "13", "00", null, null
+        );
 
-        OrderResult result = service.rejectRefund(1L, "정상 배송", false);
+        assertThatThrownBy(() -> service.updateOrder(1L, cmd))
+                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
 
-        assertThat(result.status()).isEqualTo("DELIVERED");
-        assertThat(result.refundRejectReason()).isEqualTo("정상 배송");
-        verify(applyOrderPointUseCase, never()).restoreSettledOrder(any(), any(), any(), any());
+    @Test
+    void getOrder_deletedOrder_isHiddenFromNonSuperAdmin() {
+        Order order = orderingOrder(1L, OrderStatus.DELIVERED);
+        order.softDelete();
+        given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> service.getOrder(1L, false))
+                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    void getOrder_deletedOrder_isVisibleToSuperAdmin() {
+        Order order = orderingOrder(1L, OrderStatus.DELIVERED);
+        order.softDelete();
+        given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+        stubToResultReads();
+
+        OrderResult result = service.getOrder(1L, true);
+
+        assertThat(result.isDeleted()).isTrue();
+    }
+
+    @Test
+    void getOrder_normalOrder_isVisibleToEveryone() {
+        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.PENDING)));
+        stubToResultReads();
+
+        assertThat(service.getOrder(1L, false).isDeleted()).isFalse();
+        assertThat(service.getOrder(1L, true).isDeleted()).isFalse();
+    }
+
+    @Test
+    void getOrder_missingOrder_throwsNotFound() {
+        given(orderRepository.findById(9L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getOrder(9L, true))
+                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
     }
 
     @Test

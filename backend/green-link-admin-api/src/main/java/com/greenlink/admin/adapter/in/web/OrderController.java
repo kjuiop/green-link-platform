@@ -1,21 +1,27 @@
 package com.greenlink.admin.adapter.in.web;
 
 import com.greenlink.admin.adapter.in.web.dto.CreateOrderRequest;
-import com.greenlink.admin.adapter.in.web.dto.RefundReasonRequest;
+import com.greenlink.admin.adapter.in.web.dto.PriceAdjustmentRequest;
+import com.greenlink.admin.adapter.in.web.dto.ReasonRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateOrderRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateOrderStatusRequest;
 import com.greenlink.core.application.common.dto.PageResult;
+import com.greenlink.core.application.order.dto.CreateOrderCommand;
 import com.greenlink.core.application.order.dto.OrderResult;
+import com.greenlink.core.application.order.dto.UpdateOrderCommand;
 import com.greenlink.core.application.orderhistory.dto.OrderHistoryResult;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.application.order.usecase.CreateOrderUseCase;
 import com.greenlink.core.application.order.usecase.DeleteOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
-import com.greenlink.core.application.order.usecase.RefundOrderUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
 import com.greenlink.core.application.orderhistory.usecase.GetOrderHistoryUseCase;
+import com.greenlink.core.application.orderpriceadjustment.dto.PriceAdjustmentResult;
+import com.greenlink.core.application.orderpriceadjustment.usecase.DecidePriceAdjustmentUseCase;
+import com.greenlink.core.application.orderpriceadjustment.usecase.GetPriceAdjustmentsUseCase;
+import com.greenlink.core.application.orderpriceadjustment.usecase.RequestPriceAdjustmentUseCase;
 import com.greenlink.core.application.sms.usecase.SendDeliveryAlimtalkUseCase;
 import com.greenlink.core.application.sms.usecase.SendDeliveryMmsUseCase;
 import jakarta.validation.Valid;
@@ -38,32 +44,38 @@ public class OrderController {
     private final CreateOrderUseCase createOrderUseCase;
     private final UpdateOrderUseCase updateOrderUseCase;
     private final UpdateOrderStatusUseCase updateOrderStatusUseCase;
-    private final RefundOrderUseCase refundOrderUseCase;
     private final DeleteOrderUseCase deleteOrderUseCase;
     private final GetOrderHistoryUseCase getOrderHistoryUseCase;
     private final SendDeliveryMmsUseCase sendDeliveryMmsUseCase;
     private final SendDeliveryAlimtalkUseCase sendDeliveryAlimtalkUseCase;
+    private final RequestPriceAdjustmentUseCase requestPriceAdjustmentUseCase;
+    private final DecidePriceAdjustmentUseCase decidePriceAdjustmentUseCase;
+    private final GetPriceAdjustmentsUseCase getPriceAdjustmentsUseCase;
 
     public OrderController(GetOrdersUseCase getOrdersUseCase,
                            GetOrderUseCase getOrderUseCase,
                            CreateOrderUseCase createOrderUseCase,
                            UpdateOrderUseCase updateOrderUseCase,
                            UpdateOrderStatusUseCase updateOrderStatusUseCase,
-                           RefundOrderUseCase refundOrderUseCase,
                            DeleteOrderUseCase deleteOrderUseCase,
                            GetOrderHistoryUseCase getOrderHistoryUseCase,
                            SendDeliveryMmsUseCase sendDeliveryMmsUseCase,
-                           SendDeliveryAlimtalkUseCase sendDeliveryAlimtalkUseCase) {
+                           SendDeliveryAlimtalkUseCase sendDeliveryAlimtalkUseCase,
+                           RequestPriceAdjustmentUseCase requestPriceAdjustmentUseCase,
+                           DecidePriceAdjustmentUseCase decidePriceAdjustmentUseCase,
+                           GetPriceAdjustmentsUseCase getPriceAdjustmentsUseCase) {
         this.getOrdersUseCase = getOrdersUseCase;
         this.getOrderUseCase = getOrderUseCase;
         this.createOrderUseCase = createOrderUseCase;
         this.updateOrderUseCase = updateOrderUseCase;
         this.updateOrderStatusUseCase = updateOrderStatusUseCase;
-        this.refundOrderUseCase = refundOrderUseCase;
         this.deleteOrderUseCase = deleteOrderUseCase;
         this.getOrderHistoryUseCase = getOrderHistoryUseCase;
         this.sendDeliveryMmsUseCase = sendDeliveryMmsUseCase;
         this.sendDeliveryAlimtalkUseCase = sendDeliveryAlimtalkUseCase;
+        this.requestPriceAdjustmentUseCase = requestPriceAdjustmentUseCase;
+        this.decidePriceAdjustmentUseCase = decidePriceAdjustmentUseCase;
+        this.getPriceAdjustmentsUseCase = getPriceAdjustmentsUseCase;
     }
 
     @GetMapping
@@ -130,6 +142,9 @@ public class OrderController {
         if (isVendor) {
             List<OrderResult> masked = result.content().stream().map(OrderController::maskPhones).toList();
             result = new PageResult<>(masked, result.page(), result.size(), result.totalElements(), result.totalPages(), result.totalAmount());
+        } else if (hasRole(auth, "ROLE_ORDERING")) {
+            List<OrderResult> hidden = result.content().stream().map(OrderResult::toOrderingView).toList();
+            result = new PageResult<>(hidden, result.page(), result.size(), result.totalElements(), result.totalPages(), result.totalAmount());
         }
         return ResponseEntity.ok(result);
     }
@@ -138,8 +153,8 @@ public class OrderController {
     public ResponseEntity<OrderResult> getOne(@PathVariable Long id, Authentication auth) {
         boolean isVendor = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
-        OrderResult result = getOrderUseCase.getOrder(id);
-        return ResponseEntity.ok(isVendor ? maskPhones(result).toVendorView() : result);
+        OrderResult result = getOrderUseCase.getOrder(id, hasRole(auth, "ROLE_SUPER_ADMIN"));
+        return ResponseEntity.ok(isVendor ? maskPhones(result).toVendorView() : forOrderingCaller(auth, result));
     }
 
     @PostMapping
@@ -151,14 +166,17 @@ public class OrderController {
                 && token.getDetails() instanceof Long cid) {
             orderingCompanyId = cid;
         }
+        CreateOrderCommand cmd = req.toCommand(orderingCompanyId);
+        if (hasRole(auth, "ROLE_ORDERING")) cmd = cmd.withVendorAmount(null);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(createOrderUseCase.createOrder(req.toCommand(orderingCompanyId)));
+                .body(forOrderingCaller(auth, createOrderUseCase.createOrder(cmd)));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<OrderResult> update(Authentication auth,
                                               @PathVariable Long id,
                                               @RequestBody @Valid UpdateOrderRequest req) {
+        UpdateOrderCommand cmd = req.toCommand();
         if (auth != null && auth.isAuthenticated()) {
             boolean isVendor = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
@@ -174,9 +192,10 @@ public class OrderController {
                 if (callerCompanyId == null || !callerCompanyId.equals(existing.orderingCompanyId())) {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
                 }
+                cmd = cmd.withVendorAmount(existing.vendorAmount());
             }
         }
-        return ResponseEntity.ok(updateOrderUseCase.updateOrder(id, req.toCommand()));
+        return ResponseEntity.ok(forOrderingCaller(auth, updateOrderUseCase.updateOrder(id, cmd)));
     }
 
     @PutMapping("/{id}/status")
@@ -198,7 +217,7 @@ public class OrderController {
         }
         boolean isVendor = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
-        return ResponseEntity.ok(isVendor ? result.toVendorView() : result);
+        return ResponseEntity.ok(isVendor ? result.toVendorView() : forOrderingCaller(auth, result));
     }
 
     @GetMapping("/{id}/history")
@@ -222,9 +241,9 @@ public class OrderController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{id}/refund-request")
-    public ResponseEntity<OrderResult> requestRefund(Authentication auth, @PathVariable Long id,
-                                                     @RequestBody @Valid RefundReasonRequest req) {
+    @PostMapping("/{id}/price-adjustments")
+    public ResponseEntity<PriceAdjustmentResult> requestPriceAdjustment(Authentication auth, @PathVariable Long id,
+                                                                        @RequestBody @Valid PriceAdjustmentRequest req) {
         boolean superAdmin = hasRole(auth, "ROLE_SUPER_ADMIN");
         if (!superAdmin) {
             if (!hasRole(auth, "ROLE_ORDERING")) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -234,22 +253,60 @@ public class OrderController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
         }
-        return ResponseEntity.ok(refundOrderUseCase.requestRefund(id, req.reason(), superAdmin));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(requestPriceAdjustmentUseCase.request(id, req.newTotalAmount(), req.reason(), superAdmin));
     }
 
-    @PostMapping("/{id}/refund-approve")
-    public ResponseEntity<OrderResult> approveRefund(Authentication auth, @PathVariable Long id) {
+    @PostMapping("/{id}/price-adjustments/{adjustmentId}/accept")
+    public ResponseEntity<PriceAdjustmentResult> acceptPriceAdjustment(Authentication auth, @PathVariable Long id,
+                                                                       @PathVariable Long adjustmentId) {
         boolean superAdmin = hasRole(auth, "ROLE_SUPER_ADMIN");
         if (!superAdmin && !isAssignedVendor(auth, id)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        return ResponseEntity.ok(refundOrderUseCase.approveRefund(id, superAdmin));
+        return ResponseEntity.ok(forViewer(auth, id, decidePriceAdjustmentUseCase.accept(id, adjustmentId, superAdmin)));
     }
 
-    @PostMapping("/{id}/refund-reject")
-    public ResponseEntity<OrderResult> rejectRefund(Authentication auth, @PathVariable Long id,
-                                                    @RequestBody @Valid RefundReasonRequest req) {
+    @PostMapping("/{id}/price-adjustments/{adjustmentId}/reject")
+    public ResponseEntity<PriceAdjustmentResult> rejectPriceAdjustment(Authentication auth, @PathVariable Long id,
+                                                                       @PathVariable Long adjustmentId,
+                                                                       @RequestBody @Valid ReasonRequest req) {
         boolean superAdmin = hasRole(auth, "ROLE_SUPER_ADMIN");
         if (!superAdmin && !isAssignedVendor(auth, id)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        return ResponseEntity.ok(refundOrderUseCase.rejectRefund(id, req.reason(), superAdmin));
+        return ResponseEntity.ok(forViewer(auth, id,
+                decidePriceAdjustmentUseCase.reject(id, adjustmentId, req.reason(), superAdmin)));
+    }
+
+    @GetMapping("/{id}/price-adjustments")
+    public ResponseEntity<List<PriceAdjustmentResult>> getPriceAdjustments(Authentication auth, @PathVariable Long id) {
+        boolean superAdmin = hasRole(auth, "ROLE_SUPER_ADMIN");
+        OrderResult order = getOrderUseCase.getOrder(id, superAdmin);
+        if (!superAdmin && !canViewAdjustments(auth, order)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        List<PriceAdjustmentResult> adjustments = getPriceAdjustmentsUseCase.getAdjustments(id);
+        if (hasRole(auth, "ROLE_VENDOR")) {
+            Long fee = order.vendorFee();
+            adjustments = adjustments.stream().map(a -> a.toVendorView(fee)).toList();
+        }
+        return ResponseEntity.ok(adjustments);
+    }
+
+    private boolean canViewAdjustments(Authentication auth, OrderResult order) {
+        if (hasRole(auth, "ROLE_VENDOR")) {
+            return order.vendorId() != null && order.vendorId().equals(Long.parseLong(String.valueOf(auth.getPrincipal())));
+        }
+        if (hasRole(auth, "ROLE_ORDERING")) {
+            Long callerCompanyId = (auth instanceof org.springframework.security.authentication.UsernamePasswordAuthenticationToken token
+                    && token.getDetails() instanceof Long cid) ? cid : null;
+            return callerCompanyId != null && callerCompanyId.equals(order.orderingCompanyId());
+        }
+        return false;
+    }
+
+    private static OrderResult forOrderingCaller(Authentication auth, OrderResult result) {
+        return hasRole(auth, "ROLE_ORDERING") ? result.toOrderingView() : result;
+    }
+
+    private PriceAdjustmentResult forViewer(Authentication auth, Long orderId, PriceAdjustmentResult result) {
+        if (!hasRole(auth, "ROLE_VENDOR")) return result;
+        return result.toVendorView(getOrderUseCase.getOrder(orderId).vendorFee());
     }
 
     private boolean isAssignedVendor(Authentication auth, Long orderId) {
@@ -296,7 +353,7 @@ public class OrderController {
                 r.isDeleted(), r.messageSentAt(),
                 r.createdByAdminId(), r.updatedByAdminId(),
                 r.isDelayed(), r.photoToken(),
-                r.refundReason(), r.refundRequestedAt(), r.refundRejectReason()
+                r.adjustAmount(), r.pendingAdjustment()
         );
     }
 }

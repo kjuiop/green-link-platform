@@ -1,8 +1,38 @@
-export type OrderStatus = '발주대기' | '수주완료' | '배송완료' | '수주거절' | '주문취소' | '환불요청' | '환불완료'
+export type OrderStatus = '발주대기' | '수주완료' | '배송완료' | '수주거절' | '주문취소'
 export type MessageStatus = '미발송' | '발송' | '실패'
 export type DeliveryType = '일반' | '즉시'
 export type DeliveryTimeType = '까지' | '예식' | '행사' | '3시간이내' | '직접입력'
 export type EventType = '장례식' | '결혼식' | '기타'
+
+export interface PendingAdjustment {
+  id: number
+  requesterName: string | null
+  requestedByProxy: boolean
+  requestedAt: string
+  beforeTotal: number
+  adjustAmount: number
+  afterTotal: number
+  reason: string
+}
+
+export type PriceAdjustmentStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED'
+
+export interface PriceAdjustment {
+  id: number
+  orderId: number
+  requesterName: string | null
+  requestedByProxy: boolean
+  requestedAt: string
+  beforeTotal: number
+  adjustAmount: number
+  afterTotal: number
+  reason: string
+  status: PriceAdjustmentStatus
+  decidedByName: string | null
+  decidedByProxy: boolean
+  decidedAt: string | null
+  rejectReason: string | null
+}
 
 export interface Order {
   id: string
@@ -47,6 +77,8 @@ export interface Order {
   deliveryTimeMinute?: string
   deliveryTimeCustom?: string
   extraCost?: number
+  adjustAmount?: number
+  pendingAdjustment?: PendingAdjustment
   deliveryPhotos?: string[]
   status: OrderStatus
   messageStatus: MessageStatus
@@ -61,7 +93,4 @@ export interface Order {
   messageSentAt?: string
   isDelayed?: boolean
   photoToken?: string
-  refundReason?: string
-  refundRequestedAt?: string
-  refundRejectReason?: string
 }

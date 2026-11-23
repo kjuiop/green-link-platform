@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { AcceptOrderBadge, AcceptOrderButton, RejectOrderButton, OrderStatusBadge } from '@/components/common/StatusBadge'
+import { AcceptOrderBadge, AcceptOrderButton, RejectOrderButton, OrderStatusBadge, AdjustmentRequestBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
 import { PageResult } from '@/types/page'
@@ -15,6 +15,7 @@ import { ReferencePhotoIcon } from '@/components/common/ReferencePhotoViewer'
 import { ReceiptConfirmButton } from '@/components/common/ReceiptConfirmDialog'
 import { OrderDetailPopup } from '@/components/common/OrderDetailPopup'
 import { highlightGrade } from '@/lib/utils/productName'
+import { orderTotalOf } from '@/lib/utils/orderAmount'
 import { fmtMinute } from '@/lib/utils/formatDateTime'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
@@ -28,8 +29,6 @@ const STATUS_TO_API: Partial<Record<OrderStatus, string>> = {
   '배송완료': 'DELIVERED',
   '수주거절': 'REJECTED',
   '주문취소': 'CANCELLED',
-  '환불요청': 'REFUND_REQUESTED',
-  '환불완료': 'REFUNDED',
 }
 
 type StringOrderSearchKey = { [K in keyof OrderSearchParams]: OrderSearchParams[K] extends string | undefined ? K : never }[keyof OrderSearchParams]
@@ -74,8 +73,6 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '수주완료', value: '수주완료' },
   { label: '배송완료', value: '배송완료' },
   { label: '수주거절', value: '수주거절' },
-  { label: '환불요청', value: '환불요청' },
-  { label: '환불완료', value: '환불완료' },
   { label: '주문취소', value: '주문취소' },
 ]
 
@@ -482,13 +479,13 @@ export default function ReceivedOrdersPage() {
             <>
               <span className="text-gray-500">건수 <strong className="text-green-700">{selectedIds.size}</strong>건</span>
               <span className="text-gray-300">|</span>
-              <span className="text-gray-500">수주금액 <strong className="text-green-700">{filtered.filter((o) => selectedIds.has(o.id)).reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+              <span className="text-gray-500">수주금액 <strong className="text-green-700">{filtered.filter((o) => selectedIds.has(o.id)).reduce((sum, o) => sum + orderTotalOf(o), 0).toLocaleString()}</strong>원</span>
             </>
           ) : (
             <>
               <span className="text-gray-500">건수 <strong className="text-gray-900">{result?.totalElements ?? 0}</strong>건</span>
               <span className="text-gray-300">|</span>
-              <span className="text-gray-500">수주금액 <strong className="text-gray-900">{filtered.reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+              <span className="text-gray-500">수주금액 <strong className="text-gray-900">{filtered.reduce((sum, o) => sum + orderTotalOf(o), 0).toLocaleString()}</strong>원</span>
             </>
           )}
         </div>
@@ -631,7 +628,7 @@ export default function ReceivedOrdersPage() {
                     <div className="break-all text-sm text-gray-400">{formatDeliveryShort(order.placeName, order.address)}</div>
                   </TableCell>
                   <TableCell className="text-sm">{order.quantity}</TableCell>
-                  <TableCell className="text-sm">{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원</TableCell>
+                  <TableCell className="text-sm">{orderTotalOf(order).toLocaleString()}원</TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
                       <AcceptOrderBadge
@@ -642,6 +639,7 @@ export default function ReceivedOrdersPage() {
                           loadOrders(buildServerParams(), page)
                         }}
                       />
+                      <AdjustmentRequestBadge pending={order.pendingAdjustment} />
                       {order.isDelayed && (
                         <span className="animate-pulse rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-600">
                           지연
@@ -737,6 +735,7 @@ export default function ReceivedOrdersPage() {
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <div className="flex items-center gap-1">
                       <OrderStatusBadge status={order.status} />
+                      <AdjustmentRequestBadge pending={order.pendingAdjustment} />
                       {order.isDelayed && (
                         <span className="animate-pulse rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-600">
                           지연
@@ -773,7 +772,7 @@ export default function ReceivedOrdersPage() {
                     {order.deliveryTimeType === '직접입력' && order.deliveryTimeCustom && ` ${order.deliveryTimeCustom}`}
                   </span>
                   <span className="break-all">{order.placeName}</span>
-                  <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
+                  <span>{orderTotalOf(order).toLocaleString()}원 · {order.quantity}개</span>
                   {order.completedAt && <span>완료 {fmtMinute(order.completedAt)}</span>}
                 </div>
               </button>
