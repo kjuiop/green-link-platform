@@ -9,3 +9,14 @@ services:
     volumes:
       - ./logs/dev:/app/logs
     restart: always
+
+  shop-api-dev:
+    image: ${SHOP_DOCKER_IMAGE:-kjuiop/green-shop-api:latest}
+    container_name: green-shop-api-dev
+    ports:
+      - "127.0.0.1:8082:8080"
+    env_file:
+      - .env.shop.dev
+    volumes:
+      - ./logs/shop-dev:/app/logs
+    restart: always
