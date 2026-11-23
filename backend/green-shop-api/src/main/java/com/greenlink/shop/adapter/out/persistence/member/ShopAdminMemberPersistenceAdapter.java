@@ -3,6 +3,9 @@ package com.greenlink.shop.adapter.out.persistence.member;
 import com.greenlink.shopcore.domain.member.model.ShopAdminMember;
 import com.greenlink.shopcore.domain.member.model.ShopAdminStatus;
 import com.greenlink.shopcore.domain.member.port.ShopAdminMemberRepository;
+import com.greenlink.shopcore.global.exception.ShopBusinessException;
+import com.greenlink.shopcore.global.exception.ShopErrorCode;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -41,6 +44,10 @@ class ShopAdminMemberPersistenceAdapter implements ShopAdminMemberRepository {
             ? ShopAdminMemberJpaEntity.from(member)
             : jpaRepository.findById(member.getId()).map(e -> { e.apply(member); return e; })
                 .orElseGet(() -> ShopAdminMemberJpaEntity.from(member));
-        return jpaRepository.save(entity).toDomain();
+        try {
+            return jpaRepository.save(entity).toDomain();
+        } catch (DataIntegrityViolationException e) {
+            throw new ShopBusinessException(ShopErrorCode.ACCESS_ALREADY_REQUESTED);
+        }
     }
 }
