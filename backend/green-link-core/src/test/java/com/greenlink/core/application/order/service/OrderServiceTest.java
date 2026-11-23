@@ -368,20 +368,6 @@ class OrderServiceTest {
     }
 
     @Test
-    void deleteOrder_whenPendingAdjustmentExists_isBlocked() {
-        given(orderRepository.findById(1L)).willReturn(Optional.of(savedOrder(1L, OrderStatus.DELIVERED)));
-        given(priceAdjustmentRepository.findPendingByOrderId(1L)).willReturn(Optional.of(
-                com.greenlink.core.domain.orderpriceadjustment.model.OrderPriceAdjustment.request(
-                        1L, 5L, "요청자", false, "t", 50000L, 60000L, "사유")));
-
-        assertThatThrownBy(() -> service.deleteOrder(1L))
-                .isInstanceOf(BusinessException.class)
-                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
-                        .isEqualTo(OrderErrorCode.ORDER_HAS_PENDING_ADJUST));
-        verify(orderRepository, never()).save(any());
-    }
-
-    @Test
     void pendingAdjustment_vendorView_subtractsFeeButKeepsDiffAndReason() {
         var view = new com.greenlink.core.application.order.dto.PendingAdjustment(
                 1L, "요청자", false, "t", 50000L, 10000L, 60000L, "사유").toVendorView(3000L);
@@ -579,58 +565,6 @@ class OrderServiceTest {
     }
 
     @Test
-    void requestRefund_movesDeliveredToRefundRequested() {
-        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.DELIVERED)));
-        given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
-
-        OrderResult result = service.requestRefund(1L, "오배송", false);
-
-        assertThat(result.status()).isEqualTo("REFUND_REQUESTED");
-        assertThat(result.refundReason()).isEqualTo("오배송");
-    }
-
-    @Test
-    void requestRefund_whenPendingAdjustmentExists_isBlocked() {
-        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.DELIVERED)));
-        given(priceAdjustmentRepository.findPendingByOrderId(1L)).willReturn(Optional.of(
-                com.greenlink.core.domain.orderpriceadjustment.model.OrderPriceAdjustment.request(
-                        1L, 5L, "요청자", false, "t", 50000L, 60000L, "사유")));
-
-        assertThatThrownBy(() -> service.requestRefund(1L, "오배송", false))
-                .isInstanceOf(BusinessException.class)
-                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
-                        .isEqualTo(OrderErrorCode.ORDER_HAS_PENDING_ADJUST));
-        verify(orderRepository, never()).save(any());
-    }
-
-    @Test
-    void requestRefund_whenNotDelivered_throws() {
-        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.ACCEPTED)));
-
-        assertThatThrownBy(() -> service.requestRefund(1L, "오배송", false))
-                .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    void approveRefund_restoresPointsAndMarksRefunded() {
-        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.REFUND_REQUESTED)));
-        given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
-
-        OrderResult result = service.approveRefund(1L, false);
-
-        assertThat(result.status()).isEqualTo("REFUNDED");
-        verify(applyOrderPointUseCase).restoreSettledOrder(eq(ORDERING_COMPANY_ID), eq(1L), any(), any());
-    }
-
-    @Test
-    void approveRefund_whenNotRequested_throwsAndDoesNotRestore() {
-        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.DELIVERED)));
-
-        assertThatThrownBy(() -> service.approveRefund(1L, false)).isInstanceOf(IllegalStateException.class);
-        verify(applyOrderPointUseCase, never()).restoreSettledOrder(any(), any(), any(), any());
-    }
-
-    @Test
     void deleteOrder_beforeDelivery_closesPointAndMarksDeleted() {
         given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.ACCEPTED)));
         given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
@@ -658,14 +592,16 @@ class OrderServiceTest {
     }
 
     @Test
-    void deleteOrder_whenRefundRequestedOrRefunded_throws() {
-        for (OrderStatus status : List.of(OrderStatus.REFUND_REQUESTED, OrderStatus.REFUNDED)) {
-            given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, status)));
+    void deleteOrder_whenPendingAdjustmentExists_isBlocked() {
+        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.DELIVERED)));
+        given(priceAdjustmentRepository.findPendingByOrderId(1L)).willReturn(Optional.of(
+                com.greenlink.core.domain.orderpriceadjustment.model.OrderPriceAdjustment.request(
+                        1L, 5L, "요청자", false, "t", 50000L, 60000L, "사유")));
 
-            assertThatThrownBy(() -> service.deleteOrder(1L))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("삭제할 수 없습니다");
-        }
+        assertThatThrownBy(() -> service.deleteOrder(1L))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(OrderErrorCode.ORDER_HAS_PENDING_ADJUST));
         verify(orderRepository, never()).save(any(Order.class));
         verify(applyOrderPointUseCase, never()).restoreSettledOrder(any(), any(), any(), any());
     }
@@ -695,12 +631,6 @@ class OrderServiceTest {
             assertThatThrownBy(() -> service.updateOrderStatus(1L, action))
                     .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
         }
-        assertThatThrownBy(() -> service.requestRefund(1L, "오배송", false))
-                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
-        assertThatThrownBy(() -> service.approveRefund(1L, false))
-                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
-        assertThatThrownBy(() -> service.rejectRefund(1L, "정상 배송", false))
-                .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
         verify(orderRepository, never()).save(any(Order.class));
         verify(eventPublisher, never()).publishEvent(any());
     }
@@ -761,18 +691,6 @@ class OrderServiceTest {
 
         assertThatThrownBy(() -> service.getOrder(9L, true))
                 .isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_NOT_FOUND.getMessage());
-    }
-
-    @Test
-    void rejectRefund_returnsToDeliveredWithReason() {
-        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.REFUND_REQUESTED)));
-        given(orderRepository.save(any(Order.class))).willAnswer(inv -> inv.getArgument(0));
-
-        OrderResult result = service.rejectRefund(1L, "정상 배송", false);
-
-        assertThat(result.status()).isEqualTo("DELIVERED");
-        assertThat(result.refundRejectReason()).isEqualTo("정상 배송");
-        verify(applyOrderPointUseCase, never()).restoreSettledOrder(any(), any(), any(), any());
     }
 
     @Test

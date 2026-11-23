@@ -2,7 +2,7 @@ package com.greenlink.admin.adapter.in.web;
 
 import com.greenlink.admin.adapter.in.web.dto.CreateOrderRequest;
 import com.greenlink.admin.adapter.in.web.dto.PriceAdjustmentRequest;
-import com.greenlink.admin.adapter.in.web.dto.RefundReasonRequest;
+import com.greenlink.admin.adapter.in.web.dto.ReasonRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateOrderRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateOrderStatusRequest;
 import com.greenlink.core.application.common.dto.PageResult;
@@ -15,7 +15,6 @@ import com.greenlink.core.application.order.usecase.CreateOrderUseCase;
 import com.greenlink.core.application.order.usecase.DeleteOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
-import com.greenlink.core.application.order.usecase.RefundOrderUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
 import com.greenlink.core.application.orderhistory.usecase.GetOrderHistoryUseCase;
@@ -45,7 +44,6 @@ public class OrderController {
     private final CreateOrderUseCase createOrderUseCase;
     private final UpdateOrderUseCase updateOrderUseCase;
     private final UpdateOrderStatusUseCase updateOrderStatusUseCase;
-    private final RefundOrderUseCase refundOrderUseCase;
     private final DeleteOrderUseCase deleteOrderUseCase;
     private final GetOrderHistoryUseCase getOrderHistoryUseCase;
     private final SendDeliveryMmsUseCase sendDeliveryMmsUseCase;
@@ -59,7 +57,6 @@ public class OrderController {
                            CreateOrderUseCase createOrderUseCase,
                            UpdateOrderUseCase updateOrderUseCase,
                            UpdateOrderStatusUseCase updateOrderStatusUseCase,
-                           RefundOrderUseCase refundOrderUseCase,
                            DeleteOrderUseCase deleteOrderUseCase,
                            GetOrderHistoryUseCase getOrderHistoryUseCase,
                            SendDeliveryMmsUseCase sendDeliveryMmsUseCase,
@@ -72,7 +69,6 @@ public class OrderController {
         this.createOrderUseCase = createOrderUseCase;
         this.updateOrderUseCase = updateOrderUseCase;
         this.updateOrderStatusUseCase = updateOrderStatusUseCase;
-        this.refundOrderUseCase = refundOrderUseCase;
         this.deleteOrderUseCase = deleteOrderUseCase;
         this.getOrderHistoryUseCase = getOrderHistoryUseCase;
         this.sendDeliveryMmsUseCase = sendDeliveryMmsUseCase;
@@ -245,36 +241,6 @@ public class OrderController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{id}/refund-request")
-    public ResponseEntity<OrderResult> requestRefund(Authentication auth, @PathVariable Long id,
-                                                     @RequestBody @Valid RefundReasonRequest req) {
-        boolean superAdmin = hasRole(auth, "ROLE_SUPER_ADMIN");
-        if (!superAdmin) {
-            if (!hasRole(auth, "ROLE_ORDERING")) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-            Long callerCompanyId = (auth instanceof org.springframework.security.authentication.UsernamePasswordAuthenticationToken token
-                    && token.getDetails() instanceof Long cid) ? cid : null;
-            if (callerCompanyId == null || !callerCompanyId.equals(getOrderUseCase.getOrder(id).orderingCompanyId())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-            }
-        }
-        return ResponseEntity.ok(forOrderingCaller(auth, refundOrderUseCase.requestRefund(id, req.reason(), superAdmin)));
-    }
-
-    @PostMapping("/{id}/refund-approve")
-    public ResponseEntity<OrderResult> approveRefund(Authentication auth, @PathVariable Long id) {
-        boolean superAdmin = hasRole(auth, "ROLE_SUPER_ADMIN");
-        if (!superAdmin && !isAssignedVendor(auth, id)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        return ResponseEntity.ok(forOrderingCaller(auth, refundOrderUseCase.approveRefund(id, superAdmin)));
-    }
-
-    @PostMapping("/{id}/refund-reject")
-    public ResponseEntity<OrderResult> rejectRefund(Authentication auth, @PathVariable Long id,
-                                                    @RequestBody @Valid RefundReasonRequest req) {
-        boolean superAdmin = hasRole(auth, "ROLE_SUPER_ADMIN");
-        if (!superAdmin && !isAssignedVendor(auth, id)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        return ResponseEntity.ok(forOrderingCaller(auth, refundOrderUseCase.rejectRefund(id, req.reason(), superAdmin)));
-    }
-
     @PostMapping("/{id}/price-adjustments")
     public ResponseEntity<PriceAdjustmentResult> requestPriceAdjustment(Authentication auth, @PathVariable Long id,
                                                                         @RequestBody @Valid PriceAdjustmentRequest req) {
@@ -302,7 +268,7 @@ public class OrderController {
     @PostMapping("/{id}/price-adjustments/{adjustmentId}/reject")
     public ResponseEntity<PriceAdjustmentResult> rejectPriceAdjustment(Authentication auth, @PathVariable Long id,
                                                                        @PathVariable Long adjustmentId,
-                                                                       @RequestBody @Valid RefundReasonRequest req) {
+                                                                       @RequestBody @Valid ReasonRequest req) {
         boolean superAdmin = hasRole(auth, "ROLE_SUPER_ADMIN");
         if (!superAdmin && !isAssignedVendor(auth, id)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         return ResponseEntity.ok(forViewer(auth, id,
@@ -387,7 +353,6 @@ public class OrderController {
                 r.isDeleted(), r.messageSentAt(),
                 r.createdByAdminId(), r.updatedByAdminId(),
                 r.isDelayed(), r.photoToken(),
-                r.refundReason(), r.refundRequestedAt(), r.refundRejectReason(),
                 r.adjustAmount(), r.pendingAdjustment()
         );
     }

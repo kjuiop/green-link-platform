@@ -61,9 +61,6 @@ public record OrderResult(
         Long updatedByAdminId,
         boolean isDelayed,
         String photoToken,
-        String refundReason,
-        String refundRequestedAt,
-        String refundRejectReason,
         long adjustAmount,
         PendingAdjustment pendingAdjustment
 ) {
@@ -99,7 +96,6 @@ public record OrderResult(
                 isDeleted, messageSentAt,
                 createdByAdminId, updatedByAdminId,
                 isDelayed, photoToken,
-                refundReason, refundRequestedAt, refundRejectReason,
                 adjustAmount, pendingAdjustment != null ? pendingAdjustment.toVendorView(vendorFee) : null);
     }
 
@@ -134,7 +130,6 @@ public record OrderResult(
                 isDeleted, messageSentAt,
                 createdByAdminId, updatedByAdminId,
                 isDelayed, photoToken,
-                refundReason, refundRequestedAt, refundRejectReason,
                 adjustAmount, pending);
     }
 }

@@ -150,18 +150,6 @@ public class OrderJpaEntity extends BaseJpaEntity {
     @Column(name = "photo_token", length = 36, unique = true)
     private String photoToken;
 
-    @Column(name = "refund_reason", length = 500)
-    private String refundReason;
-
-    @Column(name = "refund_requested_at", length = 30)
-    private String refundRequestedAt;
-
-    @Column(name = "refund_reject_reason", length = 500)
-    private String refundRejectReason;
-
-    @Column(name = "refund_decided_at", length = 30)
-    private String refundDecidedAt;
-
     protected OrderJpaEntity() {}
 
     public static OrderJpaEntity from(Order order) {
@@ -212,10 +200,6 @@ public class OrderJpaEntity extends BaseJpaEntity {
         e.completedAt = order.getCompletedAt();
         e.isDeleted = order.isDeleted();
         e.photoToken = order.getPhotoToken();
-        e.refundReason = order.getRefundReason();
-        e.refundRequestedAt = order.getRefundRequestedAt();
-        e.refundRejectReason = order.getRefundRejectReason();
-        e.refundDecidedAt = order.getRefundDecidedAt();
         return e;
     }
 
@@ -269,7 +253,6 @@ public class OrderJpaEntity extends BaseJpaEntity {
         );
         order.assignVendorFee(vendorFee);
         order.assignAdjustAmount(adjustAmount);
-        order.assignRefundInfo(refundReason, refundRequestedAt, refundRejectReason, refundDecidedAt);
         return order;
     }
 }

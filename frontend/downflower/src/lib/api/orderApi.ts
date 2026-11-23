@@ -8,8 +8,6 @@ const STATUS_MAP: Record<string, OrderStatus> = {
   DELIVERED: '배송완료',
   REJECTED: '수주거절',
   CANCELLED: '주문취소',
-  REFUND_REQUESTED: '환불요청',
-  REFUNDED: '환불완료',
 }
 
 type BackendOrder = {
@@ -67,9 +65,6 @@ type BackendOrder = {
   messageSentAt: string | null
   isDelayed: boolean
   photoToken: string | null
-  refundReason: string | null
-  refundRequestedAt: string | null
-  refundRejectReason: string | null
 }
 
 export type CreateOrderPayload = {
@@ -167,9 +162,6 @@ function toFrontend(o: BackendOrder): Order {
     receiptReceiverRelation: o.receiptReceiverRelation ?? undefined,
     isDelayed: o.isDelayed ?? false,
     photoToken: o.photoToken ?? undefined,
-    refundReason: o.refundReason ?? undefined,
-    refundRequestedAt: o.refundRequestedAt ?? undefined,
-    refundRejectReason: o.refundRejectReason ?? undefined,
   }
 }
 
@@ -499,20 +491,6 @@ export async function downloadOrdersExcel(orderIds: string[]): Promise<void> {
   URL.revokeObjectURL(url)
 }
 
-async function postRefundAction(id: string, path: string, reason: string | null, failMessage: string): Promise<Order> {
-  const res = await fetchWithAuth(`/api/orders/${id}/${path}`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: reason === null ? undefined : JSON.stringify({ reason }),
-  })
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    throw new Error(data.message ?? failMessage)
-  }
-  refreshMemberSummary()
-  return toFrontend(await res.json())
-}
-
 async function adjustmentRequest<T>(path: string, method: 'GET' | 'POST', body: unknown, failMessage: string): Promise<T> {
   const res = await fetchWithAuth(`/api/orders/${path}`, {
     method,
@@ -559,18 +537,6 @@ export async function deleteOrder(id: string): Promise<void> {
     throw new Error(data.message ?? '주문서 삭제에 실패했습니다.')
   }
   refreshMemberSummary()
-}
-
-export function requestRefund(id: string, reason: string): Promise<Order> {
-  return postRefundAction(id, 'refund-request', reason, '환불 요청에 실패했습니다.')
-}
-
-export function approveRefund(id: string): Promise<Order> {
-  return postRefundAction(id, 'refund-approve', null, '환불 승인에 실패했습니다.')
-}
-
-export function rejectRefund(id: string, reason: string): Promise<Order> {
-  return postRefundAction(id, 'refund-reject', reason, '환불 거절에 실패했습니다.')
 }
 
 export async function updateOrderStatus(id: string, action: string, photoUrls?: string[]): Promise<Order> {

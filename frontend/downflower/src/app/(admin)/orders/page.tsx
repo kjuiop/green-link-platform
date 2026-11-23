@@ -30,8 +30,6 @@ const STATUS_TO_API: Partial<Record<OrderStatus, string>> = {
   '배송완료': 'DELIVERED',
   '수주거절': 'REJECTED',
   '주문취소': 'CANCELLED',
-  '환불요청': 'REFUND_REQUESTED',
-  '환불완료': 'REFUNDED',
 }
 
 type StringOrderSearchKey = { [K in keyof OrderSearchParams]: OrderSearchParams[K] extends string | undefined ? K : never }[keyof OrderSearchParams]
@@ -76,8 +74,6 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: '수주완료', value: '수주완료' },
   { label: '배송완료', value: '배송완료' },
   { label: '수주거절', value: '수주거절' },
-  { label: '환불요청', value: '환불요청' },
-  { label: '환불완료', value: '환불완료' },
 ]
 
 const PAGE_SIZE_OPTIONS = [10, 50, 100, 200, 300, 500]

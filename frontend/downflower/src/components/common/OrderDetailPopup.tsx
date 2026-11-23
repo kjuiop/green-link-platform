@@ -8,7 +8,7 @@ import {
   OrderActionButtons, SaveErrorBanner,
   BasicInfoCard, DeliveryInfoCard, RibbonCard, ContactCard, MemoCard,
   ReferenceImageCard, DeliveryPhotosCard, ReceiptConfirmationCard,
-  SmsHistoryCard, AlimtalkHistoryCard, HistoryCard, CompleteDialog, RefundDialog, DeleteDialog, RefundInfoBanner,
+  SmsHistoryCard, AlimtalkHistoryCard, HistoryCard, CompleteDialog, DeleteDialog,
   AdjustmentInfoBanner, AdjustmentHistoryCard, AdjustmentDialog,
 } from '@/components/common/OrderDetailSections'
 
@@ -119,7 +119,6 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
             </div>
 
             <SaveErrorBanner d={loaded} />
-            <RefundInfoBanner d={loaded} />
             <AdjustmentInfoBanner d={loaded} />
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -143,7 +142,6 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
       {loaded && (
         <>
           <CompleteDialog d={loaded} overlayClassName={POPUP_OVERLAY} />
-          <RefundDialog d={loaded} overlayClassName={POPUP_OVERLAY} />
           <AdjustmentDialog d={loaded} overlayClassName={POPUP_OVERLAY} />
           <DeleteDialog d={loaded} overlayClassName={POPUP_OVERLAY} />
         </>
