@@ -21,7 +21,7 @@ public enum OrderErrorCode implements ErrorCode {
     ADJUST_SETTLED_LOCKED(400, "ORDER_015", "정산이 완료된 기간의 주문은 금액을 조정할 수 없습니다."),
     ADJUST_FORBIDDEN(403, "ORDER_016", "금액 수정 요청 권한이 없습니다."),
     ADJUST_REASON_REQUIRED(400, "ORDER_017", "사유를 입력해주세요."),
-    ORDER_HAS_PENDING_ADJUST(400, "ORDER_018", "승인 대기 중인 금액 수정 요청이 있는 주문은 금액을 수정하거나 삭제할 수 없습니다."),
+    ORDER_HAS_PENDING_ADJUST(400, "ORDER_018", "승인 대기 중인 금액 수정 요청이 있는 주문은 수정·삭제·환불 요청을 할 수 없습니다."),
     DELIVERED_AMOUNT_LOCKED(400, "ORDER_019", "배송완료된 주문의 금액은 직접 수정할 수 없습니다. 금액 수정 요청을 이용해주세요.");
 
     private final int status;

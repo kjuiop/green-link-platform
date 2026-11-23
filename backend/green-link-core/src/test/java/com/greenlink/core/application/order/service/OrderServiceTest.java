@@ -553,6 +553,20 @@ class OrderServiceTest {
     }
 
     @Test
+    void requestRefund_whenPendingAdjustmentExists_isBlocked() {
+        given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.DELIVERED)));
+        given(priceAdjustmentRepository.findPendingByOrderId(1L)).willReturn(Optional.of(
+                com.greenlink.core.domain.orderpriceadjustment.model.OrderPriceAdjustment.request(
+                        1L, 5L, "요청자", false, "t", 50000L, 60000L, "사유")));
+
+        assertThatThrownBy(() -> service.requestRefund(1L, "오배송", false))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(OrderErrorCode.ORDER_HAS_PENDING_ADJUST));
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
     void requestRefund_whenNotDelivered_throws() {
         given(orderRepository.findById(1L)).willReturn(Optional.of(orderingOrder(1L, OrderStatus.ACCEPTED)));
 

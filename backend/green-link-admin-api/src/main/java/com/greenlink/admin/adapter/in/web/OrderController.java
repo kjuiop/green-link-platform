@@ -302,13 +302,27 @@ public class OrderController {
 
     @GetMapping("/{id}/price-adjustments")
     public ResponseEntity<List<PriceAdjustmentResult>> getPriceAdjustments(Authentication auth, @PathVariable Long id) {
-        getOrderUseCase.getOrder(id, hasRole(auth, "ROLE_SUPER_ADMIN"));
+        boolean superAdmin = hasRole(auth, "ROLE_SUPER_ADMIN");
+        OrderResult order = getOrderUseCase.getOrder(id, superAdmin);
+        if (!superAdmin && !canViewAdjustments(auth, order)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         List<PriceAdjustmentResult> adjustments = getPriceAdjustmentsUseCase.getAdjustments(id);
         if (hasRole(auth, "ROLE_VENDOR")) {
-            Long fee = getOrderUseCase.getOrder(id).vendorFee();
+            Long fee = order.vendorFee();
             adjustments = adjustments.stream().map(a -> a.toVendorView(fee)).toList();
         }
         return ResponseEntity.ok(adjustments);
+    }
+
+    private boolean canViewAdjustments(Authentication auth, OrderResult order) {
+        if (hasRole(auth, "ROLE_VENDOR")) {
+            return order.vendorId() != null && order.vendorId().equals(Long.parseLong(String.valueOf(auth.getPrincipal())));
+        }
+        if (hasRole(auth, "ROLE_ORDERING")) {
+            Long callerCompanyId = (auth instanceof org.springframework.security.authentication.UsernamePasswordAuthenticationToken token
+                    && token.getDetails() instanceof Long cid) ? cid : null;
+            return callerCompanyId != null && callerCompanyId.equals(order.orderingCompanyId());
+        }
+        return false;
     }
 
     private PriceAdjustmentResult forViewer(Authentication auth, Long orderId, PriceAdjustmentResult result) {

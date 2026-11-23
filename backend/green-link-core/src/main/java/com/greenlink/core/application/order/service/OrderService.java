@@ -725,6 +725,9 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     public OrderResult requestRefund(Long id, String reason, boolean proxy) {
         validateRefundReason(reason);
         Order order = findActiveOrder(id);
+        if (priceAdjustmentRepository.findPendingByOrderId(id).isPresent()) {
+            throw new BusinessException(OrderErrorCode.ORDER_HAS_PENDING_ADJUST);
+        }
         order.requestRefund(reason, kstNow());
         Order saved = orderRepository.save(order);
         recordOrderHistoryUseCase.record(id, OrderHistoryAction.STATUS_CHANGED,
