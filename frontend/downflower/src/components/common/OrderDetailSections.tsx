@@ -101,11 +101,6 @@ export function OrderActionButtons({ d }: { d: D }) {
           </Button>
         )
       )}
-      {order.status === '배송완료' && d.canRequestRefund && !isEditing && (
-        <Button variant="outline" className="gap-1.5 border-orange-300 text-orange-700 hover:bg-orange-50" onClick={() => d.openRefundDialog('request')}>
-          환불 요청
-        </Button>
-      )}
       {order.status === '배송완료' && !order.pendingAdjustment && d.canRequestAdjust && !isEditing && (
         <Button variant="outline" className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50" onClick={() => d.openAdjustDialog('request')}>
           금액 수정 요청
@@ -116,13 +111,7 @@ export function OrderActionButtons({ d }: { d: D }) {
           금액 수정 요청 확인
         </Button>
       )}
-      {order.status === '환불요청' && d.canDecideRefund && (
-        <>
-          <Button className="bg-purple-700 hover:bg-purple-800" onClick={() => d.openRefundDialog('approve')}>환불 승인</Button>
-          <Button variant="outline" className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50" onClick={() => d.openRefundDialog('reject')}>환불 거절</Button>
-        </>
-      )}
-      {d.isSuperAdmin && !isEditing && order.status !== '환불요청' && order.status !== '환불완료' && (
+      {d.isSuperAdmin && !isEditing && (
         <Button variant="outline" className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50" onClick={d.openDeleteConfirm}>
           <Trash2 className="h-3.5 w-3.5" />삭제
         </Button>
@@ -136,27 +125,6 @@ export function SaveErrorBanner({ d }: { d: D }) {
   return (
     <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">{d.saveError}</div>
   )
-}
-
-export function RefundInfoBanner({ d }: { d: D }) {
-  const { order } = d
-  if (order.status === '환불요청' || order.status === '환불완료') {
-    return (
-      <div className="rounded-md border border-orange-200 bg-orange-50 px-4 py-2 text-sm text-orange-800">
-        <p className="font-medium">{order.status === '환불요청' ? '환불 요청 중 — 수주사 승인 대기' : '환불 완료'}</p>
-        {order.refundReason && <p className="mt-0.5 whitespace-pre-wrap break-all">요청 사유: {order.refundReason}</p>}
-      </div>
-    )
-  }
-  if (order.status === '배송완료' && order.refundRejectReason) {
-    return (
-      <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700">
-        <p className="font-medium">환불 요청이 거절되었습니다.</p>
-        <p className="mt-0.5 whitespace-pre-wrap break-all">거절 사유: {order.refundRejectReason}</p>
-      </div>
-    )
-  }
-  return null
 }
 
 const signedWon = (n: number) => `${n > 0 ? '+' : n < 0 ? '-' : ''}${Math.abs(n).toLocaleString()}원`
@@ -933,46 +901,6 @@ export function DeleteDialog({ d, overlayClassName }: { d: D; overlayClassName: 
           <Button variant="outline" onClick={d.closeDeleteConfirm} disabled={d.saving}>취소</Button>
           <Button className="gap-1.5 bg-red-600 hover:bg-red-700" onClick={d.handleDelete} disabled={d.saving}>
             <Trash2 className="h-3.5 w-3.5" />{d.saving ? '삭제 중…' : '삭제'}
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const REFUND_DIALOG: Record<'request' | 'approve' | 'reject', { title: string; desc: string; confirm: string; needsReason: boolean; confirmClass: string }> = {
-  request: { title: '환불 요청', desc: '배송이 잘못된 경우 환불을 요청합니다. 수주사가 승인하면 포인트가 복구됩니다.', confirm: '환불 요청', needsReason: true, confirmClass: 'bg-orange-600 hover:bg-orange-700' },
-  approve: { title: '환불 승인', desc: '환불을 승인하면 발주사 포인트가 복구되고 정산에서 제외됩니다. 되돌릴 수 없습니다.', confirm: '환불 승인', needsReason: false, confirmClass: 'bg-purple-700 hover:bg-purple-800' },
-  reject: { title: '환불 거절', desc: '거절하면 주문은 배송완료 상태로 돌아갑니다.', confirm: '환불 거절', needsReason: true, confirmClass: 'bg-red-600 hover:bg-red-700' },
-}
-
-export function RefundDialog({ d, overlayClassName }: { d: D; overlayClassName: string }) {
-  if (!d.refundDialog) return null
-  const cfg = REFUND_DIALOG[d.refundDialog]
-  return (
-    <div className={overlayClassName}>
-      <div className="w-full max-w-sm rounded-lg bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b px-5 py-4">
-          <h2 className="font-semibold">{cfg.title}</h2>
-          <button onClick={d.closeRefundDialog} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
-        </div>
-        <div className="space-y-3 p-5">
-          <p className="text-sm text-gray-700">{cfg.desc}</p>
-          {cfg.needsReason && (
-            <Textarea
-              value={d.refundReason}
-              onChange={(e) => d.setRefundReason(e.target.value)}
-              maxLength={500}
-              rows={3}
-              placeholder={d.refundDialog === 'request' ? '환불 사유 (필수)' : '거절 사유 (필수)'}
-            />
-          )}
-          {d.refundError && <p className="text-sm text-red-600">{d.refundError}</p>}
-        </div>
-        <div className="flex justify-end gap-2 border-t px-5 py-4">
-          <Button variant="outline" onClick={d.closeRefundDialog} disabled={d.saving}>취소</Button>
-          <Button className={cfg.confirmClass} onClick={d.submitRefund} disabled={d.saving}>
-            {d.saving ? '처리 중…' : cfg.confirm}
           </Button>
         </div>
       </div>

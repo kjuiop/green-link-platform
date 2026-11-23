@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import {
-  fetchOrder, updateOrder, updateOrderStatus, deleteOrder, requestRefund, approveRefund, rejectRefund,
+  fetchOrder, updateOrder, updateOrderStatus, deleteOrder,
   fetchOrderHistory, fetchReceiptConfirmation,
   fetchPriceAdjustments, requestPriceAdjustment, acceptPriceAdjustment, rejectPriceAdjustment,
   fetchSmsMessages, fetchAlimtalkMessages, resendMms,
@@ -24,9 +24,6 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState<Order | null>(null)
-  const [refundDialog, setRefundDialog] = useState<'request' | 'approve' | 'reject' | null>(null)
-  const [refundReason, setRefundReason] = useState('')
-  const [refundError, setRefundError] = useState<string | null>(null)
   const [adjustDialog, setAdjustDialog] = useState<AdjustDialogMode | null>(null)
   const [adjustNewTotal, setAdjustNewTotal] = useState('')
   const [adjustReason, setAdjustReason] = useState('')
@@ -38,8 +35,6 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
   const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
   const role = typeof window === 'undefined' ? null : localStorage.getItem('role')
   const canEdit = role !== 'VENDOR'
-  const canRequestRefund = role === 'SUPER_ADMIN' || role === 'ORDERING'
-  const canDecideRefund = role === 'SUPER_ADMIN' || role === 'VENDOR'
   const canRequestAdjust = role === 'SUPER_ADMIN' || role === 'ORDERING'
   const canDecideAdjust = role === 'SUPER_ADMIN' || role === 'VENDOR'
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -229,42 +224,6 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
     }
   }
 
-  function openRefundDialog(kind: 'request' | 'approve' | 'reject') {
-    setRefundReason('')
-    setRefundError(null)
-    setRefundDialog(kind)
-  }
-
-  function closeRefundDialog() {
-    setRefundDialog(null)
-    setRefundError(null)
-  }
-
-  async function submitRefund() {
-    if (!refundDialog) return
-    const reason = refundReason.trim()
-    if (refundDialog !== 'approve' && !reason) {
-      setRefundError('사유를 입력해 주세요.')
-      return
-    }
-    setSaving(true)
-    setRefundError(null)
-    try {
-      const updated = refundDialog === 'request' ? await requestRefund(orderId, reason)
-        : refundDialog === 'approve' ? await approveRefund(orderId)
-        : await rejectRefund(orderId, reason)
-      setOrder(updated)
-      setDraft(updated)
-      setHistory(await fetchOrderHistory(orderId).catch(() => []))
-      setRefundDialog(null)
-      onUpdated?.()
-    } catch (e) {
-      setRefundError(e instanceof Error ? e.message : '처리에 실패했습니다.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
   function openAdjustDialog(mode: AdjustDialogMode) {
     setAdjustNewTotal(mode === 'request' && order ? String(orderTotalOf(order)) : '')
     setAdjustReason('')
@@ -375,19 +334,17 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
     orderId,
     order, draft, setDraft, loading, loadError,
     isEditing, saving, saveError, isSuperAdmin,
-    canEdit: canEdit && order?.status !== '환불요청' && order?.status !== '환불완료',
-    canRequestRefund, canDecideRefund, canRequestAdjust, canDecideAdjust,
+    canEdit,
+    canRequestAdjust, canDecideAdjust,
     adjustDialog, adjustNewTotal, setAdjustNewTotal, adjustReason, setAdjustReason, adjustError, adjustments,
     receiptConfirmation, history, smsMessages, alimtalkMessages, resending,
     selectedProductId, setSelectedProductId,
     completeDialogOpen, setCompleteDialogOpen, selectedPhotoUrls,
-    refundDialog, refundReason, setRefundReason, refundError,
     confirmDelete, deleteError,
     hasSitePhotos, hasPhotos, hasSmsFailure, hasAlimtalkFailure,
     startEdit, cancelEdit, saveEdit,
     openCompleteDialog, togglePhotoSelection, handleComplete,
     handleAccept, handleReject, handleResend,
-    openRefundDialog, closeRefundDialog, submitRefund,
     openAdjustDialog, closeAdjustDialog, submitAdjust,
     openDeleteConfirm, closeDeleteConfirm, handleDelete, refreshAfterDeliveryComplete,
     set,

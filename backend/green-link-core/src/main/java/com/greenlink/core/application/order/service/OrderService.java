@@ -14,7 +14,6 @@ import com.greenlink.core.application.order.usecase.DeleteOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetDeliveryShareUseCase;
 import com.greenlink.core.application.order.usecase.GetOrderUseCase;
 import com.greenlink.core.application.order.usecase.GetOrdersUseCase;
-import com.greenlink.core.application.order.usecase.RefundOrderUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderStatusUseCase;
 import com.greenlink.core.application.order.usecase.UpdateOrderUseCase;
 import com.greenlink.core.application.orderhistory.usecase.RecordOrderHistoryUseCase;
@@ -69,7 +68,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
-        GetOrdersUseCase, UpdateOrderUseCase, UpdateOrderStatusUseCase, RefundOrderUseCase,
+        GetOrdersUseCase, UpdateOrderUseCase, UpdateOrderStatusUseCase,
         DeleteOrderUseCase, GetDeliveryShareUseCase {
 
     private static final Map<OrderStatus, String> STATUS_LABEL = Map.of(
@@ -77,9 +76,7 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
             OrderStatus.ACCEPTED,  "수주완료",
             OrderStatus.DELIVERED, "배송완료",
             OrderStatus.REJECTED,  "수주거절",
-            OrderStatus.CANCELLED, "주문취소",
-            OrderStatus.REFUND_REQUESTED, "환불요청",
-            OrderStatus.REFUNDED,  "환불완료"
+            OrderStatus.CANCELLED, "주문취소"
     );
 
     private final OrderRepository orderRepository;
@@ -382,9 +379,6 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
                 order.getUpdatedByAdminId(),
                 calcIsDelayed(order, sitePhotoOrderIds),
                 order.getPhotoToken(),
-                order.getRefundReason(),
-                order.getRefundRequestedAt(),
-                order.getRefundRejectReason(),
                 order.getAdjustAmount(),
                 null
         );
@@ -476,9 +470,6 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
     public OrderResult updateOrder(Long id, UpdateOrderCommand cmd) {
         Order order = findActiveOrder(id);
 
-        if (order.getStatus() == OrderStatus.REFUND_REQUESTED || order.getStatus() == OrderStatus.REFUNDED) {
-            throw new BusinessException(OrderErrorCode.REFUND_ORDER_LOCKED);
-        }
         Long previousVendorId = order.getVendorId();
         Long newVendorCompanyId = cmd.vendorId() != null
                 ? adminRepository.findById(cmd.vendorId()).map(Admin::getCompanyId).orElse(null)
@@ -722,54 +713,10 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
 
     @Override
     @Transactional
-    public OrderResult requestRefund(Long id, String reason, boolean proxy) {
-        validateRefundReason(reason);
-        Order order = findActiveOrder(id);
-        if (priceAdjustmentRepository.findPendingByOrderId(id).isPresent()) {
-            throw new BusinessException(OrderErrorCode.ORDER_HAS_PENDING_ADJUST);
-        }
-        order.requestRefund(reason, kstNow());
-        Order saved = orderRepository.save(order);
-        recordOrderHistoryUseCase.record(id, OrderHistoryAction.STATUS_CHANGED,
-                "환불 요청: " + reason.trim() + proxySuffix(proxy));
-        return toResult(saved);
-    }
-
-    @Override
-    @Transactional
-    public OrderResult approveRefund(Long id, boolean proxy) {
-        Order order = findActiveOrder(id);
-        order.approveRefund(kstNow());
-        Order saved = orderRepository.save(order);
-        recordOrderHistoryUseCase.record(id, OrderHistoryAction.STATUS_CHANGED, "환불 승인" + proxySuffix(proxy));
-        if (saved.getOrderingCompanyId() != null) {
-            applyOrderPointUseCase.restoreSettledOrder(saved.getOrderingCompanyId(), saved.getId(),
-                    saved.getOrderNumber(), resolveCurrentAdminId());
-        }
-        return toResult(saved);
-    }
-
-    @Override
-    @Transactional
-    public OrderResult rejectRefund(Long id, String reason, boolean proxy) {
-        validateRefundReason(reason);
-        Order order = findActiveOrder(id);
-        order.rejectRefund(reason, kstNow());
-        Order saved = orderRepository.save(order);
-        recordOrderHistoryUseCase.record(id, OrderHistoryAction.STATUS_CHANGED,
-                "환불 거절: " + reason.trim() + proxySuffix(proxy));
-        return toResult(saved);
-    }
-
-    @Override
-    @Transactional
     public void deleteOrder(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
         if (order.isDeleted()) return;
-        if (order.getStatus() == OrderStatus.REFUND_REQUESTED || order.getStatus() == OrderStatus.REFUNDED) {
-            throw new BusinessException(OrderErrorCode.REFUND_ORDER_NOT_DELETABLE);
-        }
         if (priceAdjustmentRepository.findPendingByOrderId(id).isPresent()) {
             throw new BusinessException(OrderErrorCode.ORDER_HAS_PENDING_ADJUST);
         }
@@ -792,19 +739,6 @@ public class OrderService implements CreateOrderUseCase, GetOrderUseCase,
             throw new BusinessException(OrderErrorCode.ORDER_NOT_FOUND);
         }
         return order;
-    }
-
-    private static void validateRefundReason(String reason) {
-        if (reason == null || reason.isBlank()) {
-            throw new IllegalArgumentException("사유를 입력해주세요.");
-        }
-        if (reason.trim().length() > 500) {
-            throw new IllegalArgumentException("사유는 500자 이내로 입력해주세요.");
-        }
-    }
-
-    private static String proxySuffix(boolean proxy) {
-        return proxy ? " (관리자 대행)" : "";
     }
 
     private void syncPoint(Order order) {
