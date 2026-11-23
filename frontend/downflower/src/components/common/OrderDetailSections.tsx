@@ -14,6 +14,7 @@ import { cn, RIBBON_PHRASES, formatPhone } from '@/lib/utils'
 import type { LoadedOrderDetail } from '@/components/common/useOrderDetail'
 import type { DeliveryTimeType } from '@/types/order'
 import VendorSelectModal from '@/components/common/VendorSelectModal'
+import { orderTotalOf } from '@/lib/utils/orderAmount'
 
 type D = LoadedOrderDetail
 interface SectionProps { d: D; className?: string }
@@ -22,6 +23,7 @@ const ACTION_LABEL: Record<string, string> = {
   CREATED: '발주 등록',
   UPDATED: '발주 수정',
   STATUS_CHANGED: '상태 변경',
+  PRICE_ADJUSTED: '금액 조정',
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -104,6 +106,16 @@ export function OrderActionButtons({ d }: { d: D }) {
           환불 요청
         </Button>
       )}
+      {order.status === '배송완료' && !order.pendingAdjustment && d.canRequestAdjust && !isEditing && (
+        <Button variant="outline" className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50" onClick={() => d.openAdjustDialog('request')}>
+          금액 수정 요청
+        </Button>
+      )}
+      {order.status === '배송완료' && order.pendingAdjustment && d.canDecideAdjust && !isEditing && (
+        <Button className="animate-blink bg-amber-600 hover:bg-amber-700" onClick={() => d.openAdjustDialog('decide')}>
+          금액 수정 요청 확인
+        </Button>
+      )}
       {order.status === '환불요청' && d.canDecideRefund && (
         <>
           <Button className="bg-purple-700 hover:bg-purple-800" onClick={() => d.openRefundDialog('approve')}>환불 승인</Button>
@@ -145,6 +157,34 @@ export function RefundInfoBanner({ d }: { d: D }) {
     )
   }
   return null
+}
+
+const signedWon = (n: number) => `${n > 0 ? '+' : n < 0 ? '-' : ''}${Math.abs(n).toLocaleString()}원`
+
+function amountBreakdown(order: D['order']): string {
+  const total = orderTotalOf(order)
+  const extra = order.extraCost ?? 0
+  const adjust = order.adjustAmount ?? 0
+  if (!extra && !adjust) return `${total.toLocaleString()}원`
+  const parts = [`기본 ${order.amount.toLocaleString()}`]
+  if (extra) parts.push(`추가 ${extra.toLocaleString()}`)
+  if (adjust) parts.push(`조정 ${signedWon(adjust)}`)
+  return `${total.toLocaleString()}원 (${parts.join(' · ')})`
+}
+
+export function AdjustmentInfoBanner({ d }: { d: D }) {
+  const p = d.order.pendingAdjustment
+  if (!p || d.order.status !== '배송완료') return null
+  return (
+    <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+      <p className="font-medium">
+        금액 수정 요청 중 ({signedWon(p.adjustAmount)}) — 수주사 승인 대기
+        {p.requestedByProxy && ' · 관리자 대행'}
+      </p>
+      <p className="mt-0.5">{p.beforeTotal.toLocaleString()}원 → {p.afterTotal.toLocaleString()}원</p>
+      <p className="mt-0.5 whitespace-pre-wrap break-all">사유: {p.reason}</p>
+    </div>
+  )
 }
 
 export function BasicInfoCard({ d, className }: SectionProps) {
@@ -194,6 +234,9 @@ export function BasicInfoCard({ d, className }: SectionProps) {
             <Field label="상품금액">
               <Input type="text" readOnly tabIndex={-1} value={draft.amount.toLocaleString()} className="bg-gray-50" />
               <p className="mt-1 text-xs text-gray-400">상품·수량을 바꾸면 저장 시 수수료를 포함해 다시 계산됩니다.</p>
+              {order.status === '배송완료' && (
+                <p className="mt-1 text-xs text-amber-600">배송완료 후 금액 변경은 &apos;금액 수정 요청&apos;으로만 가능합니다.</p>
+              )}
             </Field>
             <Field label="추가비용">
               <Input
@@ -203,7 +246,7 @@ export function BasicInfoCard({ d, className }: SectionProps) {
               />
               {draft.extraCost ? (
                 <p className="mt-1 text-xs text-gray-500">
-                  최종: {(draft.amount + draft.extraCost).toLocaleString()}원
+                  최종: {orderTotalOf(draft).toLocaleString()}원
                 </p>
               ) : null}
             </Field>
@@ -219,7 +262,7 @@ export function BasicInfoCard({ d, className }: SectionProps) {
           <>
             <Row label="상품명" value={highlightGrade(order.productName)} />
             <Row label="수량" value={`${order.quantity}개`} />
-            <Row label="발주금액" value={order.extraCost ? `${(order.amount + order.extraCost).toLocaleString()}원 (기본 ${order.amount.toLocaleString()} + 추가 ${order.extraCost.toLocaleString()})` : `${order.amount.toLocaleString()}원`} />
+            <Row label="발주금액" value={amountBreakdown(order)} />
             {order.vendorAmount != null && (
               <Row label="정산금액" value={`${order.vendorAmount.toLocaleString()}원`} />
             )}
@@ -929,6 +972,144 @@ export function RefundDialog({ d, overlayClassName }: { d: D; overlayClassName: 
           <Button className={cfg.confirmClass} onClick={d.submitRefund} disabled={d.saving}>
             {d.saving ? '처리 중…' : cfg.confirm}
           </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const ADJUST_STATUS_LABEL: Record<string, { label: string; className: string }> = {
+  PENDING: { label: '승인 대기', className: 'bg-amber-100 text-amber-800' },
+  ACCEPTED: { label: '승인', className: 'bg-green-100 text-green-800' },
+  REJECTED: { label: '거절', className: 'bg-red-100 text-red-700' },
+}
+
+export function AdjustmentHistoryCard({ d, className }: SectionProps) {
+  if (d.adjustments.length === 0) return null
+  return (
+    <Card className={className}>
+      <CardHeader><CardTitle className="text-sm">금액 수정 내역</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        {d.adjustments.map((a) => {
+          const st = ADJUST_STATUS_LABEL[a.status]
+          return (
+            <div key={a.id} className="rounded-md border p-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', st?.className)}>{st?.label ?? a.status}</span>
+                <span className="font-medium">{signedWon(a.adjustAmount)}</span>
+                <span className="text-xs text-gray-500">{a.beforeTotal.toLocaleString()}원 → {a.afterTotal.toLocaleString()}원</span>
+              </div>
+              <p className="mt-1 whitespace-pre-wrap break-all text-xs text-gray-600">사유: {a.reason}</p>
+              <p className="mt-0.5 text-xs text-gray-400">
+                요청 {a.requestedAt.replace('T', ' ').slice(0, 16)}{a.requesterName ? ` · ${a.requesterName}` : ''}{a.requestedByProxy ? ' (관리자 대행)' : ''}
+              </p>
+              {a.status !== 'PENDING' && (
+                <p className="mt-0.5 text-xs text-gray-400">
+                  처리 {a.decidedAt?.replace('T', ' ').slice(0, 16)}{a.decidedByName ? ` · ${a.decidedByName}` : ''}{a.decidedByProxy ? ' (관리자 대행)' : ''}
+                </p>
+              )}
+              {a.rejectReason && <p className="mt-0.5 whitespace-pre-wrap break-all text-xs text-red-600">거절 사유: {a.rejectReason}</p>}
+            </div>
+          )
+        })}
+      </CardContent>
+    </Card>
+  )
+}
+
+export function AdjustmentDialog({ d, overlayClassName }: { d: D; overlayClassName: string }) {
+  const mode = d.adjustDialog
+  if (!mode) return null
+  const { order } = d
+  const isVendorView = typeof window !== 'undefined' && localStorage.getItem('role') === 'VENDOR'
+  const amountLabel = isVendorView ? '수주금액(수수료 제외)' : '발주금액'
+  const pending = order.pendingAdjustment
+
+  const currentTotal = orderTotalOf(order)
+  const nextTotal = Number(d.adjustNewTotal)
+  const diff = d.adjustNewTotal.trim() === '' || !Number.isFinite(nextTotal) ? null : nextTotal - currentTotal
+
+  const title = mode === 'request' ? '금액 수정 요청'
+    : mode === 'decide' ? '금액 수정 요청 확인'
+    : mode === 'confirmAccept' ? '금액 수정 승인' : '금액 수정 거절'
+
+  return (
+    <div className={overlayClassName}>
+      <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b px-5 py-4">
+          <h2 className="font-semibold">{title}</h2>
+          <button onClick={d.closeAdjustDialog} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="space-y-3 p-5 text-sm">
+          {mode === 'request' && (
+            <>
+              <p className="text-gray-700">배송완료된 주문의 발주금액 조정을 요청합니다. 수주사가 승인하면 금액이 변경되고 포인트가 차감/환급됩니다.</p>
+              <Row label="현재 발주금액" value={`${currentTotal.toLocaleString()}원`} />
+              <Field label="조정 후 발주금액 (0원 이상)">
+                <Input type="number" min={0} value={d.adjustNewTotal} onChange={(e) => d.setAdjustNewTotal(e.target.value)} />
+                {diff !== null && diff !== 0 && (
+                  <p className={cn('mt-1 text-xs font-medium', diff > 0 ? 'text-red-600' : 'text-blue-600')}>
+                    {signedWon(diff)} ({diff > 0 ? '추가 차감' : '환급'})
+                  </p>
+                )}
+              </Field>
+              <Field label="조정 사유 (필수)">
+                <Textarea value={d.adjustReason} onChange={(e) => d.setAdjustReason(e.target.value)} maxLength={500} rows={3} placeholder="금액을 조정하는 사유를 입력해 주세요" />
+              </Field>
+              {order.vendorAmount != null && (
+                <p className="rounded bg-gray-50 px-3 py-2 text-xs text-gray-600">정산금액이 별도 지정된 주문입니다. 조정금액은 지정된 정산금액에 반영되지 않습니다.</p>
+              )}
+            </>
+          )}
+          {mode !== 'request' && pending && (
+            <>
+              <div className="space-y-1 rounded-md bg-gray-50 p-3">
+                <Row label="주문번호" value={order.orderNumber} />
+                <Row label="발주사" value={order.orderingCompanyName ?? '-'} />
+                <Row label="수주사" value={order.vendorName} />
+                <Row label="배송상태" value={order.status} />
+              </div>
+              <div className="space-y-1">
+                <Row label={`변경 전 ${amountLabel}`} value={`${pending.beforeTotal.toLocaleString()}원`} />
+                <Row label={`변경 후 ${amountLabel}`} value={<strong>{pending.afterTotal.toLocaleString()}원</strong>} />
+                <Row label="차액" value={<span className={pending.adjustAmount > 0 ? 'font-medium text-red-600' : 'font-medium text-blue-600'}>{signedWon(pending.adjustAmount)}</span>} />
+                {isVendorView && <Row label="변경 후 정산 예정" value={`${pending.afterTotal.toLocaleString()}원`} />}
+                <Row label="요청자" value={`${pending.requesterName ?? '-'}${pending.requestedByProxy ? ' (관리자 대행)' : ''}`} />
+                <Row label="사유" value={<span className="whitespace-pre-wrap">{pending.reason}</span>} />
+              </div>
+              {order.vendorAmount != null && (
+                <p className="rounded bg-gray-50 px-3 py-2 text-xs text-gray-600">정산금액이 별도 지정된 주문입니다. 조정금액은 지정된 정산금액에 반영되지 않습니다.</p>
+              )}
+            </>
+          )}
+          {mode === 'confirmAccept' && (
+            <p className="text-gray-700">승인하면 금액이 즉시 변경되고 되돌릴 수 없습니다. 승인하시겠습니까?</p>
+          )}
+          {mode === 'reject' && (
+            <Textarea value={d.adjustReason} onChange={(e) => d.setAdjustReason(e.target.value)} maxLength={500} rows={3} placeholder="거절 사유 (필수)" />
+          )}
+          {d.adjustError && <p className="text-red-600">{d.adjustError}</p>}
+        </div>
+        <div className="flex justify-end gap-2 border-t px-5 py-4">
+          {mode === 'decide' ? (
+            <>
+              <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50" onClick={() => d.openAdjustDialog('reject')}>거절</Button>
+              <Button className="bg-amber-600 hover:bg-amber-700" onClick={() => d.openAdjustDialog('confirmAccept')}>승인</Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => (mode === 'request' ? d.closeAdjustDialog() : d.openAdjustDialog('decide'))} disabled={d.saving}>
+                {mode === 'request' ? '취소' : '이전'}
+              </Button>
+              <Button
+                className={mode === 'reject' ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'}
+                onClick={d.submitAdjust}
+                disabled={d.saving}
+              >
+                {d.saving ? '처리 중…' : mode === 'request' ? '수정 요청' : mode === 'confirmAccept' ? '승인 확정' : '거절 확정'}
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -5,5 +5,7 @@ public enum PointTransactionType {
     USE,
     REFUND,
     SETTLE,
-    RESTORE
+    RESTORE,
+    ADJUST_USE,
+    ADJUST_RESTORE
 }

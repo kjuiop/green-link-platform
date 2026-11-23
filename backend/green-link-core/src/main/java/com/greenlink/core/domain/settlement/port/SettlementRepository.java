@@ -9,6 +9,7 @@ import java.util.Optional;
 public interface SettlementRepository {
     Optional<Settlement> findByCompanyIdAndTypeAndPeriod(Long companyId, SettlementType type, String fromDate, String toDate);
     List<Settlement> findAllByCompanyIdsAndTypeAndPeriod(List<Long> companyIds, SettlementType type, String fromDate, String toDate);
+    boolean existsCompletedCovering(List<Long> companyIds, String date);
     Settlement save(Settlement settlement);
     void deleteByCompanyIdAndTypeAndPeriod(Long companyId, SettlementType type, String fromDate, String toDate);
 }

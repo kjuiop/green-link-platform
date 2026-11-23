@@ -12,6 +12,8 @@ public interface OrderRepository {
 
     Optional<Order> findById(Long id);
 
+    Optional<Order> findByIdForUpdate(Long id);
+
     Optional<Order> findByPhotoToken(String photoToken);
 
     List<Order> findAllByIds(List<Long> ids);
