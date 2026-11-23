@@ -1,3 +1,5 @@
 rootProject.name = 'backend'
 include('green-link-core')
 include('green-link-admin-api')
+include('green-shop-core')
+include('green-shop-api')

@@ -1,0 +1,15 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+logging:
+  level:
+    root: INFO
+    com.greenlink: INFO
+  file:
+    name: /app/logs/green-shop-api.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 30
