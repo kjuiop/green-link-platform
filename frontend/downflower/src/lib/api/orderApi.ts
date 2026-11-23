@@ -1,4 +1,4 @@
-import { Order, OrderStatus } from '@/types/order'
+import { Order, OrderStatus, PendingAdjustment, PriceAdjustment } from '@/types/order'
 import { PageResult } from '@/types/page'
 import { authHeaders, authBearerHeader, fetchWithAuth } from './fetchWithAuth'
 
@@ -29,6 +29,8 @@ type BackendOrder = {
   amount: number
   vendorAmount: number | null
   extraCost: number | null
+  adjustAmount: number | null
+  pendingAdjustment: PendingAdjustment | null
   deliveryDate: string
   deliveryTimeType: string | null
   deliveryTimeHour: string | null
@@ -126,6 +128,8 @@ function toFrontend(o: BackendOrder): Order {
     amount: o.amount,
     vendorAmount: o.vendorAmount ?? undefined,
     extraCost: o.extraCost ?? undefined,
+    adjustAmount: o.adjustAmount ?? 0,
+    pendingAdjustment: o.pendingAdjustment ?? undefined,
     deliveryType: '일반',
     deliveryAt: o.deliveryDate ?? '',
     deliveryTimeType: ((o.deliveryTimeType === '3시간내' ? '3시간이내' : o.deliveryTimeType) as Order['deliveryTimeType']) ?? undefined,
@@ -507,6 +511,42 @@ async function postRefundAction(id: string, path: string, reason: string | null,
   }
   refreshMemberSummary()
   return toFrontend(await res.json())
+}
+
+async function adjustmentRequest<T>(path: string, method: 'GET' | 'POST', body: unknown, failMessage: string): Promise<T> {
+  const res = await fetchWithAuth(`/api/orders/${path}`, {
+    method,
+    headers: authHeaders(),
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message ?? failMessage)
+  }
+  return res.json()
+}
+
+export function fetchPriceAdjustments(orderId: string): Promise<PriceAdjustment[]> {
+  return adjustmentRequest(`${orderId}/price-adjustments`, 'GET', undefined, '금액 수정 내역을 불러오지 못했습니다.')
+}
+
+export async function requestPriceAdjustment(orderId: string, newTotalAmount: number, reason: string): Promise<PriceAdjustment> {
+  const result = await adjustmentRequest<PriceAdjustment>(`${orderId}/price-adjustments`, 'POST',
+    { newTotalAmount, reason }, '금액 수정 요청에 실패했습니다.')
+  refreshMemberSummary()
+  return result
+}
+
+export async function acceptPriceAdjustment(orderId: string, adjustmentId: number): Promise<PriceAdjustment> {
+  const result = await adjustmentRequest<PriceAdjustment>(`${orderId}/price-adjustments/${adjustmentId}/accept`, 'POST',
+    undefined, '금액 수정 승인에 실패했습니다.')
+  refreshMemberSummary()
+  return result
+}
+
+export async function rejectPriceAdjustment(orderId: string, adjustmentId: number, reason: string): Promise<PriceAdjustment> {
+  return adjustmentRequest(`${orderId}/price-adjustments/${adjustmentId}/reject`, 'POST',
+    { reason }, '금액 수정 거절에 실패했습니다.')
 }
 
 export async function deleteOrder(id: string): Promise<void> {

@@ -9,6 +9,7 @@ import {
   BasicInfoCard, DeliveryInfoCard, RibbonCard, ContactCard, MemoCard,
   ReferenceImageCard, DeliveryPhotosCard, ReceiptConfirmationCard,
   SmsHistoryCard, AlimtalkHistoryCard, HistoryCard, CompleteDialog, RefundDialog, DeleteDialog, RefundInfoBanner,
+  AdjustmentInfoBanner, AdjustmentHistoryCard, AdjustmentDialog,
 } from '@/components/common/OrderDetailSections'
 
 interface Props {
@@ -119,6 +120,7 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
 
             <SaveErrorBanner d={loaded} />
             <RefundInfoBanner d={loaded} />
+            <AdjustmentInfoBanner d={loaded} />
 
             <div className="grid gap-3 sm:grid-cols-2">
               <BasicInfoCard d={loaded} />
@@ -131,6 +133,7 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
               <ReceiptConfirmationCard d={loaded} className="sm:col-span-2" />
               <SmsHistoryCard d={loaded} className="sm:col-span-2" />
               <AlimtalkHistoryCard d={loaded} className="sm:col-span-2" />
+              <AdjustmentHistoryCard d={loaded} className="sm:col-span-2" />
               <HistoryCard d={loaded} className="sm:col-span-2" />
             </div>
           </div>
@@ -141,6 +144,7 @@ export function OrderDetailPopup({ orderId, zIndex, initialOffset = 0, onClose, 
         <>
           <CompleteDialog d={loaded} overlayClassName={POPUP_OVERLAY} />
           <RefundDialog d={loaded} overlayClassName={POPUP_OVERLAY} />
+          <AdjustmentDialog d={loaded} overlayClassName={POPUP_OVERLAY} />
           <DeleteDialog d={loaded} overlayClassName={POPUP_OVERLAY} />
         </>
       )}

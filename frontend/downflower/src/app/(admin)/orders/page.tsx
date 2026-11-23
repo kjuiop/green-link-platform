@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { AcceptOrderBadge } from '@/components/common/StatusBadge'
+import { AcceptOrderBadge, AdjustmentRequestBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
 import { useOrderUpdatedListener } from '@/components/common/useOrderSync'
@@ -17,6 +17,7 @@ import { OrderDetailPopup } from '@/components/common/OrderDetailPopup'
 import VendorInfoPopup from '@/components/vendor/VendorInfoPopup'
 import { fmtMinute } from '@/lib/utils/formatDateTime'
 import { highlightGrade } from '@/lib/utils/productName'
+import { orderTotalOf } from '@/lib/utils/orderAmount'
 
 type SearchField = '발주사명' | '수주사명' | '주문일' | '배송일' | '주문자' | '받는분' | '배달장소' | '보내는분' | '인수자' | '주문번호'
 type DeletedFilter = '정상' | '삭제' | '전체'
@@ -499,13 +500,13 @@ export default function OrdersPage() {
             <>
               <span className="text-gray-500">건수 <strong className="text-green-700">{selectedIds.size}</strong>건</span>
               <span className="text-gray-300">|</span>
-              <span className="text-gray-500">발주금액 <strong className="text-green-700">{filtered.filter((o) => selectedIds.has(o.id)).reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+              <span className="text-gray-500">발주금액 <strong className="text-green-700">{filtered.filter((o) => selectedIds.has(o.id)).reduce((sum, o) => sum + orderTotalOf(o), 0).toLocaleString()}</strong>원</span>
             </>
           ) : (
             <>
               <span className="text-gray-500">건수 <strong className="text-gray-900">{result?.totalElements ?? 0}</strong>건</span>
               <span className="text-gray-300">|</span>
-              <span className="text-gray-500">발주금액 <strong className="text-gray-900">{filtered.reduce((sum, o) => sum + o.amount + (o.extraCost ?? 0), 0).toLocaleString()}</strong>원</span>
+              <span className="text-gray-500">발주금액 <strong className="text-gray-900">{filtered.reduce((sum, o) => sum + orderTotalOf(o), 0).toLocaleString()}</strong>원</span>
             </>
           )}
         </div>
@@ -661,7 +662,7 @@ export default function OrdersPage() {
                   <TableCell>
                     <div className="text-xs text-gray-600">{highlightGrade(order.productName)}</div>
                     <div className="text-xs text-gray-400">{order.amount.toLocaleString()}원</div>
-                    <div className="text-sm font-medium text-blue-600">{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원</div>
+                    <div className="text-sm font-medium text-blue-600">{orderTotalOf(order).toLocaleString()}원</div>
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
@@ -673,6 +674,7 @@ export default function OrdersPage() {
                           loadOrders(buildServerParams(), page)
                         }}
                       />
+                      <AdjustmentRequestBadge pending={order.pendingAdjustment} />
                       {order.isDelayed && (
                         <span className="animate-pulse rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-600">
                           지연
@@ -790,6 +792,7 @@ export default function OrdersPage() {
                           loadOrders(buildServerParams(), page)
                         }}
                       />
+                      <AdjustmentRequestBadge pending={order.pendingAdjustment} />
                     </div>
                     <div onClick={(e) => e.stopPropagation()}>
                       <ClickableMessageBadge status={order.messageStatus} orderId={order.id} photos={order.deliveryPhotos} orderNumber={order.orderNumber} />
@@ -804,7 +807,7 @@ export default function OrdersPage() {
                     {order.deliveryTimeType === '직접입력' && order.deliveryTimeCustom && ` ${order.deliveryTimeCustom}`}
                   </span>
                   <span className="break-all">{order.placeName}</span>
-                  <span>{(order.amount + (order.extraCost ?? 0)).toLocaleString()}원 · {order.quantity}개</span>
+                  <span>{orderTotalOf(order).toLocaleString()}원 · {order.quantity}개</span>
                   {order.completedAt && <span>완료 {fmtMinute(order.completedAt)}</span>}
                 </div>
               </button>

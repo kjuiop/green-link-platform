@@ -139,12 +139,44 @@ public class PointService implements
         CompanyPoint point = companyPointRepository.findByCompanyIdForUpdate(companyId)
                 .orElseGet(() -> CompanyPoint.init(companyId));
         if (pointTransactionRepository.existsRestore(orderId)) return;
-        long settled = pointTransactionRepository.sumSettleByOrderId(orderId);
+        long settled = pointTransactionRepository.sumSettleByOrderId(orderId)
+                + pointTransactionRepository.sumNetAdjustByOrderId(orderId);
         if (settled <= 0) return;
         point.restore(settled);
         companyPointRepository.save(point);
         pointTransactionRepository.save(PointTransaction.restore(
                 companyId, actorId, orderId, settled, point.getBalance(), "배송완료 환불 " + orderNumber));
+    }
+
+    @Override
+    public boolean canAdjustSettledOrder(Long companyId, Long orderId, long delta) {
+        if (delta <= 0 || !pointTransactionRepository.existsOrderTransaction(orderId)) return true;
+        return companyPointRepository.findByCompanyId(companyId)
+                .map(p -> p.canHold(delta))
+                .orElse(false);
+    }
+
+    @Override
+    @Transactional
+    public void adjustSettledOrder(Long companyId, Long orderId, String orderNumber, long delta, Long memberId) {
+        if (delta == 0 || !pointTransactionRepository.existsOrderTransaction(orderId)) return;
+        Long actorId = resolveActor(companyId, memberId);
+        CompanyPoint point = companyPointRepository.findByCompanyIdForUpdate(companyId)
+                .orElseGet(() -> CompanyPoint.init(companyId));
+        if (delta > 0) {
+            if (!point.canHold(delta)) {
+                throw new BusinessException(PointErrorCode.INSUFFICIENT_POINT);
+            }
+            point.deduct(delta);
+            companyPointRepository.save(point);
+            pointTransactionRepository.save(PointTransaction.adjustUse(
+                    companyId, actorId, orderId, delta, point.getBalance(), "발주금액 조정 차감 " + orderNumber));
+        } else {
+            point.restore(-delta);
+            companyPointRepository.save(point);
+            pointTransactionRepository.save(PointTransaction.adjustRestore(
+                    companyId, actorId, orderId, -delta, point.getBalance(), "발주금액 조정 환급 " + orderNumber));
+        }
     }
 
     @Override

@@ -11,7 +11,7 @@ export interface CompanyPoint {
 
 export interface PointTransaction {
   id: number
-  type: 'CHARGE' | 'USE' | 'REFUND' | 'SETTLE' | 'RESTORE'
+  type: 'CHARGE' | 'USE' | 'REFUND' | 'SETTLE' | 'RESTORE' | 'ADJUST_USE' | 'ADJUST_RESTORE'
   amount: number
   balanceAfter: number
   memo: string | null

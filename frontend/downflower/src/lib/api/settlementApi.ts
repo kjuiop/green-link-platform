@@ -29,6 +29,7 @@ export interface SettlementOrder {
   deliveredAt: string
   orderAmount: number
   extraCost: number | null
+  adjustAmount: number | null
   vendorAmount: number | null
   vendorFee: number | null
   orderingFeeDiscountType: 'NONE' | 'PERCENT' | 'FIXED' | null
@@ -36,9 +37,9 @@ export interface SettlementOrder {
   orderingSettlementAmount: number | null
 }
 
-/** 발주금액 = 주문금액 + 추가비용 */
-export function totalAmountOf(o: Pick<SettlementOrder, 'orderAmount' | 'extraCost'>): number {
-  return o.orderAmount + (o.extraCost ?? 0)
+/** 발주금액 = 주문금액 + 추가비용 + 조정금액 */
+export function totalAmountOf(o: Pick<SettlementOrder, 'orderAmount' | 'extraCost' | 'adjustAmount'>): number {
+  return o.orderAmount + (o.extraCost ?? 0) + (o.adjustAmount ?? 0)
 }
 
 export async function fetchAdminSettlements(

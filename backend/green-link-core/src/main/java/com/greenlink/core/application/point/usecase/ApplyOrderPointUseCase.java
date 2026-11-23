@@ -11,5 +11,9 @@ public interface ApplyOrderPointUseCase {
 
     void restoreSettledOrder(Long companyId, Long orderId, String orderNumber, Long memberId);
 
+    void adjustSettledOrder(Long companyId, Long orderId, String orderNumber, long delta, Long memberId);
+
+    boolean canAdjustSettledOrder(Long companyId, Long orderId, long delta);
+
     boolean isSettled(Long orderId);
 }

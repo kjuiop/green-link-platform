@@ -56,6 +56,12 @@ public class PointTransactionRepositoryAdapter implements PointTransactionReposi
     }
 
     @Override
+    public long sumNetAdjustByOrderId(Long orderId) {
+        return jpaRepository.sumAmountByOrderIdAndType(orderId, PointTransactionType.ADJUST_USE)
+                - jpaRepository.sumAmountByOrderIdAndType(orderId, PointTransactionType.ADJUST_RESTORE);
+    }
+
+    @Override
     public long sumNetHeldByOrderId(Long orderId) {
         return jpaRepository.sumAmountByOrderIdAndType(orderId, PointTransactionType.USE)
                 - jpaRepository.sumAmountByOrderIdAndType(orderId, PointTransactionType.REFUND);

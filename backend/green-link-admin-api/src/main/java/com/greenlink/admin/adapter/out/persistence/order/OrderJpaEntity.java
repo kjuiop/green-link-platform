@@ -60,6 +60,9 @@ public class OrderJpaEntity extends BaseJpaEntity {
     @Column(name = "vendor_fee")
     private Long vendorFee;
 
+    @Column(name = "adjust_amount")
+    private Long adjustAmount;
+
     @Column(nullable = false, length = 16)
     private String deliveryDate;
 
@@ -179,6 +182,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
         e.extraCost = order.getExtraCost();
         e.totalAmount = order.getTotalAmount();
         e.vendorFee = order.getVendorFee();
+        e.adjustAmount = order.getAdjustAmount() != 0L ? order.getAdjustAmount() : null;
         e.deliveryDate = order.getDeliveryDate();
         e.deliveryTimeType = order.getDeliveryTimeType();
         e.deliveryTimeHour = order.getDeliveryTimeHour();
@@ -264,6 +268,7 @@ public class OrderJpaEntity extends BaseJpaEntity {
                 photoToken
         );
         order.assignVendorFee(vendorFee);
+        order.assignAdjustAmount(adjustAmount);
         order.assignRefundInfo(refundReason, refundRequestedAt, refundRejectReason, refundDecidedAt);
         return order;
     }

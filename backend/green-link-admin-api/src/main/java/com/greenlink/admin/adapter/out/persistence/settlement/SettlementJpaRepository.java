@@ -14,6 +14,9 @@ public interface SettlementJpaRepository extends JpaRepository<SettlementJpaEnti
     List<SettlementJpaEntity> findAllByCompanyIdInAndTypeAndFromDateAndToDate(
             List<Long> companyIds, SettlementType type, String fromDate, String toDate);
 
+    boolean existsByCompanyIdInAndFromDateLessThanEqualAndToDateGreaterThanEqual(
+            List<Long> companyIds, String fromDate, String toDate);
+
     void deleteByCompanyIdAndTypeAndFromDateAndToDate(
             Long companyId, SettlementType type, String fromDate, String toDate);
 }

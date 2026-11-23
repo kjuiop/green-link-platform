@@ -50,6 +50,15 @@ export function VendorOrderStatusBadge({ status }: { status: OrderStatus }) {
   )
 }
 
+export function AdjustmentRequestBadge({ pending }: { pending?: unknown }) {
+  if (!pending) return null
+  return (
+    <Badge variant="outline" className="border-amber-300 bg-amber-100 font-bold text-amber-800 animate-blink">
+      수정요청
+    </Badge>
+  )
+}
+
 export function MessageStatusBadge({ status }: { status: MessageStatus }) {
   const config = messageStatusConfig[status]
   return (

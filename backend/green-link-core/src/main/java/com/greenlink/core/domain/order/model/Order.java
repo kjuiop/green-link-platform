@@ -1,5 +1,8 @@
 package com.greenlink.core.domain.order.model;
 
+import com.greenlink.core.global.exception.BusinessException;
+import com.greenlink.core.global.exception.order.OrderErrorCode;
+
 import java.util.List;
 
 public class Order {
@@ -18,6 +21,7 @@ public class Order {
     private Long extraCost;
     private long totalAmount;
     private Long vendorFee;
+    private Long adjustAmount;
     private String deliveryDate;
     private String deliveryTimeType;
     private String deliveryTimeHour;
@@ -281,7 +285,7 @@ public class Order {
         this.quantity = items.stream().mapToInt(OrderItem::getQuantity).sum();
         this.amount = items.stream().mapToLong(OrderItem::getAmount).sum();
         this.extraCost = extraCost;
-        this.totalAmount = this.amount + (extraCost != null ? extraCost : 0L);
+        this.totalAmount = this.amount + (extraCost != null ? extraCost : 0L) + getAdjustAmount();
     }
 
     private static String representativeName(String firstName, int others) {
@@ -412,6 +416,24 @@ public class Order {
             throw new IllegalArgumentException("수수료는 0 이상이어야 합니다.");
         }
         this.vendorFee = vendorFee;
+    }
+
+    public void assignAdjustAmount(Long adjustAmount) {
+        this.adjustAmount = adjustAmount;
+    }
+
+    public long getAdjustAmount() { return adjustAmount != null ? adjustAmount : 0L; }
+
+    public void applyAdjustment(long delta) {
+        if (this.status != OrderStatus.DELIVERED) {
+            throw new BusinessException(OrderErrorCode.ADJUST_ONLY_DELIVERED);
+        }
+        long next = this.totalAmount + delta;
+        if (next < 0) {
+            throw new BusinessException(OrderErrorCode.ADJUST_INVALID_AMOUNT);
+        }
+        this.adjustAmount = getAdjustAmount() + delta;
+        this.totalAmount = next;
     }
 
     public Long getVendorFee() { return vendorFee; }

@@ -2,6 +2,7 @@ package com.greenlink.admin.adapter.out.persistence.order;
 
 import com.greenlink.admin.adapter.out.persistence.admin.QAdminJpaEntity;
 import com.greenlink.admin.adapter.out.persistence.company.QCompanyJpaEntity;
+import com.greenlink.admin.adapter.out.persistence.orderpriceadjustment.QOrderPriceAdjustmentJpaEntity;
 import com.greenlink.admin.adapter.out.persistence.photo.QPhotoJpaEntity;
 import com.greenlink.admin.adapter.out.persistence.receipt.QReceiptConfirmationJpaEntity;
 import com.greenlink.admin.adapter.out.persistence.sms.QSmsMessageJpaEntity;
@@ -69,7 +70,9 @@ public class OrderQueryRepository {
         BooleanBuilder where = buildWhere(condition, order);
         Long amountSum = queryFactory.select(order.amount.sum()).from(order).where(where).fetchOne();
         Long extraCostSum = queryFactory.select(order.extraCost.sum()).from(order).where(where).fetchOne();
-        return (amountSum != null ? amountSum : 0L) + (extraCostSum != null ? extraCostSum : 0L);
+        Long adjustSum = queryFactory.select(order.adjustAmount.sum()).from(order).where(where).fetchOne();
+        return (amountSum != null ? amountSum : 0L) + (extraCostSum != null ? extraCostSum : 0L)
+                + (adjustSum != null ? adjustSum : 0L);
     }
 
     public long sumVendorFee(OrderSearchCondition condition) {
@@ -152,7 +155,15 @@ public class OrderQueryRepository {
                         )
                     );
 
+        QOrderPriceAdjustmentJpaEntity adjustment = QOrderPriceAdjustmentJpaEntity.orderPriceAdjustmentJpaEntity;
+        com.querydsl.core.types.dsl.BooleanExpression hasPendingAdjustment =
+                JPAExpressions.selectOne()
+                    .from(adjustment)
+                    .where(adjustment.pendingOrderId.eq(order.id))
+                    .exists();
+
         return new CaseBuilder()
+                .when(hasPendingAdjustment).then(0)
                 .when(order.status.eq(OrderStatus.PENDING)).then(1)
                 .when(order.status.eq(OrderStatus.REJECTED)).then(2)
                 .when(isWeddingDelayed.or(isNonWeddingDelayed)).then(3)

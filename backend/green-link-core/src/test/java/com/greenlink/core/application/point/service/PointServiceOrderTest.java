@@ -196,6 +196,81 @@ class PointServiceOrderTest {
         assertThat(txRepo.saved).extracting(PointTransaction::getMemberId).containsExactly(8L, null);
     }
 
+    @Test
+    void adjustSettledOrder_increase_deductsBalanceAndRecordsAdjustUse() {
+        service.holdForNewOrder(COMPANY, ORDER, "DF-1", 40_000L, 9L);
+        sync(OrderPointState.DELIVERED, 40_000L);
+
+        service.adjustSettledOrder(COMPANY, ORDER, "DF-1", 10_000L, 9L);
+
+        assertThat(pointRepo.point.getBalance()).isEqualTo(50_000L);
+        assertThat(pointRepo.point.getDepositBalance()).isZero();
+        assertThat(txRepo.saved).extracting(PointTransaction::getType).last().isEqualTo(PointTransactionType.ADJUST_USE);
+    }
+
+    @Test
+    void adjustSettledOrder_increase_whenInsufficient_throws() {
+        service.holdForNewOrder(COMPANY, ORDER, "DF-1", 40_000L, 9L);
+        sync(OrderPointState.DELIVERED, 40_000L);
+
+        assertThatThrownBy(() -> service.adjustSettledOrder(COMPANY, ORDER, "DF-1", 60_001L, 9L))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(PointErrorCode.INSUFFICIENT_POINT));
+        assertThat(pointRepo.point.getBalance()).isEqualTo(60_000L);
+    }
+
+    @Test
+    void adjustSettledOrder_decrease_restoresBalanceAndRecordsAdjustRestore() {
+        service.holdForNewOrder(COMPANY, ORDER, "DF-1", 40_000L, 9L);
+        sync(OrderPointState.DELIVERED, 40_000L);
+
+        service.adjustSettledOrder(COMPANY, ORDER, "DF-1", -15_000L, 9L);
+
+        assertThat(pointRepo.point.getBalance()).isEqualTo(75_000L);
+        assertThat(txRepo.saved).extracting(PointTransaction::getType).last().isEqualTo(PointTransactionType.ADJUST_RESTORE);
+    }
+
+    @Test
+    void adjustSettledOrder_legacyOrderWithoutHistory_isIgnored() {
+        service.adjustSettledOrder(COMPANY, ORDER, "DF-1", 10_000L, 9L);
+
+        assertThat(pointRepo.point.getBalance()).isEqualTo(100_000L);
+        assertThat(txRepo.saved).isEmpty();
+    }
+
+    @Test
+    void canAdjustSettledOrder_checksBalanceOnlyForIncrease() {
+        service.holdForNewOrder(COMPANY, ORDER, "DF-1", 40_000L, 9L);
+        sync(OrderPointState.DELIVERED, 40_000L);
+
+        assertThat(service.canAdjustSettledOrder(COMPANY, ORDER, 60_000L)).isTrue();
+        assertThat(service.canAdjustSettledOrder(COMPANY, ORDER, 60_001L)).isFalse();
+        assertThat(service.canAdjustSettledOrder(COMPANY, ORDER, -999_999L)).isTrue();
+    }
+
+    @Test
+    void restoreSettledOrder_afterAdjust_returnsSettleSumPlusNetAdjust() {
+        service.holdForNewOrder(COMPANY, ORDER, "DF-1", 40_000L, 9L);
+        sync(OrderPointState.DELIVERED, 40_000L);
+        service.adjustSettledOrder(COMPANY, ORDER, "DF-1", 10_000L, 9L);
+
+        service.restoreSettledOrder(COMPANY, ORDER, "DF-1", 9L);
+
+        assertThat(pointRepo.point.getBalance()).isEqualTo(100_000L);
+    }
+
+    @Test
+    void restoreSettledOrder_afterDecreaseAdjust_returnsReducedAmount() {
+        service.holdForNewOrder(COMPANY, ORDER, "DF-1", 40_000L, 9L);
+        sync(OrderPointState.DELIVERED, 40_000L);
+        service.adjustSettledOrder(COMPANY, ORDER, "DF-1", -10_000L, 9L);
+
+        service.restoreSettledOrder(COMPANY, ORDER, "DF-1", 9L);
+
+        assertThat(pointRepo.point.getBalance()).isEqualTo(100_000L);
+    }
+
     private static com.greenlink.core.domain.admin.model.Admin adminOf(Long id, Long companyId) {
         com.greenlink.core.domain.admin.model.Admin a = Mockito.mock(com.greenlink.core.domain.admin.model.Admin.class);
         Mockito.when(a.getId()).thenReturn(id);
@@ -230,6 +305,11 @@ class PointServiceOrderTest {
         public long sumSettleByOrderId(Long orderId) {
             return saved.stream().filter(t -> orderId.equals(t.getOrderId()) && t.getType() == PointTransactionType.SETTLE)
                     .mapToLong(PointTransaction::getAmount).sum();
+        }
+        public long sumNetAdjustByOrderId(Long orderId) {
+            return saved.stream().filter(t -> orderId.equals(t.getOrderId())).mapToLong(t ->
+                    t.getType() == PointTransactionType.ADJUST_USE ? t.getAmount()
+                            : t.getType() == PointTransactionType.ADJUST_RESTORE ? -t.getAmount() : 0L).sum();
         }
         public long sumNetHeldByOrderId(Long orderId) {
             return saved.stream().filter(t -> orderId.equals(t.getOrderId())).mapToLong(t ->
