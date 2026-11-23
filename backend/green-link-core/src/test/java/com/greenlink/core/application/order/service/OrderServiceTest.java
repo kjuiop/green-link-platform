@@ -393,6 +393,43 @@ class OrderServiceTest {
     }
 
     @Test
+    void toOrderingView_hidesOnlyVendorAmount() {
+        Order o = Order.of(
+                1L, "DF-20261022-0001", 1L, null, ORDERING_COMPANY_ID, OrderStatus.PENDING,
+                null, "장미꽃다발", 1, 50000L, 40000L, null, 50000L,
+                "2026-10-23", "FIXED", "14", "00", null,
+                "서울시 강남구", "101호", "생일", "그랜드볼룸", "A홀", null,
+                "축하합니다", "홍길동", null, "홍길동", "010-1234-5678",
+                "김영희", "010-9876-5432", true, true,
+                "SCHEDULED", "13", "00", null, null, null, null, "2026-10-22T10:00:00", null, null, false, null);
+        given(orderRepository.findById(1L)).willReturn(Optional.of(o));
+        stubToResultReads();
+
+        OrderResult full = service.getOrder(1L);
+        OrderResult view = full.toOrderingView();
+
+        assertThat(full.vendorAmount()).isEqualTo(40000L);
+        assertThat(view.vendorAmount()).isNull();
+        assertThat(view.totalAmount()).isEqualTo(full.totalAmount());
+        assertThat(view.orderNumber()).isEqualTo(full.orderNumber());
+        assertThat(full.withVendorAmount(7000L).vendorAmount()).isEqualTo(7000L);
+    }
+
+    @Test
+    void updateCommand_withVendorAmount_replacesOnlyVendorAmount() {
+        UpdateOrderCommand cmd = new UpdateOrderCommand(
+                1L, null, "상품", 1, 50000L, List.of(), 99999L, 1000L,
+                "2026-10-23", "FIXED", "14", "00", null, "주소", null, null, null, null, null,
+                null, null, null, null, null, null, null, false, false, null, null, null, null, null);
+
+        UpdateOrderCommand replaced = cmd.withVendorAmount(40000L);
+
+        assertThat(replaced.vendorAmount()).isEqualTo(40000L);
+        assertThat(replaced.extraCost()).isEqualTo(1000L);
+        assertThat(replaced.vendorId()).isEqualTo(1L);
+    }
+
+    @Test
     void getOrders_returnsResultList() {
         Order o = savedOrder(1L, OrderStatus.PENDING);
         given(orderRepository.search(any(OrderSearchCondition.class))).willReturn(List.of(o));

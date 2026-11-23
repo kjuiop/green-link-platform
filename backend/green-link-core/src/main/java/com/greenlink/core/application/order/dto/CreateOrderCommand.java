@@ -37,4 +37,42 @@ public record CreateOrderCommand(
         String scheduledMessageMinute,
         String adminMemo,
         String vendorMemo
-) {}
+) {
+    public CreateOrderCommand withVendorAmount(Long newVendorAmount) {
+        return new CreateOrderCommand(
+                vendorId,
+                orderingCompanyId,
+                productId,
+                productName,
+                quantity,
+                amount,
+                items,
+                newVendorAmount,
+                extraCost,
+                deliveryDate,
+                deliveryTimeType,
+                deliveryTimeHour,
+                deliveryTimeMinute,
+                deliveryTimeCustom,
+                address,
+                addressDetail,
+                eventType,
+                placeName,
+                roomName,
+                eventInfo,
+                ribbonLeft,
+                ribbonRight,
+                ribbonExtras,
+                ordererName,
+                ordererPhone,
+                recipientName,
+                recipientPhone,
+                sendPhotoToOrderer,
+                sendPhotoToRecipient,
+                messageSchedule,
+                scheduledMessageHour,
+                scheduledMessageMinute,
+                adminMemo,
+                vendorMemo);
+    }
+}

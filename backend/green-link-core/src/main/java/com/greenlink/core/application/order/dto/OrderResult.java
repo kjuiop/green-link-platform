@@ -104,11 +104,24 @@ public record OrderResult(
     }
 
     public OrderResult withPendingAdjustment(PendingAdjustment pending) {
+        return copyWith(vendorAmount, pending);
+    }
+
+    /** 발주사 시점: 수주사 정산금액을 숨긴다. */
+    public OrderResult toOrderingView() {
+        return copyWith(null, pendingAdjustment);
+    }
+
+    public OrderResult withVendorAmount(Long newVendorAmount) {
+        return copyWith(newVendorAmount, pendingAdjustment);
+    }
+
+    private OrderResult copyWith(Long newVendorAmount, PendingAdjustment pending) {
         return new OrderResult(
                 id, orderNumber, vendorId, vendorCompanyId, vendorName, vendorPhone,
                 orderingCompanyId, orderingCompanyName, orderingCompanyPhone,
                 status, productId, productName, quantity, amount,
-                vendorAmount, extraCost, totalAmount, vendorFee, items, deliveryDate, deliveryTimeType, deliveryTimeHour,
+                newVendorAmount, extraCost, totalAmount, vendorFee, items, deliveryDate, deliveryTimeType, deliveryTimeHour,
                 deliveryTimeMinute, deliveryTimeCustom, address, addressDetail,
                 eventType, placeName, roomName, eventInfo,
                 ribbonLeft, ribbonRight, ribbonExtras,

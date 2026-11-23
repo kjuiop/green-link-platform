@@ -7,6 +7,7 @@ import com.greenlink.core.application.coupang.dto.CoupangSyncResult;
 import com.greenlink.core.application.coupang.usecase.CollectCoupangOrdersUseCase;
 import com.greenlink.core.application.coupang.usecase.ProcessCoupangOrderUseCase;
 import com.greenlink.core.application.coupang.usecase.QueryCoupangOrdersUseCase;
+import com.greenlink.core.application.order.dto.CreateOrderCommand;
 import com.greenlink.core.application.order.dto.OrderResult;
 import com.greenlink.core.domain.coupang.model.CoupangOrderStatus;
 import com.greenlink.core.domain.coupang.model.CoupangTriggerType;
@@ -67,8 +68,13 @@ public class CoupangOrderController {
     @PostMapping("/{id}/approve")
     public ResponseEntity<OrderResult> approve(Authentication auth, @PathVariable Long id,
                                                @RequestBody @Valid CreateOrderRequest req) {
-        OrderResult created = processUseCase.approve(access.callerCompanyId(auth), id, req::toCommand);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        Long callerCompanyId = access.callerCompanyId(auth);
+        boolean orderingCaller = callerCompanyId != null;
+        OrderResult created = processUseCase.approve(callerCompanyId, id, cid -> {
+            CreateOrderCommand cmd = req.toCommand(cid);
+            return orderingCaller ? cmd.withVendorAmount(null) : cmd;
+        });
+        return ResponseEntity.status(HttpStatus.CREATED).body(orderingCaller ? created.toOrderingView() : created);
     }
 
     @PostMapping("/{id}/hold")

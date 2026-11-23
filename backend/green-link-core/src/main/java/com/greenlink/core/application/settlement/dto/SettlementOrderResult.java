@@ -40,7 +40,7 @@ public record SettlementOrderResult(
         return new SettlementOrderResult(
                 r.orderId(), r.orderNumber(), counterpartName,
                 r.productName(), r.placeName(), r.ordererName(), r.completedAt(),
-                r.orderAmount(), r.vendorAmount(), r.extraCost(),
+                r.orderAmount(), null, r.extraCost(),
                 orderingCompany.getOrderingFeeDiscountType().name(), discount, total - discount, null, r.adjustAmount());
     }
 }

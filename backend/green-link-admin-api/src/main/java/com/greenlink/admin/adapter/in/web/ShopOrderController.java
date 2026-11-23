@@ -3,6 +3,7 @@ package com.greenlink.admin.adapter.in.web;
 import com.greenlink.admin.adapter.in.web.dto.CreateOrderRequest;
 import com.greenlink.admin.adapter.in.web.dto.RejectShopOrderRequest;
 import com.greenlink.core.application.common.dto.PageResult;
+import com.greenlink.core.application.order.dto.CreateOrderCommand;
 import com.greenlink.core.application.order.dto.OrderResult;
 import com.greenlink.core.application.shop.dto.ShopOrderResult;
 import com.greenlink.core.application.shop.usecase.ProcessShopOrderUseCase;
@@ -54,9 +55,13 @@ public class ShopOrderController {
     @PostMapping("/{id}/approve")
     public ResponseEntity<OrderResult> approve(Authentication auth, @PathVariable Long id,
                                                @RequestBody @Valid CreateOrderRequest req) {
-        OrderResult created = processUseCase.approve(access.callerCompanyId(auth), id, access.adminId(auth),
-                req::toCommand);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        Long callerCompanyId = access.callerCompanyId(auth);
+        boolean orderingCaller = callerCompanyId != null;
+        OrderResult created = processUseCase.approve(callerCompanyId, id, access.adminId(auth), cid -> {
+            CreateOrderCommand cmd = req.toCommand(cid);
+            return orderingCaller ? cmd.withVendorAmount(null) : cmd;
+        });
+        return ResponseEntity.status(HttpStatus.CREATED).body(orderingCaller ? created.toOrderingView() : created);
     }
 
     @PostMapping("/{id}/hold")
