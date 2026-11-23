@@ -20,7 +20,12 @@ spring:
 
 jwt:
   secret: ${SHOP_JWT_SECRET}
-  expiration: ${SHOP_JWT_EXPIRATION:43200000}
+  expiration: ${SHOP_JWT_EXPIRATION:1800000}
+
+shop:
+  identity:
+    base-url: ${ONURIM_API_BASE_URL:}
+    secret: ${SHOP_INTERNAL_SECRET:}
 
 management:
   endpoints:

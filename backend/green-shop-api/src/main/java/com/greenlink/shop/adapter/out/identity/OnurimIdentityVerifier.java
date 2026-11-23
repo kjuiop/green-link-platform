@@ -1,0 +1,109 @@
+package com.greenlink.shop.adapter.out.identity;
+
+import com.greenlink.shopcore.application.auth.dto.VerifiedIdentity;
+import com.greenlink.shopcore.application.auth.port.IdentityVerifier;
+import com.greenlink.shopcore.global.exception.ShopBusinessException;
+import com.greenlink.shopcore.global.exception.ShopErrorCode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
+
+import java.net.http.HttpClient;
+import java.time.Duration;
+
+@Component
+public class OnurimIdentityVerifier implements IdentityVerifier {
+
+    private static final Logger log = LoggerFactory.getLogger(OnurimIdentityVerifier.class);
+    private static final String SECRET_HEADER = "X-Internal-Secret";
+    private static final Duration TIMEOUT = Duration.ofSeconds(3);
+
+    private final RestClient restClient;
+    private final String secret;
+
+    @Autowired
+    public OnurimIdentityVerifier(@Value("${shop.identity.base-url:}") String baseUrl,
+                                  @Value("${shop.identity.secret:}") String secret) {
+        this(buildClient(baseUrl), secret);
+    }
+
+    OnurimIdentityVerifier(RestClient restClient, String secret) {
+        this.restClient = restClient;
+        this.secret = secret;
+    }
+
+    private static RestClient buildClient(String baseUrl) {
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(
+            HttpClient.newBuilder().connectTimeout(TIMEOUT).build());
+        factory.setReadTimeout(TIMEOUT);
+        RestClient.Builder builder = RestClient.builder().requestFactory(factory);
+        if (baseUrl != null && !baseUrl.isBlank()) {
+            builder.baseUrl(baseUrl);
+        }
+        return builder.build();
+    }
+
+    @Override
+    public VerifiedIdentity verify(String loginId, String password) {
+        return call(() -> restClient.post()
+            .uri("/internal/shop-auth/verify")
+            .header(SECRET_HEADER, secret)
+            .body(new VerifyBody(loginId, password))
+            .retrieve()
+            .body(AccountBody.class));
+    }
+
+    @Override
+    public VerifiedIdentity getAccount(Long adminId) {
+        return call(() -> restClient.get()
+            .uri("/internal/shop-auth/accounts/{adminId}", adminId)
+            .header(SECRET_HEADER, secret)
+            .retrieve()
+            .body(AccountBody.class));
+    }
+
+    private VerifiedIdentity call(java.util.function.Supplier<AccountBody> request) {
+        if (secret == null || secret.isBlank()) {
+            log.error("shop.identity.secret is not configured");
+            throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+        }
+        try {
+            AccountBody body = request.get();
+            if (body == null || body.adminId() == null) {
+                throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+            }
+            return new VerifiedIdentity(body.adminId(), body.loginId(), body.name(), body.companyName(), body.superAdmin());
+        } catch (RestClientResponseException e) {
+            throw mapError(e);
+        } catch (ResourceAccessException e) {
+            log.error("온우림 계정 서버 호출 실패: {}", e.getMessage());
+            throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.error("온우림 계정 서버 호출 설정 오류: {}", e.getMessage());
+            throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+        }
+    }
+
+    private ShopBusinessException mapError(RestClientResponseException e) {
+        int status = e.getStatusCode().value();
+        String body = e.getResponseBodyAsString();
+        if (status == 401) {
+            return new ShopBusinessException(ShopErrorCode.AUTH_INVALID_CREDENTIALS);
+        }
+        if (status == 403 && (body.contains("AUTH_006") || body.contains("AUTH_007"))) {
+            return new ShopBusinessException(ShopErrorCode.AUTH_ACCOUNT_INACTIVE);
+        }
+        log.error("온우림 계정 서버 비정상 응답: status={}", status);
+        return new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+    }
+
+    record VerifyBody(String loginId, String password) {}
+
+    record AccountBody(Long adminId, String loginId, String name, String companyName, boolean superAdmin) {}
+}
