@@ -250,13 +250,15 @@ export function BasicInfoCard({ d, className }: SectionProps) {
                 </p>
               ) : null}
             </Field>
-            <Field label="정산금액">
-              <Input
-                type="number" placeholder="0"
-                value={draft.vendorAmount ?? ''}
-                onChange={(e) => set('vendorAmount', e.target.value ? Number(e.target.value) : undefined)}
-              />
-            </Field>
+            {d.isSuperAdmin && (
+              <Field label="정산금액">
+                <Input
+                  type="number" placeholder="0"
+                  value={draft.vendorAmount ?? ''}
+                  onChange={(e) => set('vendorAmount', e.target.value ? Number(e.target.value) : undefined)}
+                />
+              </Field>
+            )}
           </>
         ) : (
           <>

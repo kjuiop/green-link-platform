@@ -109,7 +109,7 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
         productName: draft.productName,
         quantity: draft.quantity,
         amount: draft.amount,
-        vendorAmount: draft.vendorAmount,
+        ...(isSuperAdmin ? { vendorAmount: draft.vendorAmount } : {}),
         extraCost: draft.extraCost,
         deliveryDate: draft.deliveryAt.slice(0, 10),
         deliveryTimeType: draft.deliveryTimeType ?? '',

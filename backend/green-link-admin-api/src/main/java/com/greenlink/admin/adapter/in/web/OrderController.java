@@ -6,7 +6,9 @@ import com.greenlink.admin.adapter.in.web.dto.RefundReasonRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateOrderRequest;
 import com.greenlink.admin.adapter.in.web.dto.UpdateOrderStatusRequest;
 import com.greenlink.core.application.common.dto.PageResult;
+import com.greenlink.core.application.order.dto.CreateOrderCommand;
 import com.greenlink.core.application.order.dto.OrderResult;
+import com.greenlink.core.application.order.dto.UpdateOrderCommand;
 import com.greenlink.core.application.orderhistory.dto.OrderHistoryResult;
 import com.greenlink.core.domain.order.model.OrderSearchCondition;
 import com.greenlink.core.application.order.usecase.CreateOrderUseCase;
@@ -144,6 +146,9 @@ public class OrderController {
         if (isVendor) {
             List<OrderResult> masked = result.content().stream().map(OrderController::maskPhones).toList();
             result = new PageResult<>(masked, result.page(), result.size(), result.totalElements(), result.totalPages(), result.totalAmount());
+        } else if (hasRole(auth, "ROLE_ORDERING")) {
+            List<OrderResult> hidden = result.content().stream().map(OrderResult::toOrderingView).toList();
+            result = new PageResult<>(hidden, result.page(), result.size(), result.totalElements(), result.totalPages(), result.totalAmount());
         }
         return ResponseEntity.ok(result);
     }
@@ -153,7 +158,7 @@ public class OrderController {
         boolean isVendor = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
         OrderResult result = getOrderUseCase.getOrder(id, hasRole(auth, "ROLE_SUPER_ADMIN"));
-        return ResponseEntity.ok(isVendor ? maskPhones(result).toVendorView() : result);
+        return ResponseEntity.ok(isVendor ? maskPhones(result).toVendorView() : forOrderingCaller(auth, result));
     }
 
     @PostMapping
@@ -165,14 +170,17 @@ public class OrderController {
                 && token.getDetails() instanceof Long cid) {
             orderingCompanyId = cid;
         }
+        CreateOrderCommand cmd = req.toCommand(orderingCompanyId);
+        if (hasRole(auth, "ROLE_ORDERING")) cmd = cmd.withVendorAmount(null);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(createOrderUseCase.createOrder(req.toCommand(orderingCompanyId)));
+                .body(forOrderingCaller(auth, createOrderUseCase.createOrder(cmd)));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<OrderResult> update(Authentication auth,
                                               @PathVariable Long id,
                                               @RequestBody @Valid UpdateOrderRequest req) {
+        UpdateOrderCommand cmd = req.toCommand();
         if (auth != null && auth.isAuthenticated()) {
             boolean isVendor = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
@@ -188,9 +196,10 @@ public class OrderController {
                 if (callerCompanyId == null || !callerCompanyId.equals(existing.orderingCompanyId())) {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
                 }
+                cmd = cmd.withVendorAmount(existing.vendorAmount());
             }
         }
-        return ResponseEntity.ok(updateOrderUseCase.updateOrder(id, req.toCommand()));
+        return ResponseEntity.ok(forOrderingCaller(auth, updateOrderUseCase.updateOrder(id, cmd)));
     }
 
     @PutMapping("/{id}/status")
@@ -212,7 +221,7 @@ public class OrderController {
         }
         boolean isVendor = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
-        return ResponseEntity.ok(isVendor ? result.toVendorView() : result);
+        return ResponseEntity.ok(isVendor ? result.toVendorView() : forOrderingCaller(auth, result));
     }
 
     @GetMapping("/{id}/history")
@@ -248,14 +257,14 @@ public class OrderController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
         }
-        return ResponseEntity.ok(refundOrderUseCase.requestRefund(id, req.reason(), superAdmin));
+        return ResponseEntity.ok(forOrderingCaller(auth, refundOrderUseCase.requestRefund(id, req.reason(), superAdmin)));
     }
 
     @PostMapping("/{id}/refund-approve")
     public ResponseEntity<OrderResult> approveRefund(Authentication auth, @PathVariable Long id) {
         boolean superAdmin = hasRole(auth, "ROLE_SUPER_ADMIN");
         if (!superAdmin && !isAssignedVendor(auth, id)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        return ResponseEntity.ok(refundOrderUseCase.approveRefund(id, superAdmin));
+        return ResponseEntity.ok(forOrderingCaller(auth, refundOrderUseCase.approveRefund(id, superAdmin)));
     }
 
     @PostMapping("/{id}/refund-reject")
@@ -263,7 +272,7 @@ public class OrderController {
                                                     @RequestBody @Valid RefundReasonRequest req) {
         boolean superAdmin = hasRole(auth, "ROLE_SUPER_ADMIN");
         if (!superAdmin && !isAssignedVendor(auth, id)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        return ResponseEntity.ok(refundOrderUseCase.rejectRefund(id, req.reason(), superAdmin));
+        return ResponseEntity.ok(forOrderingCaller(auth, refundOrderUseCase.rejectRefund(id, req.reason(), superAdmin)));
     }
 
     @PostMapping("/{id}/price-adjustments")
@@ -323,6 +332,10 @@ public class OrderController {
             return callerCompanyId != null && callerCompanyId.equals(order.orderingCompanyId());
         }
         return false;
+    }
+
+    private static OrderResult forOrderingCaller(Authentication auth, OrderResult result) {
+        return hasRole(auth, "ROLE_ORDERING") ? result.toOrderingView() : result;
     }
 
     private PriceAdjustmentResult forViewer(Authentication auth, Long orderId, PriceAdjustmentResult result) {
