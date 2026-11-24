@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class InternalShopAuthControllerTest {
 
     private static final String BODY = "{\"loginId\":\"admin01\",\"password\":\"rawPw\"}";
-    private static final VerifiedAccount ACCOUNT = new VerifiedAccount(1L, "admin01", "관리자", "테스트업체", false);
+    private static final VerifiedAccount ACCOUNT = new VerifiedAccount(1L, "admin01", "관리자", 7L, "테스트업체", true, false, true, false);
 
     private final VerifyAdminAccountUseCase useCase = mock(VerifyAdminAccountUseCase.class);
 
@@ -69,7 +69,11 @@ class InternalShopAuthControllerTest {
                 .andExpect(jsonPath("$.adminId").value(1))
                 .andExpect(jsonPath("$.loginId").value("admin01"))
                 .andExpect(jsonPath("$.name").value("관리자"))
+                .andExpect(jsonPath("$.companyId").value(7))
                 .andExpect(jsonPath("$.companyName").value("테스트업체"))
+                .andExpect(jsonPath("$.companyOnurimEnabled").value(true))
+                .andExpect(jsonPath("$.companySiteEnabled").value(false))
+                .andExpect(jsonPath("$.adminOnurimEnabled").value(true))
                 .andExpect(jsonPath("$.superAdmin").value(false));
     }
 

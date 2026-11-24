@@ -17,7 +17,7 @@ public record CompanyInfo(
         return new CompanyInfo(
             c.getId(), c.getBusinessNo(), c.getCompanyName(), c.getCeoName(),
             c.getPhone(), c.getAddress(), c.getDetailAddress(),
-            c.getType().name(),
+            c.getType() != null ? c.getType().name() : null,
             c.getStatus().name()
         );
     }

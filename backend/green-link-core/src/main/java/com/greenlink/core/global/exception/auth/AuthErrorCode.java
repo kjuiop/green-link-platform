@@ -15,7 +15,9 @@ public enum AuthErrorCode implements ErrorCode {
     PHONE_NOT_VERIFIED(400, "AUTH_009", "휴대폰 인증을 먼저 완료해주세요."),
     MEMBER_NOT_FOUND_BY_PHONE(404, "AUTH_010", "해당 연락처로 가입된 계정을 찾을 수 없습니다."),
     SMS_SEND_FAILED(500, "AUTH_011", "인증번호 발송에 실패했습니다. 잠시 후 다시 시도해주세요."),
-    INTERNAL_ACCESS_DENIED(403, "AUTH_012", "내부 호출 권한이 없습니다.");
+    INTERNAL_ACCESS_DENIED(403, "AUTH_012", "내부 호출 권한이 없습니다."),
+    ONURIM_NOT_ENABLED(403, "AUTH_013", "온우림 이용 권한이 없습니다. 이용 신청 후 승인되면 사용할 수 있습니다."),
+    COMPANY_ONURIM_NOT_ENABLED(403, "AUTH_014", "쇼핑몰 서비스로 가입된 회사입니다. 온우림 이용은 별도 신청이 필요합니다.");
 
     private final int status;
     private final String code;

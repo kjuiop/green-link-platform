@@ -38,7 +38,9 @@ class VerifyAdminAccountServiceTest {
     }
 
     private Admin admin(Long companyId, AdminStatus status, String deletedAt) {
-        return Admin.of(1L, "admin01", "hashedPw", "관리자", "010-0000-0000", null, companyId, status, null, deletedAt);
+        Admin admin = Admin.of(1L, "admin01", "hashedPw", "관리자", "010-0000-0000", null, companyId, status, null, deletedAt);
+        admin.restoreAccessFlags(companyId == null, true);
+        return admin;
     }
 
     private Company company() {
@@ -65,6 +67,39 @@ class VerifyAdminAccountServiceTest {
         assertThat(result.name()).isEqualTo("관리자");
         assertThat(result.companyName()).isEqualTo("테스트업체");
         assertThat(result.superAdmin()).isFalse();
+        assertThat(result.companyId()).isEqualTo(7L);
+        assertThat(result.companyOnurimEnabled()).isTrue();
+        assertThat(result.companySiteEnabled()).isFalse();
+        assertThat(result.adminOnurimEnabled()).isTrue();
+    }
+
+    @Test
+    void verify_슈퍼관리자_플래그는_회사_유무가_아니라_관리자_플래그를_따른다() {
+        Admin noCompanyNotSuper = Admin.of(1L, "admin01", "hashedPw", "관리자", "010-0000-0000", null, null, AdminStatus.ACTIVE, null, null);
+        noCompanyNotSuper.restoreAccessFlags(false, false);
+        given(adminRepository.findByLoginId("admin01")).willReturn(Optional.of(noCompanyNotSuper));
+        given(passwordEncoder.matches("rawPw", "hashedPw")).willReturn(true);
+
+        VerifiedAccount result = service.verify("admin01", "rawPw");
+
+        assertThat(result.superAdmin()).isFalse();
+        assertThat(result.companyId()).isNull();
+        assertThat(result.companyOnurimEnabled()).isFalse();
+        assertThat(result.adminOnurimEnabled()).isFalse();
+    }
+
+    @Test
+    void verify_회사_플래그가_응답에_반영된다() {
+        Company siteOnly = company();
+        siteOnly.restoreServiceFlags(false, true);
+        given(adminRepository.findByLoginId("admin01")).willReturn(Optional.of(admin(7L, AdminStatus.ACTIVE, null)));
+        given(passwordEncoder.matches("rawPw", "hashedPw")).willReturn(true);
+        given(companyRepository.findById(7L)).willReturn(Optional.of(siteOnly));
+
+        VerifiedAccount result = service.verify("admin01", "rawPw");
+
+        assertThat(result.companyOnurimEnabled()).isFalse();
+        assertThat(result.companySiteEnabled()).isTrue();
     }
 
     @Test

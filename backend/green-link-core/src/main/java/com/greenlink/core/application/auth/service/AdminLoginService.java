@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)
@@ -52,27 +53,23 @@ public class AdminLoginService implements AdminLoginUseCase {
             throw new BusinessException(AuthErrorCode.ACCOUNT_INACTIVE);
         }
 
-        Long companyId = admin.getCompanyId();
-        String role = "SUPER_ADMIN";
-        String companyName = null;
-
-        if (companyId != null) {
-            Company company = companyRepository.findById(companyId).orElse(null);
-            if (company != null) {
-                companyName = company.getCompanyName();
-                if (company.getType() == CompanyType.VENDOR) {
-                    role = "VENDOR";
-                } else if (company.getType() == CompanyType.ORDERING) {
-                    role = "ORDERING";
-                } else {
-                    // BOTH 타입은 VENDOR로 처리
-                    role = "VENDOR";
-                }
-            }
+        if (admin.isSuperAdmin()) {
+            String token = tokenProvider.generateToken(admin.getId(), List.of("SUPER_ADMIN"), admin.getCompanyId());
+            return new AdminLoginResult(token, admin.getName(), admin.getCompanyId(), null);
         }
 
-        String token = tokenProvider.generateToken(admin.getId(), List.of(role), companyId);
+        Company company = Optional.ofNullable(admin.getCompanyId())
+            .flatMap(companyRepository::findById)
+            .filter(Company::isOnurimCompany)
+            .orElseThrow(() -> new BusinessException(AuthErrorCode.ONURIM_NOT_ENABLED));
+        if (!admin.isOnurimEnabled()) {
+            throw new BusinessException(AuthErrorCode.ONURIM_NOT_ENABLED);
+        }
 
-        return new AdminLoginResult(token, admin.getName(), companyId, companyName);
+        // BOTH 타입은 VENDOR로 처리
+        String role = company.getType() == CompanyType.ORDERING ? "ORDERING" : "VENDOR";
+        String token = tokenProvider.generateToken(admin.getId(), List.of(role), company.getId());
+
+        return new AdminLoginResult(token, admin.getName(), company.getId(), company.getCompanyName());
     }
 }

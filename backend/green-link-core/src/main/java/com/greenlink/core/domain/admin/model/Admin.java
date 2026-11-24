@@ -10,6 +10,8 @@ public class Admin {
     private String email;
     private Long companyId;
     private AdminStatus status;
+    private boolean superAdmin;
+    private boolean onurimEnabled = true;
     private String createdAt;
     private String deletedAt;
 
@@ -20,6 +22,7 @@ public class Admin {
         a.loginId = loginId;
         a.password = encodedPassword;
         a.status = AdminStatus.ACTIVE;
+        a.superAdmin = true;
         return a;
     }
 
@@ -74,6 +77,11 @@ public class Admin {
         return a;
     }
 
+    public void restoreAccessFlags(boolean superAdmin, boolean onurimEnabled) {
+        this.superAdmin = superAdmin;
+        this.onurimEnabled = onurimEnabled;
+    }
+
     public boolean isVendor() { return companyId != null; }
     public boolean isDeleted() { return deletedAt != null; }
 
@@ -102,6 +110,8 @@ public class Admin {
     public String getEmail() { return email; }
     public Long getCompanyId() { return companyId; }
     public AdminStatus getStatus() { return status; }
+    public boolean isSuperAdmin() { return superAdmin; }
+    public boolean isOnurimEnabled() { return onurimEnabled; }
     public String getCreatedAt() { return createdAt; }
     public String getDeletedAt() { return deletedAt; }
 }

@@ -38,7 +38,7 @@ public class CompanyJpaEntity extends BaseJpaEntity {
     private String detailAddress;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(length = 20)
     private CompanyType type;
 
     @Enumerated(EnumType.STRING)
@@ -84,6 +84,12 @@ public class CompanyJpaEntity extends BaseJpaEntity {
     @Column(name = "tax_invoice_email", length = 255)
     private String taxInvoiceEmail;
 
+    @Column(name = "onurim_enabled", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
+    private boolean onurimEnabled = true;
+
+    @Column(name = "site_enabled", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean siteEnabled;
+
     protected CompanyJpaEntity() {}
 
     public static CompanyJpaEntity from(Company company) {
@@ -111,6 +117,8 @@ public class CompanyJpaEntity extends BaseJpaEntity {
         e.orderingFeeDiscountValue = company.getOrderingFeeDiscountValue();
         e.faxEnabled = company.isFaxEnabled();
         e.taxInvoiceEmail = company.getTaxInvoiceEmail();
+        e.onurimEnabled = company.isOnurimEnabled();
+        e.siteEnabled = company.isSiteEnabled();
         return e;
     }
 
@@ -121,6 +129,7 @@ public class CompanyJpaEntity extends BaseJpaEntity {
         company.restoreOrderingFeeDiscount(orderingFeeDiscountType, orderingFeeDiscountValue);
         company.restoreFaxEnabled(faxEnabled);
         company.restoreTaxInvoiceEmail(taxInvoiceEmail);
+        company.restoreServiceFlags(onurimEnabled, siteEnabled);
         return company;
     }
 }

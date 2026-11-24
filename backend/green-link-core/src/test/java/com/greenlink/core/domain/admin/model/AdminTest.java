@@ -59,4 +59,26 @@ class AdminTest {
         assertThat(admin.getPhone()).isEqualTo("010-9999-0000");
         assertThat(admin.getEmail()).isEqualTo("new@test.com");
     }
+
+    @Test
+    void create_슈퍼관리자_플래그가_켜진다() {
+        Admin admin = Admin.create("superadmin", "encodedPw");
+        assertThat(admin.isSuperAdmin()).isTrue();
+        assertThat(admin.isOnurimEnabled()).isTrue();
+    }
+
+    @Test
+    void createVendor_슈퍼관리자가_아니고_온우림사용은_켜진다() {
+        Admin admin = Admin.createVendor("vendor01", "encodedPw", "홍길동", "010-1234-5678", "vendor01@test.com", 1L);
+        assertThat(admin.isSuperAdmin()).isFalse();
+        assertThat(admin.isOnurimEnabled()).isTrue();
+    }
+
+    @Test
+    void restoreAccessFlags_저장된_값으로_복원한다() {
+        Admin admin = Admin.createVendor("vendor01", "encodedPw", "홍길동", "010-1234-5678", "vendor01@test.com", 1L);
+        admin.restoreAccessFlags(false, false);
+        assertThat(admin.isSuperAdmin()).isFalse();
+        assertThat(admin.isOnurimEnabled()).isFalse();
+    }
 }

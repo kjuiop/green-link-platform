@@ -27,6 +27,7 @@ public class CompanyQueryService implements CompanyQueryUseCase {
     @Override
     public Optional<CompanyInfo> findByBusinessNo(String businessNo) {
         return companyRepository.findByBusinessNo(businessNo)
+            .filter(Company::isOnurimCompany)
             .map(CompanyInfo::from);
     }
 

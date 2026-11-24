@@ -29,6 +29,8 @@ public class Company {
     private long orderingFeeDiscountValue = 0L;
     private boolean faxEnabled;
     private String taxInvoiceEmail;
+    private boolean onurimEnabled = true;
+    private boolean siteEnabled;
     private List<CompanyRegion> regions = List.of();
     private List<CompanyCapability> capabilities = List.of();
 
@@ -95,7 +97,7 @@ public class Company {
 
     public void expandType(CompanyType requestedType) {
         if (this.type == requestedType) return;
-        this.type = CompanyType.BOTH;
+        this.type = this.type == null ? requestedType : CompanyType.BOTH;
     }
 
     public void updateType(CompanyType newType) {
@@ -157,6 +159,15 @@ public class Company {
         };
     }
 
+    public void restoreServiceFlags(boolean onurimEnabled, boolean siteEnabled) {
+        this.onurimEnabled = onurimEnabled;
+        this.siteEnabled = siteEnabled;
+    }
+
+    public boolean isOnurimCompany() {
+        return onurimEnabled && type != null;
+    }
+
     public void restoreFaxEnabled(boolean faxEnabled) {
         this.faxEnabled = faxEnabled;
     }
@@ -203,6 +214,8 @@ public class Company {
     public OrderingFeeDiscountType getOrderingFeeDiscountType() { return orderingFeeDiscountType; }
     public long getOrderingFeeDiscountValue() { return orderingFeeDiscountValue; }
     public boolean isFaxEnabled() { return faxEnabled; }
+    public boolean isOnurimEnabled() { return onurimEnabled; }
+    public boolean isSiteEnabled() { return siteEnabled; }
     public String getTaxInvoiceEmail() { return taxInvoiceEmail; }
     public List<CompanyRegion> getRegions() { return regions; }
     public List<CompanyCapability> getCapabilities() { return capabilities; }

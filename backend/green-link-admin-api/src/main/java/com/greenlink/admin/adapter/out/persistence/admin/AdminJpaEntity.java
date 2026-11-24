@@ -36,6 +36,12 @@ public class AdminJpaEntity extends BaseJpaEntity {
     @Column(nullable = false, length = 20)
     private AdminStatus status = AdminStatus.ACTIVE;
 
+    @Column(name = "super_admin", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean superAdmin;
+
+    @Column(name = "onurim_enabled", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
+    private boolean onurimEnabled = true;
+
     @Column(length = 30)
     private String deletedAt;
 
@@ -51,6 +57,8 @@ public class AdminJpaEntity extends BaseJpaEntity {
         e.email = admin.getEmail();
         e.companyId = admin.getCompanyId();
         e.status = admin.getStatus() != null ? admin.getStatus() : AdminStatus.ACTIVE;
+        e.superAdmin = admin.isSuperAdmin();
+        e.onurimEnabled = admin.isOnurimEnabled();
         e.deletedAt = admin.getDeletedAt();
         return e;
     }
@@ -58,6 +66,8 @@ public class AdminJpaEntity extends BaseJpaEntity {
     public Admin toDomain() {
         String createdAtStr = getCreatedAt() != null
                 ? getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null;
-        return Admin.of(id, loginId, password, name, phone, email, companyId, status, createdAtStr, deletedAt);
+        Admin admin = Admin.of(id, loginId, password, name, phone, email, companyId, status, createdAtStr, deletedAt);
+        admin.restoreAccessFlags(superAdmin, onurimEnabled);
+        return admin;
     }
 }
