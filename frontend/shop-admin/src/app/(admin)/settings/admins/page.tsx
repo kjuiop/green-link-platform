@@ -46,6 +46,10 @@ const EMPTY_TEXT: Record<Filter, string> = {
   ALL: '등록된 관리자가 없습니다.',
 }
 
+function formatDateTime(value: string): string {
+  return value.replace('T', ' ').slice(0, 16)
+}
+
 export default function AdminsPage() {
   const [filter, setFilter] = useState<Filter>('PENDING')
   const [admins, setAdmins] = useState<ShopAdmin[] | null>(null)
@@ -176,7 +180,7 @@ export default function AdminsPage() {
                           <p className="font-mono text-xs text-gray-500">{admin.loginId}</p>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">{admin.companyName ?? '-'}</TableCell>
-                        <TableCell className="whitespace-nowrap text-xs text-gray-500">{admin.requestedAt}</TableCell>
+                        <TableCell className="whitespace-nowrap text-xs text-gray-500">{formatDateTime(admin.requestedAt)}</TableCell>
                         <TableCell>
                           <Badge className={cn('whitespace-nowrap', STATUS_STYLE[admin.status])}>
                             {STATUS_LABEL[admin.status]}
@@ -185,7 +189,7 @@ export default function AdminsPage() {
                             <p className="mt-1 max-w-48 text-xs text-gray-500">{admin.rejectReason}</p>
                           )}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-xs text-gray-500">{admin.processedAt ?? '-'}</TableCell>
+                        <TableCell className="whitespace-nowrap text-xs text-gray-500">{admin.processedAt ? formatDateTime(admin.processedAt) : '-'}</TableCell>
                         <TableCell className="whitespace-nowrap text-right">
                           {admin.status === 'PENDING' && (
                             <div className="flex justify-end gap-1">

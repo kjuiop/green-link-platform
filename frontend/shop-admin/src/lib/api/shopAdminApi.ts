@@ -1,14 +1,15 @@
 import type { ShopAdmin, ShopAdminStatus } from '@/types/shopAdmin'
-import { mockApprove, mockListAdmins, mockReject } from '@/lib/mock/shopAdmins'
+import { apiFetch } from './client'
 
 export function fetchShopAdmins(status?: ShopAdminStatus): Promise<ShopAdmin[]> {
-  return mockListAdmins(status)
+  const query = status ? `?status=${status}` : ''
+  return apiFetch<ShopAdmin[]>(`/api/admin/shop-admins${query}`)
 }
 
 export function approveShopAdmin(id: number): Promise<void> {
-  return mockApprove(id)
+  return apiFetch<void>(`/api/admin/shop-admins/${id}/approve`, { method: 'POST' })
 }
 
 export function rejectShopAdmin(id: number, reason: string): Promise<void> {
-  return mockReject(id, reason)
+  return apiFetch<void>(`/api/admin/shop-admins/${id}/reject`, { method: 'POST', body: { reason } })
 }

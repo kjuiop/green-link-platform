@@ -3,7 +3,7 @@
 온우림 관리자 앱(`frontend/downflower`), 고객용 쇼핑몰(`frontend/shop`)과 별개의 Next 16 앱.
 쇼핑몰 관리자가 상품·주문·쇼핑몰 설정을 관리하는 백오피스이며, Vercel 별도 프로젝트로 배포한다 (Root Directory = `frontend/shop-admin`).
 
-현재는 **Mock 데이터** 단계다. 로그인·대시보드·연동 신청·관리자 관리(신청 승인)만 구현되어 있고 백엔드(shop-api)와는 연결되지 않는다.
+백엔드는 `green-shop-api`(기본 `http://localhost:8082`)와 연동한다. 로그인·연동 신청·관리자 관리(신청 승인)·메뉴는 실 API이고, 대시보드 수치만 실 API가 없어 정적 더미(`src/lib/api/dashboardApi.ts`)를 사용한다.
 
 ## 개발
 ```bash
@@ -13,31 +13,22 @@ npm run lint
 npm run build
 ```
 
-## Mock 로그인
-비밀번호는 아무 값이나 입력하면 된다.
-
-| 아이디 | 의미 | 결과 |
+## 환경변수
+| 이름 | 기본값 | 설명 |
 |---|---|---|
-| `admin` | 최고관리자 (SUPER_ADMIN) | 대시보드 (전체 범위), `설정` 메뉴 노출 |
-| `shop` | 쇼핑몰 관리자 (승인됨) | 대시보드 (회사 범위), `설정` 메뉴 없음 |
-| `pending` | 연동 승인 대기 | `/access` 안내 (상태 새로고침) |
-| `new` | 권한 없음 (신청 전) | `/access`에서 연동 신청 가능 |
-| `rejected` | 신청 거절됨 | `/access`에 거절 사유 표시, 다시 신청 가능 |
+| `API_URL` | `http://localhost:8082` | shop-api 주소. `src/app/api/[...proxy]/route.ts` 프록시가 `/api/*` 요청을 이 주소로 전달한다 (서버 측에서만 사용, CORS 불필요). |
 
-그 외 아이디는 로그인 실패. 세션은 `localStorage`(`shopAdminSession`)에만 저장된다.
-
-### 연동 신청 시나리오
-1. `new` 로그인 → `/access`에서 "연동 신청" → 대기 안내
-2. 로그아웃 → `admin` 로그인 → 설정 > 관리자 관리에서 `new` 승인(또는 거절 사유 입력)
-3. `new` 재로그인 → 대시보드 (대기 화면에서는 "상태 새로고침"으로 진입)
-
-관리자 목록·신청 상태는 `localStorage`(`shopAdminMockAdmins`)에 저장된다. 초기화하려면 이 키를 삭제한다.
+## 인증
+- 로그인은 온우림 계정으로 하며 shop-api가 JWT(30분)를 발급한다. 세션은 `localStorage`(`shopAdminSession`)에 저장된다.
+- 연동 승인 전(LIMITED 토큰)에는 `/api/me`, `/api/access-requests`, `/api/auth/refresh`만 호출할 수 있다.
+- `/access` 화면에서 승인이 확인되면 `/api/auth/refresh`로 FULL 토큰을 다시 받는다.
+- `src/lib/useTokenRefresh.ts` 가 10분마다(탭 복귀 시 포함) 토큰을 갱신한다. 401 응답 시 세션을 지우고 `/login`으로 이동한다.
+- 서버 연결 불가(503)는 세션을 유지한 채 오류 메시지만 표시한다.
 
 ## 구조
-- `src/lib/api/*` : 화면이 호출하는 API 계층. 실 연동 시 **이 파일들 내부만** `fetch`로 교체한다.
-- `src/lib/mock/*` : Mock 구현. 실 연동 후 삭제한다. 화면에서 직접 import 하지 않는다.
-- `src/lib/session.ts` : 세션 저장소. 실 연동 시 토큰 보관 방식 변경 지점.
-- `src/components/auth/MockHint.tsx` : 로그인 화면의 Mock 계정 안내. 실 연동 시 삭제.
+- `src/lib/api/client.ts` : `apiFetch` 공통 클라이언트 (Bearer 토큰, 오류 `{code,message}` → `ApiError`, 401 처리).
+- `src/lib/api/*` : 화면이 호출하는 API 계층.
+- `src/lib/session.ts` : 세션 저장소.
 - `src/app/(auth)` 로그인 / `src/app/(gate)` 미승인 안내 / `src/app/(admin)` 가드된 영역 (미구현 메뉴는 `[...slug]`가 "준비 중" 표시).
 
 인증 가드는 화면 편의용이다. 실제 접근 통제는 shop-api가 한다.
@@ -45,4 +36,4 @@ npm run build
 ## Vercel 설정
 1. 같은 GitHub 레포를 import → **Root Directory `frontend/shop-admin`**, Framework Next.js
 2. Production Branch `main`, `develop`은 Preview (`vercel.json`의 ignoreCommand로 main/develop만 빌드)
-3. 환경변수: 현재 없음 (실 API 연동 시 추가)
+3. 환경변수: `API_URL` (shop-api 공개 주소)

@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { fetchMyAccess, submitAccessRequest } from '@/lib/api/accessApi'
+import { refreshSession } from '@/lib/api/authApi'
 import { clearSession, setSession } from '@/lib/session'
 import { useSession } from '@/lib/useSession'
+import { markTokenFresh, useTokenRefresh } from '@/lib/useTokenRefresh'
 import type { AccessStatus } from '@/types/auth'
 
 const MESSAGE: Record<Exclude<AccessStatus, 'APPROVED'>, { title: string; body: string }> = {
@@ -27,6 +29,7 @@ const MESSAGE: Record<Exclude<AccessStatus, 'APPROVED'>, { title: string; body: 
 export default function AccessPage() {
   const router = useRouter()
   const { session, loading } = useSession()
+  useTokenRefresh(!!session)
   const [rejectReason, setRejectReason] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -42,12 +45,17 @@ export default function AccessPage() {
   useEffect(() => {
     if (!session || session.accessStatus === 'APPROVED') return
     let cancelled = false
-    fetchMyAccess(session)
-      .then((result) => {
+    fetchMyAccess()
+      .then(async (result) => {
         if (cancelled) return
         setRejectReason(result.rejectReason)
         setError('')
-        if (result.accessStatus !== session.accessStatus) {
+        if (result.accessStatus === 'APPROVED') {
+          // 승인 직후 기존 LIMITED 토큰을 FULL 토큰으로 교체해야 메뉴 등 전체 API를 호출할 수 있다.
+          const fresh = await refreshSession()
+          markTokenFresh()
+          if (!cancelled) setSession(fresh)
+        } else if (result.accessStatus !== session.accessStatus) {
           setSession({ ...session, accessStatus: result.accessStatus })
         }
       })
@@ -68,7 +76,7 @@ export default function AccessPage() {
     setError('')
     setSubmitting(true)
     try {
-      await submitAccessRequest(currentSession)
+      await submitAccessRequest()
       setSession({ ...currentSession, accessStatus: 'PENDING' })
     } catch (e) {
       setError(e instanceof Error ? e.message : '신청에 실패했습니다.')
