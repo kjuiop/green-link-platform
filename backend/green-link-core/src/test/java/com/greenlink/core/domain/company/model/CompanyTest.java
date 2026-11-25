@@ -88,4 +88,16 @@ class CompanyTest {
         company.expandType(CompanyType.ORDERING);
         assertThat(company.getType()).isEqualTo(CompanyType.BOTH);
     }
+
+    @Test
+    void enableSite_사이트_사용을_켠다_멱등() {
+        Company c = ofType(CompanyType.VENDOR);
+        assertThat(c.isSiteEnabled()).isFalse();
+
+        c.enableSite();
+        c.enableSite();
+
+        assertThat(c.isSiteEnabled()).isTrue();
+        assertThat(c.isOnurimEnabled()).isTrue();
+    }
 }

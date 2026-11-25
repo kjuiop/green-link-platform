@@ -2,9 +2,11 @@ package com.greenlink.admin.adapter.in.web;
 
 import com.greenlink.admin.global.exception.GlobalExceptionHandler;
 import com.greenlink.core.application.auth.dto.AccountSummary;
+import com.greenlink.core.application.auth.dto.CompanySummary;
 import com.greenlink.core.application.auth.dto.ShopSignupCommand;
 import com.greenlink.core.application.auth.dto.ShopSignupResult;
 import com.greenlink.core.application.auth.dto.VerifiedAccount;
+import com.greenlink.core.application.auth.usecase.ShopAccessUseCase;
 import com.greenlink.core.application.auth.usecase.ShopSignupUseCase;
 import com.greenlink.core.application.auth.usecase.VerifyAdminAccountUseCase;
 import com.greenlink.core.global.exception.BusinessException;
@@ -40,9 +42,10 @@ class InternalShopAuthControllerTest {
 
     private final VerifyAdminAccountUseCase useCase = mock(VerifyAdminAccountUseCase.class);
     private final ShopSignupUseCase signupUseCase = mock(ShopSignupUseCase.class);
+    private final ShopAccessUseCase accessUseCase = mock(ShopAccessUseCase.class);
 
     private MockMvc mvc(String secret) {
-        return MockMvcBuilders.standaloneSetup(new InternalShopAuthController(useCase, signupUseCase, secret))
+        return MockMvcBuilders.standaloneSetup(new InternalShopAuthController(useCase, signupUseCase, accessUseCase, secret))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -237,5 +240,89 @@ class InternalShopAuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"businessNo\":\"123-45-67890\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.exists").value(true));
+    }
+
+    @Test
+    void 접근_부여_시크릿이_틀리면_403() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/access-grants")
+                        .header("X-Internal-Secret", "wrong")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"adminId\":1,\"companyId\":7}"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(accessUseCase);
+    }
+
+    @Test
+    void 접근_부여_정상이면_계정을_반환한다() throws Exception {
+        when(accessUseCase.grant(1L, 7L)).thenReturn(ACCOUNT);
+
+        mvc("s3cret").perform(post("/internal/shop-auth/access-grants")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"adminId\":1,\"companyId\":7}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.adminId").value(1))
+                .andExpect(jsonPath("$.companyId").value(7));
+    }
+
+    @Test
+    void 접근_부여_필수값이_없으면_400() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/access-grants")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"adminId\":1}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(accessUseCase);
+    }
+
+    @Test
+    void 접근_부여_다른_회사_소속이면_409로_매핑() throws Exception {
+        when(accessUseCase.grant(1L, 7L)).thenThrow(new BusinessException(AuthErrorCode.SHOP_ACCESS_COMPANY_MISMATCH));
+
+        mvc("s3cret").perform(post("/internal/shop-auth/access-grants")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"adminId\":1,\"companyId\":7}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("AUTH_020"));
+    }
+
+    @Test
+    void 접근_부여_없는_회사는_404로_매핑() throws Exception {
+        when(accessUseCase.grant(1L, 7L)).thenThrow(new BusinessException(AuthErrorCode.SHOP_ACCESS_COMPANY_NOT_FOUND));
+
+        mvc("s3cret").perform(post("/internal/shop-auth/access-grants")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"adminId\":1,\"companyId\":7}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("AUTH_021"));
+    }
+
+    @Test
+    void 회사_일괄_조회_시크릿이_틀리면_403() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/companies/batch")
+                        .header("X-Internal-Secret", "wrong")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"companyIds\":[7]}"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(accessUseCase);
+    }
+
+    @Test
+    void 회사_일괄_조회는_회사명을_반환한다() throws Exception {
+        when(accessUseCase.getCompanySummaries(List.of(7L))).thenReturn(List.of(new CompanySummary(7L, "꽃집")));
+
+        mvc("s3cret").perform(post("/internal/shop-auth/companies/batch")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"companyIds\":[7]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].companyId").value(7))
+                .andExpect(jsonPath("$[0].companyName").value("꽃집"));
+    }
+
+    @Test
+    void 회사_일괄_조회는_100건을_넘으면_400() throws Exception {
+        String ids = IntStream.rangeClosed(1, 101).mapToObj(String::valueOf).collect(Collectors.joining(","));
+
+        mvc("s3cret").perform(post("/internal/shop-auth/companies/batch")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"companyIds\":[" + ids + "]}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(accessUseCase);
     }
 }

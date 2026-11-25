@@ -22,7 +22,10 @@ public enum AuthErrorCode implements ErrorCode {
     SHOP_BUSINESS_NO_REGISTERED(409, "AUTH_016", "이미 등록된 사업자번호입니다. 합류 신청으로 진행해주세요."),
     SHOP_SIGNUP_ROLE_INVALID(400, "AUTH_017", "신청할 수 없는 역할입니다."),
     INVALID_BUSINESS_NO(400, "AUTH_018", "사업자번호 형식이 올바르지 않습니다."),
-    SHOP_COMPANY_NAME_REQUIRED(400, "AUTH_019", "회사명을 입력해주세요.");
+    SHOP_COMPANY_NAME_REQUIRED(400, "AUTH_019", "회사명을 입력해주세요."),
+    SHOP_ACCESS_COMPANY_MISMATCH(409, "AUTH_020", "이미 다른 회사에 소속된 계정입니다."),
+    SHOP_ACCESS_COMPANY_NOT_FOUND(404, "AUTH_021", "회사를 찾을 수 없습니다."),
+    SHOP_ACCESS_ADMIN_NOT_FOUND(404, "AUTH_022", "계정을 찾을 수 없습니다.");
 
     private final int status;
     private final String code;

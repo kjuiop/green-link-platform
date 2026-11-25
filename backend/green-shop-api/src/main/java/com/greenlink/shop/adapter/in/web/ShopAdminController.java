@@ -1,5 +1,6 @@
 package com.greenlink.shop.adapter.in.web;
 
+import com.greenlink.shop.adapter.in.web.dto.ApproveRequest;
 import com.greenlink.shop.adapter.in.web.dto.RejectRequest;
 import com.greenlink.shop.adapter.in.web.dto.ShopAdminResponse;
 import com.greenlink.shop.security.ShopPrincipal;
@@ -34,8 +35,10 @@ public class ShopAdminController {
     }
 
     @PostMapping("/{id}/approve")
-    public ResponseEntity<Void> approve(@PathVariable Long id, @AuthenticationPrincipal ShopPrincipal principal) {
-        managementUseCase.approve(id, principal.adminId());
+    public ResponseEntity<Void> approve(@PathVariable Long id,
+                                        @RequestBody(required = false) ApproveRequest request,
+                                        @AuthenticationPrincipal ShopPrincipal principal) {
+        managementUseCase.approve(id, request == null ? null : request.role(), principal.adminId());
         return ResponseEntity.noContent().build();
     }
 

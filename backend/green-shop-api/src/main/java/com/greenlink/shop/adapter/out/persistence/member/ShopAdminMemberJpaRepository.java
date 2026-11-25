@@ -10,4 +10,6 @@ interface ShopAdminMemberJpaRepository extends JpaRepository<ShopAdminMemberJpaE
     List<ShopAdminMemberJpaEntity> findByStatusOrderByRequestedAtDesc(
         com.greenlink.shopcore.domain.member.model.ShopAdminStatus status);
     List<ShopAdminMemberJpaEntity> findAllByOrderByRequestedAtDesc();
+    boolean existsByCompanyIdAndStatus(Long companyId,
+        com.greenlink.shopcore.domain.member.model.ShopAdminStatus status);
 }

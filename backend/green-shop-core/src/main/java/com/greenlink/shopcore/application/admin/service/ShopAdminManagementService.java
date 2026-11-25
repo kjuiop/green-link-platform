@@ -1,9 +1,11 @@
 package com.greenlink.shopcore.application.admin.service;
 
 import com.greenlink.shopcore.application.admin.dto.ShopAdminView;
+import com.greenlink.shopcore.application.access.port.CompanyAccessGranter;
 import com.greenlink.shopcore.application.admin.usecase.ShopAdminManagementUseCase;
 import com.greenlink.shopcore.application.auth.dto.AccountProfile;
 import com.greenlink.shopcore.application.auth.port.IdentityVerifier;
+import com.greenlink.shopcore.domain.auth.ShopRole;
 import com.greenlink.shopcore.domain.member.model.ShopAdminMember;
 import com.greenlink.shopcore.domain.member.model.ShopAdminStatus;
 import com.greenlink.shopcore.domain.member.port.ShopAdminMemberRepository;
@@ -17,8 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -30,13 +34,16 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
 
     private final ShopAdminMemberRepository memberRepository;
     private final IdentityVerifier identityVerifier;
+    private final CompanyAccessGranter accessGranter;
     private final Clock clock;
 
     public ShopAdminManagementService(ShopAdminMemberRepository memberRepository,
                                       IdentityVerifier identityVerifier,
+                                      CompanyAccessGranter accessGranter,
                                       Clock clock) {
         this.memberRepository = memberRepository;
         this.identityVerifier = identityVerifier;
+        this.accessGranter = accessGranter;
         this.clock = clock;
     }
 
@@ -45,15 +52,25 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
     public List<ShopAdminView> list(ShopAdminStatus status) {
         List<ShopAdminMember> members = memberRepository.findAll(status);
         Map<Long, AccountProfile> profiles = loadProfiles(members);
+        Map<Long, String> companyNames = loadCompanyNames(members, profiles);
         return members.stream()
-            .map(m -> ShopAdminView.of(m, profiles.get(m.getAdminId())))
+            .map(m -> ShopAdminView.of(m, profiles.get(m.getAdminId()), companyNames.get(m.getCompanyId())))
             .toList();
     }
 
     @Override
-    public void approve(Long id, Long actorAdminId) {
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public void approve(Long id, ShopRole grantedRole, Long actorAdminId) {
         ShopAdminMember member = find(id);
-        member.approve(actorAdminId, LocalDateTime.now(clock));
+        ShopRole role = grantedRole != null ? grantedRole : member.getRequestedRole();
+        member.validateApproval(role);
+        if (role != ShopRole.PARTNER_ADMIN && !memberRepository.existsApprovedByCompanyId(member.getCompanyId())) {
+            throw new ShopBusinessException(ShopErrorCode.ACCESS_FIRST_MEMBER_MUST_BE_PARTNER);
+        }
+
+        accessGranter.grant(member.getAdminId(), member.getCompanyId());
+
+        member.approve(role, actorAdminId, LocalDateTime.now(clock));
         memberRepository.save(member);
     }
 
@@ -75,6 +92,27 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
         } catch (RuntimeException e) {
             log.warn("관리자 이름 조회 실패, 이름 없이 목록을 반환합니다: {}", e.getMessage());
             return Map.of();
+        }
+    }
+
+    private Map<Long, String> loadCompanyNames(List<ShopAdminMember> members, Map<Long, AccountProfile> profiles) {
+        List<Long> companyIds = members.stream()
+            .filter(m -> {
+                AccountProfile p = profiles.get(m.getAdminId());
+                return p == null || p.companyName() == null;
+            })
+            .map(ShopAdminMember::getCompanyId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+        if (companyIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        try {
+            return identityVerifier.getCompanyNames(companyIds);
+        } catch (RuntimeException e) {
+            log.warn("회사명 조회 실패, 회사명 없이 목록을 반환합니다: {}", e.getMessage());
+            return Collections.emptyMap();
         }
     }
 

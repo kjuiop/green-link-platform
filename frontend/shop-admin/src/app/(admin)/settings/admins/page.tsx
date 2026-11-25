@@ -66,6 +66,7 @@ export default function AdminsPage() {
   const [rejectingId, setRejectingId] = useState<number | null>(null)
   const [reason, setReason] = useState('')
   const [actionError, setActionError] = useState('')
+  const [grantRoles, setGrantRoles] = useState<Record<number, ShopRole>>({})
 
   useEffect(() => {
     let cancelled = false
@@ -89,12 +90,12 @@ export default function AdminsPage() {
     setActionError('')
   }
 
-  async function handleApprove(id: number) {
+  async function handleApprove(admin: ShopAdmin) {
     if (busyId !== null) return
     setActionError('')
-    setBusyId(id)
+    setBusyId(admin.id)
     try {
-      await approveShopAdmin(id)
+      await approveShopAdmin(admin.id, grantRoles[admin.id] ?? admin.requestedRole)
       setReloadKey((key) => key + 1)
     } catch (e) {
       setActionError(e instanceof Error ? e.message : '승인에 실패했습니다.')
@@ -201,12 +202,24 @@ export default function AdminsPage() {
                         <TableCell className="whitespace-nowrap text-xs text-gray-500">{admin.processedAt ? formatDateTime(admin.processedAt) : '-'}</TableCell>
                         <TableCell className="whitespace-nowrap text-right">
                           {admin.status === 'PENDING' && (
-                            <div className="flex justify-end gap-1">
+                            <div className="flex items-center justify-end gap-1">
+                              {admin.requestedRole === 'PARTNER_ADMIN' && (
+                                <select
+                                  aria-label="부여할 역할"
+                                  className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs"
+                                  disabled={busyId !== null}
+                                  value={grantRoles[admin.id] ?? admin.requestedRole}
+                                  onChange={(e) => setGrantRoles((prev) => ({ ...prev, [admin.id]: e.target.value as ShopRole }))}
+                                >
+                                  <option value="PARTNER_ADMIN">{ROLE_LABEL.PARTNER_ADMIN}</option>
+                                  <option value="BRAND_ADMIN">{ROLE_LABEL.BRAND_ADMIN}</option>
+                                </select>
+                              )}
                               <Button
                                 size="sm"
                                 className="bg-green-700 hover:bg-green-800"
                                 disabled={busyId !== null}
-                                onClick={() => handleApprove(admin.id)}
+                                onClick={() => handleApprove(admin)}
                               >
                                 승인
                               </Button>

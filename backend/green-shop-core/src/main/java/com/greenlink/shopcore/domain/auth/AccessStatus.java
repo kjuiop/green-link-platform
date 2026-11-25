@@ -6,7 +6,8 @@ public enum AccessStatus {
     NONE,
     PENDING,
     APPROVED,
-    REJECTED;
+    REJECTED,
+    SITE_DISABLED;
 
     public static AccessStatus from(ShopAdminStatus status) {
         return switch (status) {

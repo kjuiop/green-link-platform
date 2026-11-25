@@ -1,6 +1,7 @@
 package com.greenlink.shop.adapter.out.identity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.greenlink.shopcore.application.access.port.CompanyAccessGranter;
 import com.greenlink.shopcore.application.auth.dto.AccountProfile;
 import com.greenlink.shopcore.application.auth.dto.RegisteredAccount;
 import com.greenlink.shopcore.application.auth.dto.SignupCommand;
@@ -22,10 +23,12 @@ import org.springframework.web.client.RestClientResponseException;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
-public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistrar {
+public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistrar, CompanyAccessGranter {
 
     private static final Logger log = LoggerFactory.getLogger(OnurimIdentityVerifier.class);
     private static final String SECRET_HEADER = "X-Internal-Secret";
@@ -99,6 +102,44 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
             }
         }
         return result;
+    }
+
+    @Override
+    public Map<Long, String> getCompanyNames(Collection<Long> companyIds) {
+        if (companyIds == null || companyIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, String> result = new HashMap<>();
+        List<Long> ids = List.copyOf(companyIds);
+        for (int from = 0; from < ids.size(); from += BATCH_LIMIT) {
+            List<Long> chunk = ids.subList(from, Math.min(from + BATCH_LIMIT, ids.size()));
+            CompanyBody[] body = execute(() -> restClient.post()
+                .uri("/internal/shop-auth/companies/batch")
+                .header(SECRET_HEADER, secret)
+                .body(new CompanyBatchBody(chunk))
+                .retrieve()
+                .body(CompanyBody[].class));
+            if (body == null) {
+                throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+            }
+            for (CompanyBody b : body) {
+                result.put(b.companyId(), b.companyName());
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public void grant(Long adminId, Long companyId) {
+        AccountBody body = executeWith(() -> restClient.post()
+            .uri("/internal/shop-auth/access-grants")
+            .header(SECRET_HEADER, secret)
+            .body(new AccessGrantBody(adminId, companyId))
+            .retrieve()
+            .body(AccountBody.class), this::mapGrantError);
+        if (body == null || body.adminId() == null) {
+            throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+        }
     }
 
     @Override
@@ -180,6 +221,19 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
         return mapError(e);
     }
 
+    private ShopBusinessException mapGrantError(RestClientResponseException e) {
+        if (e.getStatusCode().value() == 409 && e.getResponseBodyAsString().contains("AUTH_020")) {
+            return new ShopBusinessException(ShopErrorCode.ACCESS_COMPANY_MISMATCH);
+        }
+        if (e.getStatusCode().value() == 404) {
+            String body = e.getResponseBodyAsString();
+            if (body.contains("AUTH_021") || body.contains("AUTH_022")) {
+                return new ShopBusinessException(ShopErrorCode.ADMIN_REQUEST_NOT_FOUND);
+            }
+        }
+        return mapError(e);
+    }
+
     private ShopBusinessException mapError(RestClientResponseException e) {
         int status = e.getStatusCode().value();
         String body = e.getResponseBodyAsString();
@@ -198,6 +252,13 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
     record BatchBody(List<Long> adminIds) {}
 
     record BusinessNoBody(String businessNo) {}
+
+    record CompanyBatchBody(List<Long> companyIds) {}
+
+    record AccessGrantBody(Long adminId, Long companyId) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record CompanyBody(Long companyId, String companyName) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record ExistsBody(boolean exists) {}

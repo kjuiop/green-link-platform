@@ -39,6 +39,11 @@ class ShopAdminMemberPersistenceAdapter implements ShopAdminMemberRepository {
     }
 
     @Override
+    public boolean existsApprovedByCompanyId(Long companyId) {
+        return jpaRepository.existsByCompanyIdAndStatus(companyId, ShopAdminStatus.APPROVED);
+    }
+
+    @Override
     public ShopAdminMember save(ShopAdminMember member) {
         ShopAdminMemberJpaEntity entity = member.getId() == null
             ? ShopAdminMemberJpaEntity.from(member)

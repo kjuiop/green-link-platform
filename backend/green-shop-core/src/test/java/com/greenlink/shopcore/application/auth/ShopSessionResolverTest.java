@@ -3,6 +3,7 @@ package com.greenlink.shopcore.application.auth;
 import com.greenlink.shopcore.application.auth.dto.ShopSession;
 import com.greenlink.shopcore.application.auth.dto.VerifiedIdentity;
 import com.greenlink.shopcore.application.auth.port.AccessTokenIssuer;
+import com.greenlink.shopcore.application.auth.service.AccessEvaluator;
 import com.greenlink.shopcore.application.auth.service.ShopSessionResolver;
 import com.greenlink.shopcore.domain.auth.AccessStatus;
 import com.greenlink.shopcore.domain.auth.ShopRole;
@@ -35,12 +36,16 @@ class ShopSessionResolverTest {
 
     @BeforeEach
     void setUp() {
-        resolver = new ShopSessionResolver(memberRepository, tokenIssuer);
+        resolver = new ShopSessionResolver(new AccessEvaluator(memberRepository), tokenIssuer);
     }
 
     private VerifiedIdentity identity(Long companyId, boolean superAdmin) {
+        return identity(companyId, superAdmin, true);
+    }
+
+    private VerifiedIdentity identity(Long companyId, boolean superAdmin, boolean siteEnabled) {
         return new VerifiedIdentity(10L, "login", "이름", companyId, companyId == null ? null : "회사",
-            true, false, true, superAdmin);
+            true, siteEnabled, true, superAdmin);
     }
 
     private ShopAdminMember member(ShopAdminStatus status, ShopRole role, Long companyId) {
@@ -154,5 +159,24 @@ class ShopSessionResolverTest {
         resolver.resolve(identity(7L, false));
 
         verify(memberRepository, never()).save(any());
+    }
+
+    @Test
+    void 승인되어_있어도_회사의_쇼핑몰_서비스가_꺼져_있으면_LIMITED_토큰과_SITE_DISABLED이다() {
+        given(memberRepository.findByAdminId(10L))
+            .willReturn(Optional.of(member(ShopAdminStatus.APPROVED, ShopRole.PARTNER_ADMIN, 7L)));
+        given(tokenIssuer.issue(10L, 7L, null, TokenScope.LIMITED)).willReturn("tok");
+
+        ShopSession s = resolver.resolve(identity(7L, false, false));
+
+        assertThat(s.accessStatus()).isEqualTo(AccessStatus.SITE_DISABLED);
+        assertThat(s.role()).isNull();
+    }
+
+    @Test
+    void 슈퍼관리자는_회사의_쇼핑몰_서비스_여부와_무관하게_FULL이다() {
+        given(tokenIssuer.issue(10L, 7L, ShopRole.SUPER_ADMIN, TokenScope.FULL)).willReturn("tok");
+
+        assertThat(resolver.resolve(identity(7L, true, false)).accessStatus()).isEqualTo(AccessStatus.APPROVED);
     }
 }

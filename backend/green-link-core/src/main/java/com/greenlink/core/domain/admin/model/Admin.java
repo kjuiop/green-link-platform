@@ -104,6 +104,16 @@ public class Admin {
         this.deletedAt = nowKst;
     }
 
+    public void attachToCompany(Long targetCompanyId) {
+        if (targetCompanyId == null) {
+            throw new IllegalArgumentException("companyId is required");
+        }
+        if (companyId != null && !companyId.equals(targetCompanyId)) {
+            throw new IllegalStateException("이미 다른 회사에 소속된 계정입니다.");
+        }
+        this.companyId = targetCompanyId;
+    }
+
     public void changePassword(String encodedPassword) {
         this.password = encodedPassword;
     }

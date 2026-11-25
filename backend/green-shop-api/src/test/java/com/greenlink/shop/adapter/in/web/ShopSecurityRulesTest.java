@@ -14,6 +14,7 @@ import com.greenlink.shopcore.global.exception.ShopErrorCode;
 import com.greenlink.shopcore.application.auth.usecase.RefreshTokenUseCase;
 import com.greenlink.shopcore.application.auth.usecase.ShopLoginUseCase;
 import com.greenlink.shopcore.application.menu.usecase.GetMenusUseCase;
+import com.greenlink.shopcore.domain.auth.AccessRequestType;
 import com.greenlink.shopcore.domain.auth.AccessStatus;
 import com.greenlink.shopcore.domain.auth.ShopRole;
 import com.greenlink.shopcore.domain.auth.TokenScope;
@@ -85,10 +86,10 @@ class ShopSecurityRulesTest {
         org.mockito.Mockito.reset(signupUseCase);
         when(menusUseCase.getMenus(any())).thenReturn(List.of());
         when(managementUseCase.list(any())).thenReturn(List.of());
-        when(accessRequestUseCase.getMyAccess(anyLong(), any(), anyBoolean()))
-            .thenReturn(new MyAccess(AccessStatus.PENDING, null));
-        when(accessRequestUseCase.apply(anyLong(), anyBoolean()))
-            .thenReturn(new MyAccess(AccessStatus.PENDING, null));
+        when(accessRequestUseCase.getMyAccess(anyLong(), anyBoolean()))
+            .thenReturn(new MyAccess(AccessStatus.PENDING, null, AccessRequestType.COMPANY, ShopRole.PARTNER_ADMIN));
+        when(accessRequestUseCase.apply(anyLong(), anyBoolean(), any()))
+            .thenReturn(new MyAccess(AccessStatus.PENDING, null, AccessRequestType.COMPANY, ShopRole.PARTNER_ADMIN));
         when(refreshUseCase.refresh(anyLong())).thenReturn(
             new ShopSession("t", "shop01", "홍길동", 7L, "업체", ShopRole.PARTNER_ADMIN, AccessStatus.APPROVED));
         when(loginUseCase.login(anyString(), anyString())).thenReturn(
@@ -162,7 +163,7 @@ class ShopSecurityRulesTest {
             .andExpect(status().isForbidden());
         mvc.perform(post("/api/admin/shop-admins/1/approve").header("Authorization", brandAdmin()))
             .andExpect(status().isForbidden());
-        verify(managementUseCase, never()).approve(anyLong(), anyLong());
+        verify(managementUseCase, never()).approve(anyLong(), any(), anyLong());
     }
 
     @Test
@@ -173,7 +174,7 @@ class ShopSecurityRulesTest {
         mvc.perform(post("/api/admin/shop-admins/9/reject").header("Authorization", superAdmin())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"서류 미비\"}"))
             .andExpect(status().isNoContent());
-        verify(managementUseCase).approve(9L, 1L);
+        verify(managementUseCase).approve(9L, null, 1L);
         verify(managementUseCase).reject(9L, "서류 미비", 1L);
     }
 
@@ -187,7 +188,7 @@ class ShopSecurityRulesTest {
     @Test
     void SUPER_ADMIN_토큰의_me는_superAdmin으로_전달된다() throws Exception {
         mvc.perform(get("/api/me").header("Authorization", superAdmin())).andExpect(status().isOk());
-        verify(accessRequestUseCase).getMyAccess(1L, null, true);
+        verify(accessRequestUseCase).getMyAccess(1L, true);
     }
 
     @Test
@@ -230,5 +231,31 @@ class ShopSecurityRulesTest {
             .header("X-Shop-Client-Ip", "9.9.9.9").header("X-Shop-Proxy-Secret", "anything"));
 
         verify(signupUseCase).signup(any(), org.mockito.ArgumentMatchers.eq("127.0.0.1"));
+    }
+
+    @Test
+    void 승인_요청_본문의_역할이_유스케이스로_전달된다() throws Exception {
+        mvc.perform(post("/api/admin/shop-admins/9/approve").header("Authorization", superAdmin())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"BRAND_ADMIN\"}"))
+            .andExpect(status().isNoContent());
+        verify(managementUseCase).approve(9L, ShopRole.BRAND_ADMIN, 1L);
+    }
+
+    @Test
+    void 알_수_없는_역할로_승인하면_400() throws Exception {
+        mvc.perform(post("/api/admin/shop-admins/9/approve").header("Authorization", superAdmin())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"NOPE\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 접근_신청_본문의_요청_역할이_전달되고_본문이_없어도_된다() throws Exception {
+        mvc.perform(post("/api/access-requests").header("Authorization", partnerAdmin())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"requestedRole\":\"BRAND_ADMIN\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.requestType").value("COMPANY"))
+            .andExpect(jsonPath("$.requestedRole").value("PARTNER_ADMIN"));
+        mvc.perform(post("/api/access-requests").header("Authorization", partnerAdmin()))
+            .andExpect(status().isOk());
     }
 }

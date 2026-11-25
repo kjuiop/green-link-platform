@@ -75,10 +75,18 @@ public class ShopAdminMember {
         this.rejectReason = null;
     }
 
-    public void approve(Long processedBy, LocalDateTime now) {
+    public void validateApproval(ShopRole grantedRole) {
         requirePending();
+        requireAssignable(grantedRole);
+        if (grantedRole.outranks(requestedRole)) {
+            throw new ShopBusinessException(ShopErrorCode.ACCESS_ROLE_EXCEEDS_REQUEST);
+        }
+    }
+
+    public void approve(ShopRole grantedRole, Long processedBy, LocalDateTime now) {
+        validateApproval(grantedRole);
         this.status = ShopAdminStatus.APPROVED;
-        this.role = requestedRole;
+        this.role = grantedRole;
         this.processedAt = now;
         this.processedBy = processedBy;
         this.rejectReason = null;

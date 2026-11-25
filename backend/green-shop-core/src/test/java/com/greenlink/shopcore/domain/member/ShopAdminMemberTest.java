@@ -75,12 +75,38 @@ class ShopAdminMemberTest {
     void PENDING은_승인하면_요청한_역할이_부여된다() {
         ShopAdminMember m = ShopAdminMember.request(10L, 7L, ShopRole.BRAND_ADMIN, T0);
 
-        m.approve(99L, T1);
+        m.approve(ShopRole.BRAND_ADMIN, 99L, T1);
 
         assertThat(m.getStatus()).isEqualTo(ShopAdminStatus.APPROVED);
         assertThat(m.getRole()).isEqualTo(ShopRole.BRAND_ADMIN);
         assertThat(m.getProcessedAt()).isEqualTo(T1);
         assertThat(m.getProcessedBy()).isEqualTo(99L);
+    }
+
+    @Test
+    void 신청보다_낮은_역할로_승인하면_낮은_역할이_부여된다() {
+        ShopAdminMember m = pending();
+
+        m.approve(ShopRole.BRAND_ADMIN, 99L, T1);
+
+        assertThat(m.getStatus()).isEqualTo(ShopAdminStatus.APPROVED);
+        assertThat(m.getRole()).isEqualTo(ShopRole.BRAND_ADMIN);
+        assertThat(m.getRequestedRole()).isEqualTo(ShopRole.PARTNER_ADMIN);
+    }
+
+    @Test
+    void 신청보다_높은_역할로는_승인할_수_없고_상태가_바뀌지_않는다() {
+        ShopAdminMember m = ShopAdminMember.request(10L, 7L, ShopRole.BRAND_ADMIN, T0);
+
+        assertCode(() -> m.approve(ShopRole.PARTNER_ADMIN, 99L, T1), ShopErrorCode.ACCESS_ROLE_EXCEEDS_REQUEST);
+        assertThat(m.getStatus()).isEqualTo(ShopAdminStatus.PENDING);
+        assertThat(m.getRole()).isNull();
+    }
+
+    @Test
+    void 슈퍼관리자나_null_역할로는_승인할_수_없다() {
+        assertCode(() -> pending().approve(ShopRole.SUPER_ADMIN, 99L, T1), ShopErrorCode.ACCESS_ROLE_NOT_ASSIGNABLE);
+        assertCode(() -> pending().approve(null, 99L, T1), ShopErrorCode.ACCESS_ROLE_NOT_ASSIGNABLE);
     }
 
     @Test
@@ -103,8 +129,8 @@ class ShopAdminMemberTest {
 
     @Test
     void PENDING이_아니면_승인_거절이_거부된다() {
-        assertCode(() -> in(ShopAdminStatus.APPROVED).approve(99L, T1), ShopErrorCode.ACCESS_INVALID_TRANSITION);
-        assertCode(() -> in(ShopAdminStatus.REJECTED).approve(99L, T1), ShopErrorCode.ACCESS_INVALID_TRANSITION);
+        assertCode(() -> in(ShopAdminStatus.APPROVED).approve(ShopRole.PARTNER_ADMIN, 99L, T1), ShopErrorCode.ACCESS_INVALID_TRANSITION);
+        assertCode(() -> in(ShopAdminStatus.REJECTED).approve(ShopRole.PARTNER_ADMIN, 99L, T1), ShopErrorCode.ACCESS_INVALID_TRANSITION);
         assertCode(() -> in(ShopAdminStatus.APPROVED).reject("사유", 99L, T1), ShopErrorCode.ACCESS_INVALID_TRANSITION);
         assertCode(() -> in(ShopAdminStatus.REJECTED).reject("사유", 99L, T1), ShopErrorCode.ACCESS_INVALID_TRANSITION);
     }
