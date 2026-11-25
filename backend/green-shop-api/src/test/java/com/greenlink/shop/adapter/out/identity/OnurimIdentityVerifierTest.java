@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
@@ -87,6 +88,22 @@ class OnurimIdentityVerifierTest {
         assertThat(result.get(0).name()).isEqualTo("홍길동");
         assertThat(result.get(0).companyName()).isEqualTo("테스트업체");
         assertThat(result.get(1).companyName()).isNull();
+        server.verify();
+    }
+
+    @Test
+    void 배치_조회는_100건_단위로_나눠_호출한다() {
+        List<Long> ids = java.util.stream.LongStream.rangeClosed(1, 101).boxed().toList();
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/batch"))
+            .andExpect(jsonPath("$.adminIds.length()").value(100))
+            .andRespond(withSuccess("[{\"adminId\":1,\"loginId\":\"a\",\"name\":\"A\"}]", MediaType.APPLICATION_JSON));
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/batch"))
+            .andExpect(jsonPath("$.adminIds.length()").value(1))
+            .andRespond(withSuccess("[{\"adminId\":101,\"loginId\":\"b\",\"name\":\"B\"}]", MediaType.APPLICATION_JSON));
+
+        List<AccountProfile> result = verifier.getAccounts(ids);
+
+        assertThat(result).extracting(AccountProfile::adminId).containsExactly(1L, 101L);
         server.verify();
     }
 

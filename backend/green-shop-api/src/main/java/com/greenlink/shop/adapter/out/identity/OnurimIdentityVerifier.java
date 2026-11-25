@@ -26,6 +26,7 @@ public class OnurimIdentityVerifier implements IdentityVerifier {
 
     private static final Logger log = LoggerFactory.getLogger(OnurimIdentityVerifier.class);
     private static final String SECRET_HEADER = "X-Internal-Secret";
+    private static final int BATCH_LIMIT = 100;
     private static final Duration TIMEOUT = Duration.ofSeconds(3);
 
     private final RestClient restClient;
@@ -77,18 +78,24 @@ public class OnurimIdentityVerifier implements IdentityVerifier {
         if (adminIds == null || adminIds.isEmpty()) {
             return List.of();
         }
-        SummaryBody[] body = execute(() -> restClient.post()
-            .uri("/internal/shop-auth/accounts/batch")
-            .header(SECRET_HEADER, secret)
-            .body(new BatchBody(List.copyOf(adminIds)))
-            .retrieve()
-            .body(SummaryBody[].class));
-        if (body == null) {
-            throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+        List<AccountProfile> result = new java.util.ArrayList<>();
+        List<Long> ids = List.copyOf(adminIds);
+        for (int from = 0; from < ids.size(); from += BATCH_LIMIT) {
+            List<Long> chunk = ids.subList(from, Math.min(from + BATCH_LIMIT, ids.size()));
+            SummaryBody[] body = execute(() -> restClient.post()
+                .uri("/internal/shop-auth/accounts/batch")
+                .header(SECRET_HEADER, secret)
+                .body(new BatchBody(chunk))
+                .retrieve()
+                .body(SummaryBody[].class));
+            if (body == null) {
+                throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+            }
+            for (SummaryBody b : body) {
+                result.add(new AccountProfile(b.adminId(), b.loginId(), b.name(), b.companyName()));
+            }
         }
-        return java.util.Arrays.stream(body)
-            .map(b -> new AccountProfile(b.adminId(), b.loginId(), b.name(), b.companyName()))
-            .toList();
+        return result;
     }
 
     private VerifiedIdentity call(java.util.function.Supplier<AccountBody> request) {
