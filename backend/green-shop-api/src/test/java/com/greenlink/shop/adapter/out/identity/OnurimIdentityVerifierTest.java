@@ -309,6 +309,17 @@ class OnurimIdentityVerifierTest {
     }
 
     @Test
+    void 접근_부여_계정_또는_회사_없음_404는_ADMIN_REQUEST_NOT_FOUND로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/access-grants"))
+            .andRespond(withStatus(HttpStatus.NOT_FOUND).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_022\"}"));
+
+        assertThatThrownBy(() -> verifier.grant(5L, 7L))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.ADMIN_REQUEST_NOT_FOUND));
+    }
+
+    @Test
     void 접근_부여_그_외_오류는_업스트림_장애로_매핑된다() {
         server.expect(requestTo(BASE + "/internal/shop-auth/access-grants"))
             .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));

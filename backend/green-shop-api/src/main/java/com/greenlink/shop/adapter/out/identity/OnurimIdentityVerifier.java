@@ -225,6 +225,12 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
         if (e.getStatusCode().value() == 409 && e.getResponseBodyAsString().contains("AUTH_020")) {
             return new ShopBusinessException(ShopErrorCode.ACCESS_COMPANY_MISMATCH);
         }
+        if (e.getStatusCode().value() == 404) {
+            String body = e.getResponseBodyAsString();
+            if (body.contains("AUTH_021") || body.contains("AUTH_022")) {
+                return new ShopBusinessException(ShopErrorCode.ADMIN_REQUEST_NOT_FOUND);
+            }
+        }
         return mapError(e);
     }
 
