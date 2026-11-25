@@ -7,6 +7,7 @@ import com.greenlink.shopcore.application.auth.port.IdentityVerifier;
 import com.greenlink.shopcore.domain.auth.AccessStatus;
 import com.greenlink.shopcore.domain.auth.ShopRole;
 import com.greenlink.shopcore.domain.member.model.ShopAdminMember;
+import com.greenlink.shopcore.domain.member.model.ShopAdminStatus;
 import com.greenlink.shopcore.domain.member.port.ShopAdminMemberRepository;
 import com.greenlink.shopcore.global.exception.ShopBusinessException;
 import com.greenlink.shopcore.global.exception.ShopErrorCode;
@@ -37,7 +38,7 @@ public class AccessRequestService implements AccessRequestUseCase {
             return new MyAccess(AccessStatus.APPROVED, null);
         }
         return memberRepository.findByAdminId(adminId)
-            .filter(m -> Objects.equals(m.getCompanyId(), companyId))
+            .filter(m -> m.getStatus() != ShopAdminStatus.APPROVED || Objects.equals(m.getCompanyId(), companyId))
             .map(m -> new MyAccess(AccessStatus.from(m.getStatus()), m.getRejectReason()))
             .orElse(new MyAccess(AccessStatus.NONE, null));
     }

@@ -7,6 +7,7 @@ import com.greenlink.shopcore.domain.auth.AccessStatus;
 import com.greenlink.shopcore.domain.auth.ShopRole;
 import com.greenlink.shopcore.domain.auth.TokenScope;
 import com.greenlink.shopcore.domain.member.model.ShopAdminMember;
+import com.greenlink.shopcore.domain.member.model.ShopAdminStatus;
 import com.greenlink.shopcore.domain.member.port.ShopAdminMemberRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +37,7 @@ public class ShopSessionResolver {
         }
 
         Optional<ShopAdminMember> member = memberRepository.findByAdminId(identity.adminId())
-            .filter(m -> companyMatches(m, identity));
+            .filter(m -> m.getStatus() != ShopAdminStatus.APPROVED || companyMatches(m, identity));
 
         AccessStatus status = member.map(m -> AccessStatus.from(m.getStatus())).orElse(AccessStatus.NONE);
         if (status == AccessStatus.APPROVED) {

@@ -14,6 +14,26 @@ class AdminTest {
     }
 
     @Test
+    void createShopFounder_회사에_소속된_활성_계정이다() {
+        Admin admin = Admin.createShopFounder("shop01", "encodedPw", "홍길동", "010-1234-5678", "a@test.com", 9L);
+
+        assertThat(admin.getStatus()).isEqualTo(AdminStatus.ACTIVE);
+        assertThat(admin.getCompanyId()).isEqualTo(9L);
+        assertThat(admin.isSuperAdmin()).isFalse();
+        assertThat(admin.isOnurimEnabled()).isTrue();
+    }
+
+    @Test
+    void createShopApplicant_소속없고_온우림_접근이_꺼진_활성_계정이다() {
+        Admin admin = Admin.createShopApplicant("shop02", "encodedPw", "김철수", "010-1234-5678", null);
+
+        assertThat(admin.getStatus()).isEqualTo(AdminStatus.ACTIVE);
+        assertThat(admin.getCompanyId()).isNull();
+        assertThat(admin.isOnurimEnabled()).isFalse();
+        assertThat(admin.isSuperAdmin()).isFalse();
+    }
+
+    @Test
     void createVendorRequest_setsStatusToPending() {
         Admin admin = Admin.createVendorRequest("vendor01", "encodedPw", "홍길동", "010-1234-5678", "vendor01@test.com", 1L);
         assertThat(admin.getStatus()).isEqualTo(AdminStatus.PENDING);

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -91,6 +92,10 @@ export default function LoginPage() {
             </Button>
           </CardContent>
         </Card>
+        <p className="text-center text-sm text-gray-500">
+          계정이 없으신가요?{' '}
+          <Link href="/signup" className="font-medium text-green-700 hover:underline">회원가입</Link>
+        </p>
       </div>
     </div>
   )

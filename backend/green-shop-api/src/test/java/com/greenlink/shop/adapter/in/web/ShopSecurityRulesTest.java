@@ -7,6 +7,10 @@ import com.greenlink.shopcore.application.access.dto.MyAccess;
 import com.greenlink.shopcore.application.access.usecase.AccessRequestUseCase;
 import com.greenlink.shopcore.application.admin.usecase.ShopAdminManagementUseCase;
 import com.greenlink.shopcore.application.auth.dto.ShopSession;
+import com.greenlink.shopcore.application.auth.dto.SignupResult;
+import com.greenlink.shopcore.application.auth.usecase.ShopSignupUseCase;
+import com.greenlink.shopcore.global.exception.ShopBusinessException;
+import com.greenlink.shopcore.global.exception.ShopErrorCode;
 import com.greenlink.shopcore.application.auth.usecase.RefreshTokenUseCase;
 import com.greenlink.shopcore.application.auth.usecase.ShopLoginUseCase;
 import com.greenlink.shopcore.application.menu.usecase.GetMenusUseCase;
@@ -53,13 +57,14 @@ class ShopSecurityRulesTest {
     @Configuration
     @EnableWebMvc
     @Import({SecurityConfig.class, ShopJwtProvider.class, GlobalExceptionHandler.class,
-        ShopAuthController.class, AccessRequestController.class, ShopAdminController.class, MenuController.class})
+        ShopAuthController.class, ShopSignupController.class, ClientIpResolver.class, AccessRequestController.class, ShopAdminController.class, MenuController.class})
     static class TestConfig {
         @Bean ShopLoginUseCase shopLoginUseCase() { return mock(ShopLoginUseCase.class); }
         @Bean RefreshTokenUseCase refreshTokenUseCase() { return mock(RefreshTokenUseCase.class); }
         @Bean AccessRequestUseCase accessRequestUseCase() { return mock(AccessRequestUseCase.class); }
         @Bean ShopAdminManagementUseCase shopAdminManagementUseCase() { return mock(ShopAdminManagementUseCase.class); }
         @Bean GetMenusUseCase getMenusUseCase() { return mock(GetMenusUseCase.class); }
+        @Bean ShopSignupUseCase shopSignupUseCase() { return mock(ShopSignupUseCase.class); }
     }
 
     @Autowired WebApplicationContext context;
@@ -70,12 +75,14 @@ class ShopSecurityRulesTest {
     @Autowired AccessRequestUseCase accessRequestUseCase;
     @Autowired ShopAdminManagementUseCase managementUseCase;
     @Autowired GetMenusUseCase menusUseCase;
+    @Autowired ShopSignupUseCase signupUseCase;
 
     MockMvc mvc;
 
     @BeforeEach
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(springSecurityFilterChain).build();
+        org.mockito.Mockito.reset(signupUseCase);
         when(menusUseCase.getMenus(any())).thenReturn(List.of());
         when(managementUseCase.list(any())).thenReturn(List.of());
         when(accessRequestUseCase.getMyAccess(anyLong(), any(), anyBoolean()))
@@ -87,6 +94,9 @@ class ShopSecurityRulesTest {
         when(loginUseCase.login(anyString(), anyString())).thenReturn(
             new ShopSession("t", "shop01", "홍길동", 7L, "업체", null, AccessStatus.NONE));
     }
+
+    private static final String SIGNUP_BODY = "{\"loginId\":\"shop01\",\"password\":\"Passw0rd!\",\"name\":\"홍길동\","
+        + "\"phone\":\"010-1234-5678\",\"businessNo\":\"123-45-67890\",\"companyName\":\"꽃집\"}";
 
     private String limited() { return "Bearer " + jwt.issue(5L, 7L, null, TokenScope.LIMITED); }
     private String partnerAdmin() { return "Bearer " + jwt.issue(5L, 7L, ShopRole.PARTNER_ADMIN, TokenScope.FULL); }
@@ -178,5 +188,47 @@ class ShopSecurityRulesTest {
     void SUPER_ADMIN_토큰의_me는_superAdmin으로_전달된다() throws Exception {
         mvc.perform(get("/api/me").header("Authorization", superAdmin())).andExpect(status().isOk());
         verify(accessRequestUseCase).getMyAccess(1L, null, true);
+    }
+
+    @Test
+    void 가입과_사업자번호_조회는_토큰없이_가능하다() throws Exception {
+        when(signupUseCase.signup(any(), anyString())).thenReturn(new SignupResult(10L, true));
+        when(signupUseCase.businessNoExists(anyString(), anyString())).thenReturn(true);
+
+        mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON).content(SIGNUP_BODY))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.founder").value(true));
+        mvc.perform(get("/api/auth/business-numbers/123-45-67890/exists"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.exists").value(true));
+    }
+
+    @Test
+    void 가입_입력이_규칙에_맞지_않으면_400이고_서비스를_호출하지_않는다() throws Exception {
+        mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
+                .content(SIGNUP_BODY.replace("Passw0rd!", "short")))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
+                .content(SIGNUP_BODY.replace("shop01", "a b")))
+            .andExpect(status().isBadRequest());
+        verify(signupUseCase, never()).signup(any(), anyString());
+    }
+
+    @Test
+    void 한도_초과는_429로_매핑된다() throws Exception {
+        when(signupUseCase.signup(any(), anyString()))
+            .thenThrow(new ShopBusinessException(ShopErrorCode.SIGNUP_RATE_LIMITED));
+
+        mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON).content(SIGNUP_BODY))
+            .andExpect(status().isTooManyRequests())
+            .andExpect(jsonPath("$.code").value("SHOP_SIGNUP_001"));
+    }
+
+    @Test
+    void 시크릿이_없으면_X_Shop_Client_Ip를_믿지_않고_원격_주소를_쓴다() throws Exception {
+        when(signupUseCase.signup(any(), anyString())).thenReturn(new SignupResult(10L, true));
+
+        mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON).content(SIGNUP_BODY)
+            .header("X-Shop-Client-Ip", "9.9.9.9").header("X-Shop-Proxy-Secret", "anything"));
+
+        verify(signupUseCase).signup(any(), org.mockito.ArgumentMatchers.eq("127.0.0.1"));
     }
 }

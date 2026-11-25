@@ -107,6 +107,33 @@ class ShopSessionResolverTest {
     }
 
     @Test
+    void 소속없는_합류_신청자는_회사가_달라도_대기_거절_상태를_유지한다() {
+        given(memberRepository.findByAdminId(10L)).willReturn(
+            Optional.of(member(ShopAdminStatus.PENDING, null, 7L)),
+            Optional.of(member(ShopAdminStatus.REJECTED, null, 7L)));
+        given(tokenIssuer.issue(10L, null, null, TokenScope.LIMITED)).willReturn("tok");
+
+        ShopSession pending = resolver.resolve(identity(null, false));
+        ShopSession rejected = resolver.resolve(identity(null, false));
+
+        assertThat(pending.accessStatus()).isEqualTo(AccessStatus.PENDING);
+        assertThat(pending.role()).isNull();
+        assertThat(rejected.accessStatus()).isEqualTo(AccessStatus.REJECTED);
+    }
+
+    @Test
+    void 소속없는_계정의_승인_row는_회사_불일치라_FULL_토큰을_주지_않는다() {
+        given(memberRepository.findByAdminId(10L))
+            .willReturn(Optional.of(member(ShopAdminStatus.APPROVED, ShopRole.PARTNER_ADMIN, 7L)));
+        given(tokenIssuer.issue(10L, null, null, TokenScope.LIMITED)).willReturn("tok");
+
+        ShopSession s = resolver.resolve(identity(null, false));
+
+        assertThat(s.accessStatus()).isEqualTo(AccessStatus.NONE);
+        assertThat(s.role()).isNull();
+    }
+
+    @Test
     void 온우림의_회사가_멤버의_회사와_다르면_승인되어_있어도_FULL_토큰을_주지_않는다() {
         given(memberRepository.findByAdminId(10L))
             .willReturn(Optional.of(member(ShopAdminStatus.APPROVED, ShopRole.PARTNER_ADMIN, 7L)));

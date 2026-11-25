@@ -48,6 +48,18 @@ public class Admin {
         return a;
     }
 
+    public static Admin createShopFounder(String loginId, String encodedPassword,
+                                          String name, String phone, String email, Long companyId) {
+        return createVendor(loginId, encodedPassword, name, phone, email, companyId);
+    }
+
+    public static Admin createShopApplicant(String loginId, String encodedPassword,
+                                            String name, String phone, String email) {
+        Admin a = createVendor(loginId, encodedPassword, name, phone, email, null);
+        a.onurimEnabled = false;
+        return a;
+    }
+
     public static Admin createVendorRequest(String loginId, String encodedPassword,
                                              String name, String phone, String email, Long companyId) {
         Admin a = new Admin();

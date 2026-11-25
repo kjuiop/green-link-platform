@@ -17,7 +17,12 @@ public enum AuthErrorCode implements ErrorCode {
     SMS_SEND_FAILED(500, "AUTH_011", "인증번호 발송에 실패했습니다. 잠시 후 다시 시도해주세요."),
     INTERNAL_ACCESS_DENIED(403, "AUTH_012", "내부 호출 권한이 없습니다."),
     ONURIM_NOT_ENABLED(403, "AUTH_013", "온우림 이용 권한이 없습니다. 이용 신청 후 승인되면 사용할 수 있습니다."),
-    COMPANY_ONURIM_NOT_ENABLED(403, "AUTH_014", "쇼핑몰 서비스로 가입된 회사입니다. 온우림 이용은 별도 신청이 필요합니다.");
+    COMPANY_ONURIM_NOT_ENABLED(403, "AUTH_014", "쇼핑몰 서비스로 가입된 회사입니다. 온우림 이용은 별도 신청이 필요합니다."),
+    SHOP_LOGIN_ID_DUPLICATED(409, "AUTH_015", "이미 사용 중인 아이디입니다."),
+    SHOP_BUSINESS_NO_REGISTERED(409, "AUTH_016", "이미 등록된 사업자번호입니다. 합류 신청으로 진행해주세요."),
+    SHOP_SIGNUP_ROLE_INVALID(400, "AUTH_017", "신청할 수 없는 역할입니다."),
+    INVALID_BUSINESS_NO(400, "AUTH_018", "사업자번호 형식이 올바르지 않습니다."),
+    SHOP_COMPANY_NAME_REQUIRED(400, "AUTH_019", "회사명을 입력해주세요.");
 
     private final int status;
     private final String code;

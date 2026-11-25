@@ -37,7 +37,8 @@ public class SecurityConfig {
                 .accessDeniedHandler((req, res, e) -> writeJson(res, HttpServletResponse.SC_FORBIDDEN, FORBIDDEN_BODY)))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/actuator/health/**", "/api/ping").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/signup").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/auth/business-numbers/*/exists").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/refresh").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/me").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/access-requests").authenticated()

@@ -1,0 +1,9 @@
+package com.greenlink.shopcore.application.auth.port;
+
+import com.greenlink.shopcore.application.auth.dto.RegisteredAccount;
+import com.greenlink.shopcore.application.auth.dto.SignupCommand;
+
+public interface IdentityRegistrar {
+    RegisteredAccount register(SignupCommand command);
+    boolean businessNoExists(String businessNo);
+}

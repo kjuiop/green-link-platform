@@ -34,6 +34,17 @@ class ShopAdminMemberTest {
     }
 
     @Test
+    void 창립자는_승인된_PARTNER_ADMIN으로_즉시_생성된다() {
+        ShopAdminMember m = ShopAdminMember.founder(10L, 7L, T0);
+
+        assertThat(m.getStatus()).isEqualTo(ShopAdminStatus.APPROVED);
+        assertThat(m.getRole()).isEqualTo(ShopRole.PARTNER_ADMIN);
+        assertThat(m.getCompanyId()).isEqualTo(7L);
+        assertThat(m.getAdminId()).isEqualTo(10L);
+        assertThat(m.getProcessedAt()).isEqualTo(T0);
+    }
+
+    @Test
     void 신청하면_PENDING으로_생성되고_역할은_아직_없다() {
         ShopAdminMember m = pending();
 

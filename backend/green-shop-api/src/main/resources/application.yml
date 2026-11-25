@@ -26,6 +26,9 @@ shop:
   identity:
     base-url: ${ONURIM_API_BASE_URL:}
     secret: ${SHOP_INTERNAL_SECRET:}
+  proxy:
+    # shop-admin 앱(Vercel) 서버가 실제 사용자 IP를 X-Shop-Client-Ip 로 전달할 때 쓰는 공유 시크릿. 비우면 비활성
+    secret: ${SHOP_PROXY_SECRET:}
 
 management:
   endpoints:

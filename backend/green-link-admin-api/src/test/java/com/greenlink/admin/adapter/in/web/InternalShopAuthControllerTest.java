@@ -2,7 +2,10 @@ package com.greenlink.admin.adapter.in.web;
 
 import com.greenlink.admin.global.exception.GlobalExceptionHandler;
 import com.greenlink.core.application.auth.dto.AccountSummary;
+import com.greenlink.core.application.auth.dto.ShopSignupCommand;
+import com.greenlink.core.application.auth.dto.ShopSignupResult;
 import com.greenlink.core.application.auth.dto.VerifiedAccount;
+import com.greenlink.core.application.auth.usecase.ShopSignupUseCase;
 import com.greenlink.core.application.auth.usecase.VerifyAdminAccountUseCase;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
@@ -15,6 +18,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -30,10 +34,15 @@ class InternalShopAuthControllerTest {
     private static final String BODY = "{\"loginId\":\"admin01\",\"password\":\"rawPw\"}";
     private static final VerifiedAccount ACCOUNT = new VerifiedAccount(1L, "admin01", "관리자", 7L, "테스트업체", true, false, true, false);
 
+    private static final String SIGNUP_BODY = "{\"loginId\":\"shop01\",\"password\":\"Passw0rd!\",\"name\":\"홍길동\","
+            + "\"phone\":\"010-1234-5678\",\"email\":\"a@test.com\",\"businessNo\":\"123-45-67890\","
+            + "\"companyName\":\"꽃집\",\"ceoName\":\"김대표\"}";
+
     private final VerifyAdminAccountUseCase useCase = mock(VerifyAdminAccountUseCase.class);
+    private final ShopSignupUseCase signupUseCase = mock(ShopSignupUseCase.class);
 
     private MockMvc mvc(String secret) {
-        return MockMvcBuilders.standaloneSetup(new InternalShopAuthController(useCase, secret))
+        return MockMvcBuilders.standaloneSetup(new InternalShopAuthController(useCase, signupUseCase, secret))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -161,5 +170,72 @@ class InternalShopAuthControllerTest {
                         .header("X-Internal-Secret", "s3cret"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("AUTH_006"));
+    }
+
+    @Test
+    void signup_시크릿이_틀리면_403() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/signup")
+                        .header("X-Internal-Secret", "wrong")
+                        .contentType(MediaType.APPLICATION_JSON).content(SIGNUP_BODY))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(signupUseCase);
+    }
+
+    @Test
+    void signup_정상이면_결과를_반환하고_커맨드로_변환한다() throws Exception {
+        when(signupUseCase.signup(any(ShopSignupCommand.class)))
+                .thenReturn(new ShopSignupResult(new VerifiedAccount(10L, "shop01", "홍길동", 20L, "꽃집", false, true, true, false), 20L, true));
+
+        mvc("s3cret").perform(post("/internal/shop-auth/signup")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content(SIGNUP_BODY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.founder").value(true))
+                .andExpect(jsonPath("$.targetCompanyId").value(20))
+                .andExpect(jsonPath("$.account.adminId").value(10))
+                .andExpect(jsonPath("$.account.companyOnurimEnabled").value(false));
+    }
+
+    @Test
+    void signup_입력_검증에_실패하면_400() throws Exception {
+        String bad = SIGNUP_BODY.replace("Passw0rd!", "short");
+
+        mvc("s3cret").perform(post("/internal/shop-auth/signup")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content(bad))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(signupUseCase);
+    }
+
+    @Test
+    void signup_이미_등록된_사업자번호는_409로_매핑() throws Exception {
+        when(signupUseCase.signup(any(ShopSignupCommand.class)))
+                .thenThrow(new BusinessException(AuthErrorCode.SHOP_BUSINESS_NO_REGISTERED));
+
+        mvc("s3cret").perform(post("/internal/shop-auth/signup")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content(SIGNUP_BODY))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("AUTH_016"));
+    }
+
+    @Test
+    void 사업자번호_존재_조회_시크릿이_틀리면_403() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/business-numbers/exists")
+                        .header("X-Internal-Secret", "wrong")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"businessNo\":\"123-45-67890\"}"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(signupUseCase);
+    }
+
+    @Test
+    void 사업자번호_존재_조회는_존재_여부만_반환한다() throws Exception {
+        when(signupUseCase.existsBusinessNo("123-45-67890")).thenReturn(true);
+
+        mvc("s3cret").perform(post("/internal/shop-auth/business-numbers/exists")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"businessNo\":\"123-45-67890\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.exists").value(true));
     }
 }

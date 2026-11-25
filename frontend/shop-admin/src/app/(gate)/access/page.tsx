@@ -18,7 +18,7 @@ const MESSAGE: Record<Exclude<AccessStatus, 'APPROVED'>, { title: string; body: 
   },
   PENDING: {
     title: '승인 대기 중',
-    body: '쇼핑몰 연동 신청이 접수되었습니다. 최고관리자의 승인 후 이용할 수 있습니다.',
+    body: '신청이 접수되었습니다. 승인이 완료되면 이용할 수 있습니다.',
   },
   REJECTED: {
     title: '연동 신청이 거절되었습니다',

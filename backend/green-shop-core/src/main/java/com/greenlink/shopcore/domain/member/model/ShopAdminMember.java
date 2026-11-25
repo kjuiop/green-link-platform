@@ -32,6 +32,18 @@ public class ShopAdminMember {
         return m;
     }
 
+    public static ShopAdminMember founder(Long adminId, Long companyId, LocalDateTime now) {
+        ShopAdminMember m = new ShopAdminMember();
+        m.adminId = adminId;
+        m.companyId = companyId;
+        m.role = ShopRole.PARTNER_ADMIN;
+        m.requestedRole = ShopRole.PARTNER_ADMIN;
+        m.status = ShopAdminStatus.APPROVED;
+        m.requestedAt = now;
+        m.processedAt = now;
+        return m;
+    }
+
     public static ShopAdminMember of(Long id, Long adminId, Long companyId, ShopRole role, ShopRole requestedRole,
                                      ShopAdminStatus status, LocalDateTime requestedAt, LocalDateTime processedAt,
                                      Long processedBy, String rejectReason) {
