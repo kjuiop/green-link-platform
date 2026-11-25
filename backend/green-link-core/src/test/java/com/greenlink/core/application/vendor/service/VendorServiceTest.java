@@ -13,6 +13,7 @@ import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.domain.company.port.DocumentStorage;
 import com.greenlink.core.global.exception.BusinessException;
+import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import com.greenlink.core.global.exception.vendor.VendorErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -135,6 +136,24 @@ class VendorServiceTest {
         verify(companyRepository, never()).save(any());
         verify(syncBaseProductsUseCase).syncBaseProducts(10L);
         assertThat(result.status()).isEqualTo("PENDING");
+    }
+
+    @Test
+    void signup_온우림_미사용_회사_사업자번호면_가입을_차단한다() {
+        Company siteOnly = savedCompany(10L);
+        siteOnly.restoreServiceFlags(false, true);
+        given(adminRepository.existsByLoginId("vendor01")).willReturn(false);
+        given(companyRepository.existsByBusinessNo("123-45-67890")).willReturn(true);
+        given(companyRepository.findByBusinessNo("123-45-67890")).willReturn(Optional.of(siteOnly));
+
+        assertThatThrownBy(() -> service.signup(
+                new VendorSignupCommand("vendor01", "pw", "홍길동", "010-0000-0000", null,
+                        "123-45-67890", "테스트꽃집", "홍대표", "02-1234-5678", "서울", "", List.of("VENDOR"), null, null)))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(AuthErrorCode.COMPANY_ONURIM_NOT_ENABLED));
+
+        verify(companyRepository, never()).save(any());
+        verify(adminRepository, never()).save(any());
     }
 
     @Test

@@ -37,4 +37,44 @@ class CompanyTest {
         assertThatThrownBy(() -> company().changeVendorFee(Company.MAX_VENDOR_FEE + 1))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    private static Company ofType(CompanyType type) {
+        return Company.of(1L, "000-00-00001", "회사", null, null, null, null, null,
+                type, CompanyStatus.ACTIVE, true, null, null, null, null, null, BusinessStatus.OPEN);
+    }
+
+    @Test
+    void 기본값은_온우림사용_켜짐_사이트사용_꺼짐() {
+        Company company = ofType(CompanyType.VENDOR);
+        assertThat(company.isOnurimEnabled()).isTrue();
+        assertThat(company.isSiteEnabled()).isFalse();
+        assertThat(company.isOnurimCompany()).isTrue();
+    }
+
+    @Test
+    void 온우림사용이_꺼지면_온우림_회사가_아니다() {
+        Company company = ofType(CompanyType.VENDOR);
+        company.restoreServiceFlags(false, true);
+        assertThat(company.isOnurimCompany()).isFalse();
+        assertThat(company.isSiteEnabled()).isTrue();
+    }
+
+    @Test
+    void 타입이_없으면_온우림_회사가_아니다() {
+        assertThat(ofType(null).isOnurimCompany()).isFalse();
+    }
+
+    @Test
+    void expandType_타입이_없으면_요청_타입으로_설정() {
+        Company company = ofType(null);
+        company.expandType(CompanyType.ORDERING);
+        assertThat(company.getType()).isEqualTo(CompanyType.ORDERING);
+    }
+
+    @Test
+    void expandType_타입이_있으면_BOTH로_확장() {
+        Company company = ofType(CompanyType.VENDOR);
+        company.expandType(CompanyType.ORDERING);
+        assertThat(company.getType()).isEqualTo(CompanyType.BOTH);
+    }
 }

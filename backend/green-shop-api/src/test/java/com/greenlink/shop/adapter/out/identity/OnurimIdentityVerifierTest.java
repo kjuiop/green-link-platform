@@ -26,7 +26,8 @@ class OnurimIdentityVerifierTest {
 
     private static final String BASE = "https://onurim.test";
     private static final String ACCOUNT_JSON =
-        "{\"adminId\":5,\"loginId\":\"shop01\",\"name\":\"홍길동\",\"companyName\":\"테스트업체\",\"superAdmin\":false}";
+        "{\"adminId\":5,\"loginId\":\"shop01\",\"name\":\"홍길동\",\"companyId\":7,\"companyName\":\"테스트업체\","
+        + "\"companyOnurimEnabled\":true,\"companySiteEnabled\":false,\"adminOnurimEnabled\":true,\"superAdmin\":false}";
 
     private MockRestServiceServer server;
     private OnurimIdentityVerifier verifier;

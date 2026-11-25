@@ -56,8 +56,14 @@ public class VerifyAdminAccountService implements VerifyAdminAccountUseCase {
             throw new BusinessException(AuthErrorCode.ACCOUNT_INACTIVE);
         }
         Long companyId = admin.getCompanyId();
-        String companyName = companyId == null ? null
-            : companyRepository.findById(companyId).map(Company::getCompanyName).orElse(null);
-        return new VerifiedAccount(admin.getId(), admin.getLoginId(), admin.getName(), companyName, companyId == null);
+        Company company = companyId == null ? null : companyRepository.findById(companyId).orElse(null);
+        return new VerifiedAccount(
+            admin.getId(), admin.getLoginId(), admin.getName(),
+            companyId,
+            company == null ? null : company.getCompanyName(),
+            company != null && company.isOnurimEnabled(),
+            company != null && company.isSiteEnabled(),
+            admin.isOnurimEnabled(),
+            admin.isSuperAdmin());
     }
 }

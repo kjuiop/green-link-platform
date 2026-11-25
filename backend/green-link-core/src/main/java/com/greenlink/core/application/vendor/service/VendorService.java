@@ -28,6 +28,7 @@ import com.greenlink.core.application.product.usecase.SyncBaseProductsUseCase;
 import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.global.exception.BusinessException;
+import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import com.greenlink.core.global.exception.vendor.VendorErrorCode;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -272,6 +273,9 @@ public class VendorService implements GetVendorsUseCase, GetVendorUseCase,
         if (businessNo != null && companyRepository.existsByBusinessNo(businessNo)) {
             Company existing = companyRepository.findByBusinessNo(businessNo)
                 .orElseThrow(() -> new BusinessException(VendorErrorCode.VENDOR_NOT_FOUND));
+            if (!existing.isOnurimCompany()) {
+                throw new BusinessException(AuthErrorCode.COMPANY_ONURIM_NOT_ENABLED);
+            }
             CompanyType prevType = existing.getType();
             existing.expandType(requestedType);
             savedCompany = existing.getType() != prevType ? companyRepository.save(existing) : existing;

@@ -4,6 +4,8 @@ import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.greenlink.admin.adapter.out.persistence.admin.QAdminJpaEntity.adminJpaEntity;
+import static com.greenlink.admin.adapter.out.persistence.company.QCompanyJpaEntity.companyJpaEntity;
 
 @Component
 public class AdminRepositoryAdapter implements AdminRepository {
@@ -61,7 +64,8 @@ public class AdminRepositoryAdapter implements AdminRepository {
         return queryFactory
             .selectFrom(adminJpaEntity)
             .where(adminJpaEntity.companyId.isNotNull()
-                .and(adminJpaEntity.deletedAt.isNull()))
+                .and(adminJpaEntity.deletedAt.isNull())
+                .and(onurimEnabledAdminInOnurimCompany()))
             .orderBy(adminJpaEntity.createdAt.desc())
             .fetch()
             .stream()
@@ -89,7 +93,7 @@ public class AdminRepositoryAdapter implements AdminRepository {
         if (companyIds.isEmpty()) return List.of();
         return jpaRepository.findByCompanyIdInAndDeletedAtIsNull(companyIds).stream()
             .map(AdminJpaEntity::toDomain)
-            .filter(a -> a.getStatus() == AdminStatus.ACTIVE)
+            .filter(a -> a.getStatus() == AdminStatus.ACTIVE && a.isOnurimEnabled())
             .toList();
     }
 
@@ -98,6 +102,7 @@ public class AdminRepositoryAdapter implements AdminRepository {
         BooleanBuilder where = new BooleanBuilder();
         where.and(adminJpaEntity.companyId.isNotNull());
         where.and(adminJpaEntity.deletedAt.isNull());
+        where.and(onurimEnabledAdminInOnurimCompany());
         if (status != null && !status.isBlank()) {
             try {
                 AdminStatus adminStatus = AdminStatus.valueOf(status.toUpperCase());
@@ -123,6 +128,15 @@ public class AdminRepositoryAdapter implements AdminRepository {
 
         return new PageImpl<>(content, pageable, total != null ? total : 0L)
                 .map(AdminJpaEntity::toDomain);
+    }
+
+    private BooleanExpression onurimEnabledAdminInOnurimCompany() {
+        return adminJpaEntity.onurimEnabled.isTrue()
+            .and(JPAExpressions.selectOne()
+                .from(companyJpaEntity)
+                .where(companyJpaEntity.id.eq(adminJpaEntity.companyId)
+                    .and(companyJpaEntity.onurimEnabled.isTrue()))
+                .exists());
     }
 
     @Override

@@ -71,14 +71,14 @@ public class CompanyRepositoryAdapter implements CompanyRepository {
 
     @Override
     public List<Company> findAllByType(CompanyType type) {
-        return jpaRepository.findByTypeAndDisplayYnTrue(type).stream()
+        return jpaRepository.findByTypeAndDisplayYnTrueAndOnurimEnabledTrue(type).stream()
             .map(CompanyJpaEntity::toDomain)
             .toList();
     }
 
     @Override
     public List<Company> findAllByTypeIn(List<CompanyType> types) {
-        return jpaRepository.findByTypeInAndDisplayYnTrue(types).stream()
+        return jpaRepository.findByTypeInAndDisplayYnTrueAndOnurimEnabledTrue(types).stream()
             .map(CompanyJpaEntity::toDomain)
             .toList();
     }
@@ -90,7 +90,7 @@ public class CompanyRepositoryAdapter implements CompanyRepository {
 
     @Override
     public Page<Company> findAllDisplayed(Pageable pageable) {
-        return jpaRepository.findAllByDisplayYnTrue(pageable)
+        return jpaRepository.findAllByDisplayYnTrueAndOnurimEnabledTrue(pageable)
             .map(CompanyJpaEntity::toDomain);
     }
 
@@ -98,6 +98,7 @@ public class CompanyRepositoryAdapter implements CompanyRepository {
     public Page<Company> searchVendorCompanies(String keyword, Pageable pageable) {
         BooleanBuilder where = new BooleanBuilder()
             .and(companyJpaEntity.displayYn.isTrue())
+            .and(companyJpaEntity.onurimEnabled.isTrue())
             .and(companyJpaEntity.type.in(CompanyType.VENDOR, CompanyType.BOTH));
         if (keyword != null && !keyword.isBlank()) {
             where.and(companyJpaEntity.companyName.containsIgnoreCase(keyword.trim()));
@@ -124,6 +125,7 @@ public class CompanyRepositoryAdapter implements CompanyRepository {
     public Page<Company> searchOrderingCompanies(String keyword, Pageable pageable) {
         BooleanBuilder where = new BooleanBuilder()
             .and(companyJpaEntity.displayYn.isTrue())
+            .and(companyJpaEntity.onurimEnabled.isTrue())
             .and(companyJpaEntity.type.in(CompanyType.ORDERING, CompanyType.BOTH));
         if (keyword != null && !keyword.isBlank()) {
             where.and(companyJpaEntity.companyName.containsIgnoreCase(keyword.trim()));
