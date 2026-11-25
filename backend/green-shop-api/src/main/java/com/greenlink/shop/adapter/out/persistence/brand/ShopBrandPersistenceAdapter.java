@@ -18,14 +18,26 @@ class ShopBrandPersistenceAdapter implements ShopBrandRepository {
 
     @Override
     public Optional<ShopBrand> findById(Long id) {
-        return jpaRepository.findById(id).map(ShopBrandJpaEntity::toDomain);
+        return jpaRepository.findByIdAndDeletedAtIsNull(id).map(ShopBrandJpaEntity::toDomain);
+    }
+
+    @Override
+    public List<ShopBrand> findAll() {
+        return jpaRepository.findByDeletedAtIsNullOrderByIdAsc().stream()
+            .map(ShopBrandJpaEntity::toDomain)
+            .toList();
     }
 
     @Override
     public List<ShopBrand> findAllByCompanyId(Long companyId) {
-        return jpaRepository.findByCompanyIdOrderByIdAsc(companyId).stream()
+        return jpaRepository.findByCompanyIdAndDeletedAtIsNullOrderByIdAsc(companyId).stream()
             .map(ShopBrandJpaEntity::toDomain)
             .toList();
+    }
+
+    @Override
+    public boolean existsByCompanyIdAndName(Long companyId, String name) {
+        return jpaRepository.existsByCompanyIdAndNameAndDeletedAtIsNull(companyId, name);
     }
 
     @Override

@@ -14,6 +14,7 @@ public enum AccessStatus {
             case PENDING -> PENDING;
             case APPROVED -> APPROVED;
             case REJECTED -> REJECTED;
+            case REMOVED -> NONE;
         };
     }
 }

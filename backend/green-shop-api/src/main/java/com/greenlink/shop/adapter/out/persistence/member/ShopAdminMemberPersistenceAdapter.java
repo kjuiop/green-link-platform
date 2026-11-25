@@ -1,5 +1,6 @@
 package com.greenlink.shop.adapter.out.persistence.member;
 
+import com.greenlink.shopcore.domain.auth.ShopRole;
 import com.greenlink.shopcore.domain.member.model.ShopAdminMember;
 import com.greenlink.shopcore.domain.member.model.ShopAdminStatus;
 import com.greenlink.shopcore.domain.member.port.ShopAdminMemberRepository;
@@ -33,9 +34,22 @@ class ShopAdminMemberPersistenceAdapter implements ShopAdminMemberRepository {
     @Override
     public List<ShopAdminMember> findAll(ShopAdminStatus status) {
         List<ShopAdminMemberJpaEntity> rows = status == null
-            ? jpaRepository.findAllByOrderByRequestedAtDesc()
+            ? jpaRepository.findByStatusNotOrderByRequestedAtDesc(ShopAdminStatus.REMOVED)
             : jpaRepository.findByStatusOrderByRequestedAtDesc(status);
         return rows.stream().map(ShopAdminMemberJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public List<ShopAdminMember> findAllByCompanyId(Long companyId, ShopAdminStatus status) {
+        List<ShopAdminMemberJpaEntity> rows = status == null
+            ? jpaRepository.findByCompanyIdAndStatusNotOrderByRequestedAtDesc(companyId, ShopAdminStatus.REMOVED)
+            : jpaRepository.findByCompanyIdAndStatusOrderByRequestedAtDesc(companyId, status);
+        return rows.stream().map(ShopAdminMemberJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public long countApprovedByCompanyIdAndRole(Long companyId, ShopRole role) {
+        return jpaRepository.countByCompanyIdAndRoleAndStatus(companyId, role, ShopAdminStatus.APPROVED);
     }
 
     @Override

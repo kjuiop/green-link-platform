@@ -60,7 +60,7 @@ class BrandAccessServiceTest {
 
     @Test
     void 슈퍼관리자는_배정_조회_없이_통과한다() {
-        given(brandRepository.findById(100L)).willReturn(Optional.of(ShopBrand.of(100L, 7L, "브랜드")));
+        given(brandRepository.findById(100L)).willReturn(Optional.of(ShopBrand.of(100L, 7L, "브랜드", null)));
 
         assertThatCode(() -> service.requireAccess(1L, ShopRole.SUPER_ADMIN, null, 100L)).doesNotThrowAnyException();
         verifyNoInteractions(memberRepository, brandMemberRepository);
@@ -68,7 +68,7 @@ class BrandAccessServiceTest {
 
     @Test
     void 파트너_관리자는_자기_회사_브랜드면_배정_조회_없이_통과한다() {
-        given(brandRepository.findById(100L)).willReturn(Optional.of(ShopBrand.of(100L, 7L, "브랜드")));
+        given(brandRepository.findById(100L)).willReturn(Optional.of(ShopBrand.of(100L, 7L, "브랜드", null)));
 
         assertThatCode(() -> service.requireAccess(10L, ShopRole.PARTNER_ADMIN, 7L, 100L)).doesNotThrowAnyException();
         verifyNoInteractions(memberRepository, brandMemberRepository);
@@ -76,14 +76,14 @@ class BrandAccessServiceTest {
 
     @Test
     void 파트너_관리자가_다른_회사_브랜드에_접근하면_거부된다() {
-        given(brandRepository.findById(100L)).willReturn(Optional.of(ShopBrand.of(100L, 7L, "브랜드")));
+        given(brandRepository.findById(100L)).willReturn(Optional.of(ShopBrand.of(100L, 7L, "브랜드", null)));
 
         assertCode(() -> service.requireAccess(10L, ShopRole.PARTNER_ADMIN, 8L, 100L), ShopErrorCode.BRAND_ACCESS_DENIED);
     }
 
     @Test
     void 브랜드_관리자는_배정된_브랜드에_접근할_수_있다() {
-        given(brandRepository.findById(100L)).willReturn(Optional.of(ShopBrand.of(100L, 7L, "브랜드")));
+        given(brandRepository.findById(100L)).willReturn(Optional.of(ShopBrand.of(100L, 7L, "브랜드", null)));
         given(memberRepository.findByAdminId(10L)).willReturn(Optional.of(brandAdminMember()));
         given(brandMemberRepository.findBrandIdsByMemberId(5L)).willReturn(Set.of(100L));
 
@@ -92,7 +92,7 @@ class BrandAccessServiceTest {
 
     @Test
     void 브랜드_관리자는_배정되지_않은_브랜드에_접근하면_거부된다() {
-        given(brandRepository.findById(100L)).willReturn(Optional.of(ShopBrand.of(100L, 7L, "브랜드")));
+        given(brandRepository.findById(100L)).willReturn(Optional.of(ShopBrand.of(100L, 7L, "브랜드", null)));
         given(memberRepository.findByAdminId(10L)).willReturn(Optional.of(brandAdminMember()));
         given(brandMemberRepository.findBrandIdsByMemberId(5L)).willReturn(Set.of(101L));
 
@@ -101,7 +101,7 @@ class BrandAccessServiceTest {
 
     @Test
     void 멤버_행이_없는_브랜드_관리자는_거부된다() {
-        given(brandRepository.findById(100L)).willReturn(Optional.of(ShopBrand.of(100L, 7L, "브랜드")));
+        given(brandRepository.findById(100L)).willReturn(Optional.of(ShopBrand.of(100L, 7L, "브랜드", null)));
         given(memberRepository.findByAdminId(10L)).willReturn(Optional.empty());
 
         assertCode(() -> service.requireAccess(10L, ShopRole.BRAND_ADMIN, 7L, 100L), ShopErrorCode.BRAND_ACCESS_DENIED);

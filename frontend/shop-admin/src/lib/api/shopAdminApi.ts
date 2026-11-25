@@ -4,16 +4,16 @@ import { apiFetch } from './client'
 
 export function fetchShopAdmins(status?: ShopAdminStatus): Promise<ShopAdmin[]> {
   const query = status ? `?status=${status}` : ''
-  return apiFetch<ShopAdmin[]>(`/api/admin/shop-admins${query}`)
+  return apiFetch<ShopAdmin[]>(`/api/members${query}`)
 }
 
-export function approveShopAdmin(id: number, role?: ShopRole): Promise<void> {
-  return apiFetch<void>(`/api/admin/shop-admins/${id}/approve`, {
+export function approveShopAdmin(id: number, role?: ShopRole, brandIds?: number[]): Promise<void> {
+  return apiFetch<void>(`/api/members/${id}/approve`, {
     method: 'POST',
-    body: role ? { role } : undefined,
+    body: role || brandIds ? { role, brandIds } : undefined,
   })
 }
 
 export function rejectShopAdmin(id: number, reason: string): Promise<void> {
-  return apiFetch<void>(`/api/admin/shop-admins/${id}/reject`, { method: 'POST', body: { reason } })
+  return apiFetch<void>(`/api/members/${id}/reject`, { method: 'POST', body: { reason } })
 }
