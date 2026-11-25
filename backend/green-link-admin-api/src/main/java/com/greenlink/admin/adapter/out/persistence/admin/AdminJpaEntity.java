@@ -4,6 +4,7 @@ import com.greenlink.admin.adapter.out.persistence.BaseJpaEntity;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Entity
@@ -45,6 +46,12 @@ public class AdminJpaEntity extends BaseJpaEntity {
     @Column(length = 30)
     private String deletedAt;
 
+    @Column(name = "password_setup_expires_at")
+    private LocalDateTime passwordSetupExpiresAt;
+
+    @Column(name = "password_setup_attempts", nullable = false, columnDefinition = "INT DEFAULT 0")
+    private int passwordSetupAttempts;
+
     protected AdminJpaEntity() {}
 
     public static AdminJpaEntity from(Admin admin) {
@@ -60,6 +67,8 @@ public class AdminJpaEntity extends BaseJpaEntity {
         e.superAdmin = admin.isSuperAdmin();
         e.onurimEnabled = admin.isOnurimEnabled();
         e.deletedAt = admin.getDeletedAt();
+        e.passwordSetupExpiresAt = admin.getPasswordSetupExpiresAt();
+        e.passwordSetupAttempts = admin.getPasswordSetupAttempts();
         return e;
     }
 
@@ -68,6 +77,7 @@ public class AdminJpaEntity extends BaseJpaEntity {
                 ? getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null;
         Admin admin = Admin.of(id, loginId, password, name, phone, email, companyId, status, createdAtStr, deletedAt);
         admin.restoreAccessFlags(superAdmin, onurimEnabled);
+        admin.restorePasswordSetup(passwordSetupExpiresAt, passwordSetupAttempts);
         return admin;
     }
 }

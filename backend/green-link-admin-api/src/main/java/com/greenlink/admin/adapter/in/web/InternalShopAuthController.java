@@ -4,6 +4,8 @@ import com.greenlink.admin.adapter.in.web.dto.BatchShopAccountsRequest;
 import com.greenlink.admin.adapter.in.web.dto.BatchShopCompaniesRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopAccessGrantRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopBusinessNoRequest;
+import com.greenlink.admin.adapter.in.web.dto.ShopManagedAccountRequest;
+import com.greenlink.admin.adapter.in.web.dto.ShopPasswordSetupRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopSignupRequest;
 import com.greenlink.admin.adapter.in.web.dto.VerifyShopAccountRequest;
 import com.greenlink.core.application.auth.dto.AccountSummary;
@@ -11,12 +13,14 @@ import com.greenlink.core.application.auth.dto.CompanySummary;
 import com.greenlink.core.application.auth.dto.ShopSignupResult;
 import com.greenlink.core.application.auth.dto.VerifiedAccount;
 import com.greenlink.core.application.auth.usecase.ShopAccessUseCase;
+import com.greenlink.core.application.auth.usecase.ShopManagedAccountUseCase;
 import com.greenlink.core.application.auth.usecase.ShopSignupUseCase;
 import com.greenlink.core.application.auth.usecase.VerifyAdminAccountUseCase;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
@@ -33,15 +37,18 @@ public class InternalShopAuthController {
     private final VerifyAdminAccountUseCase useCase;
     private final ShopSignupUseCase signupUseCase;
     private final ShopAccessUseCase accessUseCase;
+    private final ShopManagedAccountUseCase managedAccountUseCase;
     private final byte[] internalSecret;
 
     public InternalShopAuthController(VerifyAdminAccountUseCase useCase,
                                       ShopSignupUseCase signupUseCase,
                                       ShopAccessUseCase accessUseCase,
+                                      ShopManagedAccountUseCase managedAccountUseCase,
                                       @Value("${shop.internal.secret:}") String internalSecret) {
         this.useCase = useCase;
         this.signupUseCase = signupUseCase;
         this.accessUseCase = accessUseCase;
+        this.managedAccountUseCase = managedAccountUseCase;
         this.internalSecret = internalSecret.getBytes(StandardCharsets.UTF_8);
     }
 
@@ -92,6 +99,29 @@ public class InternalShopAuthController {
                                              @RequestBody @Valid BatchShopCompaniesRequest req) {
         requireSecret(secret);
         return accessUseCase.getCompanySummaries(req.companyIds());
+    }
+
+    @PostMapping("/managed-accounts")
+    public VerifiedAccount createManagedAccount(@RequestHeader(value = SECRET_HEADER, required = false) String secret,
+                                                @RequestBody @Valid ShopManagedAccountRequest req) {
+        requireSecret(secret);
+        return managedAccountUseCase.create(req.toCommand());
+    }
+
+    @PostMapping("/password-setup")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void setupPassword(@RequestHeader(value = SECRET_HEADER, required = false) String secret,
+                              @RequestBody @Valid ShopPasswordSetupRequest req) {
+        requireSecret(secret);
+        managedAccountUseCase.completePasswordSetup(req.loginId(), req.phone(), req.newPassword());
+    }
+
+    @PostMapping("/accounts/{adminId}/password-setup-reissue")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reissuePasswordSetup(@RequestHeader(value = SECRET_HEADER, required = false) String secret,
+                                     @PathVariable Long adminId) {
+        requireSecret(secret);
+        managedAccountUseCase.reissuePasswordSetup(adminId);
     }
 
     private void requireSecret(String provided) {

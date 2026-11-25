@@ -224,4 +224,33 @@ class VerifyAdminAccountServiceTest {
 
         assertCode(() -> service.getActiveAccount(1L), AuthErrorCode.ACCOUNT_INACTIVE);
     }
+
+    @Test
+    void verify_비밀번호_설정_대기_계정은_비밀번호_비교_없이_PASSWORD_NOT_SET() {
+        Admin pending = admin(7L, AdminStatus.ACTIVE, null);
+        pending.restorePasswordSetup(java.time.LocalDateTime.now().plusDays(1), 0);
+        given(adminRepository.findByLoginId("admin01")).willReturn(Optional.of(pending));
+
+        assertCode(() -> service.verify("admin01", "anything"), AuthErrorCode.PASSWORD_NOT_SET);
+        verifyNoInteractions(passwordEncoder);
+    }
+
+    @Test
+    void verify_비밀번호_설정_만료_계정도_PASSWORD_NOT_SET() {
+        Admin expired = admin(7L, AdminStatus.ACTIVE, null);
+        expired.restorePasswordSetup(java.time.LocalDateTime.now().minusDays(1), 0);
+        given(adminRepository.findByLoginId("admin01")).willReturn(Optional.of(expired));
+
+        assertCode(() -> service.verify("admin01", "anything"), AuthErrorCode.PASSWORD_NOT_SET);
+    }
+
+    @Test
+    void getAccountSummaries_설정_대기_여부를_반영한다() {
+        Admin pending = admin(7L, AdminStatus.ACTIVE, null);
+        pending.restorePasswordSetup(java.time.LocalDateTime.now().plusDays(1), 0);
+        given(adminRepository.findAllByIdIn(List.of(1L))).willReturn(List.of(pending));
+        given(companyRepository.findAllByIdIn(List.of(7L))).willReturn(List.of(company()));
+
+        assertThat(service.getAccountSummaries(List.of(1L)).get(0).passwordSetupPending()).isTrue();
+    }
 }

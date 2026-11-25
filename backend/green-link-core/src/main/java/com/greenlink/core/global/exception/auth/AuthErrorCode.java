@@ -25,7 +25,10 @@ public enum AuthErrorCode implements ErrorCode {
     SHOP_COMPANY_NAME_REQUIRED(400, "AUTH_019", "회사명을 입력해주세요."),
     SHOP_ACCESS_COMPANY_MISMATCH(409, "AUTH_020", "이미 다른 회사에 소속된 계정입니다."),
     SHOP_ACCESS_COMPANY_NOT_FOUND(404, "AUTH_021", "회사를 찾을 수 없습니다."),
-    SHOP_ACCESS_ADMIN_NOT_FOUND(404, "AUTH_022", "계정을 찾을 수 없습니다.");
+    SHOP_ACCESS_ADMIN_NOT_FOUND(404, "AUTH_022", "계정을 찾을 수 없습니다."),
+    PASSWORD_NOT_SET(403, "AUTH_023", "비밀번호가 아직 설정되지 않은 계정입니다."),
+    PASSWORD_SETUP_FAILED(400, "AUTH_024", "설정할 수 없습니다. 아이디·휴대폰 번호·설정 기간을 확인해주세요."),
+    PASSWORD_SETUP_NOT_PENDING(409, "AUTH_025", "이미 비밀번호가 설정된 계정입니다.");
 
     private final int status;
     private final String code;
