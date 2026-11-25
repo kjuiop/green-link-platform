@@ -61,23 +61,4 @@ class ShopAccessPolicyTest {
         assertThat(ShopAccessPolicy.canManageCompany(ShopRole.BRAND_ADMIN, 7L, 7L)).isFalse();
         assertThat(ShopAccessPolicy.canManageCompany(null, 7L, 7L)).isFalse();
     }
-
-    @Test
-    void 역할_부여는_슈퍼관리자는_모두_파트너는_브랜드_관리자만_가능하다() {
-        assertThat(ShopAccessPolicy.canGrantRole(ShopRole.SUPER_ADMIN, ShopRole.PARTNER_ADMIN)).isTrue();
-        assertThat(ShopAccessPolicy.canGrantRole(ShopRole.SUPER_ADMIN, ShopRole.BRAND_ADMIN)).isTrue();
-        assertThat(ShopAccessPolicy.canGrantRole(ShopRole.PARTNER_ADMIN, ShopRole.BRAND_ADMIN)).isTrue();
-        assertThat(ShopAccessPolicy.canGrantRole(ShopRole.PARTNER_ADMIN, ShopRole.PARTNER_ADMIN)).isFalse();
-        assertThat(ShopAccessPolicy.canGrantRole(ShopRole.BRAND_ADMIN, ShopRole.BRAND_ADMIN)).isFalse();
-        assertThat(ShopAccessPolicy.canGrantRole(null, ShopRole.BRAND_ADMIN)).isFalse();
-        assertThat(ShopAccessPolicy.canGrantRole(ShopRole.SUPER_ADMIN, null)).isFalse();
-    }
-
-    @Test
-    void 역할_변경은_슈퍼관리자만_가능하다() {
-        assertThat(ShopAccessPolicy.canChangeRole(ShopRole.SUPER_ADMIN)).isTrue();
-        assertThat(ShopAccessPolicy.canChangeRole(ShopRole.PARTNER_ADMIN)).isFalse();
-        assertThat(ShopAccessPolicy.canChangeRole(ShopRole.BRAND_ADMIN)).isFalse();
-        assertThat(ShopAccessPolicy.canChangeRole(null)).isFalse();
-    }
 }

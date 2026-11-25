@@ -36,8 +36,9 @@ public class MemberController {
 
     @GetMapping
     public List<ShopAdminResponse> list(@RequestParam(required = false) ShopAdminStatus status,
+                                        @RequestParam(required = false) Long companyId,
                                         @AuthenticationPrincipal ShopPrincipal principal) {
-        return managementUseCase.list(principal.toActor(), status).stream().map(ShopAdminResponse::from).toList();
+        return managementUseCase.list(principal.toActor(), status, companyId).stream().map(ShopAdminResponse::from).toList();
     }
 
     @PostMapping("/{id}/approve")

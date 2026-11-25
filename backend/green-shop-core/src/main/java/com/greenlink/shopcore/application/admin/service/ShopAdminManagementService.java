@@ -68,10 +68,11 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
 
     @Override
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public List<ShopAdminView> list(ManagementActor actor, ShopAdminStatus status) {
+    public List<ShopAdminView> list(ManagementActor actor, ShopAdminStatus status, Long companyId) {
         Long verifiedCompanyId = guard.requireManager(actor);
-        List<ShopAdminMember> members = actor.role() == ShopRole.PARTNER_ADMIN
-            ? memberRepository.findAllByCompanyId(verifiedCompanyId, status)
+        Long targetCompanyId = actor.role() == ShopRole.PARTNER_ADMIN ? verifiedCompanyId : companyId;
+        List<ShopAdminMember> members = targetCompanyId != null
+            ? memberRepository.findAllByCompanyId(targetCompanyId, status)
             : memberRepository.findAll(status);
         if (members.isEmpty()) {
             return List.of();
@@ -92,9 +93,6 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
         ShopAdminMember member = findManageable(actor, id);
         ShopRole role = grantedRole != null ? grantedRole : member.getRequestedRole();
         member.validateApproval(role);
-        if (!ShopAccessPolicy.canGrantRole(actor.role(), role)) {
-            throw new ShopBusinessException(ShopErrorCode.ACCESS_PARTNER_PROMOTION_FORBIDDEN);
-        }
         if (role != ShopRole.PARTNER_ADMIN && !memberRepository.existsApprovedByCompanyId(member.getCompanyId())) {
             throw new ShopBusinessException(ShopErrorCode.ACCESS_FIRST_MEMBER_MUST_BE_PARTNER);
         }
@@ -118,11 +116,7 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
 
     @Override
     public void changeRole(ManagementActor actor, Long id, ShopRole newRole) {
-        guard.requireManager(actor);
-        if (!ShopAccessPolicy.canChangeRole(actor.role())) {
-            throw new ShopBusinessException(ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
-        }
-        ShopAdminMember member = find(id);
+        ShopAdminMember member = findManageable(actor, id);
         ShopRole previousRole = member.getRole();
         member.changeRole(newRole);
         if (previousRole == ShopRole.PARTNER_ADMIN && newRole != ShopRole.PARTNER_ADMIN) {
@@ -150,9 +144,6 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
     @Override
     public void remove(ManagementActor actor, Long id) {
         ShopAdminMember member = findManageable(actor, id);
-        if (member.getRole() == ShopRole.PARTNER_ADMIN && actor.role() != ShopRole.SUPER_ADMIN) {
-            throw new ShopBusinessException(ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
-        }
         if (member.isApprovedAs(ShopRole.PARTNER_ADMIN)) {
             requireNotLastPartner(member);
         }

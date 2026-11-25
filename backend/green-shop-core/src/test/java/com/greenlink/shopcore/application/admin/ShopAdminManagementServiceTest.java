@@ -105,7 +105,7 @@ class ShopAdminManagementServiceTest {
         given(identityVerifier.getAccounts(List.of(10L)))
             .willReturn(List.of(new AccountProfile(10L, "login", "이름", "회사")));
 
-        List<ShopAdminView> result = service.list(SUPER, ShopAdminStatus.PENDING);
+        List<ShopAdminView> result = service.list(SUPER, ShopAdminStatus.PENDING, null);
 
         assertThat(result).hasSize(1);
         ShopAdminView v = result.get(0);
@@ -124,7 +124,7 @@ class ShopAdminManagementServiceTest {
         given(memberRepository.findAll(null)).willReturn(List.of(member(ShopAdminStatus.APPROVED)));
         given(identityVerifier.getAccounts(List.of(10L))).willReturn(List.of());
 
-        assertThat(service.list(SUPER, null).get(0).role()).isEqualTo(ShopRole.PARTNER_ADMIN);
+        assertThat(service.list(SUPER, null, null).get(0).role()).isEqualTo(ShopRole.PARTNER_ADMIN);
     }
 
     @Test
@@ -132,7 +132,7 @@ class ShopAdminManagementServiceTest {
         given(memberRepository.findAll(null)).willReturn(List.of(member(ShopAdminStatus.PENDING)));
         given(identityVerifier.getAccounts(List.of(10L))).willReturn(List.of());
 
-        ShopAdminView v = service.list(SUPER, null).get(0);
+        ShopAdminView v = service.list(SUPER, null, null).get(0);
 
         assertThat(v.name()).isNull();
         assertThat(v.loginId()).isNull();
@@ -145,7 +145,7 @@ class ShopAdminManagementServiceTest {
         given(identityVerifier.getAccounts(any()))
             .willThrow(new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE));
 
-        List<ShopAdminView> result = service.list(SUPER, null);
+        List<ShopAdminView> result = service.list(SUPER, null, null);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).name()).isNull();
@@ -156,7 +156,7 @@ class ShopAdminManagementServiceTest {
     void 목록이_비어_있으면_온우림을_조회하지_않는다() {
         given(memberRepository.findAll(null)).willReturn(List.of());
 
-        assertThat(service.list(SUPER, null)).isEmpty();
+        assertThat(service.list(SUPER, null, null)).isEmpty();
         verifyNoInteractions(identityVerifier);
     }
 
@@ -264,7 +264,7 @@ class ShopAdminManagementServiceTest {
             .willReturn(List.of(new AccountProfile(10L, "login", "이름", null)));
         given(identityVerifier.getCompanyNames(List.of(7L))).willReturn(Map.of(7L, "신청 회사"));
 
-        assertThat(service.list(SUPER, null).get(0).companyName()).isEqualTo("신청 회사");
+        assertThat(service.list(SUPER, null, null).get(0).companyName()).isEqualTo("신청 회사");
     }
 
     @Test
@@ -275,7 +275,7 @@ class ShopAdminManagementServiceTest {
         given(identityVerifier.getCompanyNames(any()))
             .willThrow(new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE));
 
-        ShopAdminView v = service.list(SUPER, null).get(0);
+        ShopAdminView v = service.list(SUPER, null, null).get(0);
 
         assertThat(v.loginId()).isEqualTo("login");
         assertThat(v.companyName()).isNull();
@@ -382,15 +382,17 @@ class ShopAdminManagementServiceTest {
     }
 
     @Test
-    void 파트너_관리자는_파트너_관리자로_승인할_수_없다() {
+    void 파트너_관리자는_같은_회사의_파트너_관리자_신청을_승인할_수_있다() {
         partnerActorIsApproved();
-        given(memberRepository.findById(1L)).willReturn(Optional.of(pendingMember(1L, 10L, 7L, ShopRole.PARTNER_ADMIN)));
+        ShopAdminMember m = pendingMember(1L, 10L, 7L, ShopRole.PARTNER_ADMIN);
+        given(memberRepository.findById(1L)).willReturn(Optional.of(m));
 
-        assertCode(() -> service.approve(PARTNER, 1L, ShopRole.PARTNER_ADMIN, null),
-            ShopErrorCode.ACCESS_PARTNER_PROMOTION_FORBIDDEN);
-        assertCode(() -> service.approve(PARTNER, 1L, null, null), ShopErrorCode.ACCESS_PARTNER_PROMOTION_FORBIDDEN);
-        verifyNoInteractions(accessGranter);
-        verify(memberRepository, never()).save(any());
+        service.approve(PARTNER, 1L, null, null);
+
+        assertThat(m.getStatus()).isEqualTo(ShopAdminStatus.APPROVED);
+        assertThat(m.getRole()).isEqualTo(ShopRole.PARTNER_ADMIN);
+        assertThat(m.getProcessedBy()).isEqualTo(50L);
+        verify(accessGranter).grant(10L, 7L);
     }
 
     @Test
@@ -401,6 +403,7 @@ class ShopAdminManagementServiceTest {
         assertCode(() -> service.approve(PARTNER, 1L, ShopRole.BRAND_ADMIN, Set.of(100L)), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
         assertCode(() -> service.reject(PARTNER, 1L, "사유"), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
         assertCode(() -> service.remove(PARTNER, 1L), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
+        assertCode(() -> service.changeRole(PARTNER, 1L, ShopRole.PARTNER_ADMIN), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
         assertCode(() -> service.assignBrands(PARTNER, 1L, Set.of()), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
         verifyNoInteractions(accessGranter);
         verify(memberRepository, never()).save(any());
@@ -420,12 +423,12 @@ class ShopAdminManagementServiceTest {
 
     @Test
     void 브랜드_관리자와_승인되지_않은_파트너는_구성원_API를_쓸_수_없다() {
-        assertCode(() -> service.list(BRAND_ADMIN_ACTOR, null), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
+        assertCode(() -> service.list(BRAND_ADMIN_ACTOR, null, null), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
         assertCode(() -> service.approve(BRAND_ADMIN_ACTOR, 1L, null, null), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
         assertCode(() -> service.remove(BRAND_ADMIN_ACTOR, 1L), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
 
         given(memberRepository.findByAdminId(50L)).willReturn(Optional.empty());
-        assertCode(() -> service.list(PARTNER, null), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
+        assertCode(() -> service.list(PARTNER, null, null), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
         verify(memberRepository, never()).save(any());
     }
 
@@ -435,7 +438,30 @@ class ShopAdminManagementServiceTest {
             ShopAdminStatus.REMOVED, NOW.minusDays(3), NOW.minusDays(1), 99L, null);
         given(memberRepository.findByAdminId(50L)).willReturn(Optional.of(removed));
 
-        assertCode(() -> service.list(PARTNER, null), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
+        assertCode(() -> service.list(PARTNER, null, null), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
+    }
+
+    @Test
+    void 슈퍼관리자는_회사_조건으로_목록을_좁힐_수_있고_조건이_없으면_전체를_조회한다() {
+        ShopAdminMember m = approvedMember(1L, 10L, 8L, ShopRole.BRAND_ADMIN);
+        given(memberRepository.findAllByCompanyId(8L, null)).willReturn(List.of(m));
+        given(identityVerifier.getAccounts(List.of(10L))).willReturn(List.of());
+        given(brandMemberRepository.findBrandIdsByMemberIds(List.of(1L))).willReturn(Map.of());
+
+        assertThat(service.list(SUPER, null, 8L)).hasSize(1);
+        verify(memberRepository, never()).findAll(any());
+
+        given(memberRepository.findAll(null)).willReturn(List.of());
+        assertThat(service.list(SUPER, null, null)).isEmpty();
+    }
+
+    @Test
+    void 파트너_관리자는_다른_회사를_조건으로_넘겨도_자기_회사만_조회한다() {
+        partnerActorIsApproved();
+        given(memberRepository.findAllByCompanyId(7L, null)).willReturn(List.of());
+
+        assertThat(service.list(PARTNER, null, 999L)).isEmpty();
+        verify(memberRepository, never()).findAllByCompanyId(eq(999L), any());
     }
 
     @Test
@@ -446,7 +472,7 @@ class ShopAdminManagementServiceTest {
         given(identityVerifier.getAccounts(List.of(10L))).willReturn(List.of());
         given(brandMemberRepository.findBrandIdsByMemberIds(List.of(1L))).willReturn(Map.of(1L, Set.of(100L)));
 
-        List<ShopAdminView> result = service.list(PARTNER, null);
+        List<ShopAdminView> result = service.list(PARTNER, null, null);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).brandIds()).containsExactly(100L);
@@ -454,11 +480,16 @@ class ShopAdminManagementServiceTest {
     }
 
     @Test
-    void 역할_변경은_슈퍼관리자만_할_수_있다() {
+    void 파트너_관리자는_같은_회사_구성원의_역할을_변경할_수_있다() {
         partnerActorIsApproved();
+        ShopAdminMember m = approvedMember(1L, 10L, 7L, ShopRole.BRAND_ADMIN);
+        given(memberRepository.findById(1L)).willReturn(Optional.of(m));
 
-        assertCode(() -> service.changeRole(PARTNER, 1L, ShopRole.PARTNER_ADMIN), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
-        verify(memberRepository, never()).save(any());
+        service.changeRole(PARTNER, 1L, ShopRole.PARTNER_ADMIN);
+
+        assertThat(m.getRole()).isEqualTo(ShopRole.PARTNER_ADMIN);
+        verify(memberRepository).save(m);
+        verify(brandMemberRepository).unassignAllByMemberId(1L, NOW);
     }
 
     @Test
@@ -563,11 +594,27 @@ class ShopAdminManagementServiceTest {
     }
 
     @Test
-    void 파트너_관리자는_다른_파트너를_삭제할_수_없다() {
+    void 파트너_관리자는_같은_회사의_다른_파트너를_삭제할_수_있다() {
         partnerActorIsApproved();
-        given(memberRepository.findById(2L)).willReturn(Optional.of(approvedMember(2L, 11L, 7L, ShopRole.PARTNER_ADMIN)));
+        ShopAdminMember other = approvedMember(2L, 11L, 7L, ShopRole.PARTNER_ADMIN);
+        given(memberRepository.findById(2L)).willReturn(Optional.of(other));
+        given(memberRepository.countApprovedByCompanyIdAndRole(7L, ShopRole.PARTNER_ADMIN)).willReturn(2L);
 
-        assertCode(() -> service.remove(PARTNER, 2L), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
+        service.remove(PARTNER, 2L);
+
+        assertThat(other.getStatus()).isEqualTo(ShopAdminStatus.REMOVED);
+        assertThat(other.getProcessedBy()).isEqualTo(50L);
+        verify(memberRepository).save(other);
+    }
+
+    @Test
+    void 파트너_관리자도_마지막_파트너인_자기_자신은_삭제할_수_없다() {
+        partnerActorIsApproved();
+        ShopAdminMember self = approvedMember(5L, 50L, 7L, ShopRole.PARTNER_ADMIN);
+        given(memberRepository.findById(5L)).willReturn(Optional.of(self));
+        given(memberRepository.countApprovedByCompanyIdAndRole(7L, ShopRole.PARTNER_ADMIN)).willReturn(1L);
+
+        assertCode(() -> service.remove(PARTNER, 5L), ShopErrorCode.MEMBER_LAST_PARTNER);
         verify(memberRepository, never()).save(any());
     }
 

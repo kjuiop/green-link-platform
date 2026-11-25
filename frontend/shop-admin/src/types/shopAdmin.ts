@@ -1,6 +1,6 @@
 import type { AccessRequestType, AccessStatus, ShopRole } from '@/types/auth'
 
-export type ShopAdminStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+export type ShopAdminStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'REMOVED'
 
 export interface ShopAdmin {
   id: number

@@ -9,7 +9,7 @@ export class ApiError extends Error {
 const NETWORK_MESSAGE = '서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.'
 
 interface Options {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
   body?: unknown
   auth?: boolean
 }

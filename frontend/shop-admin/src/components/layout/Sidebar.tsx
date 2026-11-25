@@ -9,6 +9,8 @@ import {
   Settings,
   ShoppingCart,
   Store,
+  Tag,
+  UserCog,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -24,6 +26,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   products: Package,
   shop: Store,
   settings: Settings,
+  brands: Tag,
+  admins: UserCog,
 }
 
 const ROLE_LABEL: Record<ShopRole, string> = {
