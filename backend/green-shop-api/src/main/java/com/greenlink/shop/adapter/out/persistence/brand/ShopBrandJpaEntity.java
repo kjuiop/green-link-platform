@@ -9,6 +9,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "shop_brands", indexes = @Index(name = "idx_shop_brands_company", columnList = "company_id"))
 public class ShopBrandJpaEntity {
@@ -23,6 +25,9 @@ public class ShopBrandJpaEntity {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     protected ShopBrandJpaEntity() {}
 
     static ShopBrandJpaEntity from(ShopBrand b) {
@@ -30,10 +35,11 @@ public class ShopBrandJpaEntity {
         e.id = b.getId();
         e.companyId = b.getCompanyId();
         e.name = b.getName();
+        e.deletedAt = b.getDeletedAt();
         return e;
     }
 
     ShopBrand toDomain() {
-        return ShopBrand.of(id, companyId, name);
+        return ShopBrand.of(id, companyId, name, deletedAt);
     }
 }

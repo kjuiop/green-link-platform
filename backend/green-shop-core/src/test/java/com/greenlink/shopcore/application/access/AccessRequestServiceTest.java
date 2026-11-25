@@ -172,6 +172,20 @@ class AccessRequestServiceTest {
     }
 
     @Test
+    void 제거된_계정은_재신청할_수_있고_기존_역할은_초기화된다() {
+        ShopAdminMember removed = ShopAdminMember.of(1L, 10L, 7L, ShopRole.PARTNER_ADMIN, ShopRole.PARTNER_ADMIN,
+            ShopAdminStatus.REMOVED, NOW.minusDays(1), NOW.minusHours(1), 99L, null);
+        given(identityVerifier.getAccount(10L)).willReturn(identity(7L, false));
+        given(memberRepository.findByAdminId(10L)).willReturn(Optional.of(removed));
+        given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        MyAccess r = service.apply(10L, false, null);
+
+        assertThat(r.accessStatus()).isEqualTo(AccessStatus.PENDING);
+        assertThat(removed.getRole()).isNull();
+    }
+
+    @Test
     void 재신청하면_온우림의_현재_회사로_갱신된다() {
         ShopAdminMember rejected = member(ShopAdminStatus.REJECTED);
         given(identityVerifier.getAccount(10L)).willReturn(identity(8L, false));

@@ -34,6 +34,7 @@ public class AccessEvaluator {
 
         AccessRequestType requestType = requestTypeOf(identity);
         Optional<ShopAdminMember> found = memberRepository.findByAdminId(identity.adminId())
+            .filter(m -> m.getStatus() != ShopAdminStatus.REMOVED)
             .filter(m -> m.getStatus() != ShopAdminStatus.APPROVED || companyMatches(m, identity));
         if (found.isEmpty()) {
             return new AccessDecision(AccessStatus.NONE, null, TokenScope.LIMITED, null, requestType, null);

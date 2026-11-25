@@ -62,11 +62,12 @@ public class ShopAdminMember {
     }
 
     public void reapply(Long companyId, ShopRole requestedRole, LocalDateTime now) {
-        if (status != ShopAdminStatus.REJECTED) {
+        if (status != ShopAdminStatus.REJECTED && status != ShopAdminStatus.REMOVED) {
             throw new ShopBusinessException(ShopErrorCode.ACCESS_ALREADY_REQUESTED);
         }
         requireAssignable(requestedRole);
         this.companyId = companyId;
+        this.role = null;
         this.requestedRole = requestedRole;
         this.status = ShopAdminStatus.PENDING;
         this.requestedAt = now;
@@ -101,6 +102,31 @@ public class ShopAdminMember {
         this.processedAt = now;
         this.processedBy = processedBy;
         this.rejectReason = reason.trim();
+    }
+
+    public void changeRole(ShopRole newRole) {
+        requireApproved();
+        requireAssignable(newRole);
+        this.role = newRole;
+    }
+
+    public void remove(Long processedBy, LocalDateTime now) {
+        if (status == ShopAdminStatus.REMOVED) {
+            throw new ShopBusinessException(ShopErrorCode.ACCESS_INVALID_TRANSITION);
+        }
+        this.status = ShopAdminStatus.REMOVED;
+        this.processedAt = now;
+        this.processedBy = processedBy;
+    }
+
+    public boolean isApprovedAs(ShopRole expected) {
+        return status == ShopAdminStatus.APPROVED && role == expected;
+    }
+
+    private void requireApproved() {
+        if (status != ShopAdminStatus.APPROVED) {
+            throw new ShopBusinessException(ShopErrorCode.MEMBER_NOT_APPROVED);
+        }
     }
 
     private void requirePending() {

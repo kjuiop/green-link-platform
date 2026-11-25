@@ -9,7 +9,15 @@ interface ShopAdminMemberJpaRepository extends JpaRepository<ShopAdminMemberJpaE
     Optional<ShopAdminMemberJpaEntity> findByAdminId(Long adminId);
     List<ShopAdminMemberJpaEntity> findByStatusOrderByRequestedAtDesc(
         com.greenlink.shopcore.domain.member.model.ShopAdminStatus status);
-    List<ShopAdminMemberJpaEntity> findAllByOrderByRequestedAtDesc();
+    List<ShopAdminMemberJpaEntity> findByStatusNotOrderByRequestedAtDesc(
+        com.greenlink.shopcore.domain.member.model.ShopAdminStatus status);
+    List<ShopAdminMemberJpaEntity> findByCompanyIdAndStatusOrderByRequestedAtDesc(Long companyId,
+        com.greenlink.shopcore.domain.member.model.ShopAdminStatus status);
+    List<ShopAdminMemberJpaEntity> findByCompanyIdAndStatusNotOrderByRequestedAtDesc(Long companyId,
+        com.greenlink.shopcore.domain.member.model.ShopAdminStatus status);
+    long countByCompanyIdAndRoleAndStatus(Long companyId,
+        com.greenlink.shopcore.domain.auth.ShopRole role,
+        com.greenlink.shopcore.domain.member.model.ShopAdminStatus status);
     boolean existsByCompanyIdAndStatus(Long companyId,
         com.greenlink.shopcore.domain.member.model.ShopAdminStatus status);
 }

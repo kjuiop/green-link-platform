@@ -125,4 +125,16 @@ class AccessEvaluatorTest {
         assertThat(rejected.status()).isEqualTo(AccessStatus.REJECTED);
         assertThat(rejected.rejectReason()).isEqualTo("사유");
     }
+
+    @Test
+    void 제거된_멤버는_NONE_LIMITED이다() {
+        given(memberRepository.findByAdminId(10L)).willReturn(
+            Optional.of(member(ShopAdminStatus.REMOVED, ShopRole.PARTNER_ADMIN, ShopRole.PARTNER_ADMIN, 7L)));
+
+        AccessDecision d = evaluator.evaluate(identity(7L, true, false));
+
+        assertThat(d.status()).isEqualTo(AccessStatus.NONE);
+        assertThat(d.role()).isNull();
+        assertThat(d.scope()).isEqualTo(TokenScope.LIMITED);
+    }
 }
