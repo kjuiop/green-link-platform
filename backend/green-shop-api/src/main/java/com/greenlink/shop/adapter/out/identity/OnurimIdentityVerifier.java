@@ -1,5 +1,7 @@
 package com.greenlink.shop.adapter.out.identity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.greenlink.shopcore.application.auth.dto.AccountProfile;
 import com.greenlink.shopcore.application.auth.dto.VerifiedIdentity;
 import com.greenlink.shopcore.application.auth.port.IdentityVerifier;
 import com.greenlink.shopcore.global.exception.ShopBusinessException;
@@ -16,6 +18,8 @@ import org.springframework.web.client.RestClientResponseException;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.Collection;
+import java.util.List;
 
 @Component
 public class OnurimIdentityVerifier implements IdentityVerifier {
@@ -68,17 +72,41 @@ public class OnurimIdentityVerifier implements IdentityVerifier {
             .body(AccountBody.class));
     }
 
+    @Override
+    public List<AccountProfile> getAccounts(Collection<Long> adminIds) {
+        if (adminIds == null || adminIds.isEmpty()) {
+            return List.of();
+        }
+        SummaryBody[] body = execute(() -> restClient.post()
+            .uri("/internal/shop-auth/accounts/batch")
+            .header(SECRET_HEADER, secret)
+            .body(new BatchBody(List.copyOf(adminIds)))
+            .retrieve()
+            .body(SummaryBody[].class));
+        if (body == null) {
+            throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+        }
+        return java.util.Arrays.stream(body)
+            .map(b -> new AccountProfile(b.adminId(), b.loginId(), b.name(), b.companyName()))
+            .toList();
+    }
+
     private VerifiedIdentity call(java.util.function.Supplier<AccountBody> request) {
+        AccountBody body = execute(request);
+        if (body == null || body.adminId() == null) {
+            throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+        }
+        return new VerifiedIdentity(body.adminId(), body.loginId(), body.name(), body.companyId(), body.companyName(),
+            body.companyOnurimEnabled(), body.companySiteEnabled(), body.adminOnurimEnabled(), body.superAdmin());
+    }
+
+    private <T> T execute(java.util.function.Supplier<T> request) {
         if (secret == null || secret.isBlank()) {
             log.error("shop.identity.secret is not configured");
             throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
         }
         try {
-            AccountBody body = request.get();
-            if (body == null || body.adminId() == null) {
-                throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
-            }
-            return new VerifiedIdentity(body.adminId(), body.loginId(), body.name(), body.companyName(), body.superAdmin());
+            return request.get();
         } catch (RestClientResponseException e) {
             throw mapError(e);
         } catch (ResourceAccessException e) {
@@ -105,5 +133,13 @@ public class OnurimIdentityVerifier implements IdentityVerifier {
 
     record VerifyBody(String loginId, String password) {}
 
-    record AccountBody(Long adminId, String loginId, String name, String companyName, boolean superAdmin) {}
+    record BatchBody(List<Long> adminIds) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record AccountBody(Long adminId, String loginId, String name, Long companyId, String companyName,
+                       boolean companyOnurimEnabled, boolean companySiteEnabled,
+                       boolean adminOnurimEnabled, boolean superAdmin) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record SummaryBody(Long adminId, String loginId, String name, Long companyId, String companyName) {}
 }

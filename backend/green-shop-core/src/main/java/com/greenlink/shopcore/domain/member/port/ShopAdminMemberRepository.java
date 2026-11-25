@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public interface ShopAdminMemberRepository {
     Optional<ShopAdminMember> findById(Long id);
-    Optional<ShopAdminMember> findByOnurimAdminId(Long onurimAdminId);
+    Optional<ShopAdminMember> findByAdminId(Long adminId);
     List<ShopAdminMember> findAll(ShopAdminStatus status);
     ShopAdminMember save(ShopAdminMember member);
 }

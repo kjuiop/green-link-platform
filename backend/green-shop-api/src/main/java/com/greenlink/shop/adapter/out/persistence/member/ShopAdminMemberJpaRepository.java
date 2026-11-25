@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 interface ShopAdminMemberJpaRepository extends JpaRepository<ShopAdminMemberJpaEntity, Long> {
-    Optional<ShopAdminMemberJpaEntity> findByOnurimAdminId(Long onurimAdminId);
+    Optional<ShopAdminMemberJpaEntity> findByAdminId(Long adminId);
     List<ShopAdminMemberJpaEntity> findByStatusOrderByRequestedAtDesc(
         com.greenlink.shopcore.domain.member.model.ShopAdminStatus status);
     List<ShopAdminMemberJpaEntity> findAllByOrderByRequestedAtDesc();

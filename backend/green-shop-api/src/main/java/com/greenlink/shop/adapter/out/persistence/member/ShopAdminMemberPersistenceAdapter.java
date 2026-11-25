@@ -26,8 +26,8 @@ class ShopAdminMemberPersistenceAdapter implements ShopAdminMemberRepository {
     }
 
     @Override
-    public Optional<ShopAdminMember> findByOnurimAdminId(Long onurimAdminId) {
-        return jpaRepository.findByOnurimAdminId(onurimAdminId).map(ShopAdminMemberJpaEntity::toDomain);
+    public Optional<ShopAdminMember> findByAdminId(Long adminId) {
+        return jpaRepository.findByAdminId(adminId).map(ShopAdminMemberJpaEntity::toDomain);
     }
 
     @Override

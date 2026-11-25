@@ -5,6 +5,7 @@ import com.greenlink.shopcore.application.access.service.AccessRequestService;
 import com.greenlink.shopcore.application.auth.dto.VerifiedIdentity;
 import com.greenlink.shopcore.application.auth.port.IdentityVerifier;
 import com.greenlink.shopcore.domain.auth.AccessStatus;
+import com.greenlink.shopcore.domain.auth.ShopRole;
 import com.greenlink.shopcore.domain.member.model.ShopAdminMember;
 import com.greenlink.shopcore.domain.member.model.ShopAdminStatus;
 import com.greenlink.shopcore.domain.member.port.ShopAdminMemberRepository;
@@ -50,8 +51,14 @@ class AccessRequestServiceTest {
     }
 
     private ShopAdminMember member(ShopAdminStatus status) {
-        return ShopAdminMember.of(1L, 10L, "login", "이름", "회사", status, NOW.minusDays(1), NOW.minusHours(1), 99L,
+        return ShopAdminMember.of(1L, 10L, 7L, status == ShopAdminStatus.APPROVED ? ShopRole.PARTNER_ADMIN : null,
+            ShopRole.PARTNER_ADMIN, status, NOW.minusDays(1), NOW.minusHours(1), 99L,
             status == ShopAdminStatus.REJECTED ? "사유" : null);
+    }
+
+    private VerifiedIdentity identity(Long companyId, boolean superAdmin) {
+        return new VerifiedIdentity(10L, "login", "이름", companyId, companyId == null ? null : "회사",
+            true, false, true, superAdmin);
     }
 
     private void assertCode(Runnable call, ErrorCode expected) {
@@ -69,14 +76,14 @@ class AccessRequestServiceTest {
 
     @Test
     void 내_상태_조회_row가_없으면_NONE() {
-        given(memberRepository.findByOnurimAdminId(10L)).willReturn(Optional.empty());
+        given(memberRepository.findByAdminId(10L)).willReturn(Optional.empty());
 
         assertThat(service.getMyAccess(10L, false).accessStatus()).isEqualTo(AccessStatus.NONE);
     }
 
     @Test
     void 내_상태_조회_거절되면_사유가_함께_반환된다() {
-        given(memberRepository.findByOnurimAdminId(10L)).willReturn(Optional.of(member(ShopAdminStatus.REJECTED)));
+        given(memberRepository.findByAdminId(10L)).willReturn(Optional.of(member(ShopAdminStatus.REJECTED)));
 
         MyAccess r = service.getMyAccess(10L, false);
 
@@ -85,9 +92,9 @@ class AccessRequestServiceTest {
     }
 
     @Test
-    void 처음_신청하면_PENDING_row가_온우림_스냅샷과_함께_저장된다() {
-        given(identityVerifier.getAccount(10L)).willReturn(new VerifiedIdentity(10L, "login", "이름", "회사", false));
-        given(memberRepository.findByOnurimAdminId(10L)).willReturn(Optional.empty());
+    void 처음_신청하면_회사_ID와_PARTNER_ADMIN_요청_역할로_PENDING_row가_저장된다() {
+        given(identityVerifier.getAccount(10L)).willReturn(identity(7L, false));
+        given(memberRepository.findByAdminId(10L)).willReturn(Optional.empty());
         given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
         MyAccess r = service.apply(10L, false);
@@ -95,8 +102,10 @@ class AccessRequestServiceTest {
         ArgumentCaptor<ShopAdminMember> captor = ArgumentCaptor.forClass(ShopAdminMember.class);
         verify(memberRepository).save(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(ShopAdminStatus.PENDING);
-        assertThat(captor.getValue().getOnurimAdminId()).isEqualTo(10L);
-        assertThat(captor.getValue().getLoginId()).isEqualTo("login");
+        assertThat(captor.getValue().getAdminId()).isEqualTo(10L);
+        assertThat(captor.getValue().getCompanyId()).isEqualTo(7L);
+        assertThat(captor.getValue().getRequestedRole()).isEqualTo(ShopRole.PARTNER_ADMIN);
+        assertThat(captor.getValue().getRole()).isNull();
         assertThat(captor.getValue().getRequestedAt()).isEqualTo(NOW);
         assertThat(r.accessStatus()).isEqualTo(AccessStatus.PENDING);
     }
@@ -104,8 +113,8 @@ class AccessRequestServiceTest {
     @Test
     void 거절된_계정은_재신청할_수_있다() {
         ShopAdminMember rejected = member(ShopAdminStatus.REJECTED);
-        given(identityVerifier.getAccount(10L)).willReturn(new VerifiedIdentity(10L, "login", "이름", "회사", false));
-        given(memberRepository.findByOnurimAdminId(10L)).willReturn(Optional.of(rejected));
+        given(identityVerifier.getAccount(10L)).willReturn(identity(7L, false));
+        given(memberRepository.findByAdminId(10L)).willReturn(Optional.of(rejected));
         given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
         MyAccess r = service.apply(10L, false);
@@ -116,9 +125,37 @@ class AccessRequestServiceTest {
     }
 
     @Test
+    void 재신청하면_온우림의_현재_회사로_갱신된다() {
+        ShopAdminMember rejected = member(ShopAdminStatus.REJECTED);
+        given(identityVerifier.getAccount(10L)).willReturn(identity(8L, false));
+        given(memberRepository.findByAdminId(10L)).willReturn(Optional.of(rejected));
+        given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        service.apply(10L, false);
+
+        assertThat(rejected.getCompanyId()).isEqualTo(8L);
+    }
+
+    @Test
+    void 회사가_없는_계정은_신청할_수_없다() {
+        given(identityVerifier.getAccount(10L)).willReturn(identity(null, false));
+
+        assertCode(() -> service.apply(10L, false), ShopErrorCode.ACCESS_COMPANY_REQUIRED);
+        verify(memberRepository, never()).save(any());
+    }
+
+    @Test
+    void 온우림이_슈퍼관리자로_판정한_계정은_신청할_수_없다() {
+        given(identityVerifier.getAccount(10L)).willReturn(identity(null, true));
+
+        assertCode(() -> service.apply(10L, false), ShopErrorCode.ACCESS_NOT_REQUIRED);
+        verify(memberRepository, never()).save(any());
+    }
+
+    @Test
     void 대기중이거나_승인된_계정의_신청은_거부된다() {
-        given(identityVerifier.getAccount(10L)).willReturn(new VerifiedIdentity(10L, "login", "이름", "회사", false));
-        given(memberRepository.findByOnurimAdminId(10L))
+        given(identityVerifier.getAccount(10L)).willReturn(identity(7L, false));
+        given(memberRepository.findByAdminId(10L))
             .willReturn(Optional.of(member(ShopAdminStatus.PENDING)), Optional.of(member(ShopAdminStatus.APPROVED)));
 
         assertCode(() -> service.apply(10L, false), ShopErrorCode.ACCESS_ALREADY_REQUESTED);

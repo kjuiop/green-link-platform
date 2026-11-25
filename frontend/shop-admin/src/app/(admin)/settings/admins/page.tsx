@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/table'
 import { approveShopAdmin, fetchShopAdmins, rejectShopAdmin } from '@/lib/api/shopAdminApi'
 import { cn } from '@/lib/utils'
+import type { ShopRole } from '@/types/auth'
 import type { ShopAdmin, ShopAdminStatus } from '@/types/shopAdmin'
 
 type Filter = ShopAdminStatus | 'ALL'
@@ -37,6 +38,12 @@ const STATUS_STYLE: Record<ShopAdminStatus, string> = {
   PENDING: 'bg-yellow-100 text-yellow-700',
   APPROVED: 'bg-green-100 text-green-700',
   REJECTED: 'bg-red-100 text-red-600',
+}
+
+const ROLE_LABEL: Record<ShopRole, string> = {
+  SUPER_ADMIN: '슈퍼관리자',
+  PARTNER_ADMIN: '파트너 관리자',
+  BRAND_ADMIN: '브랜드 관리자',
 }
 
 const EMPTY_TEXT: Record<Filter, string> = {
@@ -165,6 +172,7 @@ export default function AdminsPage() {
                   <TableRow>
                     <TableHead>이름 / 아이디</TableHead>
                     <TableHead>소속</TableHead>
+                    <TableHead>역할</TableHead>
                     <TableHead>신청일시</TableHead>
                     <TableHead>상태</TableHead>
                     <TableHead>처리일시</TableHead>
@@ -176,10 +184,11 @@ export default function AdminsPage() {
                     <Fragment key={admin.id}>
                       <TableRow>
                         <TableCell className="whitespace-nowrap">
-                          <p className="font-medium">{admin.name}</p>
-                          <p className="font-mono text-xs text-gray-500">{admin.loginId}</p>
+                          <p className="font-medium">{admin.name ?? '-'}</p>
+                          <p className="font-mono text-xs text-gray-500">{admin.loginId ?? `#${admin.adminId}`}</p>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">{admin.companyName ?? '-'}</TableCell>
+                        <TableCell className="whitespace-nowrap">{admin.companyName ?? `#${admin.companyId}`}</TableCell>
+                        <TableCell className="whitespace-nowrap">{ROLE_LABEL[admin.role ?? admin.requestedRole]}{admin.role === null && <span className="text-xs text-gray-400"> (신청)</span>}</TableCell>
                         <TableCell className="whitespace-nowrap text-xs text-gray-500">{formatDateTime(admin.requestedAt)}</TableCell>
                         <TableCell>
                           <Badge className={cn('whitespace-nowrap', STATUS_STYLE[admin.status])}>
@@ -215,7 +224,7 @@ export default function AdminsPage() {
                       </TableRow>
                       {rejectingId === admin.id && (
                         <TableRow>
-                          <TableCell colSpan={6} className="bg-gray-50">
+                          <TableCell colSpan={7} className="bg-gray-50">
                             <div className="flex flex-wrap items-center gap-2">
                               <Input
                                 className="min-w-48 flex-1 bg-white"

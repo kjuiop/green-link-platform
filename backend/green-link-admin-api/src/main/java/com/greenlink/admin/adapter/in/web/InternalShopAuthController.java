@@ -1,6 +1,8 @@
 package com.greenlink.admin.adapter.in.web;
 
+import com.greenlink.admin.adapter.in.web.dto.BatchShopAccountsRequest;
 import com.greenlink.admin.adapter.in.web.dto.VerifyShopAccountRequest;
+import com.greenlink.core.application.auth.dto.AccountSummary;
 import com.greenlink.core.application.auth.dto.VerifiedAccount;
 import com.greenlink.core.application.auth.usecase.VerifyAdminAccountUseCase;
 import com.greenlink.core.global.exception.BusinessException;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.List;
 
 @RestController
 @RequestMapping("/internal/shop-auth")
@@ -39,6 +42,13 @@ public class InternalShopAuthController {
                                       @PathVariable Long adminId) {
         requireSecret(secret);
         return useCase.getActiveAccount(adminId);
+    }
+
+    @PostMapping("/accounts/batch")
+    public List<AccountSummary> getAccounts(@RequestHeader(value = SECRET_HEADER, required = false) String secret,
+                                            @RequestBody @Valid BatchShopAccountsRequest req) {
+        requireSecret(secret);
+        return useCase.getAccountSummaries(req.adminIds());
     }
 
     private void requireSecret(String provided) {

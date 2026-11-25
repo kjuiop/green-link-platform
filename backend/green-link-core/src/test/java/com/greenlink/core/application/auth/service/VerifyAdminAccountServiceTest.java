@@ -1,5 +1,6 @@
 package com.greenlink.core.application.auth.service;
 
+import com.greenlink.core.application.auth.dto.AccountSummary;
 import com.greenlink.core.application.auth.dto.VerifiedAccount;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.model.AdminStatus;
@@ -17,11 +18,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class VerifyAdminAccountServiceTest {
@@ -176,6 +179,43 @@ class VerifyAdminAccountServiceTest {
                 .willReturn(Optional.of(admin(null, AdminStatus.ACTIVE, "2026-01-01 00:00:00")));
 
         assertCode(() -> service.getActiveAccount(1L), AuthErrorCode.INVALID_CREDENTIALS);
+    }
+
+    @Test
+    void getAccountSummaries_삭제된_계정은_제외하고_회사명을_한번에_조회한다() {
+        Admin a1 = Admin.of(1L, "admin01", "pw", "관리자", "010", null, 7L, AdminStatus.ACTIVE, null, null);
+        Admin a2 = Admin.of(2L, "admin02", "pw", "직원", "010", null, 7L, AdminStatus.PENDING, null, null);
+        Admin deleted = Admin.of(3L, "admin03", "pw", "삭제됨", "010", null, 7L, AdminStatus.ACTIVE, null, "2026-01-01 00:00:00");
+        Admin noCompany = Admin.of(4L, "admin04", "pw", "무소속", "010", null, null, AdminStatus.ACTIVE, null, null);
+        given(adminRepository.findAllByIdIn(List.of(1L, 2L, 3L, 4L))).willReturn(List.of(a1, a2, deleted, noCompany));
+        given(companyRepository.findAllByIdIn(List.of(7L))).willReturn(List.of(company()));
+
+        List<AccountSummary> result = service.getAccountSummaries(List.of(1L, 2L, 3L, 4L));
+
+        assertThat(result).extracting(AccountSummary::adminId).containsExactly(1L, 2L, 4L);
+        assertThat(result.get(0).companyName()).isEqualTo("테스트업체");
+        assertThat(result.get(1).loginId()).isEqualTo("admin02");
+        assertThat(result.get(2).companyId()).isNull();
+        assertThat(result.get(2).companyName()).isNull();
+    }
+
+    @Test
+    void getAccountSummaries_빈_목록이면_조회하지_않는다() {
+        assertThat(service.getAccountSummaries(List.of())).isEmpty();
+        assertThat(service.getAccountSummaries(null)).isEmpty();
+
+        verifyNoInteractions(adminRepository, companyRepository);
+    }
+
+    @Test
+    void getAccountSummaries_회사가_없는_계정만이면_회사를_조회하지_않는다() {
+        Admin noCompany = Admin.of(4L, "admin04", "pw", "무소속", "010", null, null, AdminStatus.ACTIVE, null, null);
+        given(adminRepository.findAllByIdIn(List.of(4L))).willReturn(List.of(noCompany));
+
+        List<AccountSummary> result = service.getAccountSummaries(List.of(4L));
+
+        assertThat(result).hasSize(1);
+        verifyNoInteractions(companyRepository);
     }
 
     @Test

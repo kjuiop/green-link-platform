@@ -1,5 +1,6 @@
 package com.greenlink.shop.adapter.out.identity;
 
+import com.greenlink.shopcore.application.auth.dto.AccountProfile;
 import com.greenlink.shopcore.application.auth.dto.VerifiedIdentity;
 import com.greenlink.shopcore.global.exception.ShopBusinessException;
 import com.greenlink.shopcore.global.exception.ShopErrorCode;
@@ -12,9 +13,11 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -50,9 +53,57 @@ class OnurimIdentityVerifierTest {
 
         assertThat(id.adminId()).isEqualTo(5L);
         assertThat(id.loginId()).isEqualTo("shop01");
+        assertThat(id.companyId()).isEqualTo(7L);
         assertThat(id.companyName()).isEqualTo("테스트업체");
+        assertThat(id.companyOnurimEnabled()).isTrue();
+        assertThat(id.companySiteEnabled()).isFalse();
+        assertThat(id.adminOnurimEnabled()).isTrue();
         assertThat(id.superAdmin()).isFalse();
         server.verify();
+    }
+
+    @Test
+    void 알_수_없는_필드가_있어도_파싱된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/5"))
+            .andRespond(withSuccess(ACCOUNT_JSON.replace("}", ",\"futureField\":1}"), MediaType.APPLICATION_JSON));
+
+        assertThat(verifier.getAccount(5L).adminId()).isEqualTo(5L);
+    }
+
+    @Test
+    void 배치_조회는_ID_목록을_보내고_프로필로_매핑한다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/batch"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(header("X-Internal-Secret", "s3cret"))
+            .andExpect(content().json("{\"adminIds\":[5,6]}"))
+            .andRespond(withSuccess(
+                "[{\"adminId\":5,\"loginId\":\"shop01\",\"name\":\"홍길동\",\"companyId\":7,\"companyName\":\"테스트업체\"},"
+                + "{\"adminId\":6,\"loginId\":\"shop02\",\"name\":\"김철수\",\"companyId\":null,\"companyName\":null}]",
+                MediaType.APPLICATION_JSON));
+
+        List<AccountProfile> result = verifier.getAccounts(List.of(5L, 6L));
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).name()).isEqualTo("홍길동");
+        assertThat(result.get(0).companyName()).isEqualTo("테스트업체");
+        assertThat(result.get(1).companyName()).isNull();
+        server.verify();
+    }
+
+    @Test
+    void 배치_조회는_빈_목록이면_호출하지_않는다() {
+        assertThat(verifier.getAccounts(List.of())).isEmpty();
+        server.verify();
+    }
+
+    @Test
+    void 배치_조회_장애는_업스트림_장애로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/batch"))
+            .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+
+        assertThatThrownBy(() -> verifier.getAccounts(List.of(5L)))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE));
     }
 
     @Test

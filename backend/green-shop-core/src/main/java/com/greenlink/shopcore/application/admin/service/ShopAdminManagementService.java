@@ -2,34 +2,52 @@ package com.greenlink.shopcore.application.admin.service;
 
 import com.greenlink.shopcore.application.admin.dto.ShopAdminView;
 import com.greenlink.shopcore.application.admin.usecase.ShopAdminManagementUseCase;
+import com.greenlink.shopcore.application.auth.dto.AccountProfile;
+import com.greenlink.shopcore.application.auth.port.IdentityVerifier;
 import com.greenlink.shopcore.domain.member.model.ShopAdminMember;
 import com.greenlink.shopcore.domain.member.model.ShopAdminStatus;
 import com.greenlink.shopcore.domain.member.port.ShopAdminMemberRepository;
 import com.greenlink.shopcore.global.exception.ShopBusinessException;
 import com.greenlink.shopcore.global.exception.ShopErrorCode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
 public class ShopAdminManagementService implements ShopAdminManagementUseCase {
 
+    private static final Logger log = LoggerFactory.getLogger(ShopAdminManagementService.class);
+
     private final ShopAdminMemberRepository memberRepository;
+    private final IdentityVerifier identityVerifier;
     private final Clock clock;
 
-    public ShopAdminManagementService(ShopAdminMemberRepository memberRepository, Clock clock) {
+    public ShopAdminManagementService(ShopAdminMemberRepository memberRepository,
+                                      IdentityVerifier identityVerifier,
+                                      Clock clock) {
         this.memberRepository = memberRepository;
+        this.identityVerifier = identityVerifier;
         this.clock = clock;
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public List<ShopAdminView> list(ShopAdminStatus status) {
-        return memberRepository.findAll(status).stream().map(ShopAdminView::from).toList();
+        List<ShopAdminMember> members = memberRepository.findAll(status);
+        Map<Long, AccountProfile> profiles = loadProfiles(members);
+        return members.stream()
+            .map(m -> ShopAdminView.of(m, profiles.get(m.getAdminId())))
+            .toList();
     }
 
     @Override
@@ -44,6 +62,20 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
         ShopAdminMember member = find(id);
         member.reject(reason, actorAdminId, LocalDateTime.now(clock));
         memberRepository.save(member);
+    }
+
+    private Map<Long, AccountProfile> loadProfiles(List<ShopAdminMember> members) {
+        if (members.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> adminIds = members.stream().map(ShopAdminMember::getAdminId).distinct().toList();
+        try {
+            return identityVerifier.getAccounts(adminIds).stream()
+                .collect(Collectors.toMap(AccountProfile::adminId, Function.identity(), (a, b) -> a));
+        } catch (RuntimeException e) {
+            log.warn("관리자 이름 조회 실패, 이름 없이 목록을 반환합니다: {}", e.getMessage());
+            return Map.of();
+        }
     }
 
     private ShopAdminMember find(Long id) {

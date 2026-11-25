@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -82,14 +83,15 @@ class ShopSecurityRulesTest {
         when(accessRequestUseCase.apply(anyLong(), anyBoolean()))
             .thenReturn(new MyAccess(AccessStatus.PENDING, null));
         when(refreshUseCase.refresh(anyLong())).thenReturn(
-            new ShopSession("t", "shop01", "홍길동", "업체", ShopRole.SHOP_ADMIN, AccessStatus.APPROVED));
+            new ShopSession("t", "shop01", "홍길동", 7L, "업체", ShopRole.PARTNER_ADMIN, AccessStatus.APPROVED));
         when(loginUseCase.login(anyString(), anyString())).thenReturn(
-            new ShopSession("t", "shop01", "홍길동", "업체", ShopRole.SHOP_ADMIN, AccessStatus.NONE));
+            new ShopSession("t", "shop01", "홍길동", 7L, "업체", null, AccessStatus.NONE));
     }
 
-    private String limited() { return "Bearer " + jwt.issue(5L, null, TokenScope.LIMITED); }
-    private String shopAdmin() { return "Bearer " + jwt.issue(5L, ShopRole.SHOP_ADMIN, TokenScope.FULL); }
-    private String superAdmin() { return "Bearer " + jwt.issue(1L, ShopRole.SUPER_ADMIN, TokenScope.FULL); }
+    private String limited() { return "Bearer " + jwt.issue(5L, 7L, null, TokenScope.LIMITED); }
+    private String partnerAdmin() { return "Bearer " + jwt.issue(5L, 7L, ShopRole.PARTNER_ADMIN, TokenScope.FULL); }
+    private String brandAdmin() { return "Bearer " + jwt.issue(6L, 7L, ShopRole.BRAND_ADMIN, TokenScope.FULL); }
+    private String superAdmin() { return "Bearer " + jwt.issue(1L, null, ShopRole.SUPER_ADMIN, TokenScope.FULL); }
 
     @Test
     void 로그인과_ping은_토큰없이_가능하다() throws Exception {
@@ -97,7 +99,8 @@ class ShopSecurityRulesTest {
                 .content("{\"loginId\":\"shop01\",\"password\":\"pw\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.accessStatus").value("NONE"))
-            .andExpect(jsonPath("$.role").value("SHOP_ADMIN"));
+            .andExpect(jsonPath("$.role").isEmpty())
+            .andExpect(jsonPath("$.companyId").value(7));
     }
 
     @Test
@@ -133,13 +136,23 @@ class ShopSecurityRulesTest {
     }
 
     @Test
-    void FULL_SHOP_ADMIN은_메뉴는_가능하고_관리자_API는_403() throws Exception {
-        mvc.perform(get("/api/menus").header("Authorization", shopAdmin())).andExpect(status().isOk());
-        mvc.perform(get("/api/admin/shop-admins").header("Authorization", shopAdmin()))
+    void FULL_PARTNER_ADMIN은_메뉴는_가능하고_관리자_API는_403() throws Exception {
+        mvc.perform(get("/api/menus").header("Authorization", partnerAdmin())).andExpect(status().isOk());
+        mvc.perform(get("/api/admin/shop-admins").header("Authorization", partnerAdmin()))
             .andExpect(status().isForbidden());
-        mvc.perform(post("/api/admin/shop-admins/1/reject").header("Authorization", shopAdmin())
+        mvc.perform(post("/api/admin/shop-admins/1/reject").header("Authorization", partnerAdmin())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"x\"}"))
             .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void FULL_BRAND_ADMIN도_메뉴는_가능하고_관리자_API는_403() throws Exception {
+        mvc.perform(get("/api/menus").header("Authorization", brandAdmin())).andExpect(status().isOk());
+        mvc.perform(get("/api/admin/shop-admins").header("Authorization", brandAdmin()))
+            .andExpect(status().isForbidden());
+        mvc.perform(post("/api/admin/shop-admins/1/approve").header("Authorization", brandAdmin()))
+            .andExpect(status().isForbidden());
+        verify(managementUseCase, never()).approve(anyLong(), anyLong());
     }
 
     @Test

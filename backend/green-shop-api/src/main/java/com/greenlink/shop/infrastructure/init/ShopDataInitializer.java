@@ -32,7 +32,8 @@ public class ShopDataInitializer implements ApplicationRunner {
         menuRepository.save(ShopMenu.create("대시보드", "/dashboard", "dashboard", 1, all));
         menuRepository.save(ShopMenu.create("주문 관리", "/orders", "orders", 2, all));
         menuRepository.save(ShopMenu.create("상품 관리", "/products", "products", 3, all));
-        menuRepository.save(ShopMenu.create("쇼핑몰 설정", "/shop-settings", "shop", 4, all));
+        menuRepository.save(ShopMenu.create("쇼핑몰 설정", "/shop-settings", "shop", 4,
+            EnumSet.of(ShopRole.SUPER_ADMIN, ShopRole.PARTNER_ADMIN)));
         menuRepository.save(ShopMenu.create("설정", "/settings", "settings", 5, EnumSet.of(ShopRole.SUPER_ADMIN)));
         log.info("shop 기본 메뉴를 생성했습니다.");
     }

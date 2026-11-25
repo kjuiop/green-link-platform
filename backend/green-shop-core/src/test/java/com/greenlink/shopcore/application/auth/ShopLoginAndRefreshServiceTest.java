@@ -27,9 +27,9 @@ class ShopLoginAndRefreshServiceTest {
     @Mock IdentityVerifier identityVerifier;
     @Mock ShopSessionResolver sessionResolver;
 
-    private static final VerifiedIdentity IDENTITY = new VerifiedIdentity(10L, "login", "이름", "회사", false);
+    private static final VerifiedIdentity IDENTITY = new VerifiedIdentity(10L, "login", "이름", 7L, "회사", true, false, true, false);
     private static final ShopSession SESSION =
-        new ShopSession("tok", "login", "이름", "회사", ShopRole.SHOP_ADMIN, AccessStatus.APPROVED);
+        new ShopSession("tok", "login", "이름", 7L, "회사", ShopRole.PARTNER_ADMIN, AccessStatus.APPROVED);
 
     @Test
     void 로그인은_온우림_검증_결과로_세션을_만든다() {
