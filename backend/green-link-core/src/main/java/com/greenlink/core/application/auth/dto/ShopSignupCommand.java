@@ -10,4 +10,10 @@ public record ShopSignupCommand(
     String companyName,
     String ceoName,
     String requestedRole
-) {}
+) {
+
+    @Override
+    public String toString() {
+        return "ShopSignupCommand[loginId=" + loginId + ", businessNo=" + businessNo + ", password=****]";
+    }
+}

@@ -21,6 +21,11 @@ public record ShopSignupRequest(
             businessNo, companyName, blankToNull(ceoName), requestedRole);
     }
 
+    @Override
+    public String toString() {
+        return "ShopSignupRequest[loginId=" + loginId + ", businessNo=" + businessNo + ", password=****]";
+    }
+
     private static String blankToNull(String v) {
         return v == null || v.isBlank() ? null : v;
     }

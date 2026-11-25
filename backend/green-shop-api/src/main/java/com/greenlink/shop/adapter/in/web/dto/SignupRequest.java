@@ -19,4 +19,9 @@ public record SignupRequest(
     public SignupCommand toCommand() {
         return new SignupCommand(loginId, password, name, phone, email, businessNo, companyName, ceoName, requestedRole);
     }
+
+    @Override
+    public String toString() {
+        return "SignupRequest[loginId=" + loginId + ", businessNo=" + businessNo + ", password=****]";
+    }
 }
