@@ -5,6 +5,7 @@ import com.greenlink.shopcore.application.access.usecase.AccessRequestUseCase;
 import com.greenlink.shopcore.application.auth.dto.VerifiedIdentity;
 import com.greenlink.shopcore.application.auth.port.IdentityVerifier;
 import com.greenlink.shopcore.domain.auth.AccessStatus;
+import com.greenlink.shopcore.domain.auth.ShopRole;
 import com.greenlink.shopcore.domain.member.model.ShopAdminMember;
 import com.greenlink.shopcore.domain.member.port.ShopAdminMemberRepository;
 import com.greenlink.shopcore.global.exception.ShopBusinessException;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Service
 public class AccessRequestService implements AccessRequestUseCase {
@@ -30,11 +32,12 @@ public class AccessRequestService implements AccessRequestUseCase {
     }
 
     @Override
-    public MyAccess getMyAccess(Long adminId, boolean superAdmin) {
+    public MyAccess getMyAccess(Long adminId, Long companyId, boolean superAdmin) {
         if (superAdmin) {
             return new MyAccess(AccessStatus.APPROVED, null);
         }
-        return memberRepository.findByOnurimAdminId(adminId)
+        return memberRepository.findByAdminId(adminId)
+            .filter(m -> Objects.equals(m.getCompanyId(), companyId))
             .map(m -> new MyAccess(AccessStatus.from(m.getStatus()), m.getRejectReason()))
             .orElse(new MyAccess(AccessStatus.NONE, null));
     }
@@ -48,14 +51,16 @@ public class AccessRequestService implements AccessRequestUseCase {
         if (identity.superAdmin()) {
             throw new ShopBusinessException(ShopErrorCode.ACCESS_NOT_REQUIRED);
         }
+        if (identity.companyId() == null) {
+            throw new ShopBusinessException(ShopErrorCode.ACCESS_COMPANY_REQUIRED);
+        }
 
         LocalDateTime now = LocalDateTime.now(clock);
-        ShopAdminMember member = memberRepository.findByOnurimAdminId(adminId).orElse(null);
+        ShopAdminMember member = memberRepository.findByAdminId(adminId).orElse(null);
         if (member == null) {
-            member = ShopAdminMember.request(adminId, identity.loginId(), identity.name(), identity.companyName(), now);
+            member = ShopAdminMember.request(adminId, identity.companyId(), ShopRole.PARTNER_ADMIN, now);
         } else {
-            member.reapply(now);
-            member.refreshSnapshot(identity.loginId(), identity.name(), identity.companyName());
+            member.reapply(identity.companyId(), ShopRole.PARTNER_ADMIN, now);
         }
         ShopAdminMember saved = memberRepository.save(member);
         return new MyAccess(AccessStatus.from(saved.getStatus()), saved.getRejectReason());

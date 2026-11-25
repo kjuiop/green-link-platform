@@ -2,6 +2,8 @@ package com.greenlink.shopcore.application.admin;
 
 import com.greenlink.shopcore.application.admin.dto.ShopAdminView;
 import com.greenlink.shopcore.application.admin.service.ShopAdminManagementService;
+import com.greenlink.shopcore.application.auth.dto.AccountProfile;
+import com.greenlink.shopcore.application.auth.port.IdentityVerifier;
 import com.greenlink.shopcore.domain.auth.ShopRole;
 import com.greenlink.shopcore.domain.member.model.ShopAdminMember;
 import com.greenlink.shopcore.domain.member.model.ShopAdminStatus;
@@ -28,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class ShopAdminManagementServiceTest {
@@ -36,16 +39,18 @@ class ShopAdminManagementServiceTest {
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 11, 23, 10, 0);
 
     @Mock ShopAdminMemberRepository memberRepository;
+    @Mock IdentityVerifier identityVerifier;
 
     private ShopAdminManagementService service;
 
     @BeforeEach
     void setUp() {
-        service = new ShopAdminManagementService(memberRepository, CLOCK);
+        service = new ShopAdminManagementService(memberRepository, identityVerifier, CLOCK);
     }
 
     private ShopAdminMember member(ShopAdminStatus status) {
-        return ShopAdminMember.of(1L, 10L, "login", "이름", "회사", status, NOW.minusDays(1), null, null, null);
+        return ShopAdminMember.of(1L, 10L, 7L, status == ShopAdminStatus.APPROVED ? ShopRole.PARTNER_ADMIN : null,
+            ShopRole.PARTNER_ADMIN, status, NOW.minusDays(1), null, null, null);
     }
 
     private void assertCode(Runnable call, ErrorCode expected) {
@@ -54,14 +59,64 @@ class ShopAdminManagementServiceTest {
     }
 
     @Test
-    void 목록은_상태_필터를_저장소에_전달하고_SHOP_ADMIN_역할로_변환한다() {
+    void 목록은_상태_필터를_저장소에_전달하고_온우림_배치_조회로_이름을_채운다() {
         given(memberRepository.findAll(ShopAdminStatus.PENDING)).willReturn(List.of(member(ShopAdminStatus.PENDING)));
+        given(identityVerifier.getAccounts(List.of(10L)))
+            .willReturn(List.of(new AccountProfile(10L, "login", "이름", "회사")));
 
         List<ShopAdminView> result = service.list(ShopAdminStatus.PENDING);
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).role()).isEqualTo(ShopRole.SHOP_ADMIN);
+        ShopAdminView v = result.get(0);
+        assertThat(v.adminId()).isEqualTo(10L);
+        assertThat(v.companyId()).isEqualTo(7L);
+        assertThat(v.loginId()).isEqualTo("login");
+        assertThat(v.name()).isEqualTo("이름");
+        assertThat(v.companyName()).isEqualTo("회사");
+        assertThat(v.requestedRole()).isEqualTo(ShopRole.PARTNER_ADMIN);
+        assertThat(v.role()).isNull();
+        assertThat(v.status()).isEqualTo(ShopAdminStatus.PENDING);
+    }
+
+    @Test
+    void 승인된_멤버는_저장된_역할이_노출된다() {
+        given(memberRepository.findAll(null)).willReturn(List.of(member(ShopAdminStatus.APPROVED)));
+        given(identityVerifier.getAccounts(List.of(10L))).willReturn(List.of());
+
+        assertThat(service.list(null).get(0).role()).isEqualTo(ShopRole.PARTNER_ADMIN);
+    }
+
+    @Test
+    void 온우림에_없는_계정은_이름_없이_반환된다() {
+        given(memberRepository.findAll(null)).willReturn(List.of(member(ShopAdminStatus.PENDING)));
+        given(identityVerifier.getAccounts(List.of(10L))).willReturn(List.of());
+
+        ShopAdminView v = service.list(null).get(0);
+
+        assertThat(v.name()).isNull();
+        assertThat(v.loginId()).isNull();
+        assertThat(v.companyName()).isNull();
+    }
+
+    @Test
+    void 온우림_조회가_실패해도_목록은_이름_없이_반환된다() {
+        given(memberRepository.findAll(null)).willReturn(List.of(member(ShopAdminStatus.PENDING)));
+        given(identityVerifier.getAccounts(any()))
+            .willThrow(new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE));
+
+        List<ShopAdminView> result = service.list(null);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).name()).isNull();
         assertThat(result.get(0).status()).isEqualTo(ShopAdminStatus.PENDING);
+    }
+
+    @Test
+    void 목록이_비어_있으면_온우림을_조회하지_않는다() {
+        given(memberRepository.findAll(null)).willReturn(List.of());
+
+        assertThat(service.list(null)).isEmpty();
+        verifyNoInteractions(identityVerifier);
     }
 
     @Test

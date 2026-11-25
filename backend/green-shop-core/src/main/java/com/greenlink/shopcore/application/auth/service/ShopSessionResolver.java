@@ -8,13 +8,18 @@ import com.greenlink.shopcore.domain.auth.ShopRole;
 import com.greenlink.shopcore.domain.auth.TokenScope;
 import com.greenlink.shopcore.domain.member.model.ShopAdminMember;
 import com.greenlink.shopcore.domain.member.port.ShopAdminMemberRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
 import java.util.Optional;
 
 @Component
 public class ShopSessionResolver {
+
+    private static final Logger log = LoggerFactory.getLogger(ShopSessionResolver.class);
 
     private final ShopAdminMemberRepository memberRepository;
     private final AccessTokenIssuer tokenIssuer;
@@ -24,26 +29,34 @@ public class ShopSessionResolver {
         this.tokenIssuer = tokenIssuer;
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public ShopSession resolve(VerifiedIdentity identity) {
         if (identity.superAdmin()) {
             return session(identity, ShopRole.SUPER_ADMIN, AccessStatus.APPROVED, TokenScope.FULL);
         }
 
-        Optional<ShopAdminMember> member = memberRepository.findByOnurimAdminId(identity.adminId());
-        member.ifPresent(m -> {
-            m.refreshSnapshot(identity.loginId(), identity.name(), identity.companyName());
-            memberRepository.save(m);
-        });
+        Optional<ShopAdminMember> member = memberRepository.findByAdminId(identity.adminId())
+            .filter(m -> companyMatches(m, identity));
 
         AccessStatus status = member.map(m -> AccessStatus.from(m.getStatus())).orElse(AccessStatus.NONE);
-        TokenScope scope = status == AccessStatus.APPROVED ? TokenScope.FULL : TokenScope.LIMITED;
-        return session(identity, ShopRole.SHOP_ADMIN, status, scope);
+        if (status == AccessStatus.APPROVED) {
+            return session(identity, member.get().getRole(), status, TokenScope.FULL);
+        }
+        return session(identity, null, status, TokenScope.LIMITED);
+    }
+
+    private boolean companyMatches(ShopAdminMember member, VerifiedIdentity identity) {
+        boolean matches = Objects.equals(member.getCompanyId(), identity.companyId());
+        if (!matches) {
+            log.warn("shop 멤버 회사 불일치로 접근을 부여하지 않음: adminId={}, memberCompanyId={}, identityCompanyId={}",
+                identity.adminId(), member.getCompanyId(), identity.companyId());
+        }
+        return matches;
     }
 
     private ShopSession session(VerifiedIdentity identity, ShopRole role, AccessStatus status, TokenScope scope) {
-        ShopRole tokenRole = scope == TokenScope.FULL ? role : null;
-        String token = tokenIssuer.issue(identity.adminId(), tokenRole, scope);
-        return new ShopSession(token, identity.loginId(), identity.name(), identity.companyName(), role, status);
+        String token = tokenIssuer.issue(identity.adminId(), identity.companyId(), role, scope);
+        return new ShopSession(token, identity.loginId(), identity.name(),
+            identity.companyId(), identity.companyName(), role, status);
     }
 }

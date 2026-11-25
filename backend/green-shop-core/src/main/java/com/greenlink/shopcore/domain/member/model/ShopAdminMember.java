@@ -1,5 +1,6 @@
 package com.greenlink.shopcore.domain.member.model;
 
+import com.greenlink.shopcore.domain.auth.ShopRole;
 import com.greenlink.shopcore.global.exception.ShopBusinessException;
 import com.greenlink.shopcore.global.exception.ShopErrorCode;
 
@@ -8,10 +9,10 @@ import java.time.LocalDateTime;
 public class ShopAdminMember {
 
     private Long id;
-    private Long onurimAdminId;
-    private String loginId;
-    private String name;
-    private String companyName;
+    private Long adminId;
+    private Long companyId;
+    private ShopRole role;
+    private ShopRole requestedRole;
     private ShopAdminStatus status;
     private LocalDateTime requestedAt;
     private LocalDateTime processedAt;
@@ -20,27 +21,26 @@ public class ShopAdminMember {
 
     private ShopAdminMember() {}
 
-    public static ShopAdminMember request(Long onurimAdminId, String loginId, String name,
-                                          String companyName, LocalDateTime now) {
+    public static ShopAdminMember request(Long adminId, Long companyId, ShopRole requestedRole, LocalDateTime now) {
+        requireAssignable(requestedRole);
         ShopAdminMember m = new ShopAdminMember();
-        m.onurimAdminId = onurimAdminId;
-        m.loginId = loginId;
-        m.name = name;
-        m.companyName = companyName;
+        m.adminId = adminId;
+        m.companyId = companyId;
+        m.requestedRole = requestedRole;
         m.status = ShopAdminStatus.PENDING;
         m.requestedAt = now;
         return m;
     }
 
-    public static ShopAdminMember of(Long id, Long onurimAdminId, String loginId, String name, String companyName,
+    public static ShopAdminMember of(Long id, Long adminId, Long companyId, ShopRole role, ShopRole requestedRole,
                                      ShopAdminStatus status, LocalDateTime requestedAt, LocalDateTime processedAt,
                                      Long processedBy, String rejectReason) {
         ShopAdminMember m = new ShopAdminMember();
         m.id = id;
-        m.onurimAdminId = onurimAdminId;
-        m.loginId = loginId;
-        m.name = name;
-        m.companyName = companyName;
+        m.adminId = adminId;
+        m.companyId = companyId;
+        m.role = role;
+        m.requestedRole = requestedRole;
         m.status = status;
         m.requestedAt = requestedAt;
         m.processedAt = processedAt;
@@ -49,10 +49,13 @@ public class ShopAdminMember {
         return m;
     }
 
-    public void reapply(LocalDateTime now) {
+    public void reapply(Long companyId, ShopRole requestedRole, LocalDateTime now) {
         if (status != ShopAdminStatus.REJECTED) {
             throw new ShopBusinessException(ShopErrorCode.ACCESS_ALREADY_REQUESTED);
         }
+        requireAssignable(requestedRole);
+        this.companyId = companyId;
+        this.requestedRole = requestedRole;
         this.status = ShopAdminStatus.PENDING;
         this.requestedAt = now;
         this.processedAt = null;
@@ -63,6 +66,7 @@ public class ShopAdminMember {
     public void approve(Long processedBy, LocalDateTime now) {
         requirePending();
         this.status = ShopAdminStatus.APPROVED;
+        this.role = requestedRole;
         this.processedAt = now;
         this.processedBy = processedBy;
         this.rejectReason = null;
@@ -79,23 +83,23 @@ public class ShopAdminMember {
         this.rejectReason = reason.trim();
     }
 
-    public void refreshSnapshot(String loginId, String name, String companyName) {
-        this.loginId = loginId;
-        this.name = name;
-        this.companyName = companyName;
-    }
-
     private void requirePending() {
         if (status != ShopAdminStatus.PENDING) {
             throw new ShopBusinessException(ShopErrorCode.ACCESS_INVALID_TRANSITION);
         }
     }
 
+    private static void requireAssignable(ShopRole role) {
+        if (role == null || role == ShopRole.SUPER_ADMIN) {
+            throw new ShopBusinessException(ShopErrorCode.ACCESS_ROLE_NOT_ASSIGNABLE);
+        }
+    }
+
     public Long getId() { return id; }
-    public Long getOnurimAdminId() { return onurimAdminId; }
-    public String getLoginId() { return loginId; }
-    public String getName() { return name; }
-    public String getCompanyName() { return companyName; }
+    public Long getAdminId() { return adminId; }
+    public Long getCompanyId() { return companyId; }
+    public ShopRole getRole() { return role; }
+    public ShopRole getRequestedRole() { return requestedRole; }
     public ShopAdminStatus getStatus() { return status; }
     public LocalDateTime getRequestedAt() { return requestedAt; }
     public LocalDateTime getProcessedAt() { return processedAt; }

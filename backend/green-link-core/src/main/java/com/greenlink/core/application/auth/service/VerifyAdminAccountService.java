@@ -1,5 +1,6 @@
 package com.greenlink.core.application.auth.service;
 
+import com.greenlink.core.application.auth.dto.AccountSummary;
 import com.greenlink.core.application.auth.dto.VerifiedAccount;
 import com.greenlink.core.application.auth.usecase.VerifyAdminAccountUseCase;
 import com.greenlink.core.domain.admin.model.Admin;
@@ -12,6 +13,12 @@ import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -46,6 +53,31 @@ public class VerifyAdminAccountService implements VerifyAdminAccountUseCase {
             .filter(a -> !a.isDeleted())
             .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_CREDENTIALS));
         return toVerified(admin);
+    }
+
+    @Override
+    public List<AccountSummary> getAccountSummaries(Collection<Long> adminIds) {
+        if (adminIds == null || adminIds.isEmpty()) {
+            return List.of();
+        }
+        List<Admin> admins = adminRepository.findAllByIdIn(adminIds).stream()
+            .filter(a -> !a.isDeleted())
+            .toList();
+        List<Long> companyIds = admins.stream()
+            .map(Admin::getCompanyId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+        Map<Long, String> companyNames = companyIds.isEmpty()
+            ? Map.of()
+            : companyRepository.findAllByIdIn(companyIds).stream()
+                .collect(Collectors.toMap(Company::getId, Company::getCompanyName, (a, b) -> a));
+        return admins.stream()
+            .map(a -> new AccountSummary(
+                a.getId(), a.getLoginId(), a.getName(),
+                a.getCompanyId(),
+                a.getCompanyId() == null ? null : companyNames.get(a.getCompanyId())))
+            .toList();
     }
 
     private VerifiedAccount toVerified(Admin admin) {

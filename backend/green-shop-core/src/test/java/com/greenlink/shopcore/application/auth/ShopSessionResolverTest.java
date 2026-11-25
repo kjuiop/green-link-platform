@@ -38,72 +38,94 @@ class ShopSessionResolverTest {
         resolver = new ShopSessionResolver(memberRepository, tokenIssuer);
     }
 
-    private VerifiedIdentity identity(boolean superAdmin) {
-        return new VerifiedIdentity(10L, "newLogin", "새이름", "새회사", superAdmin);
+    private VerifiedIdentity identity(Long companyId, boolean superAdmin) {
+        return new VerifiedIdentity(10L, "login", "이름", companyId, companyId == null ? null : "회사",
+            true, false, true, superAdmin);
     }
 
-    private ShopAdminMember member(ShopAdminStatus status) {
-        return ShopAdminMember.of(1L, 10L, "oldLogin", "옛이름", "옛회사", status,
+    private ShopAdminMember member(ShopAdminStatus status, ShopRole role, Long companyId) {
+        return ShopAdminMember.of(1L, 10L, companyId, role, ShopRole.PARTNER_ADMIN, status,
             LocalDateTime.of(2026, 11, 23, 10, 0), null, null, status == ShopAdminStatus.REJECTED ? "사유" : null);
     }
 
     @Test
     void 슈퍼관리자는_row_없이_FULL_토큰을_받는다() {
-        given(tokenIssuer.issue(10L, ShopRole.SUPER_ADMIN, TokenScope.FULL)).willReturn("tok");
+        given(tokenIssuer.issue(10L, null, ShopRole.SUPER_ADMIN, TokenScope.FULL)).willReturn("tok");
 
-        ShopSession s = resolver.resolve(identity(true));
+        ShopSession s = resolver.resolve(identity(null, true));
 
         assertThat(s.accessToken()).isEqualTo("tok");
         assertThat(s.role()).isEqualTo(ShopRole.SUPER_ADMIN);
         assertThat(s.accessStatus()).isEqualTo(AccessStatus.APPROVED);
-        verify(memberRepository, never()).findByOnurimAdminId(any());
-        verify(memberRepository, never()).save(any());
+        verify(memberRepository, never()).findByAdminId(any());
     }
 
     @Test
-    void 승인된_계정은_FULL_토큰을_받는다() {
-        given(memberRepository.findByOnurimAdminId(10L)).willReturn(Optional.of(member(ShopAdminStatus.APPROVED)));
-        given(tokenIssuer.issue(10L, ShopRole.SHOP_ADMIN, TokenScope.FULL)).willReturn("tok");
+    void 승인된_파트너_관리자는_회사_ID가_담긴_FULL_토큰을_받는다() {
+        given(memberRepository.findByAdminId(10L))
+            .willReturn(Optional.of(member(ShopAdminStatus.APPROVED, ShopRole.PARTNER_ADMIN, 7L)));
+        given(tokenIssuer.issue(10L, 7L, ShopRole.PARTNER_ADMIN, TokenScope.FULL)).willReturn("tok");
 
-        ShopSession s = resolver.resolve(identity(false));
+        ShopSession s = resolver.resolve(identity(7L, false));
 
-        assertThat(s.role()).isEqualTo(ShopRole.SHOP_ADMIN);
+        assertThat(s.role()).isEqualTo(ShopRole.PARTNER_ADMIN);
+        assertThat(s.companyId()).isEqualTo(7L);
+        assertThat(s.companyName()).isEqualTo("회사");
         assertThat(s.accessStatus()).isEqualTo(AccessStatus.APPROVED);
     }
 
     @Test
-    void row가_없으면_NONE이고_LIMITED_토큰이다() {
-        given(memberRepository.findByOnurimAdminId(10L)).willReturn(Optional.empty());
-        given(tokenIssuer.issue(10L, null, TokenScope.LIMITED)).willReturn("tok");
+    void 승인된_브랜드_관리자는_멤버에_저장된_역할로_토큰을_받는다() {
+        given(memberRepository.findByAdminId(10L))
+            .willReturn(Optional.of(member(ShopAdminStatus.APPROVED, ShopRole.BRAND_ADMIN, 7L)));
+        given(tokenIssuer.issue(10L, 7L, ShopRole.BRAND_ADMIN, TokenScope.FULL)).willReturn("tok");
 
-        ShopSession s = resolver.resolve(identity(false));
+        assertThat(resolver.resolve(identity(7L, false)).role()).isEqualTo(ShopRole.BRAND_ADMIN);
+    }
+
+    @Test
+    void row가_없으면_NONE이고_역할_없는_LIMITED_토큰이다() {
+        given(memberRepository.findByAdminId(10L)).willReturn(Optional.empty());
+        given(tokenIssuer.issue(10L, 7L, null, TokenScope.LIMITED)).willReturn("tok");
+
+        ShopSession s = resolver.resolve(identity(7L, false));
 
         assertThat(s.accessStatus()).isEqualTo(AccessStatus.NONE);
-        assertThat(s.role()).isEqualTo(ShopRole.SHOP_ADMIN);
-        verify(memberRepository, never()).save(any());
+        assertThat(s.role()).isNull();
+        assertThat(s.companyId()).isEqualTo(7L);
     }
 
     @Test
     void 대기와_거절_계정은_LIMITED_토큰을_받는다() {
-        given(memberRepository.findByOnurimAdminId(10L))
-            .willReturn(Optional.of(member(ShopAdminStatus.PENDING)), Optional.of(member(ShopAdminStatus.REJECTED)));
-        given(tokenIssuer.issue(10L, null, TokenScope.LIMITED)).willReturn("tok");
+        given(memberRepository.findByAdminId(10L)).willReturn(
+            Optional.of(member(ShopAdminStatus.PENDING, null, 7L)),
+            Optional.of(member(ShopAdminStatus.REJECTED, null, 7L)));
+        given(tokenIssuer.issue(10L, 7L, null, TokenScope.LIMITED)).willReturn("tok");
 
-        assertThat(resolver.resolve(identity(false)).accessStatus()).isEqualTo(AccessStatus.PENDING);
-        assertThat(resolver.resolve(identity(false)).accessStatus()).isEqualTo(AccessStatus.REJECTED);
+        assertThat(resolver.resolve(identity(7L, false)).accessStatus()).isEqualTo(AccessStatus.PENDING);
+        assertThat(resolver.resolve(identity(7L, false)).accessStatus()).isEqualTo(AccessStatus.REJECTED);
     }
 
     @Test
-    void 로그인할_때마다_이름_loginId_회사명_스냅샷을_갱신해_저장한다() {
-        ShopAdminMember m = member(ShopAdminStatus.APPROVED);
-        given(memberRepository.findByOnurimAdminId(10L)).willReturn(Optional.of(m));
-        given(tokenIssuer.issue(10L, ShopRole.SHOP_ADMIN, TokenScope.FULL)).willReturn("tok");
+    void 온우림의_회사가_멤버의_회사와_다르면_승인되어_있어도_FULL_토큰을_주지_않는다() {
+        given(memberRepository.findByAdminId(10L))
+            .willReturn(Optional.of(member(ShopAdminStatus.APPROVED, ShopRole.PARTNER_ADMIN, 7L)));
+        given(tokenIssuer.issue(10L, 8L, null, TokenScope.LIMITED)).willReturn("tok");
 
-        resolver.resolve(identity(false));
+        ShopSession s = resolver.resolve(identity(8L, false));
 
-        assertThat(m.getLoginId()).isEqualTo("newLogin");
-        assertThat(m.getName()).isEqualTo("새이름");
-        assertThat(m.getCompanyName()).isEqualTo("새회사");
-        verify(memberRepository).save(m);
+        assertThat(s.accessStatus()).isEqualTo(AccessStatus.NONE);
+        assertThat(s.role()).isNull();
+    }
+
+    @Test
+    void 로그인은_읽기_전용이라_멤버를_저장하지_않는다() {
+        given(memberRepository.findByAdminId(10L))
+            .willReturn(Optional.of(member(ShopAdminStatus.APPROVED, ShopRole.PARTNER_ADMIN, 7L)));
+        given(tokenIssuer.issue(10L, 7L, ShopRole.PARTNER_ADMIN, TokenScope.FULL)).willReturn("tok");
+
+        resolver.resolve(identity(7L, false));
+
+        verify(memberRepository, never()).save(any());
     }
 }

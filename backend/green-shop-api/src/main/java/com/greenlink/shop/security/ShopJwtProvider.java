@@ -19,6 +19,7 @@ public class ShopJwtProvider implements AccessTokenIssuer {
 
     private static final String CLAIM_SCOPE = "scope";
     private static final String CLAIM_ROLE = "role";
+    private static final String CLAIM_COMPANY_ID = "cid";
 
     private final SecretKey key;
     private final long expirationMillis;
@@ -34,13 +35,16 @@ public class ShopJwtProvider implements AccessTokenIssuer {
     }
 
     @Override
-    public String issue(Long adminId, ShopRole role, TokenScope scope) {
+    public String issue(Long adminId, Long companyId, ShopRole role, TokenScope scope) {
         long now = System.currentTimeMillis();
         var builder = Jwts.builder()
             .subject(String.valueOf(adminId))
             .claim(CLAIM_SCOPE, scope.name())
             .issuedAt(new Date(now))
             .expiration(new Date(now + expirationMillis));
+        if (companyId != null) {
+            builder.claim(CLAIM_COMPANY_ID, companyId);
+        }
         if (role != null) {
             builder.claim(CLAIM_ROLE, role.name());
         }
@@ -56,7 +60,9 @@ public class ShopJwtProvider implements AccessTokenIssuer {
             if (scope == TokenScope.FULL && role == null) {
                 return Optional.empty();
             }
-            return Optional.of(new ShopPrincipal(Long.valueOf(payload.getSubject()), role, scope));
+            Number companyClaim = payload.get(CLAIM_COMPANY_ID, Number.class);
+            Long companyId = companyClaim == null ? null : companyClaim.longValue();
+            return Optional.of(new ShopPrincipal(Long.valueOf(payload.getSubject()), companyId, role, scope));
         } catch (Exception e) {
             return Optional.empty();
         }

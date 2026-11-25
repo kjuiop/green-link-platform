@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { fetchMenus } from '@/lib/api/menuApi'
-import type { Session } from '@/types/auth'
+import type { Session, ShopRole } from '@/types/auth'
 import type { MenuItem } from '@/types/menu'
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -26,9 +26,10 @@ const ICON_MAP: Record<string, LucideIcon> = {
   settings: Settings,
 }
 
-const ROLE_LABEL: Record<Session['role'], string> = {
-  SUPER_ADMIN: '최고관리자',
-  SHOP_ADMIN: '쇼핑몰 관리자',
+const ROLE_LABEL: Record<ShopRole, string> = {
+  SUPER_ADMIN: '슈퍼관리자',
+  PARTNER_ADMIN: '파트너 관리자',
+  BRAND_ADMIN: '브랜드 관리자',
 }
 
 function isActive(pathname: string, url: string): boolean {
@@ -55,7 +56,7 @@ function SidebarNav({ session, menus, menuError, onNavClick }: SidebarNavProps) 
         <div className="mb-1 flex items-center justify-between">
           <span className="font-semibold text-green-100">로그인 정보</span>
           <span className="rounded bg-green-600 px-1.5 py-0.5 text-green-100">
-            {ROLE_LABEL[session.role]}
+            {session.role ? ROLE_LABEL[session.role] : '승인 대기'}
           </span>
         </div>
         <div className="flex items-center gap-1 text-green-200">

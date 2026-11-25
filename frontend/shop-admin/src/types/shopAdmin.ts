@@ -4,10 +4,13 @@ export type ShopAdminStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
 export interface ShopAdmin {
   id: number
-  loginId: string
-  name: string
+  adminId: number
+  companyId: number
+  loginId: string | null
+  name: string | null
   companyName: string | null
-  role: ShopRole
+  role: ShopRole | null
+  requestedRole: ShopRole
   status: ShopAdminStatus
   requestedAt: string
   processedAt: string | null

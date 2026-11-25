@@ -1,5 +1,6 @@
 package com.greenlink.shop.adapter.out.persistence.member;
 
+import com.greenlink.shopcore.domain.auth.ShopRole;
 import com.greenlink.shopcore.domain.member.model.ShopAdminMember;
 import com.greenlink.shopcore.domain.member.model.ShopAdminStatus;
 import jakarta.persistence.Column;
@@ -15,24 +16,29 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "shop_admin_members", indexes = @Index(name = "idx_shop_admin_members_status", columnList = "status"))
+@Table(name = "shop_admin_members", indexes = {
+    @Index(name = "idx_shop_admin_members_status", columnList = "status"),
+    @Index(name = "idx_shop_admin_members_company", columnList = "company_id")
+})
 public class ShopAdminMemberJpaEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "onurim_admin_id", nullable = false, unique = true)
-    private Long onurimAdminId;
+    @Column(name = "admin_id", nullable = false, unique = true)
+    private Long adminId;
 
-    @Column(name = "login_id", nullable = false, length = 100)
-    private String loginId;
+    @Column(name = "company_id", nullable = false)
+    private Long companyId;
 
-    @Column(nullable = false, length = 100)
-    private String name;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private ShopRole role;
 
-    @Column(name = "company_name", length = 200)
-    private String companyName;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "requested_role", nullable = false, length = 30)
+    private ShopRole requestedRole;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -60,10 +66,10 @@ public class ShopAdminMemberJpaEntity {
     }
 
     void apply(ShopAdminMember m) {
-        this.onurimAdminId = m.getOnurimAdminId();
-        this.loginId = m.getLoginId();
-        this.name = m.getName();
-        this.companyName = m.getCompanyName();
+        this.adminId = m.getAdminId();
+        this.companyId = m.getCompanyId();
+        this.role = m.getRole();
+        this.requestedRole = m.getRequestedRole();
         this.status = m.getStatus();
         this.requestedAt = m.getRequestedAt();
         this.processedAt = m.getProcessedAt();
@@ -72,7 +78,7 @@ public class ShopAdminMemberJpaEntity {
     }
 
     ShopAdminMember toDomain() {
-        return ShopAdminMember.of(id, onurimAdminId, loginId, name, companyName, status,
+        return ShopAdminMember.of(id, adminId, companyId, role, requestedRole, status,
             requestedAt, processedAt, processedBy, rejectReason);
     }
 }

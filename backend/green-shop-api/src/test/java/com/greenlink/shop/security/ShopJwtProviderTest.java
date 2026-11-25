@@ -20,26 +20,53 @@ class ShopJwtProviderTest {
 
     @Test
     void FULL_토큰은_역할과_scope를_담아_파싱된다() {
-        String token = provider.issue(7L, ShopRole.SHOP_ADMIN, TokenScope.FULL);
+        String token = provider.issue(7L, 3L, ShopRole.PARTNER_ADMIN, TokenScope.FULL);
 
         var principal = provider.parse(token).orElseThrow();
 
         assertThat(principal.adminId()).isEqualTo(7L);
-        assertThat(principal.role()).isEqualTo(ShopRole.SHOP_ADMIN);
+        assertThat(principal.role()).isEqualTo(ShopRole.PARTNER_ADMIN);
+        assertThat(principal.companyId()).isEqualTo(3L);
         assertThat(principal.scope()).isEqualTo(TokenScope.FULL);
         assertThat(principal.superAdmin()).isFalse();
     }
 
     @Test
+    void 브랜드_관리자_토큰도_왕복된다() {
+        String token = provider.issue(8L, 3L, ShopRole.BRAND_ADMIN, TokenScope.FULL);
+
+        var principal = provider.parse(token).orElseThrow();
+
+        assertThat(principal.role()).isEqualTo(ShopRole.BRAND_ADMIN);
+        assertThat(principal.companyId()).isEqualTo(3L);
+    }
+
+    @Test
+    void 회사가_없는_슈퍼관리자_토큰은_companyId가_null이다() {
+        String token = provider.issue(1L, null, ShopRole.SUPER_ADMIN, TokenScope.FULL);
+
+        assertThat(provider.parse(token).orElseThrow().companyId()).isNull();
+    }
+
+    @Test
+    void 구_SHOP_ADMIN_역할_토큰은_거부된다() {
+        String token = Jwts.builder().subject("7").claim("scope", "FULL").claim("role", "SHOP_ADMIN")
+            .expiration(new Date(System.currentTimeMillis() + 60_000))
+            .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8))).compact();
+
+        assertThat(provider.parse(token)).isEmpty();
+    }
+
+    @Test
     void 슈퍼관리자_토큰은_superAdmin이다() {
-        String token = provider.issue(1L, ShopRole.SUPER_ADMIN, TokenScope.FULL);
+        String token = provider.issue(1L, null, ShopRole.SUPER_ADMIN, TokenScope.FULL);
 
         assertThat(provider.parse(token).orElseThrow().superAdmin()).isTrue();
     }
 
     @Test
     void LIMITED_토큰에는_역할이_없다() {
-        String token = provider.issue(7L, null, TokenScope.LIMITED);
+        String token = provider.issue(7L, 3L, null, TokenScope.LIMITED);
 
         var principal = provider.parse(token).orElseThrow();
 
@@ -51,19 +78,19 @@ class ShopJwtProviderTest {
     void 만료된_토큰은_거부된다() {
         ShopJwtProvider expired = new ShopJwtProvider(SECRET, -1_000);
 
-        assertThat(provider.parse(expired.issue(7L, ShopRole.SHOP_ADMIN, TokenScope.FULL))).isEmpty();
+        assertThat(provider.parse(expired.issue(7L, 3L, ShopRole.PARTNER_ADMIN, TokenScope.FULL))).isEmpty();
     }
 
     @Test
     void 다른_키로_서명된_토큰은_거부된다() {
         ShopJwtProvider other = new ShopJwtProvider("other-secret-other-secret-other-secret-01", 60_000);
 
-        assertThat(provider.parse(other.issue(7L, ShopRole.SHOP_ADMIN, TokenScope.FULL))).isEmpty();
+        assertThat(provider.parse(other.issue(7L, 3L, ShopRole.PARTNER_ADMIN, TokenScope.FULL))).isEmpty();
     }
 
     @Test
     void 변조되거나_형식이_잘못된_토큰은_거부된다() {
-        String token = provider.issue(7L, ShopRole.SHOP_ADMIN, TokenScope.FULL);
+        String token = provider.issue(7L, 3L, ShopRole.PARTNER_ADMIN, TokenScope.FULL);
 
         assertThat(provider.parse(token + "x")).isEmpty();
         assertThat(provider.parse("not-a-jwt")).isEmpty();

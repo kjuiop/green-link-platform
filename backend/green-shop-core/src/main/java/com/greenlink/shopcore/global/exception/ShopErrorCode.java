@@ -9,7 +9,11 @@ public enum ShopErrorCode implements ErrorCode {
     ACCESS_INVALID_TRANSITION(409, "SHOP_ACCESS_002", "처리할 수 없는 상태입니다."),
     ACCESS_REJECT_REASON_REQUIRED(400, "SHOP_ACCESS_003", "거절 사유를 입력해주세요."),
     ACCESS_NOT_REQUIRED(409, "SHOP_ACCESS_004", "접근 신청이 필요 없는 계정입니다."),
-    ADMIN_REQUEST_NOT_FOUND(404, "SHOP_ACCESS_005", "신청 내역을 찾을 수 없습니다.");
+    ADMIN_REQUEST_NOT_FOUND(404, "SHOP_ACCESS_005", "신청 내역을 찾을 수 없습니다."),
+    ACCESS_COMPANY_REQUIRED(409, "SHOP_ACCESS_006", "소속 회사가 있어야 접근 신청을 할 수 있습니다."),
+    ACCESS_ROLE_NOT_ASSIGNABLE(400, "SHOP_ACCESS_007", "신청하거나 부여할 수 없는 역할입니다."),
+    BRAND_NOT_FOUND(404, "SHOP_BRAND_001", "브랜드를 찾을 수 없습니다."),
+    BRAND_ACCESS_DENIED(403, "SHOP_BRAND_002", "해당 브랜드에 접근할 권한이 없습니다.");
 
     private final int status;
     private final String code;

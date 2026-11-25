@@ -4,5 +4,5 @@ import com.greenlink.shopcore.domain.auth.ShopRole;
 import com.greenlink.shopcore.domain.auth.TokenScope;
 
 public interface AccessTokenIssuer {
-    String issue(Long adminId, ShopRole role, TokenScope scope);
+    String issue(Long adminId, Long companyId, ShopRole role, TokenScope scope);
 }

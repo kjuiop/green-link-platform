@@ -1,6 +1,7 @@
 package com.greenlink.admin.adapter.in.web;
 
 import com.greenlink.admin.global.exception.GlobalExceptionHandler;
+import com.greenlink.core.application.auth.dto.AccountSummary;
 import com.greenlink.core.application.auth.dto.VerifiedAccount;
 import com.greenlink.core.application.auth.usecase.VerifyAdminAccountUseCase;
 import com.greenlink.core.global.exception.BusinessException;
@@ -9,6 +10,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -97,6 +102,54 @@ class InternalShopAuthControllerTest {
                         .header("X-Internal-Secret", "s3cret"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.adminId").value(1));
+    }
+
+    @Test
+    void batch_시크릿이_틀리면_403() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/accounts/batch")
+                        .header("X-Internal-Secret", "wrong")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"adminIds\":[1]}"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(useCase);
+    }
+
+    @Test
+    void batch_정상_시크릿이면_요약_목록을_반환() throws Exception {
+        when(useCase.getAccountSummaries(List.of(1L, 2L))).thenReturn(List.of(
+                new AccountSummary(1L, "admin01", "관리자", 7L, "테스트업체"),
+                new AccountSummary(2L, "admin02", "직원", null, null)));
+
+        mvc("s3cret").perform(post("/internal/shop-auth/accounts/batch")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"adminIds\":[1,2]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].adminId").value(1))
+                .andExpect(jsonPath("$[0].loginId").value("admin01"))
+                .andExpect(jsonPath("$[0].name").value("관리자"))
+                .andExpect(jsonPath("$[0].companyId").value(7))
+                .andExpect(jsonPath("$[0].companyName").value("테스트업체"))
+                .andExpect(jsonPath("$[1].companyId").isEmpty());
+    }
+
+    @Test
+    void batch_adminIds가_없으면_400() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/accounts/batch")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(useCase);
+    }
+
+    @Test
+    void batch_100건을_초과하면_400() throws Exception {
+        String ids = IntStream.rangeClosed(1, 101).mapToObj(String::valueOf).collect(Collectors.joining(","));
+
+        mvc("s3cret").perform(post("/internal/shop-auth/accounts/batch")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"adminIds\":[" + ids + "]}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(useCase);
     }
 
     @Test
