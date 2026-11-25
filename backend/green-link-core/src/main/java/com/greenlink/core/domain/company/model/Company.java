@@ -171,6 +171,10 @@ public class Company {
         this.siteEnabled = siteEnabled;
     }
 
+    public void enableSite() {
+        this.siteEnabled = true;
+    }
+
     public boolean isOnurimCompany() {
         return onurimEnabled && type != null;
     }

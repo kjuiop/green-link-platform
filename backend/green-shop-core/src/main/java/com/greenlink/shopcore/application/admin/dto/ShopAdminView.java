@@ -11,11 +11,11 @@ public record ShopAdminView(Long id, Long adminId, Long companyId, String loginI
                             ShopRole role, ShopRole requestedRole, ShopAdminStatus status,
                             LocalDateTime requestedAt, LocalDateTime processedAt, String rejectReason) {
 
-    public static ShopAdminView of(ShopAdminMember m, AccountProfile profile) {
+    public static ShopAdminView of(ShopAdminMember m, AccountProfile profile, String fallbackCompanyName) {
         return new ShopAdminView(m.getId(), m.getAdminId(), m.getCompanyId(),
             profile == null ? null : profile.loginId(),
             profile == null ? null : profile.name(),
-            profile == null ? null : profile.companyName(),
+            profile != null && profile.companyName() != null ? profile.companyName() : fallbackCompanyName,
             m.getRole(), m.getRequestedRole(), m.getStatus(),
             m.getRequestedAt(), m.getProcessedAt(), m.getRejectReason());
     }

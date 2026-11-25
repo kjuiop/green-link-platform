@@ -282,4 +282,57 @@ class OnurimIdentityVerifierTest {
         assertThatThrownBy(() -> verifier.verify("shop01", "pw")).isInstanceOfSatisfying(ShopBusinessException.class,
             e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE));
     }
+
+    @Test
+    void 접근_부여는_어드민과_회사_ID를_보내고_시크릿_헤더를_붙인다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/access-grants"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(header("X-Internal-Secret", "s3cret"))
+            .andExpect(jsonPath("$.adminId").value(5))
+            .andExpect(jsonPath("$.companyId").value(7))
+            .andRespond(withSuccess(ACCOUNT_JSON, MediaType.APPLICATION_JSON));
+
+        verifier.grant(5L, 7L);
+
+        server.verify();
+    }
+
+    @Test
+    void 접근_부여_회사_불일치_409는_ACCESS_COMPANY_MISMATCH로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/access-grants"))
+            .andRespond(withStatus(HttpStatus.CONFLICT).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_020\"}"));
+
+        assertThatThrownBy(() -> verifier.grant(5L, 7L))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.ACCESS_COMPANY_MISMATCH));
+    }
+
+    @Test
+    void 접근_부여_그_외_오류는_업스트림_장애로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/access-grants"))
+            .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        assertThatThrownBy(() -> verifier.grant(5L, 7L))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE));
+    }
+
+    @Test
+    void 회사명_배치_조회는_ID_목록을_보내고_맵으로_매핑한다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/companies/batch"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(header("X-Internal-Secret", "s3cret"))
+            .andExpect(jsonPath("$.companyIds[0]").value(7))
+            .andRespond(withSuccess("[{\"companyId\":7,\"companyName\":\"꽃집\"}]", MediaType.APPLICATION_JSON));
+
+        assertThat(verifier.getCompanyNames(java.util.List.of(7L))).containsEntry(7L, "꽃집");
+        server.verify();
+    }
+
+    @Test
+    void 회사명_조회_대상이_비어_있으면_호출하지_않는다() {
+        assertThat(verifier.getCompanyNames(java.util.List.of())).isEmpty();
+        server.verify();
+    }
 }

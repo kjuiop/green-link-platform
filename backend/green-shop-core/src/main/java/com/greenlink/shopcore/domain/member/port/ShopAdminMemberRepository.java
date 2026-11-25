@@ -10,5 +10,6 @@ public interface ShopAdminMemberRepository {
     Optional<ShopAdminMember> findById(Long id);
     Optional<ShopAdminMember> findByAdminId(Long adminId);
     List<ShopAdminMember> findAll(ShopAdminStatus status);
+    boolean existsApprovedByCompanyId(Long companyId);
     ShopAdminMember save(ShopAdminMember member);
 }

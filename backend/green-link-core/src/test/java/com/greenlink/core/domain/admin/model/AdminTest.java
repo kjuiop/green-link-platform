@@ -101,4 +101,40 @@ class AdminTest {
         assertThat(admin.isSuperAdmin()).isFalse();
         assertThat(admin.isOnurimEnabled()).isFalse();
     }
+
+    @Test
+    void attachToCompany_소속없는_계정은_회사에_연결된다() {
+        Admin admin = Admin.createShopApplicant("shop02", "encodedPw", "김철수", "010-1234-5678", null);
+
+        admin.attachToCompany(7L);
+
+        assertThat(admin.getCompanyId()).isEqualTo(7L);
+        assertThat(admin.isOnurimEnabled()).isFalse();
+    }
+
+    @Test
+    void attachToCompany_같은_회사면_변경이_없다() {
+        Admin admin = Admin.createShopFounder("shop01", "encodedPw", "홍길동", "010-1234-5678", null, 7L);
+
+        admin.attachToCompany(7L);
+
+        assertThat(admin.getCompanyId()).isEqualTo(7L);
+    }
+
+    @Test
+    void attachToCompany_다른_회사에_소속된_계정은_거부한다() {
+        Admin admin = Admin.createShopFounder("shop01", "encodedPw", "홍길동", "010-1234-5678", null, 7L);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> admin.attachToCompany(8L))
+            .isInstanceOf(IllegalStateException.class);
+        assertThat(admin.getCompanyId()).isEqualTo(7L);
+    }
+
+    @Test
+    void attachToCompany_회사_id가_없으면_거부한다() {
+        Admin admin = Admin.createShopApplicant("shop02", "encodedPw", "김철수", "010-1234-5678", null);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> admin.attachToCompany(null))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
 }

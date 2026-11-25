@@ -1,4 +1,4 @@
-import type { AccessStatus, ShopRole } from '@/types/auth'
+import type { AccessRequestType, AccessStatus, ShopRole } from '@/types/auth'
 
 export type ShopAdminStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
@@ -20,4 +20,6 @@ export interface ShopAdmin {
 export interface MyAccess {
   accessStatus: AccessStatus
   rejectReason: string | null
+  requestType: AccessRequestType | null
+  requestedRole: ShopRole | null
 }
