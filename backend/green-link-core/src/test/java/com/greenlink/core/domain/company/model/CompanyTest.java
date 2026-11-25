@@ -14,6 +14,17 @@ class CompanyTest {
     }
 
     @Test
+    void 쇼핑몰_가입_회사는_온우림이_꺼지고_사이트만_켜진다() {
+        Company c = Company.createForShop("123-45-67890", "꽃집", "홍길동", "02-111-2222");
+
+        assertThat(c.isOnurimEnabled()).isFalse();
+        assertThat(c.isSiteEnabled()).isTrue();
+        assertThat(c.getType()).isNull();
+        assertThat(c.getStatus()).isEqualTo(CompanyStatus.ACTIVE);
+        assertThat(c.getBusinessNo()).isEqualTo("123-45-67890");
+    }
+
+    @Test
     void 수수료_기본값은_3000원이다() {
         assertThat(company().getVendorFee()).isEqualTo(3000L);
     }

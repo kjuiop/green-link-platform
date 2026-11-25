@@ -2,7 +2,10 @@ package com.greenlink.shop.adapter.out.identity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.greenlink.shopcore.application.auth.dto.AccountProfile;
+import com.greenlink.shopcore.application.auth.dto.RegisteredAccount;
+import com.greenlink.shopcore.application.auth.dto.SignupCommand;
 import com.greenlink.shopcore.application.auth.dto.VerifiedIdentity;
+import com.greenlink.shopcore.application.auth.port.IdentityRegistrar;
 import com.greenlink.shopcore.application.auth.port.IdentityVerifier;
 import com.greenlink.shopcore.global.exception.ShopBusinessException;
 import com.greenlink.shopcore.global.exception.ShopErrorCode;
@@ -22,7 +25,7 @@ import java.util.Collection;
 import java.util.List;
 
 @Component
-public class OnurimIdentityVerifier implements IdentityVerifier {
+public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistrar {
 
     private static final Logger log = LoggerFactory.getLogger(OnurimIdentityVerifier.class);
     private static final String SECRET_HEADER = "X-Internal-Secret";
@@ -98,16 +101,53 @@ public class OnurimIdentityVerifier implements IdentityVerifier {
         return result;
     }
 
+    @Override
+    public RegisteredAccount register(SignupCommand command) {
+        SignupBody body = executeWith(() -> restClient.post()
+            .uri("/internal/shop-auth/signup")
+            .header(SECRET_HEADER, secret)
+            .body(command)
+            .retrieve()
+            .body(SignupBody.class), this::mapSignupError);
+        if (body == null || body.account() == null || body.account().adminId() == null) {
+            throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+        }
+        return new RegisteredAccount(toIdentity(body.account()), body.targetCompanyId(), body.founder());
+    }
+
+    @Override
+    public boolean businessNoExists(String businessNo) {
+        ExistsBody body = executeWith(() -> restClient.post()
+            .uri("/internal/shop-auth/business-numbers/exists")
+            .header(SECRET_HEADER, secret)
+            .body(new BusinessNoBody(businessNo))
+            .retrieve()
+            .body(ExistsBody.class), this::mapSignupError);
+        if (body == null) {
+            throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+        }
+        return body.exists();
+    }
+
     private VerifiedIdentity call(java.util.function.Supplier<AccountBody> request) {
         AccountBody body = execute(request);
         if (body == null || body.adminId() == null) {
             throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
         }
+        return toIdentity(body);
+    }
+
+    private VerifiedIdentity toIdentity(AccountBody body) {
         return new VerifiedIdentity(body.adminId(), body.loginId(), body.name(), body.companyId(), body.companyName(),
             body.companyOnurimEnabled(), body.companySiteEnabled(), body.adminOnurimEnabled(), body.superAdmin());
     }
 
     private <T> T execute(java.util.function.Supplier<T> request) {
+        return executeWith(request, this::mapError);
+    }
+
+    private <T> T executeWith(java.util.function.Supplier<T> request,
+                              java.util.function.Function<RestClientResponseException, ShopBusinessException> errorMapper) {
         if (secret == null || secret.isBlank()) {
             log.error("shop.identity.secret is not configured");
             throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
@@ -115,7 +155,7 @@ public class OnurimIdentityVerifier implements IdentityVerifier {
         try {
             return request.get();
         } catch (RestClientResponseException e) {
-            throw mapError(e);
+            throw errorMapper.apply(e);
         } catch (ResourceAccessException e) {
             log.error("온우림 계정 서버 호출 실패: {}", e.getMessage());
             throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
@@ -123,6 +163,21 @@ public class OnurimIdentityVerifier implements IdentityVerifier {
             log.error("온우림 계정 서버 호출 설정 오류: {}", e.getMessage());
             throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
         }
+    }
+
+    private ShopBusinessException mapSignupError(RestClientResponseException e) {
+        int status = e.getStatusCode().value();
+        String body = e.getResponseBodyAsString();
+        if (status == 409 && body.contains("AUTH_015")) {
+            return new ShopBusinessException(ShopErrorCode.SIGNUP_LOGIN_ID_DUPLICATED);
+        }
+        if (status == 409 && body.contains("AUTH_016")) {
+            return new ShopBusinessException(ShopErrorCode.SIGNUP_BUSINESS_NO_REGISTERED);
+        }
+        if (status == 400) {
+            return new ShopBusinessException(ShopErrorCode.SIGNUP_INVALID_INPUT);
+        }
+        return mapError(e);
     }
 
     private ShopBusinessException mapError(RestClientResponseException e) {
@@ -141,6 +196,14 @@ public class OnurimIdentityVerifier implements IdentityVerifier {
     record VerifyBody(String loginId, String password) {}
 
     record BatchBody(List<Long> adminIds) {}
+
+    record BusinessNoBody(String businessNo) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record ExistsBody(boolean exists) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record SignupBody(AccountBody account, Long targetCompanyId, boolean founder) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record AccountBody(Long adminId, String loginId, String name, Long companyId, String companyName,

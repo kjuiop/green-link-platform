@@ -1,6 +1,8 @@
 package com.greenlink.shop.adapter.out.identity;
 
 import com.greenlink.shopcore.application.auth.dto.AccountProfile;
+import com.greenlink.shopcore.application.auth.dto.RegisteredAccount;
+import com.greenlink.shopcore.application.auth.dto.SignupCommand;
 import com.greenlink.shopcore.application.auth.dto.VerifiedIdentity;
 import com.greenlink.shopcore.global.exception.ShopBusinessException;
 import com.greenlink.shopcore.global.exception.ShopErrorCode;
@@ -198,5 +200,86 @@ class OnurimIdentityVerifierTest {
         assertThatThrownBy(() -> noSecret.verify("shop01", "pw"))
             .isInstanceOfSatisfying(ShopBusinessException.class,
                 e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE));
+    }
+
+    private static final SignupCommand SIGNUP = new SignupCommand("shop01", "Passw0rd!", "홍길동", "010-1234-5678", null,
+        "123-45-67890", "꽃집", "김대표", null);
+
+    @Test
+    void 가입_성공시_계정과_대상회사_창립자_여부를_매핑한다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/signup"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(header("X-Internal-Secret", "s3cret"))
+            .andExpect(jsonPath("$.loginId").value("shop01"))
+            .andExpect(jsonPath("$.businessNo").value("123-45-67890"))
+            .andRespond(withStatus(HttpStatus.CREATED).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"account\":" + ACCOUNT_JSON + ",\"targetCompanyId\":7,\"founder\":true}"));
+
+        RegisteredAccount result = verifier.register(SIGNUP);
+
+        assertThat(result.identity().adminId()).isEqualTo(5L);
+        assertThat(result.targetCompanyId()).isEqualTo(7L);
+        assertThat(result.founder()).isTrue();
+        server.verify();
+    }
+
+    @Test
+    void 가입_409는_코드별로_중복_오류로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/signup"))
+            .andRespond(withStatus(HttpStatus.CONFLICT).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_015\",\"message\":\"x\"}"));
+        server.expect(requestTo(BASE + "/internal/shop-auth/signup"))
+            .andRespond(withStatus(HttpStatus.CONFLICT).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_016\",\"message\":\"x\"}"));
+
+        assertThatThrownBy(() -> verifier.register(SIGNUP)).isInstanceOfSatisfying(ShopBusinessException.class,
+            e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.SIGNUP_LOGIN_ID_DUPLICATED));
+        assertThatThrownBy(() -> verifier.register(SIGNUP)).isInstanceOfSatisfying(ShopBusinessException.class,
+            e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.SIGNUP_BUSINESS_NO_REGISTERED));
+    }
+
+    @Test
+    void 가입_400은_입력_오류로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/signup"))
+            .andRespond(withStatus(HttpStatus.BAD_REQUEST).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_018\",\"message\":\"x\"}"));
+
+        assertThatThrownBy(() -> verifier.register(SIGNUP)).isInstanceOfSatisfying(ShopBusinessException.class,
+            e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.SIGNUP_INVALID_INPUT));
+    }
+
+    @Test
+    void 가입_서버오류와_시크릿_불일치는_업스트림_장애로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/signup"))
+            .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+        server.expect(requestTo(BASE + "/internal/shop-auth/signup"))
+            .andRespond(withStatus(HttpStatus.FORBIDDEN).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_012\",\"message\":\"x\"}"));
+
+        for (int i = 0; i < 2; i++) {
+            assertThatThrownBy(() -> verifier.register(SIGNUP)).isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE));
+        }
+    }
+
+    @Test
+    void 사업자번호_존재_조회는_exists만_읽는다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/business-numbers/exists"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(header("X-Internal-Secret", "s3cret"))
+            .andExpect(content().json("{\"businessNo\":\"123-45-67890\"}"))
+            .andRespond(withSuccess("{\"exists\":true}", MediaType.APPLICATION_JSON));
+
+        assertThat(verifier.businessNoExists("123-45-67890")).isTrue();
+        server.verify();
+    }
+
+    @Test
+    void 기존_엔드포인트의_400은_가입_오류가_아닌_업스트림_장애로_남는다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/verify"))
+            .andRespond(withStatus(HttpStatus.BAD_REQUEST));
+
+        assertThatThrownBy(() -> verifier.verify("shop01", "pw")).isInstanceOfSatisfying(ShopBusinessException.class,
+            e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE));
     }
 }

@@ -99,6 +99,13 @@ class AccessRequestServiceTest {
     }
 
     @Test
+    void 내_상태_조회_소속없는_합류_신청자는_회사가_달라도_PENDING() {
+        given(memberRepository.findByAdminId(10L)).willReturn(Optional.of(member(ShopAdminStatus.PENDING)));
+
+        assertThat(service.getMyAccess(10L, null, false).accessStatus()).isEqualTo(AccessStatus.PENDING);
+    }
+
+    @Test
     void 처음_신청하면_회사_ID와_PARTNER_ADMIN_요청_역할로_PENDING_row가_저장된다() {
         given(identityVerifier.getAccount(10L)).willReturn(identity(7L, false));
         given(memberRepository.findByAdminId(10L)).willReturn(Optional.empty());

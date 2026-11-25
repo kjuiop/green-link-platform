@@ -13,7 +13,11 @@ public enum ShopErrorCode implements ErrorCode {
     ACCESS_COMPANY_REQUIRED(409, "SHOP_ACCESS_006", "소속 회사가 있어야 접근 신청을 할 수 있습니다."),
     ACCESS_ROLE_NOT_ASSIGNABLE(400, "SHOP_ACCESS_007", "신청하거나 부여할 수 없는 역할입니다."),
     BRAND_NOT_FOUND(404, "SHOP_BRAND_001", "브랜드를 찾을 수 없습니다."),
-    BRAND_ACCESS_DENIED(403, "SHOP_BRAND_002", "해당 브랜드에 접근할 권한이 없습니다.");
+    BRAND_ACCESS_DENIED(403, "SHOP_BRAND_002", "해당 브랜드에 접근할 권한이 없습니다."),
+    SIGNUP_RATE_LIMITED(429, "SHOP_SIGNUP_001", "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."),
+    SIGNUP_LOGIN_ID_DUPLICATED(409, "SHOP_SIGNUP_002", "이미 사용 중인 아이디입니다."),
+    SIGNUP_BUSINESS_NO_REGISTERED(409, "SHOP_SIGNUP_003", "이미 등록된 사업자번호입니다."),
+    SIGNUP_INVALID_INPUT(400, "SHOP_SIGNUP_004", "입력값을 확인해주세요.");
 
     private final int status;
     private final String code;

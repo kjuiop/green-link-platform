@@ -54,6 +54,13 @@ public class Company {
         return c;
     }
 
+    public static Company createForShop(String businessNo, String companyName, String ceoName, String phone) {
+        Company c = create(businessNo, companyName, ceoName, phone, null, "", "", null);
+        c.onurimEnabled = false;
+        c.siteEnabled = true;
+        return c;
+    }
+
     public static Company of(Long id, String businessNo, String companyName,
                               String ceoName, String phone, String faxNumber,
                               String address, String detailAddress,
