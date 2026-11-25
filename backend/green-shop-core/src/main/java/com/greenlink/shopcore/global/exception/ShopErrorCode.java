@@ -16,7 +16,6 @@ public enum ShopErrorCode implements ErrorCode {
     ACCESS_ROLE_EXCEEDS_REQUEST(400, "SHOP_ACCESS_009", "신청한 역할보다 높은 역할로 승인할 수 없습니다."),
     ACCESS_COMPANY_MISMATCH(409, "SHOP_ACCESS_010", "이미 다른 회사에 소속된 계정입니다."),
     BRAND_NOT_FOUND(404, "SHOP_BRAND_001", "브랜드를 찾을 수 없습니다."),
-    ACCESS_PARTNER_PROMOTION_FORBIDDEN(403, "SHOP_ACCESS_011", "파트너 관리자 권한은 슈퍼관리자만 부여할 수 있습니다."),
     ACCESS_MANAGE_FORBIDDEN(403, "SHOP_ACCESS_012", "해당 구성원을 관리할 권한이 없습니다."),
     MEMBER_NOT_APPROVED(409, "SHOP_MEMBER_001", "승인된 구성원만 처리할 수 있습니다."),
     MEMBER_BRAND_REQUIRED(400, "SHOP_MEMBER_002", "브랜드 관리자는 브랜드를 1개 이상 지정해야 합니다."),

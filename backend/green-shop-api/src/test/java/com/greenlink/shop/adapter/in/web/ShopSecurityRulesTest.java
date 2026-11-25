@@ -97,7 +97,7 @@ class ShopSecurityRulesTest {
         mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(springSecurityFilterChain).build();
         org.mockito.Mockito.reset(signupUseCase, managementUseCase, brandUseCase);
         when(menusUseCase.getMenus(any())).thenReturn(List.of());
-        when(managementUseCase.list(any(), any())).thenReturn(List.of());
+        when(managementUseCase.list(any(), any(), any())).thenReturn(List.of());
         when(brandUseCase.list(any(), any())).thenReturn(List.of());
         when(accessRequestUseCase.getMyAccess(anyLong(), anyBoolean()))
             .thenReturn(new MyAccess(AccessStatus.PENDING, null, AccessRequestType.COMPANY, ShopRole.PARTNER_ADMIN));
@@ -168,7 +168,7 @@ class ShopSecurityRulesTest {
         mvc.perform(get("/api/menus").header("Authorization", partnerAdmin())).andExpect(status().isOk());
         mvc.perform(get("/api/members").header("Authorization", partnerAdmin())).andExpect(status().isOk());
         mvc.perform(get("/api/brands").header("Authorization", brandAdmin())).andExpect(status().isOk());
-        verify(managementUseCase).list(new ManagementActor(5L, 7L, ShopRole.PARTNER_ADMIN), null);
+        verify(managementUseCase).list(new ManagementActor(5L, 7L, ShopRole.PARTNER_ADMIN), null, null);
         verify(brandUseCase).list(new ManagementActor(6L, 7L, ShopRole.BRAND_ADMIN), null);
     }
 
@@ -199,7 +199,7 @@ class ShopSecurityRulesTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"서류 미비\"}"))
             .andExpect(status().isNoContent());
 
-        verify(managementUseCase).list(superActor, null);
+        verify(managementUseCase).list(superActor, null, null);
         verify(managementUseCase).approve(superActor, 9L, null, null);
         verify(managementUseCase).reject(superActor, 9L, "서류 미비");
     }
@@ -208,7 +208,9 @@ class ShopSecurityRulesTest {
     void 목록_상태_필터가_전달된다() throws Exception {
         mvc.perform(get("/api/members?status=PENDING").header("Authorization", superAdmin()))
             .andExpect(status().isOk());
-        verify(managementUseCase).list(new ManagementActor(1L, null, ShopRole.SUPER_ADMIN), ShopAdminStatus.PENDING);
+        verify(managementUseCase).list(new ManagementActor(1L, null, ShopRole.SUPER_ADMIN), ShopAdminStatus.PENDING, null);
+        mvc.perform(get("/api/members?companyId=8").header("Authorization", superAdmin())).andExpect(status().isOk());
+        verify(managementUseCase).list(new ManagementActor(1L, null, ShopRole.SUPER_ADMIN), null, 8L);
     }
 
     @Test

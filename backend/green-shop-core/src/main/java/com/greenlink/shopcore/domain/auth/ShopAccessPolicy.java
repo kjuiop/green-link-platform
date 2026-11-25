@@ -33,21 +33,6 @@ public final class ShopAccessPolicy {
         };
     }
 
-    public static boolean canGrantRole(ShopRole actorRole, ShopRole grantedRole) {
-        if (actorRole == null || grantedRole == null) {
-            return false;
-        }
-        return switch (actorRole) {
-            case SUPER_ADMIN -> true;
-            case PARTNER_ADMIN -> grantedRole == ShopRole.BRAND_ADMIN;
-            case BRAND_ADMIN -> false;
-        };
-    }
-
-    public static boolean canChangeRole(ShopRole actorRole) {
-        return actorRole == ShopRole.SUPER_ADMIN;
-    }
-
     private static boolean sameCompany(Long actorCompanyId, ShopBrand brand) {
         return actorCompanyId != null && Objects.equals(actorCompanyId, brand.getCompanyId());
     }

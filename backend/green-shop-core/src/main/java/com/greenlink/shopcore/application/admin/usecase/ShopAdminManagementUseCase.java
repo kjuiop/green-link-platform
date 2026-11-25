@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Set;
 
 public interface ShopAdminManagementUseCase {
-    List<ShopAdminView> list(ManagementActor actor, ShopAdminStatus status);
+    List<ShopAdminView> list(ManagementActor actor, ShopAdminStatus status, Long companyId);
     void approve(ManagementActor actor, Long id, ShopRole grantedRole, Set<Long> brandIds);
     void reject(ManagementActor actor, Long id, String reason);
     void changeRole(ManagementActor actor, Long id, ShopRole newRole);
