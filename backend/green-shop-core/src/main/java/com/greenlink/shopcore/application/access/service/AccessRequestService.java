@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Service
 public class AccessRequestService implements AccessRequestUseCase {
@@ -31,11 +32,12 @@ public class AccessRequestService implements AccessRequestUseCase {
     }
 
     @Override
-    public MyAccess getMyAccess(Long adminId, boolean superAdmin) {
+    public MyAccess getMyAccess(Long adminId, Long companyId, boolean superAdmin) {
         if (superAdmin) {
             return new MyAccess(AccessStatus.APPROVED, null);
         }
         return memberRepository.findByAdminId(adminId)
+            .filter(m -> Objects.equals(m.getCompanyId(), companyId))
             .map(m -> new MyAccess(AccessStatus.from(m.getStatus()), m.getRejectReason()))
             .orElse(new MyAccess(AccessStatus.NONE, null));
     }

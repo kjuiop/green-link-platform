@@ -19,7 +19,7 @@ public class AccessRequestController {
 
     @GetMapping("/api/me")
     public MyAccessResponse me(@AuthenticationPrincipal ShopPrincipal principal) {
-        return MyAccessResponse.from(accessRequestUseCase.getMyAccess(principal.adminId(), principal.superAdmin()));
+        return MyAccessResponse.from(accessRequestUseCase.getMyAccess(principal.adminId(), principal.companyId(), principal.superAdmin()));
     }
 
     @PostMapping("/api/access-requests")

@@ -78,7 +78,7 @@ class ShopSecurityRulesTest {
         mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(springSecurityFilterChain).build();
         when(menusUseCase.getMenus(any())).thenReturn(List.of());
         when(managementUseCase.list(any())).thenReturn(List.of());
-        when(accessRequestUseCase.getMyAccess(anyLong(), anyBoolean()))
+        when(accessRequestUseCase.getMyAccess(anyLong(), any(), anyBoolean()))
             .thenReturn(new MyAccess(AccessStatus.PENDING, null));
         when(accessRequestUseCase.apply(anyLong(), anyBoolean()))
             .thenReturn(new MyAccess(AccessStatus.PENDING, null));
@@ -177,6 +177,6 @@ class ShopSecurityRulesTest {
     @Test
     void SUPER_ADMIN_토큰의_me는_superAdmin으로_전달된다() throws Exception {
         mvc.perform(get("/api/me").header("Authorization", superAdmin())).andExpect(status().isOk());
-        verify(accessRequestUseCase).getMyAccess(1L, true);
+        verify(accessRequestUseCase).getMyAccess(1L, null, true);
     }
 }

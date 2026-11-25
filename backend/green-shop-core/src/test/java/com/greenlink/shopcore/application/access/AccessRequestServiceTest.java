@@ -68,7 +68,7 @@ class AccessRequestServiceTest {
 
     @Test
     void 내_상태_조회_슈퍼관리자는_APPROVED이고_저장소를_조회하지_않는다() {
-        MyAccess r = service.getMyAccess(10L, true);
+        MyAccess r = service.getMyAccess(10L, null, true);
 
         assertThat(r.accessStatus()).isEqualTo(AccessStatus.APPROVED);
         verifyNoInteractions(memberRepository);
@@ -78,17 +78,24 @@ class AccessRequestServiceTest {
     void 내_상태_조회_row가_없으면_NONE() {
         given(memberRepository.findByAdminId(10L)).willReturn(Optional.empty());
 
-        assertThat(service.getMyAccess(10L, false).accessStatus()).isEqualTo(AccessStatus.NONE);
+        assertThat(service.getMyAccess(10L, 7L, false).accessStatus()).isEqualTo(AccessStatus.NONE);
     }
 
     @Test
     void 내_상태_조회_거절되면_사유가_함께_반환된다() {
         given(memberRepository.findByAdminId(10L)).willReturn(Optional.of(member(ShopAdminStatus.REJECTED)));
 
-        MyAccess r = service.getMyAccess(10L, false);
+        MyAccess r = service.getMyAccess(10L, 7L, false);
 
         assertThat(r.accessStatus()).isEqualTo(AccessStatus.REJECTED);
         assertThat(r.rejectReason()).isEqualTo("사유");
+    }
+
+    @Test
+    void 내_상태_조회_회사가_다르면_NONE() {
+        given(memberRepository.findByAdminId(10L)).willReturn(Optional.of(member(ShopAdminStatus.APPROVED)));
+
+        assertThat(service.getMyAccess(10L, 8L, false).accessStatus()).isEqualTo(AccessStatus.NONE);
     }
 
     @Test
