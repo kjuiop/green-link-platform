@@ -7,6 +7,8 @@ import com.greenlink.core.application.auth.usecase.VendorLoginUseCase;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
+import com.greenlink.core.domain.company.model.Company;
+import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,13 +22,16 @@ import java.util.List;
 public class VendorLoginService implements VendorLoginUseCase {
 
     private final AdminRepository adminRepository;
+    private final CompanyRepository companyRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenProvider tokenProvider;
 
     public VendorLoginService(AdminRepository adminRepository,
+                               CompanyRepository companyRepository,
                                PasswordEncoder passwordEncoder,
                                TokenProvider tokenProvider) {
         this.adminRepository = adminRepository;
+        this.companyRepository = companyRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
     }
@@ -50,6 +55,13 @@ public class VendorLoginService implements VendorLoginUseCase {
 
         if (admin.getStatus() == AdminStatus.INACTIVE) {
             throw new BusinessException(AuthErrorCode.ACCOUNT_INACTIVE);
+        }
+
+        boolean onurimCompany = companyRepository.findById(admin.getCompanyId())
+            .filter(Company::isOnurimCompany)
+            .isPresent();
+        if (!onurimCompany || !admin.isOnurimEnabled()) {
+            throw new BusinessException(AuthErrorCode.ONURIM_NOT_ENABLED);
         }
 
         String token = tokenProvider.generateToken(admin.getId(), List.of("VENDOR"), admin.getCompanyId());
