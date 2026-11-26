@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { BrandPicker } from '@/components/BrandPicker'
 import { fetchBrands } from '@/lib/api/brandApi'
 import {
   approveShopAdmin,
@@ -93,49 +94,6 @@ function formatDateTime(value: string): string {
 
 function toggle(list: number[], id: number): number[] {
   return list.includes(id) ? list.filter((v) => v !== id) : [...list, id]
-}
-
-function BrandPicker({ options, selected, disabled, onToggle }: {
-  options: Brand[]
-  selected: number[]
-  disabled: boolean
-  onToggle: (id: number) => void
-}) {
-  const remaining = options.filter((b) => !selected.includes(b.id))
-  return (
-    <div className="space-y-2">
-      <select
-        aria-label="브랜드 선택"
-        className={SELECT_CLASS}
-        value=""
-        disabled={disabled || remaining.length === 0}
-        onChange={(e) => { if (e.target.value) onToggle(Number(e.target.value)) }}
-      >
-        <option value="">{remaining.length === 0 ? '추가할 브랜드가 없습니다' : '브랜드 추가'}</option>
-        {remaining.map((b) => (
-          <option key={b.id} value={b.id}>{b.name}</option>
-        ))}
-      </select>
-      {selected.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {selected.map((id) => (
-            <span key={id} className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800">
-              {options.find((b) => b.id === id)?.name ?? `#${id}`}
-              <button
-                type="button"
-                aria-label="브랜드 제거"
-                className="text-green-700 hover:text-green-900 disabled:opacity-50"
-                disabled={disabled}
-                onClick={() => onToggle(id)}
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  )
 }
 
 export default function AdminsPage() {
@@ -230,6 +188,8 @@ export default function AdminsPage() {
   const brandsOf = (admin: ShopAdmin) => brands.filter((b) => b.companyId === admin.companyId)
   const grantedRoleOf = (admin: ShopAdmin) => grantRoles[admin.id] ?? admin.requestedRole
   const selectionOf = (admin: ShopAdmin) => brandSelections[admin.id] ?? admin.brandIds
+  const pendingSelectionOf = (admin: ShopAdmin) =>
+    brandSelections[admin.id] ?? admin.requestedBrandIds.filter((id) => brandsOf(admin).some((b) => b.id === id))
   const brandNames = (admin: ShopAdmin) =>
     admin.brandIds.map((id) => brands.find((b) => b.id === id)?.name ?? `#${id}`).join(', ')
 
@@ -294,7 +254,7 @@ export default function AdminsPage() {
 
   function handleApprove(admin: ShopAdmin) {
     const role = grantedRoleOf(admin)
-    const brandIds = role === 'BRAND_ADMIN' ? brandSelections[admin.id] ?? [] : undefined
+    const brandIds = role === 'BRAND_ADMIN' ? pendingSelectionOf(admin) : undefined
     return run(admin.id, () => approveShopAdmin(admin.id, role, brandIds), '승인에 실패했습니다.')
   }
 
@@ -528,7 +488,7 @@ export default function AdminsPage() {
                     const isApproved = admin.status === 'APPROVED'
                     const isBrandAdmin = admin.role === 'BRAND_ADMIN'
                     const granted = grantedRoleOf(admin)
-                    const pendingSelection = brandSelections[admin.id] ?? []
+                    const pendingSelection = pendingSelectionOf(admin)
                     const approveBlocked = isPending && granted === 'BRAND_ADMIN' && pendingSelection.length === 0
                     const draftRole = roleDrafts[admin.id] ?? admin.role ?? admin.requestedRole
 
@@ -637,9 +597,11 @@ export default function AdminsPage() {
                         {isPending && granted === 'BRAND_ADMIN' && (
                           <TableRow>
                             <TableCell colSpan={COLUMN_COUNT} className="bg-gray-50">
-                              <p className="mb-1 text-xs font-medium text-gray-600">담당 브랜드 (1개 이상 선택)</p>
+                              <p className="mb-1 text-xs font-medium text-gray-600">
+                                담당 브랜드 (1개 이상 선택){admin.requestedBrandIds.length > 0 && ' · 신청자 희망 브랜드가 미리 선택되어 있습니다'}
+                              </p>
                               {renderBrandChecks(admin, pendingSelection, (id) =>
-                                setBrandSelections((prev) => ({ ...prev, [admin.id]: toggle(prev[admin.id] ?? [], id) })))}
+                                setBrandSelections((prev) => ({ ...prev, [admin.id]: toggle(prev[admin.id] ?? pendingSelection, id) })))}
                             </TableCell>
                           </TableRow>
                         )}

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 public class AccessEvaluator {
@@ -29,7 +30,7 @@ public class AccessEvaluator {
 
     public AccessDecision evaluate(VerifiedIdentity identity) {
         if (identity.superAdmin()) {
-            return new AccessDecision(AccessStatus.APPROVED, ShopRole.SUPER_ADMIN, TokenScope.FULL, null, null, null);
+            return new AccessDecision(AccessStatus.APPROVED, ShopRole.SUPER_ADMIN, TokenScope.FULL, null, null, null, Set.of());
         }
 
         AccessRequestType requestType = requestTypeOf(identity);
@@ -37,20 +38,20 @@ public class AccessEvaluator {
             .filter(m -> m.getStatus() != ShopAdminStatus.REMOVED)
             .filter(m -> m.getStatus() != ShopAdminStatus.APPROVED || companyMatches(m, identity));
         if (found.isEmpty()) {
-            return new AccessDecision(AccessStatus.NONE, null, TokenScope.LIMITED, null, requestType, null);
+            return new AccessDecision(AccessStatus.NONE, null, TokenScope.LIMITED, null, requestType, null, Set.of());
         }
 
         ShopAdminMember member = found.get();
         if (member.getStatus() == ShopAdminStatus.APPROVED) {
             if (!identity.companySiteEnabled()) {
                 return new AccessDecision(AccessStatus.SITE_DISABLED, null, TokenScope.LIMITED, null,
-                    requestType, member.getRequestedRole());
+                    requestType, member.getRequestedRole(), member.getRequestedBrandIds());
             }
             return new AccessDecision(AccessStatus.APPROVED, member.getRole(), TokenScope.FULL, null,
-                requestType, member.getRequestedRole());
+                requestType, member.getRequestedRole(), member.getRequestedBrandIds());
         }
         return new AccessDecision(AccessStatus.from(member.getStatus()), null, TokenScope.LIMITED,
-            member.getRejectReason(), requestType, member.getRequestedRole());
+            member.getRejectReason(), requestType, member.getRequestedRole(), member.getRequestedBrandIds());
     }
 
     public AccessRequestType requestTypeOf(VerifiedIdentity identity) {

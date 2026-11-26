@@ -362,6 +362,19 @@ class ShopAdminManagementServiceTest {
     }
 
     @Test
+    void 승인_때_지정한_브랜드가_신청자의_희망_브랜드보다_우선해_배정된다() {
+        ShopAdminMember m = ShopAdminMember.of(1L, 10L, 7L, null, ShopRole.BRAND_ADMIN, Set.of(100L),
+            ShopAdminStatus.PENDING, NOW.minusDays(1), null, null, null);
+        given(memberRepository.findById(1L)).willReturn(Optional.of(m));
+        given(memberRepository.existsApprovedByCompanyId(7L)).willReturn(true);
+        given(brandRepository.findAllByCompanyId(7L)).willReturn(List.of(brand(100L, 7L), brand(101L, 7L)));
+
+        service.approve(SUPER, 1L, null, Set.of(101L));
+
+        verify(brandMemberRepository).replaceAssignments(1L, Set.of(101L), NOW);
+    }
+
+    @Test
     void 파트너_관리자_승인은_브랜드_배정을_비운다() {
         ShopAdminMember m = pendingMember(1L, 10L, 7L, ShopRole.PARTNER_ADMIN);
         given(memberRepository.findById(1L)).willReturn(Optional.of(m));

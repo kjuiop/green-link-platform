@@ -104,9 +104,9 @@ class ShopSecurityRulesTest {
         when(managementUseCase.list(any(), any(), any())).thenReturn(List.of());
         when(brandUseCase.list(any(), any())).thenReturn(List.of());
         when(accessRequestUseCase.getMyAccess(anyLong(), anyBoolean()))
-            .thenReturn(new MyAccess(AccessStatus.PENDING, null, AccessRequestType.COMPANY, ShopRole.PARTNER_ADMIN));
-        when(accessRequestUseCase.apply(anyLong(), anyBoolean(), any()))
-            .thenReturn(new MyAccess(AccessStatus.PENDING, null, AccessRequestType.COMPANY, ShopRole.PARTNER_ADMIN));
+            .thenReturn(new MyAccess(AccessStatus.PENDING, null, AccessRequestType.COMPANY, ShopRole.PARTNER_ADMIN, java.util.Set.of()));
+        when(accessRequestUseCase.apply(anyLong(), anyBoolean(), any(), any()))
+            .thenReturn(new MyAccess(AccessStatus.PENDING, null, AccessRequestType.COMPANY, ShopRole.PARTNER_ADMIN, java.util.Set.of()));
         when(refreshUseCase.refresh(anyLong())).thenReturn(
             new ShopSession("t", "shop01", "홍길동", 7L, "업체", ShopRole.PARTNER_ADMIN, AccessStatus.APPROVED));
         when(loginUseCase.login(anyString(), anyString())).thenReturn(
@@ -151,6 +151,8 @@ class ShopSecurityRulesTest {
         mvc.perform(get("/api/me").header("Authorization", limited()))
             .andExpect(status().isOk()).andExpect(jsonPath("$.accessStatus").value("PENDING"));
         mvc.perform(post("/api/access-requests").header("Authorization", limited())).andExpect(status().isOk());
+        mvc.perform(get("/api/access-requests/brands").header("Authorization", limited())).andExpect(status().isOk());
+        mvc.perform(get("/api/access-requests/brands")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/auth/refresh").header("Authorization", limited())).andExpect(status().isOk());
         verify(refreshUseCase).refresh(5L);
     }

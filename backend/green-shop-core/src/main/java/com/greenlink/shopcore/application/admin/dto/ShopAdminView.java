@@ -11,7 +11,7 @@ import java.util.Set;
 public record ShopAdminView(Long id, Long adminId, Long companyId, String loginId, String name, String companyName,
                             ShopRole role, ShopRole requestedRole, ShopAdminStatus status,
                             LocalDateTime requestedAt, LocalDateTime processedAt, String rejectReason,
-                            Set<Long> brandIds, boolean passwordSetupPending) {
+                            Set<Long> brandIds, Set<Long> requestedBrandIds, boolean passwordSetupPending) {
 
     public static ShopAdminView of(ShopAdminMember m, AccountProfile profile, String fallbackCompanyName,
                                     Set<Long> brandIds) {
@@ -21,7 +21,7 @@ public record ShopAdminView(Long id, Long adminId, Long companyId, String loginI
             profile != null && profile.companyName() != null ? profile.companyName() : fallbackCompanyName,
             m.getRole(), m.getRequestedRole(), m.getStatus(),
             m.getRequestedAt(), m.getProcessedAt(), m.getRejectReason(),
-            brandIds == null ? Set.of() : brandIds,
+            brandIds == null ? Set.of() : brandIds, m.getRequestedBrandIds(),
             profile != null && profile.passwordSetupPending());
     }
 }

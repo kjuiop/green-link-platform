@@ -40,7 +40,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/signup", "/api/auth/password-setup").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/auth/business-numbers/*/exists").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/refresh").authenticated()
-                .requestMatchers(HttpMethod.GET, "/api/me").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/me", "/api/access-requests/brands").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/access-requests").authenticated()
                 .requestMatchers("/api/admin/**").hasAuthority("ROLE_SUPER_ADMIN")
                 .anyRequest().hasAuthority("SCOPE_FULL")

@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { fetchMyAccess, submitAccessRequest } from '@/lib/api/accessApi'
+import { BrandPicker } from '@/components/BrandPicker'
+import { fetchApplicableBrands, fetchMyAccess, submitAccessRequest } from '@/lib/api/accessApi'
 import { refreshSession } from '@/lib/api/authApi'
 import { clearSession, setSession } from '@/lib/session'
 import { useSession } from '@/lib/useSession'
 import { markTokenFresh, useTokenRefresh } from '@/lib/useTokenRefresh'
 import type { AccessRequestType, AccessStatus, ShopRole } from '@/types/auth'
+import type { ApplicableBrand } from '@/types/shopAdmin'
 
 type GateStatus = Exclude<AccessStatus, 'APPROVED'>
 
@@ -49,6 +51,9 @@ export default function AccessPage() {
   const [rejectReason, setRejectReason] = useState<string | null>(null)
   const [requestType, setRequestType] = useState<AccessRequestType | null>(null)
   const [role, setRole] = useState<ShopRole>('BRAND_ADMIN')
+  const [brands, setBrands] = useState<ApplicableBrand[]>([])
+  const [brandsLoaded, setBrandsLoaded] = useState(false)
+  const [brandIds, setBrandIds] = useState<number[]>([])
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [checking, setChecking] = useState(false)
@@ -69,6 +74,7 @@ export default function AccessPage() {
         setRejectReason(result.rejectReason)
         setRequestType(result.requestType)
         if (result.requestedRole && result.requestedRole !== 'SUPER_ADMIN') setRole(result.requestedRole)
+        setBrandIds(result.requestedBrandIds ?? [])
         setError('')
         if (result.accessStatus === 'APPROVED') {
           // 승인 직후 기존 LIMITED 토큰을 FULL 토큰으로 교체해야 메뉴 등 전체 API를 호출할 수 있다.
@@ -84,6 +90,16 @@ export default function AccessPage() {
     return () => { cancelled = true }
   }, [session, reloadKey])
 
+  const needsBrands = !!session && session.accessStatus !== 'APPROVED' && requestType === 'JOIN' && role === 'BRAND_ADMIN'
+  useEffect(() => {
+    if (!needsBrands) return
+    let cancelled = false
+    fetchApplicableBrands()
+      .then((list) => { if (!cancelled) { setBrands(list); setBrandsLoaded(true) } })
+      .catch(() => { if (!cancelled) setError('브랜드 목록을 불러오지 못했습니다.') })
+    return () => { cancelled = true }
+  }, [needsBrands, reloadKey])
+
   if (loading || !session) return null
   const status = session.accessStatus
   if (status === 'APPROVED') return null
@@ -92,13 +108,15 @@ export default function AccessPage() {
   const message = MESSAGE[status]
   const body = status === 'NONE' && requestType ? NONE_BODY[requestType] : message.body
   const canApply = (status === 'NONE' || status === 'REJECTED') && requestType !== null
+  const selectedBrandIds = brandIds.filter((id) => brands.some((b) => b.id === id))
+  const brandMissing = needsBrands && (!brandsLoaded || (brands.length > 0 && selectedBrandIds.length === 0))
 
   async function handleSubmit() {
     if (submitting) return
     setError('')
     setSubmitting(true)
     try {
-      await submitAccessRequest(requestType === 'JOIN' ? role : undefined)
+      await submitAccessRequest(requestType === 'JOIN' ? role : undefined, needsBrands ? selectedBrandIds : undefined)
       setSession({ ...currentSession, accessStatus: 'PENDING' })
     } catch (e) {
       setError(e instanceof Error ? e.message : '신청에 실패했습니다.')
@@ -149,11 +167,33 @@ export default function AccessPage() {
                 ))}
               </select>
             )}
+            {canApply && needsBrands && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-gray-600">관리할 브랜드</p>
+                {!brandsLoaded ? (
+                  <p className="text-xs text-gray-500">브랜드 목록을 불러오는 중입니다...</p>
+                ) : brands.length === 0 ? (
+                  <p className="text-xs text-gray-500">등록된 브랜드가 없어 브랜드 없이 신청됩니다. 승인 후 배정받을 수 있습니다.</p>
+                ) : (
+                  <>
+                    <BrandPicker
+                      options={brands}
+                      selected={selectedBrandIds}
+                      disabled={submitting}
+                      selectClassName="h-9 w-full rounded-md border border-gray-200 bg-white px-3 text-sm"
+                      onToggle={(id) =>
+                        setBrandIds((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))}
+                    />
+                    <p className="text-xs text-gray-500">희망 브랜드이며, 최종 배정은 승인할 때 확정됩니다. (1개 이상 선택)</p>
+                  </>
+                )}
+              </div>
+            )}
             {canApply && (
               <Button
                 className="w-full bg-green-700 hover:bg-green-800"
                 onClick={handleSubmit}
-                disabled={submitting}
+                disabled={submitting || brandMissing}
               >
                 {submitting ? '신청 중...' : status === 'REJECTED' ? '다시 신청' : '연동 신청'}
               </Button>

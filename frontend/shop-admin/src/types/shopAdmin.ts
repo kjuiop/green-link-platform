@@ -16,6 +16,7 @@ export interface ShopAdmin {
   processedAt: string | null
   rejectReason: string | null
   brandIds: number[]
+  requestedBrandIds: number[]
   passwordSetupPending: boolean
 }
 
@@ -24,4 +25,10 @@ export interface MyAccess {
   rejectReason: string | null
   requestType: AccessRequestType | null
   requestedRole: ShopRole | null
+  requestedBrandIds: number[]
+}
+
+export interface ApplicableBrand {
+  id: number
+  name: string
 }
