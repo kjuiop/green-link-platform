@@ -17,6 +17,7 @@ import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import com.greenlink.core.global.exception.company.CompanyErrorCode;
 import com.greenlink.core.global.exception.onurimapplication.OnurimApplicationErrorCode;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -63,8 +64,12 @@ public class OnurimApplicationService implements ApplyOnurimUseCase, ManageOnuri
         if (applicationRepository.existsPendingByCompanyId(companyId)) {
             throw new BusinessException(OnurimApplicationErrorCode.ALREADY_PENDING);
         }
-        OnurimApplication saved = applicationRepository.save(
-            OnurimApplication.request(companyId, adminId, desiredType, info));
+        OnurimApplication saved;
+        try {
+            saved = applicationRepository.save(OnurimApplication.request(companyId, adminId, desiredType, info));
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(OnurimApplicationErrorCode.ALREADY_PENDING);
+        }
         return toResult(saved, company, admin);
     }
 
@@ -113,11 +118,13 @@ public class OnurimApplicationService implements ApplyOnurimUseCase, ManageOnuri
             info.address(), info.detailAddress());
         company.changeTaxInvoiceEmail(info.taxInvoiceEmail());
         company.enableOnurim(type);
+        boolean vendor = type == CompanyType.VENDOR || type == CompanyType.BOTH;
+        if (vendor) {
+            company.updateBankAccount(info.bankName(), info.accountNumber(), info.accountHolder());
+        }
         companyRepository.save(company);
 
-        if (type == CompanyType.VENDOR || type == CompanyType.BOTH) {
-            company.updateBankAccount(info.bankName(), info.accountNumber(), info.accountHolder());
-            companyRepository.save(company);
+        if (vendor) {
             companyRepository.saveRegions(company.getId(), info.regions().stream()
                 .map(r -> CompanyRegion.of(company.getId(), r.sido(), r.sigungu()))
                 .toList());

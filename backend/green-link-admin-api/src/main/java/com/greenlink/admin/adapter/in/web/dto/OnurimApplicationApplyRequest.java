@@ -4,6 +4,7 @@ import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.onurimapplication.model.OnurimApplicationInfo;
 import com.greenlink.core.domain.onurimapplication.model.OnurimApplicationRegion;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -17,7 +18,7 @@ public record OnurimApplicationApplyRequest(
     @NotBlank @Size(max = 30) String companyPhone,
     @NotBlank @Size(max = 255) String address,
     @Size(max = 255) String detailAddress,
-    @Size(max = 255) String taxInvoiceEmail,
+    @Email @Size(max = 255) String taxInvoiceEmail,
     @Size(max = 500) String memo,
     @Size(max = 30) String faxNumber,
     @Size(max = 50) String bankName,

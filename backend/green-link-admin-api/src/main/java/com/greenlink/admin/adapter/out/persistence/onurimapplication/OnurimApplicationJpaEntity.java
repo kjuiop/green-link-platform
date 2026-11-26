@@ -69,7 +69,7 @@ public class OnurimApplicationJpaEntity extends BaseJpaEntity {
     @Column(name = "account_holder", length = 50)
     private String accountHolder;
 
-    @Column(length = 2000)
+    @Column(length = 4000)
     private String regions;
 
     @Enumerated(EnumType.STRING)
