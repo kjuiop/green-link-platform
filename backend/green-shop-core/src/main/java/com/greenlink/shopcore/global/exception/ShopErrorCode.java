@@ -32,7 +32,10 @@ public enum ShopErrorCode implements ErrorCode {
     SIGNUP_LOGIN_ID_DUPLICATED(409, "SHOP_SIGNUP_002", "이미 사용 중인 아이디입니다."),
     SIGNUP_BUSINESS_NO_REGISTERED(409, "SHOP_SIGNUP_003", "이미 등록된 사업자번호입니다."),
     SIGNUP_INVALID_INPUT(400, "SHOP_SIGNUP_004", "입력값을 확인해주세요."),
-    MEMBER_COMPANY_REQUIRED(400, "SHOP_MEMBER_005", "계정을 만들 회사를 지정해주세요.");
+    MEMBER_COMPANY_REQUIRED(400, "SHOP_MEMBER_005", "계정을 만들 회사를 지정해주세요."),
+    ONURIM_ALREADY_ENABLED(409, "SHOP_ONURIM_001", "이미 온우림을 이용 중인 회사입니다."),
+    ONURIM_APPLICATION_ALREADY_PENDING(409, "SHOP_ONURIM_002", "심사 중인 신청이 이미 있습니다."),
+    ONURIM_APPLICATION_INVALID(400, "SHOP_ONURIM_003", "신청 내용을 확인해주세요. (이용 유형, 연락처, 주소는 필수입니다.)");
 
     private final int status;
     private final String code;

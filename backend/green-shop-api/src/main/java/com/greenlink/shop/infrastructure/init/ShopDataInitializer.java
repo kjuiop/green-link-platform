@@ -37,6 +37,7 @@ public class ShopDataInitializer implements ApplicationRunner {
         Set<ShopRole> managers = EnumSet.of(ShopRole.SUPER_ADMIN, ShopRole.PARTNER_ADMIN);
         menuRepository.save(ShopMenu.create("브랜드 관리", "/brands", "brands", 5, managers));
         menuRepository.save(ShopMenu.create("관리자 관리", "/admins", "admins", 6, managers));
+        menuRepository.save(ShopMenu.create("온우림 이용 신청", "/onurim", "onurim", 7, EnumSet.of(ShopRole.PARTNER_ADMIN)));
         log.info("shop 기본 메뉴를 생성했습니다.");
     }
 }

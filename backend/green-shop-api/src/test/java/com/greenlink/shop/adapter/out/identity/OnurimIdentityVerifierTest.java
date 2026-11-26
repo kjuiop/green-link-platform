@@ -5,6 +5,11 @@ import com.greenlink.shopcore.application.auth.dto.ManagedAccountCommand;
 import com.greenlink.shopcore.application.auth.dto.RegisteredAccount;
 import com.greenlink.shopcore.application.auth.dto.SignupCommand;
 import com.greenlink.shopcore.application.auth.dto.VerifiedIdentity;
+import com.greenlink.shopcore.application.onurim.dto.OnurimApplicationStatus;
+import com.greenlink.shopcore.application.onurim.dto.OnurimApplicationView;
+import com.greenlink.shopcore.application.onurim.dto.OnurimApplyCommand;
+import com.greenlink.shopcore.application.onurim.dto.OnurimCompanyType;
+import com.greenlink.shopcore.application.onurim.dto.OnurimRegion;
 import com.greenlink.shopcore.global.exception.ShopBusinessException;
 import com.greenlink.shopcore.global.exception.ShopErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -431,5 +436,89 @@ class OnurimIdentityVerifierTest {
         verifier.reissuePasswordSetup(5L);
         assertThatThrownBy(() -> verifier.reissuePasswordSetup(5L)).isInstanceOfSatisfying(ShopBusinessException.class,
             e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.AUTH_PASSWORD_SETUP_NOT_PENDING));
+    }
+
+    private static final String APPLICATION_JSON =
+        "{\"id\":3,\"companyId\":7,\"status\":\"REJECTED\",\"desiredType\":\"BOTH\",\"approvedType\":null,"
+        + "\"rejectReason\":\"서류 미비\",\"processedAt\":\"2026-11-26T10:00:00\",\"createdAt\":\"2026-11-25T09:30:00\","
+        + "\"faxNumber\":\"021112222\",\"futureField\":1}";
+
+    private static OnurimApplyCommand applyCommand() {
+        return new OnurimApplyCommand(OnurimCompanyType.BOTH, "02-111-2222", "서울시 강남구", "101호", "a@b.com", "메모",
+            "021112222", "국민", "123-456", "홍길동", List.of(new OnurimRegion("서울", "강남구")));
+    }
+
+    @Test
+    void 신청은_관리자_회사_ID와_본문을_보내고_응답을_매핑한다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(header("X-Internal-Secret", "s3cret"))
+            .andExpect(jsonPath("$.adminId").value(5))
+            .andExpect(jsonPath("$.companyId").value(7))
+            .andExpect(jsonPath("$.desiredType").value("BOTH"))
+            .andExpect(jsonPath("$.companyPhone").value("02-111-2222"))
+            .andExpect(jsonPath("$.regions[0].sido").value("서울"))
+            .andRespond(withSuccess(APPLICATION_JSON, MediaType.APPLICATION_JSON));
+
+        OnurimApplicationView view = verifier.apply(5L, 7L, applyCommand());
+
+        assertThat(view.id()).isEqualTo(3L);
+        assertThat(view.status()).isEqualTo(OnurimApplicationStatus.REJECTED);
+        assertThat(view.desiredType()).isEqualTo(OnurimCompanyType.BOTH);
+        assertThat(view.rejectReason()).isEqualTo("서류 미비");
+        assertThat(view.processedAt()).isEqualTo(java.time.LocalDateTime.of(2026, 11, 26, 10, 0));
+        server.verify();
+    }
+
+    @Test
+    void 신청_오류_응답은_전용_코드로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications"))
+            .andRespond(withStatus(HttpStatus.CONFLICT).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"ONURIM_APP_002\",\"message\":\"x\"}"));
+        server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications"))
+            .andRespond(withStatus(HttpStatus.CONFLICT).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"ONURIM_APP_003\",\"message\":\"x\"}"));
+        server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications"))
+            .andRespond(withStatus(HttpStatus.BAD_REQUEST).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"ONURIM_APP_005\",\"message\":\"x\"}"));
+        server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications"))
+            .andRespond(withStatus(HttpStatus.FORBIDDEN).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"ONURIM_APP_008\",\"message\":\"x\"}"));
+        server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications"))
+            .andRespond(withStatus(HttpStatus.NOT_FOUND).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_022\",\"message\":\"x\"}"));
+        server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications"))
+            .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+
+        assertApplyError(ShopErrorCode.ONURIM_ALREADY_ENABLED);
+        assertApplyError(ShopErrorCode.ONURIM_APPLICATION_ALREADY_PENDING);
+        assertApplyError(ShopErrorCode.ONURIM_APPLICATION_INVALID);
+        assertApplyError(ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
+        assertApplyError(ShopErrorCode.ADMIN_REQUEST_NOT_FOUND);
+        assertApplyError(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+    }
+
+    private void assertApplyError(ShopErrorCode expected) {
+        assertThatThrownBy(() -> verifier.apply(5L, 7L, applyCommand()))
+            .isInstanceOfSatisfying(ShopBusinessException.class, e -> assertThat(e.getErrorCode()).isEqualTo(expected));
+    }
+
+    @Test
+    void 최신_신청_조회는_회사_ID로_호출하고_알_수_없는_필드를_무시한다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications/latest?companyId=7"))
+            .andExpect(method(HttpMethod.GET))
+            .andExpect(header("X-Internal-Secret", "s3cret"))
+            .andRespond(withSuccess(APPLICATION_JSON, MediaType.APPLICATION_JSON));
+
+        assertThat(verifier.findLatest(7L)).get()
+            .extracting(OnurimApplicationView::id).isEqualTo(3L);
+    }
+
+    @Test
+    void 신청_이력이_없으면_204를_빈_값으로_돌려준다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications/latest?companyId=7"))
+            .andRespond(withStatus(HttpStatus.NO_CONTENT));
+
+        assertThat(verifier.findLatest(7L)).isEmpty();
     }
 }
