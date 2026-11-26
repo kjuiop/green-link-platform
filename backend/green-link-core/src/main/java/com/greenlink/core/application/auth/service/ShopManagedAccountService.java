@@ -67,7 +67,7 @@ public class ShopManagedAccountService implements ShopManagedAccountUseCase {
     @Override
     @Transactional(noRollbackFor = BusinessException.class)
     public void completePasswordSetup(String loginId, String phone, String newPassword) {
-        Admin admin = adminRepository.findByLoginId(loginId)
+        Admin admin = adminRepository.findByLoginIdForUpdate(loginId)
             .filter(a -> !a.isDeleted())
             .orElseThrow(this::setupFailed);
         if (!admin.canSetupPassword(LocalDateTime.now(KST))) {

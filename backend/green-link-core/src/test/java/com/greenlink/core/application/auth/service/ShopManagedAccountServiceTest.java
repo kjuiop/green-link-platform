@@ -136,7 +136,7 @@ class ShopManagedAccountServiceTest {
     @Test
     void 아이디와_휴대폰이_맞으면_비밀번호가_설정되고_대기가_해제된다() {
         Admin admin = pending(LocalDateTime.now().plusDays(3), 2);
-        given(adminRepository.findByLoginId("brand01")).willReturn(Optional.of(admin));
+        given(adminRepository.findByLoginIdForUpdate("brand01")).willReturn(Optional.of(admin));
 
         service.completePasswordSetup("brand01", "01012345678", "Passw0rd!");
 
@@ -148,7 +148,7 @@ class ShopManagedAccountServiceTest {
     @Test
     void 휴대폰이_다르면_실패횟수를_저장하고_단일_에러로_거부한다() {
         Admin admin = pending(LocalDateTime.now().plusDays(3), 0);
-        given(adminRepository.findByLoginId("brand01")).willReturn(Optional.of(admin));
+        given(adminRepository.findByLoginIdForUpdate("brand01")).willReturn(Optional.of(admin));
 
         assertCode(() -> service.completePasswordSetup("brand01", "010-9999-9999", "Passw0rd!"),
             AuthErrorCode.PASSWORD_SETUP_FAILED);
@@ -161,7 +161,7 @@ class ShopManagedAccountServiceTest {
     @Test
     void 실패가_5회_쌓이면_올바른_휴대폰이어도_거부한다() {
         Admin admin = pending(LocalDateTime.now().plusDays(3), 5);
-        given(adminRepository.findByLoginId("brand01")).willReturn(Optional.of(admin));
+        given(adminRepository.findByLoginIdForUpdate("brand01")).willReturn(Optional.of(admin));
 
         assertCode(() -> service.completePasswordSetup("brand01", "010-1234-5678", "Passw0rd!"),
             AuthErrorCode.PASSWORD_SETUP_FAILED);
@@ -171,7 +171,7 @@ class ShopManagedAccountServiceTest {
     @Test
     void 기간이_만료되면_거부한다() {
         Admin admin = pending(LocalDateTime.now().minusMinutes(1), 0);
-        given(adminRepository.findByLoginId("brand01")).willReturn(Optional.of(admin));
+        given(adminRepository.findByLoginIdForUpdate("brand01")).willReturn(Optional.of(admin));
 
         assertCode(() -> service.completePasswordSetup("brand01", "010-1234-5678", "Passw0rd!"),
             AuthErrorCode.PASSWORD_SETUP_FAILED);
@@ -180,7 +180,7 @@ class ShopManagedAccountServiceTest {
     @Test
     void 이미_설정된_계정은_다시_설정할_수_없다() {
         Admin done = Admin.of(1L, "brand01", "hash", "홍길동", "010-1234-5678", null, 7L, AdminStatus.ACTIVE, null, null);
-        given(adminRepository.findByLoginId("brand01")).willReturn(Optional.of(done));
+        given(adminRepository.findByLoginIdForUpdate("brand01")).willReturn(Optional.of(done));
 
         assertCode(() -> service.completePasswordSetup("brand01", "010-1234-5678", "Passw0rd!"),
             AuthErrorCode.PASSWORD_SETUP_FAILED);
@@ -189,7 +189,7 @@ class ShopManagedAccountServiceTest {
 
     @Test
     void 없는_아이디도_같은_에러다() {
-        given(adminRepository.findByLoginId("nobody")).willReturn(Optional.empty());
+        given(adminRepository.findByLoginIdForUpdate("nobody")).willReturn(Optional.empty());
 
         assertCode(() -> service.completePasswordSetup("nobody", "010-1234-5678", "Passw0rd!"),
             AuthErrorCode.PASSWORD_SETUP_FAILED);
@@ -199,7 +199,7 @@ class ShopManagedAccountServiceTest {
     void 삭제된_계정도_같은_에러다() {
         Admin deleted = Admin.of(1L, "brand01", "hash", "홍길동", "010-1234-5678", null, 7L, AdminStatus.INACTIVE, null, "2026-11-01");
         deleted.restorePasswordSetup(LocalDateTime.now().plusDays(1), 0);
-        given(adminRepository.findByLoginId("brand01")).willReturn(Optional.of(deleted));
+        given(adminRepository.findByLoginIdForUpdate("brand01")).willReturn(Optional.of(deleted));
 
         assertCode(() -> service.completePasswordSetup("brand01", "010-1234-5678", "Passw0rd!"),
             AuthErrorCode.PASSWORD_SETUP_FAILED);

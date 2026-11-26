@@ -11,6 +11,7 @@ import java.util.Optional;
 public interface AdminRepository {
     Optional<Admin> findById(Long id);
     Optional<Admin> findByLoginId(String loginId);
+    Optional<Admin> findByLoginIdForUpdate(String loginId);
     boolean existsByLoginId(String loginId);
     Admin save(Admin admin);
     List<Admin> findAllVendors();
