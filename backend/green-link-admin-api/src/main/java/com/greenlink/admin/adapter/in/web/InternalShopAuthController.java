@@ -2,6 +2,7 @@ package com.greenlink.admin.adapter.in.web;
 
 import com.greenlink.admin.adapter.in.web.dto.BatchShopAccountsRequest;
 import com.greenlink.admin.adapter.in.web.dto.BatchShopCompaniesRequest;
+import com.greenlink.admin.adapter.in.web.dto.OnurimApplicationApplyRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopAccessGrantRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopBusinessNoRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopManagedAccountRequest;
@@ -13,6 +14,8 @@ import com.greenlink.core.application.auth.dto.CompanySummary;
 import com.greenlink.core.application.auth.dto.ShopSignupResult;
 import com.greenlink.core.application.auth.dto.VerifiedAccount;
 import com.greenlink.core.application.auth.usecase.ShopAccessUseCase;
+import com.greenlink.core.application.onurimapplication.dto.OnurimApplicationResult;
+import com.greenlink.core.application.onurimapplication.usecase.ApplyOnurimUseCase;
 import com.greenlink.core.application.auth.usecase.ShopManagedAccountUseCase;
 import com.greenlink.core.application.auth.usecase.ShopSignupUseCase;
 import com.greenlink.core.application.auth.usecase.VerifyAdminAccountUseCase;
@@ -21,6 +24,7 @@ import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
@@ -38,17 +42,20 @@ public class InternalShopAuthController {
     private final ShopSignupUseCase signupUseCase;
     private final ShopAccessUseCase accessUseCase;
     private final ShopManagedAccountUseCase managedAccountUseCase;
+    private final ApplyOnurimUseCase onurimApplicationUseCase;
     private final byte[] internalSecret;
 
     public InternalShopAuthController(VerifyAdminAccountUseCase useCase,
                                       ShopSignupUseCase signupUseCase,
                                       ShopAccessUseCase accessUseCase,
                                       ShopManagedAccountUseCase managedAccountUseCase,
+                                      ApplyOnurimUseCase onurimApplicationUseCase,
                                       @Value("${shop.internal.secret:}") String internalSecret) {
         this.useCase = useCase;
         this.signupUseCase = signupUseCase;
         this.accessUseCase = accessUseCase;
         this.managedAccountUseCase = managedAccountUseCase;
+        this.onurimApplicationUseCase = onurimApplicationUseCase;
         this.internalSecret = internalSecret.getBytes(StandardCharsets.UTF_8);
     }
 
@@ -122,6 +129,23 @@ public class InternalShopAuthController {
                                      @PathVariable Long adminId) {
         requireSecret(secret);
         managedAccountUseCase.reissuePasswordSetup(adminId);
+    }
+
+    @PostMapping("/onurim-applications")
+    public OnurimApplicationResult applyOnurim(@RequestHeader(value = SECRET_HEADER, required = false) String secret,
+                                               @RequestBody @Valid OnurimApplicationApplyRequest req) {
+        requireSecret(secret);
+        return onurimApplicationUseCase.apply(req.adminId(), req.companyId(), req.desiredType(), req.toInfo());
+    }
+
+    @GetMapping("/onurim-applications/latest")
+    public ResponseEntity<OnurimApplicationResult> latestOnurimApplication(
+            @RequestHeader(value = SECRET_HEADER, required = false) String secret,
+            @RequestParam Long companyId) {
+        requireSecret(secret);
+        return onurimApplicationUseCase.getLatest(companyId)
+            .map(ResponseEntity::ok)
+            .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     private void requireSecret(String provided) {

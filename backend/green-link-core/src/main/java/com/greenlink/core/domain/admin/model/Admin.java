@@ -107,6 +107,10 @@ public class Admin {
         return a;
     }
 
+    public void enableOnurim() {
+        this.onurimEnabled = true;
+    }
+
     public void restoreAccessFlags(boolean superAdmin, boolean onurimEnabled) {
         this.superAdmin = superAdmin;
         this.onurimEnabled = onurimEnabled;
