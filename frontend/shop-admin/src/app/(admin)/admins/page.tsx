@@ -95,6 +95,49 @@ function toggle(list: number[], id: number): number[] {
   return list.includes(id) ? list.filter((v) => v !== id) : [...list, id]
 }
 
+function BrandPicker({ options, selected, disabled, onToggle }: {
+  options: Brand[]
+  selected: number[]
+  disabled: boolean
+  onToggle: (id: number) => void
+}) {
+  const remaining = options.filter((b) => !selected.includes(b.id))
+  return (
+    <div className="space-y-2">
+      <select
+        aria-label="브랜드 선택"
+        className={SELECT_CLASS}
+        value=""
+        disabled={disabled || remaining.length === 0}
+        onChange={(e) => { if (e.target.value) onToggle(Number(e.target.value)) }}
+      >
+        <option value="">{remaining.length === 0 ? '추가할 브랜드가 없습니다' : '브랜드 추가'}</option>
+        {remaining.map((b) => (
+          <option key={b.id} value={b.id}>{b.name}</option>
+        ))}
+      </select>
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {selected.map((id) => (
+            <span key={id} className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800">
+              {options.find((b) => b.id === id)?.name ?? `#${id}`}
+              <button
+                type="button"
+                aria-label="브랜드 제거"
+                className="text-green-700 hover:text-green-900 disabled:opacity-50"
+                disabled={disabled}
+                onClick={() => onToggle(id)}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function AdminsPage() {
   const { session } = useSession()
   const isSuper = session?.role === 'SUPER_ADMIN'
@@ -310,21 +353,7 @@ export default function AdminsPage() {
     if (options.length === 0) {
       return <p className="text-xs text-gray-500">이 회사에 등록된 브랜드가 없습니다. 브랜드 관리에서 먼저 추가하세요.</p>
     }
-    return (
-      <div className="flex flex-wrap gap-x-4 gap-y-1">
-        {options.map((b) => (
-          <label key={b.id} className="flex items-center gap-1 text-sm">
-            <input
-              type="checkbox"
-              checked={selected.includes(b.id)}
-              disabled={busyId !== null}
-              onChange={() => onToggle(b.id)}
-            />
-            {b.name}
-          </label>
-        ))}
-      </div>
-    )
+    return <BrandPicker options={options} selected={selected} disabled={busyId !== null} onToggle={onToggle} />
   }
 
   return (
@@ -436,19 +465,12 @@ export default function AdminsPage() {
                 ) : createBrandOptions.length === 0 ? (
                   <p className="text-xs text-gray-500">이 회사에 등록된 브랜드가 없습니다. 브랜드 관리에서 먼저 추가하세요.</p>
                 ) : (
-                  <div className="flex flex-wrap gap-x-4 gap-y-1">
-                    {createBrandOptions.map((b) => (
-                      <label key={b.id} className="flex items-center gap-1 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={createBrandIds.includes(b.id)}
-                          disabled={busyId !== null}
-                          onChange={() => setCreateBrandIds((prev) => toggle(prev, b.id))}
-                        />
-                        {b.name}
-                      </label>
-                    ))}
-                  </div>
+                  <BrandPicker
+                    options={createBrandOptions}
+                    selected={createBrandIds}
+                    disabled={busyId !== null}
+                    onToggle={(id) => setCreateBrandIds((prev) => toggle(prev, id))}
+                  />
                 )}
               </div>
             )}
