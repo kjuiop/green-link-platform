@@ -10,6 +10,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -65,6 +67,18 @@ public class GlobalExceptionHandler {
         log.warn("Unreadable request body: {}", e.getMessage());
         return ResponseEntity.badRequest()
             .body(new ErrorResponse("INVALID_PARAM", "요청 형식이 올바르지 않습니다."));
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> handleMissingPart(MissingServletRequestPartException e) {
+        return ResponseEntity.badRequest()
+            .body(new ErrorResponse("INVALID_PARAM", "필수 요청 항목이 누락되었습니다: " + e.getRequestPartName()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+        return ResponseEntity.badRequest()
+            .body(new ErrorResponse("INVALID_PARAM", "첨부 파일 용량이 너무 큽니다. 파일당 10MB 이하로 첨부해주세요."));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
