@@ -175,6 +175,14 @@ public class Company {
         this.siteEnabled = true;
     }
 
+    public void enableOnurim(CompanyType type) {
+        if (type == null) {
+            throw new IllegalArgumentException("온우림 이용 유형이 필요합니다.");
+        }
+        this.onurimEnabled = true;
+        this.type = type;
+    }
+
     public boolean isOnurimCompany() {
         return onurimEnabled && type != null;
     }

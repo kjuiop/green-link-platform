@@ -10,6 +10,11 @@ import com.greenlink.core.application.auth.usecase.ShopAccessUseCase;
 import com.greenlink.core.application.auth.usecase.ShopManagedAccountUseCase;
 import com.greenlink.core.application.auth.usecase.ShopSignupUseCase;
 import com.greenlink.core.application.auth.usecase.VerifyAdminAccountUseCase;
+import com.greenlink.core.application.onurimapplication.dto.OnurimApplicationResult;
+import com.greenlink.core.application.onurimapplication.usecase.ApplyOnurimUseCase;
+import com.greenlink.core.domain.company.model.CompanyType;
+import com.greenlink.core.domain.onurimapplication.model.OnurimApplicationStatus;
+import com.greenlink.core.global.exception.onurimapplication.OnurimApplicationErrorCode;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import org.junit.jupiter.api.Test;
@@ -46,9 +51,10 @@ class InternalShopAuthControllerTest {
     private final ShopSignupUseCase signupUseCase = mock(ShopSignupUseCase.class);
     private final ShopAccessUseCase accessUseCase = mock(ShopAccessUseCase.class);
     private final ShopManagedAccountUseCase managedUseCase = mock(ShopManagedAccountUseCase.class);
+    private final ApplyOnurimUseCase onurimUseCase = mock(ApplyOnurimUseCase.class);
 
     private MockMvc mvc(String secret) {
-        return MockMvcBuilders.standaloneSetup(new InternalShopAuthController(useCase, signupUseCase, accessUseCase, managedUseCase, secret))
+        return MockMvcBuilders.standaloneSetup(new InternalShopAuthController(useCase, signupUseCase, accessUseCase, managedUseCase, onurimUseCase, secret))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -416,5 +422,74 @@ class InternalShopAuthControllerTest {
                         .header("X-Internal-Secret", "s3cret"))
                 .andExpect(status().isNoContent());
         verify(managedUseCase).reissuePasswordSetup(10L);
+    }
+
+    private static final String ONURIM_BODY = "{\"adminId\":1,\"companyId\":7,\"desiredType\":\"BOTH\","
+            + "\"companyPhone\":\"02-123-4567\",\"address\":\"서울시 강남구\"}";
+
+    private static OnurimApplicationResult onurimResult() {
+        return new OnurimApplicationResult(50L, 7L, "꽃집", 1L, "홍길동", CompanyType.BOTH,
+                OnurimApplicationStatus.PENDING, "02-123-4567", "서울시 강남구", null, null, null,
+                null, null, null, null, List.of(), null, null, null, null);
+    }
+
+    @Test
+    void 온우림_이용신청_시크릿이_틀리면_403() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/onurim-applications")
+                        .header("X-Internal-Secret", "wrong")
+                        .contentType(MediaType.APPLICATION_JSON).content(ONURIM_BODY))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(onurimUseCase);
+    }
+
+    @Test
+    void 온우림_이용신청_정상이면_결과를_반환() throws Exception {
+        when(onurimUseCase.apply(anyLong(), anyLong(), any(), any())).thenReturn(onurimResult());
+
+        mvc("s3cret").perform(post("/internal/shop-auth/onurim-applications")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content(ONURIM_BODY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PENDING"));
+    }
+
+    @Test
+    void 온우림_이용신청_필수값이_없으면_400() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/onurim-applications")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"adminId\":1,\"companyId\":7,\"desiredType\":\"BOTH\"}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(onurimUseCase);
+    }
+
+    @Test
+    void 온우림_이용신청_중복은_409로_매핑() throws Exception {
+        when(onurimUseCase.apply(anyLong(), anyLong(), any(), any()))
+                .thenThrow(new BusinessException(OnurimApplicationErrorCode.ALREADY_PENDING));
+
+        mvc("s3cret").perform(post("/internal/shop-auth/onurim-applications")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content(ONURIM_BODY))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ONURIM_APP_003"));
+    }
+
+    @Test
+    void 온우림_최신_신청_조회는_없으면_204_있으면_200() throws Exception {
+        when(onurimUseCase.getLatest(7L)).thenReturn(java.util.Optional.empty());
+        mvc("s3cret").perform(get("/internal/shop-auth/onurim-applications/latest")
+                        .param("companyId", "7").header("X-Internal-Secret", "s3cret"))
+                .andExpect(status().isNoContent());
+
+        when(onurimUseCase.getLatest(7L)).thenReturn(java.util.Optional.of(onurimResult()));
+        mvc("s3cret").perform(get("/internal/shop-auth/onurim-applications/latest")
+                        .param("companyId", "7").header("X-Internal-Secret", "s3cret"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(50));
+
+        mvc("s3cret").perform(get("/internal/shop-auth/onurim-applications/latest")
+                        .param("companyId", "7").header("X-Internal-Secret", "wrong"))
+                .andExpect(status().isForbidden());
     }
 }

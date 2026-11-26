@@ -22,6 +22,7 @@ import {
   ShoppingCart,
   Store,
   MapPin,
+  UserCheck,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -51,6 +52,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/settings/points': Coins,
   '/settings/vendor-fees': Percent,
   '/settings/region-guides': MapPin,
+  '/settings/onurim-applications': UserCheck,
   '/points': Coins,
   '/sms/settings': SlidersHorizontal,
   '/sms/message-log': MessageSquare,
