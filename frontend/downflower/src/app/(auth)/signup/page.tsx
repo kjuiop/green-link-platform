@@ -153,7 +153,7 @@ function FileUploadField({ label, required, file, onChange }: FileFieldProps) {
       <input
         ref={ref}
         type="file"
-        accept="image/*,.pdf"
+        accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.pdf"
         className="hidden"
         onChange={(e) => { onChange(e.target.files?.[0] ?? null); e.target.value = '' }}
       />
@@ -318,28 +318,33 @@ export default function SignupPage() {
       alert('비밀번호가 일치하지 않습니다.')
       return
     }
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        loginId,
-        password,
-        name,
-        phone,
-        email: email || undefined,
-        businessNo,
-        companyName,
-        ceoName,
-        companyPhone,
-        address,
-        detailAddress,
-        roles: resolveRoles(),
-        regions: selectedRole !== 'ORDERING' ? regions : [],
-        capabilities: selectedRole !== 'ORDERING' ? capabilities : [],
-      }),
-    })
+    const formData = new FormData()
+    formData.append('data', new Blob([JSON.stringify({
+      loginId,
+      password,
+      name,
+      phone,
+      email: email || undefined,
+      businessNo,
+      companyName,
+      ceoName,
+      companyPhone,
+      address,
+      detailAddress,
+      roles: resolveRoles(),
+      regions: selectedRole !== 'ORDERING' ? regions : [],
+      capabilities: selectedRole !== 'ORDERING' ? capabilities : [],
+    })], { type: 'application/json' }))
+    formData.append('businessDoc', businessDoc!)
+    formData.append('bankDoc', bankDoc!)
+    const res = await fetch('/api/auth/signup', { method: 'POST', body: formData })
     if (res.ok) {
-      alert('가입 신청이 완료되었습니다. 관리자 승인 후 로그인하실 수 있습니다.')
+      const result = await res.json().catch(() => null)
+      if (result?.failedDocuments?.length > 0) {
+        alert('가입 신청은 완료되었으나 첨부서류 업로드에 실패했습니다. 관리자에게 서류를 별도로 전달해주세요.')
+      } else {
+        alert('가입 신청이 완료되었습니다. 관리자 승인 후 로그인하실 수 있습니다.')
+      }
       window.location.href = '/login'
     } else {
       const body = await res.json().catch(() => null)
