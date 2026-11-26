@@ -19,6 +19,10 @@ import com.greenlink.shopcore.global.exception.ShopErrorCode;
 import com.greenlink.shopcore.application.auth.usecase.RefreshTokenUseCase;
 import com.greenlink.shopcore.application.auth.usecase.ShopLoginUseCase;
 import com.greenlink.shopcore.application.menu.usecase.GetMenusUseCase;
+import com.greenlink.shopcore.application.onurim.dto.OnurimApplicationStatus;
+import com.greenlink.shopcore.application.onurim.dto.OnurimApplicationView;
+import com.greenlink.shopcore.application.onurim.dto.OnurimCompanyType;
+import com.greenlink.shopcore.application.onurim.usecase.OnurimApplicationUseCase;
 import com.greenlink.shopcore.domain.auth.AccessRequestType;
 import com.greenlink.shopcore.domain.auth.AccessStatus;
 import com.greenlink.shopcore.domain.auth.ShopRole;
@@ -70,7 +74,7 @@ class ShopSecurityRulesTest {
     @Configuration
     @EnableWebMvc
     @Import({SecurityConfig.class, ShopJwtProvider.class, GlobalExceptionHandler.class,
-        ShopAuthController.class, ShopSignupController.class, ShopPasswordSetupController.class, ClientIpResolver.class, AccessRequestController.class, MemberController.class, BrandController.class, MenuController.class})
+        ShopAuthController.class, ShopSignupController.class, ShopPasswordSetupController.class, ClientIpResolver.class, AccessRequestController.class, MemberController.class, BrandController.class, MenuController.class, OnurimApplicationController.class})
     static class TestConfig {
         @Bean ShopLoginUseCase shopLoginUseCase() { return mock(ShopLoginUseCase.class); }
         @Bean RefreshTokenUseCase refreshTokenUseCase() { return mock(RefreshTokenUseCase.class); }
@@ -80,6 +84,7 @@ class ShopSecurityRulesTest {
         @Bean GetMenusUseCase getMenusUseCase() { return mock(GetMenusUseCase.class); }
         @Bean ShopSignupUseCase shopSignupUseCase() { return mock(ShopSignupUseCase.class); }
         @Bean ShopPasswordSetupUseCase shopPasswordSetupUseCase() { return mock(ShopPasswordSetupUseCase.class); }
+        @Bean OnurimApplicationUseCase onurimApplicationUseCase() { return mock(OnurimApplicationUseCase.class); }
     }
 
     @Autowired WebApplicationContext context;
@@ -93,13 +98,14 @@ class ShopSecurityRulesTest {
     @Autowired GetMenusUseCase menusUseCase;
     @Autowired ShopSignupUseCase signupUseCase;
     @Autowired ShopPasswordSetupUseCase passwordSetupUseCase;
+    @Autowired OnurimApplicationUseCase onurimUseCase;
 
     MockMvc mvc;
 
     @BeforeEach
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(springSecurityFilterChain).build();
-        org.mockito.Mockito.reset(signupUseCase, managementUseCase, brandUseCase, passwordSetupUseCase);
+        org.mockito.Mockito.reset(signupUseCase, managementUseCase, brandUseCase, passwordSetupUseCase, onurimUseCase);
         when(menusUseCase.getMenus(any())).thenReturn(List.of());
         when(managementUseCase.list(any(), any(), any())).thenReturn(List.of());
         when(brandUseCase.list(any(), any())).thenReturn(List.of());
@@ -447,5 +453,69 @@ class ShopSecurityRulesTest {
         mvc.perform(post("/api/members/9/password-setup/reissue").header("Authorization", partnerAdmin()))
             .andExpect(status().isNoContent());
         verify(managementUseCase).reissuePasswordSetup(new ManagementActor(5L, 7L, ShopRole.PARTNER_ADMIN), 9L);
+    }
+
+    private static final String ONURIM_BODY = "{\"desiredType\":\"ORDERING\",\"companyPhone\":\"02-111-2222\","
+        + "\"address\":\"서울시 강남구\"}";
+
+    @Test
+    void 온우림_신청_API는_토큰이_없으면_401_LIMITED는_403() throws Exception {
+        mvc.perform(get("/api/onurim-application")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/onurim-application").header("Authorization", limited())).andExpect(status().isForbidden());
+        mvc.perform(post("/api/onurim-application").header("Authorization", limited())
+                .contentType(MediaType.APPLICATION_JSON).content(ONURIM_BODY))
+            .andExpect(status().isForbidden());
+        verifyNoInteractions(onurimUseCase);
+    }
+
+    @Test
+    void 온우림_신청은_토큰으로_만든_행위자와_함께_전달된다() throws Exception {
+        ManagementActor actor = new ManagementActor(5L, 7L, ShopRole.PARTNER_ADMIN);
+        when(onurimUseCase.apply(any(), any())).thenReturn(new OnurimApplicationView(
+            3L, OnurimApplicationStatus.PENDING, OnurimCompanyType.ORDERING, null, null, null, null));
+
+        mvc.perform(post("/api/onurim-application").header("Authorization", partnerAdmin())
+                .contentType(MediaType.APPLICATION_JSON).content(ONURIM_BODY))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.status").value("PENDING"))
+            .andExpect(jsonPath("$.desiredType").value("ORDERING"));
+
+        verify(onurimUseCase).apply(org.mockito.ArgumentMatchers.eq(actor), any());
+    }
+
+    @Test
+    void 온우림_신청_입력이_규칙에_맞지_않으면_400이고_서비스를_호출하지_않는다() throws Exception {
+        mvc.perform(post("/api/onurim-application").header("Authorization", partnerAdmin())
+                .contentType(MediaType.APPLICATION_JSON).content(ONURIM_BODY.replace("02-111-2222", " ")))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/onurim-application").header("Authorization", partnerAdmin())
+                .contentType(MediaType.APPLICATION_JSON).content(ONURIM_BODY.replace("ORDERING", "UNKNOWN")))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/onurim-application").header("Authorization", partnerAdmin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(ONURIM_BODY.replace("}", ",\"regions\":[{\"sido\":\"서울,경기\"}]}")))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/onurim-application").header("Authorization", partnerAdmin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(ONURIM_BODY.replace("}", ",\"taxInvoiceEmail\":\"not-email\"}")))
+            .andExpect(status().isBadRequest());
+        verify(onurimUseCase, never()).apply(any(), any());
+    }
+
+    @Test
+    void 브랜드_관리자는_서비스가_403으로_거부한다() throws Exception {
+        when(onurimUseCase.getLatest(any())).thenThrow(new ShopBusinessException(ShopErrorCode.ACCESS_MANAGE_FORBIDDEN));
+
+        mvc.perform(get("/api/onurim-application").header("Authorization", brandAdmin()))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.code").value("SHOP_ACCESS_012"));
+    }
+
+    @Test
+    void 온우림_신청_이력이_없으면_204() throws Exception {
+        when(onurimUseCase.getLatest(any())).thenReturn(java.util.Optional.empty());
+
+        mvc.perform(get("/api/onurim-application").header("Authorization", partnerAdmin()))
+            .andExpect(status().isNoContent());
     }
 }

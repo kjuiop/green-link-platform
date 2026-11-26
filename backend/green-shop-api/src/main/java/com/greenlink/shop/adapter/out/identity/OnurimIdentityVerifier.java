@@ -9,6 +9,12 @@ import com.greenlink.shopcore.application.auth.dto.SignupCommand;
 import com.greenlink.shopcore.application.auth.dto.VerifiedIdentity;
 import com.greenlink.shopcore.application.auth.port.IdentityRegistrar;
 import com.greenlink.shopcore.application.auth.port.IdentityVerifier;
+import com.greenlink.shopcore.application.onurim.dto.OnurimApplicationStatus;
+import com.greenlink.shopcore.application.onurim.dto.OnurimApplicationView;
+import com.greenlink.shopcore.application.onurim.dto.OnurimApplyCommand;
+import com.greenlink.shopcore.application.onurim.dto.OnurimCompanyType;
+import com.greenlink.shopcore.application.onurim.dto.OnurimRegion;
+import com.greenlink.shopcore.application.onurim.port.OnurimApplicationGateway;
 import com.greenlink.shopcore.global.exception.ShopBusinessException;
 import com.greenlink.shopcore.global.exception.ShopErrorCode;
 import org.slf4j.Logger;
@@ -23,13 +29,15 @@ import org.springframework.web.client.RestClientResponseException;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Component
-public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistrar, CompanyAccessGranter {
+public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistrar, CompanyAccessGranter, OnurimApplicationGateway {
 
     private static final Logger log = LoggerFactory.getLogger(OnurimIdentityVerifier.class);
     private static final String SECRET_HEADER = "X-Internal-Secret";
@@ -204,6 +212,30 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
             .toBodilessEntity(), this::mapReissueError);
     }
 
+    @Override
+    public OnurimApplicationView apply(Long adminId, Long companyId, OnurimApplyCommand command) {
+        ApplicationBody body = executeWith(() -> restClient.post()
+            .uri("/internal/shop-auth/onurim-applications")
+            .header(SECRET_HEADER, secret)
+            .body(new ApplyBody(adminId, companyId, command))
+            .retrieve()
+            .body(ApplicationBody.class), this::mapApplicationError);
+        if (body == null || body.id() == null) {
+            throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+        }
+        return body.toView();
+    }
+
+    @Override
+    public Optional<OnurimApplicationView> findLatest(Long companyId) {
+        ApplicationBody body = execute(() -> restClient.get()
+            .uri("/internal/shop-auth/onurim-applications/latest?companyId={companyId}", companyId)
+            .header(SECRET_HEADER, secret)
+            .retrieve()
+            .body(ApplicationBody.class));
+        return body == null || body.id() == null ? Optional.empty() : Optional.of(body.toView());
+    }
+
     private VerifiedIdentity call(java.util.function.Supplier<AccountBody> request) {
         AccountBody body = execute(request);
         if (body == null || body.adminId() == null) {
@@ -303,6 +335,24 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
         return mapError(e);
     }
 
+    private ShopBusinessException mapApplicationError(RestClientResponseException e) {
+        int status = e.getStatusCode().value();
+        String body = e.getResponseBodyAsString();
+        if (status == 409 && body.contains("ONURIM_APP_002")) {
+            return new ShopBusinessException(ShopErrorCode.ONURIM_ALREADY_ENABLED);
+        }
+        if (status == 409 && body.contains("ONURIM_APP_003")) {
+            return new ShopBusinessException(ShopErrorCode.ONURIM_APPLICATION_ALREADY_PENDING);
+        }
+        if (status == 403 && body.contains("ONURIM_APP_008")) {
+            return new ShopBusinessException(ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
+        }
+        if (status == 400) {
+            return new ShopBusinessException(ShopErrorCode.ONURIM_APPLICATION_INVALID);
+        }
+        return mapError(e);
+    }
+
     private ShopBusinessException mapError(RestClientResponseException e) {
         int status = e.getStatusCode().value();
         String body = e.getResponseBodyAsString();
@@ -331,6 +381,26 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
     }
 
     record BusinessNoBody(String businessNo) {}
+
+    record ApplyBody(Long adminId, Long companyId, OnurimCompanyType desiredType, String companyPhone,
+                     String address, String detailAddress, String taxInvoiceEmail, String memo,
+                     String faxNumber, String bankName, String accountNumber, String accountHolder,
+                     List<OnurimRegion> regions) {
+        ApplyBody(Long adminId, Long companyId, OnurimApplyCommand c) {
+            this(adminId, companyId, c.desiredType(), c.companyPhone(), c.address(), c.detailAddress(),
+                c.taxInvoiceEmail(), c.memo(), c.faxNumber(), c.bankName(), c.accountNumber(),
+                c.accountHolder(), c.regions());
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record ApplicationBody(Long id, OnurimApplicationStatus status, OnurimCompanyType desiredType,
+                           OnurimCompanyType approvedType, String rejectReason,
+                           LocalDateTime processedAt, LocalDateTime createdAt) {
+        OnurimApplicationView toView() {
+            return new OnurimApplicationView(id, status, desiredType, approvedType, rejectReason, processedAt, createdAt);
+        }
+    }
 
     record CompanyBatchBody(List<Long> companyIds) {}
 
