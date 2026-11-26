@@ -9,6 +9,7 @@ import com.greenlink.shopcore.global.exception.ShopErrorCode;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -228,5 +229,43 @@ class ShopAdminMemberTest {
         assertThat(in(ShopAdminStatus.APPROVED).isApprovedAs(ShopRole.BRAND_ADMIN)).isFalse();
         assertThat(in(ShopAdminStatus.REMOVED).isApprovedAs(ShopRole.PARTNER_ADMIN)).isFalse();
         assertThat(pending().isApprovedAs(ShopRole.PARTNER_ADMIN)).isFalse();
+    }
+
+    @Test
+    void 브랜드_관리자_신청은_희망_브랜드를_보관한다() {
+        ShopAdminMember m = ShopAdminMember.request(10L, 7L, ShopRole.BRAND_ADMIN, Set.of(1L, 2L), T0);
+
+        assertThat(m.getRequestedBrandIds()).containsExactlyInAnyOrder(1L, 2L);
+        assertThat(m.getRole()).isNull();
+    }
+
+    @Test
+    void 브랜드_관리자가_아닌_신청은_희망_브랜드를_비운다() {
+        assertThat(ShopAdminMember.request(10L, 7L, ShopRole.PARTNER_ADMIN, Set.of(1L), T0).getRequestedBrandIds())
+            .isEmpty();
+        assertThat(pending().getRequestedBrandIds()).isEmpty();
+    }
+
+    @Test
+    void 재신청하면_희망_브랜드가_교체되고_역할이_바뀌면_비워진다() {
+        ShopAdminMember m = ShopAdminMember.of(1L, 10L, 7L, null, ShopRole.BRAND_ADMIN, Set.of(1L),
+            ShopAdminStatus.REJECTED, T0, T1, 99L, "사유");
+
+        m.reapply(7L, ShopRole.BRAND_ADMIN, Set.of(2L, 3L), T1.plusDays(1));
+        assertThat(m.getRequestedBrandIds()).containsExactlyInAnyOrder(2L, 3L);
+
+        m.reject("사유", 99L, T1.plusDays(2));
+        m.reapply(7L, ShopRole.PARTNER_ADMIN, Set.of(2L), T1.plusDays(3));
+        assertThat(m.getRequestedBrandIds()).isEmpty();
+    }
+
+    @Test
+    void 승인해도_희망_브랜드는_변하지_않고_복원_시_null은_빈_집합이다() {
+        ShopAdminMember m = ShopAdminMember.request(10L, 7L, ShopRole.BRAND_ADMIN, Set.of(1L), T0);
+        m.approve(ShopRole.BRAND_ADMIN, 99L, T1);
+
+        assertThat(m.getRequestedBrandIds()).containsExactly(1L);
+        assertThat(ShopAdminMember.of(1L, 10L, 7L, null, ShopRole.BRAND_ADMIN, null, ShopAdminStatus.PENDING,
+            T0, null, null, null).getRequestedBrandIds()).isEmpty();
     }
 }

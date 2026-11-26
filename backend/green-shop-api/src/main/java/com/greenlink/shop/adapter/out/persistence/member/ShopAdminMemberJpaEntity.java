@@ -14,6 +14,9 @@ import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "shop_admin_members", indexes = {
@@ -39,6 +42,9 @@ public class ShopAdminMemberJpaEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "requested_role", nullable = false, length = 30)
     private ShopRole requestedRole;
+
+    @Column(name = "requested_brand_ids", length = 1000)
+    private String requestedBrandIds;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -70,6 +76,7 @@ public class ShopAdminMemberJpaEntity {
         this.companyId = m.getCompanyId();
         this.role = m.getRole();
         this.requestedRole = m.getRequestedRole();
+        this.requestedBrandIds = join(m.getRequestedBrandIds());
         this.status = m.getStatus();
         this.requestedAt = m.getRequestedAt();
         this.processedAt = m.getProcessedAt();
@@ -78,7 +85,17 @@ public class ShopAdminMemberJpaEntity {
     }
 
     ShopAdminMember toDomain() {
-        return ShopAdminMember.of(id, adminId, companyId, role, requestedRole, status,
+        return ShopAdminMember.of(id, adminId, companyId, role, requestedRole, split(requestedBrandIds), status,
             requestedAt, processedAt, processedBy, rejectReason);
+    }
+
+    static String join(Set<Long> ids) {
+        return ids == null || ids.isEmpty() ? null
+            : ids.stream().sorted().map(String::valueOf).collect(Collectors.joining(","));
+    }
+
+    static Set<Long> split(String raw) {
+        if (raw == null || raw.isBlank()) return Set.of();
+        return Arrays.stream(raw.split(",")).map(String::trim).map(Long::valueOf).collect(Collectors.toUnmodifiableSet());
     }
 }

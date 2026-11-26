@@ -5,6 +5,7 @@ import com.greenlink.shopcore.global.exception.ShopBusinessException;
 import com.greenlink.shopcore.global.exception.ShopErrorCode;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 public class ShopAdminMember {
 
@@ -13,6 +14,7 @@ public class ShopAdminMember {
     private Long companyId;
     private ShopRole role;
     private ShopRole requestedRole;
+    private Set<Long> requestedBrandIds = Set.of();
     private ShopAdminStatus status;
     private LocalDateTime requestedAt;
     private LocalDateTime processedAt;
@@ -22,11 +24,17 @@ public class ShopAdminMember {
     private ShopAdminMember() {}
 
     public static ShopAdminMember request(Long adminId, Long companyId, ShopRole requestedRole, LocalDateTime now) {
+        return request(adminId, companyId, requestedRole, Set.of(), now);
+    }
+
+    public static ShopAdminMember request(Long adminId, Long companyId, ShopRole requestedRole,
+                                          Set<Long> requestedBrandIds, LocalDateTime now) {
         requireAssignable(requestedRole);
         ShopAdminMember m = new ShopAdminMember();
         m.adminId = adminId;
         m.companyId = companyId;
         m.requestedRole = requestedRole;
+        m.requestedBrandIds = brandsFor(requestedRole, requestedBrandIds);
         m.status = ShopAdminStatus.PENDING;
         m.requestedAt = now;
         return m;
@@ -62,7 +70,15 @@ public class ShopAdminMember {
     public static ShopAdminMember of(Long id, Long adminId, Long companyId, ShopRole role, ShopRole requestedRole,
                                      ShopAdminStatus status, LocalDateTime requestedAt, LocalDateTime processedAt,
                                      Long processedBy, String rejectReason) {
+        return of(id, adminId, companyId, role, requestedRole, Set.of(), status, requestedAt, processedAt,
+            processedBy, rejectReason);
+    }
+
+    public static ShopAdminMember of(Long id, Long adminId, Long companyId, ShopRole role, ShopRole requestedRole,
+                                     Set<Long> requestedBrandIds, ShopAdminStatus status, LocalDateTime requestedAt,
+                                     LocalDateTime processedAt, Long processedBy, String rejectReason) {
         ShopAdminMember m = new ShopAdminMember();
+        m.requestedBrandIds = requestedBrandIds == null ? Set.of() : Set.copyOf(requestedBrandIds);
         m.id = id;
         m.adminId = adminId;
         m.companyId = companyId;
@@ -77,6 +93,10 @@ public class ShopAdminMember {
     }
 
     public void reapply(Long companyId, ShopRole requestedRole, LocalDateTime now) {
+        reapply(companyId, requestedRole, Set.of(), now);
+    }
+
+    public void reapply(Long companyId, ShopRole requestedRole, Set<Long> requestedBrandIds, LocalDateTime now) {
         if (status != ShopAdminStatus.REJECTED && status != ShopAdminStatus.REMOVED) {
             throw new ShopBusinessException(ShopErrorCode.ACCESS_ALREADY_REQUESTED);
         }
@@ -84,6 +104,7 @@ public class ShopAdminMember {
         this.companyId = companyId;
         this.role = null;
         this.requestedRole = requestedRole;
+        this.requestedBrandIds = brandsFor(requestedRole, requestedBrandIds);
         this.status = ShopAdminStatus.PENDING;
         this.requestedAt = now;
         this.processedAt = null;
@@ -150,6 +171,11 @@ public class ShopAdminMember {
         }
     }
 
+    private static Set<Long> brandsFor(ShopRole requestedRole, Set<Long> requestedBrandIds) {
+        return requestedRole == ShopRole.BRAND_ADMIN && requestedBrandIds != null
+            ? Set.copyOf(requestedBrandIds) : Set.of();
+    }
+
     private static void requireAssignable(ShopRole role) {
         if (role == null || role == ShopRole.SUPER_ADMIN) {
             throw new ShopBusinessException(ShopErrorCode.ACCESS_ROLE_NOT_ASSIGNABLE);
@@ -161,6 +187,7 @@ public class ShopAdminMember {
     public Long getCompanyId() { return companyId; }
     public ShopRole getRole() { return role; }
     public ShopRole getRequestedRole() { return requestedRole; }
+    public Set<Long> getRequestedBrandIds() { return requestedBrandIds; }
     public ShopAdminStatus getStatus() { return status; }
     public LocalDateTime getRequestedAt() { return requestedAt; }
     public LocalDateTime getProcessedAt() { return processedAt; }

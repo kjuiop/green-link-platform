@@ -8,6 +8,8 @@ import com.greenlink.shopcore.application.auth.service.AccessEvaluator;
 import com.greenlink.shopcore.domain.auth.AccessRequestType;
 import com.greenlink.shopcore.domain.auth.AccessStatus;
 import com.greenlink.shopcore.domain.auth.ShopRole;
+import com.greenlink.shopcore.domain.brand.model.ShopBrand;
+import com.greenlink.shopcore.domain.brand.port.ShopBrandRepository;
 import com.greenlink.shopcore.domain.member.model.ShopAdminMember;
 import com.greenlink.shopcore.domain.member.model.ShopAdminStatus;
 import com.greenlink.shopcore.domain.member.port.ShopAdminMemberRepository;
@@ -25,10 +27,14 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -43,13 +49,14 @@ class AccessRequestServiceTest {
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 11, 23, 10, 0);
 
     @Mock ShopAdminMemberRepository memberRepository;
+    @Mock ShopBrandRepository brandRepository;
     @Mock IdentityVerifier identityVerifier;
 
     private AccessRequestService service;
 
     @BeforeEach
     void setUp() {
-        service = new AccessRequestService(memberRepository, identityVerifier, new AccessEvaluator(memberRepository), CLOCK);
+        service = new AccessRequestService(memberRepository, brandRepository, identityVerifier, new AccessEvaluator(memberRepository), CLOCK);
     }
 
     private ShopAdminMember member(ShopAdminStatus status) {
@@ -144,7 +151,7 @@ class AccessRequestServiceTest {
         given(memberRepository.findByAdminId(10L)).willReturn(Optional.empty());
         given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        MyAccess r = service.apply(10L, false, null);
+        MyAccess r = service.apply(10L, false, null, null);
 
         ArgumentCaptor<ShopAdminMember> captor = ArgumentCaptor.forClass(ShopAdminMember.class);
         verify(memberRepository).save(captor.capture());
@@ -164,7 +171,7 @@ class AccessRequestServiceTest {
         given(memberRepository.findByAdminId(10L)).willReturn(Optional.of(rejected));
         given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        MyAccess r = service.apply(10L, false, null);
+        MyAccess r = service.apply(10L, false, null, null);
 
         assertThat(r.accessStatus()).isEqualTo(AccessStatus.PENDING);
         assertThat(r.rejectReason()).isNull();
@@ -179,7 +186,7 @@ class AccessRequestServiceTest {
         given(memberRepository.findByAdminId(10L)).willReturn(Optional.of(removed));
         given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        MyAccess r = service.apply(10L, false, null);
+        MyAccess r = service.apply(10L, false, null, null);
 
         assertThat(r.accessStatus()).isEqualTo(AccessStatus.PENDING);
         assertThat(removed.getRole()).isNull();
@@ -192,7 +199,7 @@ class AccessRequestServiceTest {
         given(memberRepository.findByAdminId(10L)).willReturn(Optional.of(rejected));
         given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        service.apply(10L, false, null);
+        service.apply(10L, false, null, null);
 
         assertThat(rejected.getCompanyId()).isEqualTo(8L);
     }
@@ -201,7 +208,7 @@ class AccessRequestServiceTest {
     void 회사가_없는_계정은_신청할_수_없다() {
         given(identityVerifier.getAccount(10L)).willReturn(identity(null, false));
 
-        assertCode(() -> service.apply(10L, false, null), ShopErrorCode.ACCESS_COMPANY_REQUIRED);
+        assertCode(() -> service.apply(10L, false, null, null), ShopErrorCode.ACCESS_COMPANY_REQUIRED);
         verify(memberRepository, never()).save(any());
     }
 
@@ -209,7 +216,7 @@ class AccessRequestServiceTest {
     void 온우림이_슈퍼관리자로_판정한_계정은_신청할_수_없다() {
         given(identityVerifier.getAccount(10L)).willReturn(identity(null, true));
 
-        assertCode(() -> service.apply(10L, false, null), ShopErrorCode.ACCESS_NOT_REQUIRED);
+        assertCode(() -> service.apply(10L, false, null, null), ShopErrorCode.ACCESS_NOT_REQUIRED);
         verify(memberRepository, never()).save(any());
     }
 
@@ -219,14 +226,14 @@ class AccessRequestServiceTest {
         given(memberRepository.findByAdminId(10L))
             .willReturn(Optional.of(member(ShopAdminStatus.PENDING)), Optional.of(member(ShopAdminStatus.APPROVED)));
 
-        assertCode(() -> service.apply(10L, false, null), ShopErrorCode.ACCESS_ALREADY_REQUESTED);
-        assertCode(() -> service.apply(10L, false, null), ShopErrorCode.ACCESS_ALREADY_REQUESTED);
+        assertCode(() -> service.apply(10L, false, null, null), ShopErrorCode.ACCESS_ALREADY_REQUESTED);
+        assertCode(() -> service.apply(10L, false, null, null), ShopErrorCode.ACCESS_ALREADY_REQUESTED);
         verify(memberRepository, never()).save(any());
     }
 
     @Test
     void 슈퍼관리자는_신청할_수_없다() {
-        assertCode(() -> service.apply(10L, true, null), ShopErrorCode.ACCESS_NOT_REQUIRED);
+        assertCode(() -> service.apply(10L, true, null, null), ShopErrorCode.ACCESS_NOT_REQUIRED);
         verifyNoInteractions(identityVerifier);
         verify(memberRepository, never()).save(any());
     }
@@ -236,7 +243,7 @@ class AccessRequestServiceTest {
         given(identityVerifier.getAccount(10L))
             .willThrow(new ShopBusinessException(ShopErrorCode.AUTH_ACCOUNT_INACTIVE));
 
-        assertCode(() -> service.apply(10L, false, null), ShopErrorCode.AUTH_ACCOUNT_INACTIVE);
+        assertCode(() -> service.apply(10L, false, null, null), ShopErrorCode.AUTH_ACCOUNT_INACTIVE);
         verify(memberRepository, never()).save(any());
     }
 
@@ -246,7 +253,7 @@ class AccessRequestServiceTest {
         given(memberRepository.findByAdminId(10L)).willReturn(Optional.empty());
         given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        MyAccess r = service.apply(10L, false, ShopRole.BRAND_ADMIN);
+        MyAccess r = service.apply(10L, false, ShopRole.BRAND_ADMIN, null);
 
         ArgumentCaptor<ShopAdminMember> captor = ArgumentCaptor.forClass(ShopAdminMember.class);
         verify(memberRepository).save(captor.capture());
@@ -260,7 +267,7 @@ class AccessRequestServiceTest {
         given(memberRepository.findByAdminId(10L)).willReturn(Optional.empty());
         given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        MyAccess r = service.apply(10L, false, ShopRole.BRAND_ADMIN);
+        MyAccess r = service.apply(10L, false, ShopRole.BRAND_ADMIN, null);
 
         ArgumentCaptor<ShopAdminMember> captor = ArgumentCaptor.forClass(ShopAdminMember.class);
         verify(memberRepository).save(captor.capture());
@@ -274,8 +281,8 @@ class AccessRequestServiceTest {
         given(identityVerifier.getAccount(10L)).willReturn(identity(7L, false, true));
         given(memberRepository.findByAdminId(10L)).willReturn(Optional.empty());
 
-        assertCode(() -> service.apply(10L, false, null), ShopErrorCode.ACCESS_ROLE_NOT_ASSIGNABLE);
-        assertCode(() -> service.apply(10L, false, ShopRole.SUPER_ADMIN), ShopErrorCode.ACCESS_ROLE_NOT_ASSIGNABLE);
+        assertCode(() -> service.apply(10L, false, null, null), ShopErrorCode.ACCESS_ROLE_NOT_ASSIGNABLE);
+        assertCode(() -> service.apply(10L, false, ShopRole.SUPER_ADMIN, null), ShopErrorCode.ACCESS_ROLE_NOT_ASSIGNABLE);
         verify(memberRepository, never()).save(any());
     }
 
@@ -287,11 +294,129 @@ class AccessRequestServiceTest {
         given(memberRepository.findByAdminId(10L)).willReturn(Optional.of(rejected));
         given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        MyAccess r = service.apply(10L, false, null);
+        MyAccess r = service.apply(10L, false, null, null);
 
         assertThat(rejected.getCompanyId()).isEqualTo(7L);
         assertThat(rejected.getRequestedRole()).isEqualTo(ShopRole.BRAND_ADMIN);
         assertThat(r.accessStatus()).isEqualTo(AccessStatus.PENDING);
         assertThat(r.requestType()).isEqualTo(AccessRequestType.JOIN);
+    }
+
+    private void joinWithBrands(Long... brandIds) {
+        given(identityVerifier.getAccount(10L)).willReturn(identity(7L, false, true));
+        given(memberRepository.findByAdminId(10L)).willReturn(Optional.empty());
+        List<ShopBrand> brands = new ArrayList<>();
+        for (Long id : brandIds) brands.add(ShopBrand.of(id, 7L, "브랜드" + id, null));
+        given(brandRepository.findAllByCompanyId(7L)).willReturn(brands);
+    }
+
+    @Test
+    void 합류_브랜드관리자_신청은_희망_브랜드가_저장되고_승인_전이라_역할은_부여되지_않는다() {
+        joinWithBrands(1L, 2L, 3L);
+        given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        MyAccess r = service.apply(10L, false, ShopRole.BRAND_ADMIN, Set.of(1L, 3L));
+
+        ArgumentCaptor<ShopAdminMember> captor = ArgumentCaptor.forClass(ShopAdminMember.class);
+        verify(memberRepository).save(captor.capture());
+        assertThat(captor.getValue().getRequestedBrandIds()).containsExactlyInAnyOrder(1L, 3L);
+        assertThat(captor.getValue().getRole()).isNull();
+        assertThat(r.requestedBrandIds()).containsExactlyInAnyOrder(1L, 3L);
+    }
+
+    @Test
+    void 회사에_브랜드가_없으면_브랜드_없이_신청할_수_있다() {
+        joinWithBrands();
+        given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        MyAccess r = service.apply(10L, false, ShopRole.BRAND_ADMIN, Set.of(99L));
+
+        assertThat(r.accessStatus()).isEqualTo(AccessStatus.PENDING);
+        assertThat(r.requestedBrandIds()).isEmpty();
+    }
+
+    @Test
+    void 회사에_브랜드가_있는데_선택하지_않으면_거부된다() {
+        joinWithBrands(1L);
+
+        assertCode(() -> service.apply(10L, false, ShopRole.BRAND_ADMIN, Set.of()), ShopErrorCode.MEMBER_BRAND_REQUIRED);
+        assertCode(() -> service.apply(10L, false, ShopRole.BRAND_ADMIN, null), ShopErrorCode.MEMBER_BRAND_REQUIRED);
+        verify(memberRepository, never()).save(any());
+    }
+
+    @Test
+    void 다른_회사_또는_삭제된_브랜드는_거부된다() {
+        joinWithBrands(1L);
+
+        assertCode(() -> service.apply(10L, false, ShopRole.BRAND_ADMIN, Set.of(1L, 55L)), ShopErrorCode.MEMBER_BRAND_INVALID);
+        verify(memberRepository, never()).save(any());
+    }
+
+    @Test
+    void 파트너관리자_신청은_브랜드_값을_무시한다() {
+        given(identityVerifier.getAccount(10L)).willReturn(identity(7L, false, true));
+        given(memberRepository.findByAdminId(10L)).willReturn(Optional.empty());
+        given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        MyAccess r = service.apply(10L, false, ShopRole.PARTNER_ADMIN, Set.of(1L));
+
+        assertThat(r.requestedBrandIds()).isEmpty();
+        verifyNoInteractions(brandRepository);
+    }
+
+    @Test
+    void 회사_최초_연동_신청은_브랜드_값을_무시한다() {
+        given(identityVerifier.getAccount(10L)).willReturn(identity(7L, false, false));
+        given(memberRepository.findByAdminId(10L)).willReturn(Optional.empty());
+        given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        MyAccess r = service.apply(10L, false, ShopRole.BRAND_ADMIN, Set.of(1L));
+
+        assertThat(r.requestedRole()).isEqualTo(ShopRole.PARTNER_ADMIN);
+        assertThat(r.requestedBrandIds()).isEmpty();
+        verifyNoInteractions(brandRepository);
+    }
+
+    @Test
+    void 재신청하면_희망_브랜드를_덮어쓴다() {
+        ShopAdminMember rejected = ShopAdminMember.of(1L, 10L, 7L, null, ShopRole.BRAND_ADMIN, Set.of(1L),
+            ShopAdminStatus.REJECTED, NOW.minusDays(1), NOW.minusHours(1), 99L, "사유");
+        given(identityVerifier.getAccount(10L)).willReturn(identity(7L, false, true));
+        given(memberRepository.findByAdminId(10L)).willReturn(Optional.of(rejected));
+        given(brandRepository.findAllByCompanyId(7L))
+            .willReturn(List.of(ShopBrand.of(1L, 7L, "a", null), ShopBrand.of(2L, 7L, "b", null)));
+        given(memberRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        MyAccess r = service.apply(10L, false, ShopRole.BRAND_ADMIN, Set.of(2L));
+
+        assertThat(r.requestedBrandIds()).containsExactly(2L);
+    }
+
+    @Test
+    void 내_상태_조회에_희망_브랜드가_포함된다() {
+        ShopAdminMember pending = ShopAdminMember.of(1L, 10L, 7L, null, ShopRole.BRAND_ADMIN, Set.of(4L, 5L),
+            ShopAdminStatus.PENDING, NOW.minusDays(1), null, null, null);
+        given(identityVerifier.getAccount(10L)).willReturn(identity(7L, false, true));
+        given(memberRepository.findByAdminId(10L)).willReturn(Optional.of(pending));
+
+        assertThat(service.getMyAccess(10L, false).requestedBrandIds()).containsExactlyInAnyOrder(4L, 5L);
+    }
+
+    @Test
+    void 신청자용_브랜드_목록은_본인_회사의_브랜드만_반환한다() {
+        given(identityVerifier.getAccount(10L)).willReturn(identity(7L, false, true));
+        given(brandRepository.findAllByCompanyId(7L)).willReturn(List.of(ShopBrand.of(1L, 7L, "꽃집", null)));
+
+        assertThat(service.getApplicableBrands(10L, false)).extracting("id", "name").containsExactly(tuple(1L, "꽃집"));
+    }
+
+    @Test
+    void 신청자용_브랜드_목록은_슈퍼관리자와_회사없는_계정에는_비어있다() {
+        assertThat(service.getApplicableBrands(10L, true)).isEmpty();
+
+        given(identityVerifier.getAccount(10L)).willReturn(identity(null, false));
+        given(memberRepository.findByAdminId(10L)).willReturn(Optional.empty());
+        assertThat(service.getApplicableBrands(10L, false)).isEmpty();
+        verifyNoInteractions(brandRepository);
     }
 }

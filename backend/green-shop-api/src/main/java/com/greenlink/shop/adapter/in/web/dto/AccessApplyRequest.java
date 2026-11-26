@@ -2,4 +2,6 @@ package com.greenlink.shop.adapter.in.web.dto;
 
 import com.greenlink.shopcore.domain.auth.ShopRole;
 
-public record AccessApplyRequest(ShopRole requestedRole) {}
+import java.util.Set;
+
+public record AccessApplyRequest(ShopRole requestedRole, Set<Long> requestedBrandIds) {}
