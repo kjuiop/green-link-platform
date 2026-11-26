@@ -347,6 +347,9 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
         if (status == 403 && body.contains("ONURIM_APP_008")) {
             return new ShopBusinessException(ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
         }
+        if (status == 404) {
+            return new ShopBusinessException(ShopErrorCode.ADMIN_REQUEST_NOT_FOUND);
+        }
         if (status == 400) {
             return new ShopBusinessException(ShopErrorCode.ONURIM_APPLICATION_INVALID);
         }

@@ -485,12 +485,16 @@ class OnurimIdentityVerifierTest {
             .andRespond(withStatus(HttpStatus.FORBIDDEN).contentType(MediaType.APPLICATION_JSON)
                 .body("{\"code\":\"ONURIM_APP_008\",\"message\":\"x\"}"));
         server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications"))
+            .andRespond(withStatus(HttpStatus.NOT_FOUND).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_022\",\"message\":\"x\"}"));
+        server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications"))
             .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
 
         assertApplyError(ShopErrorCode.ONURIM_ALREADY_ENABLED);
         assertApplyError(ShopErrorCode.ONURIM_APPLICATION_ALREADY_PENDING);
         assertApplyError(ShopErrorCode.ONURIM_APPLICATION_INVALID);
         assertApplyError(ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
+        assertApplyError(ShopErrorCode.ADMIN_REQUEST_NOT_FOUND);
         assertApplyError(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
     }
 

@@ -21,6 +21,7 @@ const TYPE_HINT: Record<OnurimCompanyType, string> = {
 }
 
 const MAX_REGIONS = 20
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const EMPTY_FORM: OnurimApplyForm = {
   desiredType: 'ORDERING',
@@ -90,9 +91,13 @@ export default function OnurimApplicationPage() {
     if (busy) return
     if (!form.companyPhone.trim()) return setError('회사 전화번호를 입력하세요.')
     if (!form.address.trim()) return setError('주소를 입력하세요.')
+    if (form.taxInvoiceEmail.trim() && !EMAIL_PATTERN.test(form.taxInvoiceEmail.trim())) {
+      return setError('세금계산서 이메일 형식을 확인하세요.')
+    }
 
     const payload: OnurimApplyForm = {
       ...form,
+      taxInvoiceEmail: form.taxInvoiceEmail.trim(),
       regions: includesVendor ? form.regions.filter((r) => r.sido.trim()) : [],
       ...(includesVendor ? {} : { faxNumber: '', bankName: '', accountNumber: '', accountHolder: '' }),
     }
