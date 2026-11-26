@@ -16,6 +16,7 @@ export interface ShopAdmin {
   processedAt: string | null
   rejectReason: string | null
   brandIds: number[]
+  passwordSetupPending: boolean
 }
 
 export interface MyAccess {

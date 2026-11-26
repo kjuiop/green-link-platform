@@ -1,9 +1,13 @@
 package com.greenlink.shopcore.application.admin.service;
 
 import com.greenlink.shopcore.application.access.port.CompanyAccessGranter;
+import com.greenlink.shopcore.application.admin.dto.CreateMemberCommand;
 import com.greenlink.shopcore.application.admin.dto.ShopAdminView;
 import com.greenlink.shopcore.application.admin.usecase.ShopAdminManagementUseCase;
 import com.greenlink.shopcore.application.auth.dto.AccountProfile;
+import com.greenlink.shopcore.application.auth.dto.ManagedAccountCommand;
+import com.greenlink.shopcore.application.auth.dto.VerifiedIdentity;
+import com.greenlink.shopcore.application.auth.port.IdentityRegistrar;
 import com.greenlink.shopcore.application.auth.port.IdentityVerifier;
 import com.greenlink.shopcore.application.common.ManagementActor;
 import com.greenlink.shopcore.application.common.ManagementGuard;
@@ -43,6 +47,7 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
     private final ShopBrandRepository brandRepository;
     private final ShopBrandMemberRepository brandMemberRepository;
     private final IdentityVerifier identityVerifier;
+    private final IdentityRegistrar identityRegistrar;
     private final CompanyAccessGranter accessGranter;
     private final ManagementGuard guard;
     private final MemberApprovalWriter approvalWriter;
@@ -52,6 +57,7 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
                                       ShopBrandRepository brandRepository,
                                       ShopBrandMemberRepository brandMemberRepository,
                                       IdentityVerifier identityVerifier,
+                                      IdentityRegistrar identityRegistrar,
                                       CompanyAccessGranter accessGranter,
                                       ManagementGuard guard,
                                       MemberApprovalWriter approvalWriter,
@@ -60,6 +66,7 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
         this.brandRepository = brandRepository;
         this.brandMemberRepository = brandMemberRepository;
         this.identityVerifier = identityVerifier;
+        this.identityRegistrar = identityRegistrar;
         this.accessGranter = accessGranter;
         this.guard = guard;
         this.approvalWriter = approvalWriter;
@@ -151,6 +158,49 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
         member.remove(actor.adminId(), now);
         memberRepository.save(member);
         brandMemberRepository.unassignAllByMemberId(member.getId(), now);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Long create(ManagementActor actor, CreateMemberCommand cmd) {
+        Long verifiedCompanyId = guard.requireManager(actor);
+        Long companyId = actor.role() == ShopRole.PARTNER_ADMIN ? verifiedCompanyId : cmd.companyId();
+        if (companyId == null) {
+            throw new ShopBusinessException(ShopErrorCode.MEMBER_COMPANY_REQUIRED);
+        }
+        ShopRole role = cmd.role();
+        if (role != ShopRole.PARTNER_ADMIN && role != ShopRole.BRAND_ADMIN) {
+            throw new ShopBusinessException(ShopErrorCode.ACCESS_ROLE_NOT_ASSIGNABLE);
+        }
+        if (role != ShopRole.PARTNER_ADMIN && !memberRepository.existsApprovedByCompanyId(companyId)) {
+            throw new ShopBusinessException(ShopErrorCode.ACCESS_FIRST_MEMBER_MUST_BE_PARTNER);
+        }
+        Set<Long> assignedBrandIds = role == ShopRole.BRAND_ADMIN
+            ? requireBrands(companyId, cmd.brandIds(), true)
+            : Set.of();
+
+        VerifiedIdentity account = identityRegistrar.createManagedAccount(
+            new ManagedAccountCommand(cmd.loginId(), cmd.name(), cmd.phone(), cmd.email(), companyId));
+
+        LocalDateTime now = LocalDateTime.now(clock);
+        try {
+            ShopAdminMember member = ShopAdminMember.createApproved(account.adminId(), companyId, role, actor.adminId(), now);
+            return approvalWriter.saveNew(member, assignedBrandIds, now);
+        } catch (RuntimeException e) {
+            log.error("온우림 계정은 생성됐으나 shop 멤버 저장 실패 - 수동 복구 필요: adminId={}, companyId={}, role={}",
+                account.adminId(), companyId, role, e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public void reissuePasswordSetup(ManagementActor actor, Long id) {
+        ShopAdminMember member = findManageable(actor, id);
+        if (member.getStatus() != ShopAdminStatus.APPROVED) {
+            throw new ShopBusinessException(ShopErrorCode.MEMBER_NOT_APPROVED);
+        }
+        identityRegistrar.reissuePasswordSetup(member.getAdminId());
     }
 
     private Set<Long> requireBrands(Long companyId, Set<Long> brandIds, boolean atLeastOne) {

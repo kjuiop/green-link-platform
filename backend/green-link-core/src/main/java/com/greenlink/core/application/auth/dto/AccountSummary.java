@@ -5,5 +5,6 @@ public record AccountSummary(
     String loginId,
     String name,
     Long companyId,
-    String companyName
+    String companyName,
+    boolean passwordSetupPending
 ) {}

@@ -1,5 +1,6 @@
 package com.greenlink.shopcore.application.admin.usecase;
 
+import com.greenlink.shopcore.application.admin.dto.CreateMemberCommand;
 import com.greenlink.shopcore.application.admin.dto.ShopAdminView;
 import com.greenlink.shopcore.application.common.ManagementActor;
 import com.greenlink.shopcore.domain.auth.ShopRole;
@@ -15,4 +16,6 @@ public interface ShopAdminManagementUseCase {
     void changeRole(ManagementActor actor, Long id, ShopRole newRole);
     void assignBrands(ManagementActor actor, Long id, Set<Long> brandIds);
     void remove(ManagementActor actor, Long id);
+    Long create(ManagementActor actor, CreateMemberCommand command);
+    void reissuePasswordSetup(ManagementActor actor, Long id);
 }

@@ -41,6 +41,9 @@ public class VerifyAdminAccountService implements VerifyAdminAccountUseCase {
         Admin admin = adminRepository.findByLoginId(loginId)
             .filter(a -> !a.isDeleted())
             .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_CREDENTIALS));
+        if (admin.isPasswordSetupPending()) {
+            throw new BusinessException(AuthErrorCode.PASSWORD_NOT_SET);
+        }
         if (!passwordEncoder.matches(rawPassword, admin.getPassword())) {
             throw new BusinessException(AuthErrorCode.INVALID_CREDENTIALS);
         }
@@ -76,7 +79,8 @@ public class VerifyAdminAccountService implements VerifyAdminAccountUseCase {
             .map(a -> new AccountSummary(
                 a.getId(), a.getLoginId(), a.getName(),
                 a.getCompanyId(),
-                a.getCompanyId() == null ? null : companyNames.get(a.getCompanyId())))
+                a.getCompanyId() == null ? null : companyNames.get(a.getCompanyId()),
+                a.isPasswordSetupPending()))
             .toList();
     }
 

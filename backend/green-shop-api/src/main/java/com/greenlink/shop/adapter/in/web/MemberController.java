@@ -2,6 +2,8 @@ package com.greenlink.shop.adapter.in.web;
 
 import com.greenlink.shop.adapter.in.web.dto.ApproveRequest;
 import com.greenlink.shop.adapter.in.web.dto.BrandAssignRequest;
+import com.greenlink.shop.adapter.in.web.dto.CreateMemberRequest;
+import com.greenlink.shop.adapter.in.web.dto.CreateMemberResponse;
 import com.greenlink.shop.adapter.in.web.dto.RejectRequest;
 import com.greenlink.shop.adapter.in.web.dto.RoleChangeRequest;
 import com.greenlink.shop.adapter.in.web.dto.ShopAdminResponse;
@@ -9,6 +11,7 @@ import com.greenlink.shop.security.ShopPrincipal;
 import com.greenlink.shopcore.application.admin.usecase.ShopAdminManagementUseCase;
 import com.greenlink.shopcore.domain.member.model.ShopAdminStatus;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -39,6 +42,20 @@ public class MemberController {
                                         @RequestParam(required = false) Long companyId,
                                         @AuthenticationPrincipal ShopPrincipal principal) {
         return managementUseCase.list(principal.toActor(), status, companyId).stream().map(ShopAdminResponse::from).toList();
+    }
+
+    @PostMapping
+    public ResponseEntity<CreateMemberResponse> create(@Valid @RequestBody CreateMemberRequest request,
+                                                       @AuthenticationPrincipal ShopPrincipal principal) {
+        Long id = managementUseCase.create(principal.toActor(), request.toCommand());
+        return ResponseEntity.status(HttpStatus.CREATED).body(new CreateMemberResponse(id));
+    }
+
+    @PostMapping("/{id}/password-setup/reissue")
+    public ResponseEntity<Void> reissuePasswordSetup(@PathVariable Long id,
+                                                     @AuthenticationPrincipal ShopPrincipal principal) {
+        managementUseCase.reissuePasswordSetup(principal.toActor(), id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/approve")

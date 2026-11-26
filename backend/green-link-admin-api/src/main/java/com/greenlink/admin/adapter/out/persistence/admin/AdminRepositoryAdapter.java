@@ -10,6 +10,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -40,6 +41,16 @@ public class AdminRepositoryAdapter implements AdminRepository {
         AdminJpaEntity result = queryFactory
             .selectFrom(adminJpaEntity)
             .where(adminJpaEntity.loginId.eq(loginId))
+            .fetchOne();
+        return Optional.ofNullable(result).map(AdminJpaEntity::toDomain);
+    }
+
+    @Override
+    public Optional<Admin> findByLoginIdForUpdate(String loginId) {
+        AdminJpaEntity result = queryFactory
+            .selectFrom(adminJpaEntity)
+            .where(adminJpaEntity.loginId.eq(loginId))
+            .setLockMode(LockModeType.PESSIMISTIC_WRITE)
             .fetchOne();
         return Optional.ofNullable(result).map(AdminJpaEntity::toDomain);
     }

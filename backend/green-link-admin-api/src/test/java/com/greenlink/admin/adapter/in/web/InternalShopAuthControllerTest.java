@@ -7,6 +7,7 @@ import com.greenlink.core.application.auth.dto.ShopSignupCommand;
 import com.greenlink.core.application.auth.dto.ShopSignupResult;
 import com.greenlink.core.application.auth.dto.VerifiedAccount;
 import com.greenlink.core.application.auth.usecase.ShopAccessUseCase;
+import com.greenlink.core.application.auth.usecase.ShopManagedAccountUseCase;
 import com.greenlink.core.application.auth.usecase.ShopSignupUseCase;
 import com.greenlink.core.application.auth.usecase.VerifyAdminAccountUseCase;
 import com.greenlink.core.global.exception.BusinessException;
@@ -24,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -43,9 +45,10 @@ class InternalShopAuthControllerTest {
     private final VerifyAdminAccountUseCase useCase = mock(VerifyAdminAccountUseCase.class);
     private final ShopSignupUseCase signupUseCase = mock(ShopSignupUseCase.class);
     private final ShopAccessUseCase accessUseCase = mock(ShopAccessUseCase.class);
+    private final ShopManagedAccountUseCase managedUseCase = mock(ShopManagedAccountUseCase.class);
 
     private MockMvc mvc(String secret) {
-        return MockMvcBuilders.standaloneSetup(new InternalShopAuthController(useCase, signupUseCase, accessUseCase, secret))
+        return MockMvcBuilders.standaloneSetup(new InternalShopAuthController(useCase, signupUseCase, accessUseCase, managedUseCase, secret))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -128,8 +131,8 @@ class InternalShopAuthControllerTest {
     @Test
     void batch_정상_시크릿이면_요약_목록을_반환() throws Exception {
         when(useCase.getAccountSummaries(List.of(1L, 2L))).thenReturn(List.of(
-                new AccountSummary(1L, "admin01", "관리자", 7L, "테스트업체"),
-                new AccountSummary(2L, "admin02", "직원", null, null)));
+                new AccountSummary(1L, "admin01", "관리자", 7L, "테스트업체", false),
+                new AccountSummary(2L, "admin02", "직원", null, null, false)));
 
         mvc("s3cret").perform(post("/internal/shop-auth/accounts/batch")
                         .header("X-Internal-Secret", "s3cret")
@@ -324,5 +327,94 @@ class InternalShopAuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"companyIds\":[" + ids + "]}"))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(accessUseCase);
+    }
+
+    private static final String MANAGED_BODY = "{\"loginId\":\"brand01\",\"name\":\"홍길동\","
+            + "\"phone\":\"010-1234-5678\",\"companyId\":7}";
+    private static final String SETUP_BODY = "{\"loginId\":\"brand01\",\"phone\":\"010-1234-5678\",\"newPassword\":\"Passw0rd!\"}";
+
+    @Test
+    void managed_accounts_시크릿이_틀리면_403() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/managed-accounts")
+                        .header("X-Internal-Secret", "wrong")
+                        .contentType(MediaType.APPLICATION_JSON).content(MANAGED_BODY))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(managedUseCase);
+    }
+
+    @Test
+    void managed_accounts_휴대폰이_없으면_400() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/managed-accounts")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"loginId\":\"brand01\",\"name\":\"홍길동\",\"companyId\":7}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(managedUseCase);
+    }
+
+    @Test
+    void managed_accounts_정상이면_계정을_반환() throws Exception {
+        when(managedUseCase.create(any())).thenReturn(
+                new VerifiedAccount(10L, "brand01", "홍길동", 7L, "파트너사", false, true, false, false));
+
+        mvc("s3cret").perform(post("/internal/shop-auth/managed-accounts")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content(MANAGED_BODY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.adminId").value(10))
+                .andExpect(jsonPath("$.adminOnurimEnabled").value(false));
+    }
+
+    @Test
+    void password_setup_시크릿이_틀리면_403() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/password-setup")
+                        .header("X-Internal-Secret", "wrong")
+                        .contentType(MediaType.APPLICATION_JSON).content(SETUP_BODY))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(managedUseCase);
+    }
+
+    @Test
+    void password_setup_정상이면_204() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/password-setup")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content(SETUP_BODY))
+                .andExpect(status().isNoContent());
+        verify(managedUseCase).completePasswordSetup("brand01", "010-1234-5678", "Passw0rd!");
+    }
+
+    @Test
+    void password_setup_약한_비밀번호는_400() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/password-setup")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"loginId\":\"brand01\",\"phone\":\"010-1234-5678\",\"newPassword\":\"12345678\"}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(managedUseCase);
+    }
+
+    @Test
+    void password_setup_실패는_단일_에러코드로_매핑() throws Exception {
+        org.mockito.Mockito.doThrow(new BusinessException(AuthErrorCode.PASSWORD_SETUP_FAILED))
+                .when(managedUseCase).completePasswordSetup(anyString(), anyString(), anyString());
+
+        mvc("s3cret").perform(post("/internal/shop-auth/password-setup")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content(SETUP_BODY))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("AUTH_024"));
+    }
+
+    @Test
+    void reissue_시크릿이_틀리면_403_정상이면_204() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/accounts/10/password-setup-reissue")
+                        .header("X-Internal-Secret", "wrong"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(managedUseCase);
+
+        mvc("s3cret").perform(post("/internal/shop-auth/accounts/10/password-setup-reissue")
+                        .header("X-Internal-Secret", "s3cret"))
+                .andExpect(status().isNoContent());
+        verify(managedUseCase).reissuePasswordSetup(10L);
     }
 }

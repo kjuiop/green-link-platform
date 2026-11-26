@@ -8,9 +8,11 @@ import com.greenlink.shopcore.application.access.usecase.AccessRequestUseCase;
 import com.greenlink.shopcore.application.admin.usecase.ShopAdminManagementUseCase;
 import com.greenlink.shopcore.application.auth.dto.ShopSession;
 import com.greenlink.shopcore.application.brand.usecase.BrandManagementUseCase;
+import com.greenlink.shopcore.application.admin.dto.CreateMemberCommand;
 import com.greenlink.shopcore.application.common.ManagementActor;
 import com.greenlink.shopcore.domain.brand.model.ShopBrand;
 import com.greenlink.shopcore.application.auth.dto.SignupResult;
+import com.greenlink.shopcore.application.auth.usecase.ShopPasswordSetupUseCase;
 import com.greenlink.shopcore.application.auth.usecase.ShopSignupUseCase;
 import com.greenlink.shopcore.global.exception.ShopBusinessException;
 import com.greenlink.shopcore.global.exception.ShopErrorCode;
@@ -68,7 +70,7 @@ class ShopSecurityRulesTest {
     @Configuration
     @EnableWebMvc
     @Import({SecurityConfig.class, ShopJwtProvider.class, GlobalExceptionHandler.class,
-        ShopAuthController.class, ShopSignupController.class, ClientIpResolver.class, AccessRequestController.class, MemberController.class, BrandController.class, MenuController.class})
+        ShopAuthController.class, ShopSignupController.class, ShopPasswordSetupController.class, ClientIpResolver.class, AccessRequestController.class, MemberController.class, BrandController.class, MenuController.class})
     static class TestConfig {
         @Bean ShopLoginUseCase shopLoginUseCase() { return mock(ShopLoginUseCase.class); }
         @Bean RefreshTokenUseCase refreshTokenUseCase() { return mock(RefreshTokenUseCase.class); }
@@ -77,6 +79,7 @@ class ShopSecurityRulesTest {
         @Bean BrandManagementUseCase brandManagementUseCase() { return mock(BrandManagementUseCase.class); }
         @Bean GetMenusUseCase getMenusUseCase() { return mock(GetMenusUseCase.class); }
         @Bean ShopSignupUseCase shopSignupUseCase() { return mock(ShopSignupUseCase.class); }
+        @Bean ShopPasswordSetupUseCase shopPasswordSetupUseCase() { return mock(ShopPasswordSetupUseCase.class); }
     }
 
     @Autowired WebApplicationContext context;
@@ -89,13 +92,14 @@ class ShopSecurityRulesTest {
     @Autowired BrandManagementUseCase brandUseCase;
     @Autowired GetMenusUseCase menusUseCase;
     @Autowired ShopSignupUseCase signupUseCase;
+    @Autowired ShopPasswordSetupUseCase passwordSetupUseCase;
 
     MockMvc mvc;
 
     @BeforeEach
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(springSecurityFilterChain).build();
-        org.mockito.Mockito.reset(signupUseCase, managementUseCase, brandUseCase);
+        org.mockito.Mockito.reset(signupUseCase, managementUseCase, brandUseCase, passwordSetupUseCase);
         when(menusUseCase.getMenus(any())).thenReturn(List.of());
         when(managementUseCase.list(any(), any(), any())).thenReturn(List.of());
         when(brandUseCase.list(any(), any())).thenReturn(List.of());
@@ -366,5 +370,80 @@ class ShopSecurityRulesTest {
             .andExpect(jsonPath("$.requestedRole").value("PARTNER_ADMIN"));
         mvc.perform(post("/api/access-requests").header("Authorization", partnerAdmin()))
             .andExpect(status().isOk());
+    }
+
+    private static final String CREATE_BODY = "{\"loginId\":\"brand01\",\"name\":\"홍길동\",\"phone\":\"010-1234-5678\","
+        + "\"role\":\"BRAND_ADMIN\",\"brandIds\":[3]}";
+
+    @Test
+    void 비밀번호_최초_설정은_토큰없이_가능하고_204() throws Exception {
+        mvc.perform(post("/api/auth/password-setup").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"loginId\":\"brand01\",\"phone\":\"010-1234-5678\",\"newPassword\":\"Passw0rd!\"}"))
+            .andExpect(status().isNoContent());
+        verify(passwordSetupUseCase).setup("brand01", "010-1234-5678", "Passw0rd!", "127.0.0.1");
+    }
+
+    @Test
+    void 비밀번호_설정_입력이_규칙에_맞지_않으면_400이고_서비스를_호출하지_않는다() throws Exception {
+        mvc.perform(post("/api/auth/password-setup").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"loginId\":\"brand01\",\"phone\":\"010-1234-5678\",\"newPassword\":\"short\"}"))
+            .andExpect(status().isBadRequest());
+        verify(passwordSetupUseCase, never()).setup(anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void 관리자_계정_생성은_FULL_토큰이_필요하고_행위자와_함께_전달된다() throws Exception {
+        when(managementUseCase.create(any(), any())).thenReturn(88L);
+
+        mvc.perform(post("/api/members").contentType(MediaType.APPLICATION_JSON).content(CREATE_BODY))
+            .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/members").header("Authorization", limited())
+                .contentType(MediaType.APPLICATION_JSON).content(CREATE_BODY))
+            .andExpect(status().isForbidden());
+        verifyNoInteractions(managementUseCase);
+
+        mvc.perform(post("/api/members").header("Authorization", partnerAdmin())
+                .contentType(MediaType.APPLICATION_JSON).content(CREATE_BODY))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").value(88));
+        verify(managementUseCase).create(new ManagementActor(5L, 7L, ShopRole.PARTNER_ADMIN),
+            new CreateMemberCommand("brand01", "홍길동", "010-1234-5678", null, ShopRole.BRAND_ADMIN, null, Set.of(3L)));
+    }
+
+    @Test
+    void 관리자_계정_생성_입력이_규칙에_맞지_않으면_400이다() throws Exception {
+        mvc.perform(post("/api/members").header("Authorization", partnerAdmin())
+                .contentType(MediaType.APPLICATION_JSON).content(CREATE_BODY.replace("brand01", "a b")))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/members").header("Authorization", partnerAdmin())
+                .contentType(MediaType.APPLICATION_JSON).content(CREATE_BODY.replace("010-1234-5678", "abc")))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/members").header("Authorization", partnerAdmin())
+                .contentType(MediaType.APPLICATION_JSON).content(CREATE_BODY.replace("\"role\":\"BRAND_ADMIN\",", "")))
+            .andExpect(status().isBadRequest());
+        verifyNoInteractions(managementUseCase);
+    }
+
+    @Test
+    void 브랜드_관리자의_계정_생성은_서비스가_거부한_403이_내려간다() throws Exception {
+        when(managementUseCase.create(any(), any()))
+            .thenThrow(new ShopBusinessException(ShopErrorCode.ACCESS_MANAGE_FORBIDDEN));
+
+        mvc.perform(post("/api/members").header("Authorization", brandAdmin())
+                .contentType(MediaType.APPLICATION_JSON).content(CREATE_BODY))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.code").value("SHOP_ACCESS_012"));
+    }
+
+    @Test
+    void 비밀번호_설정_재발급은_FULL_토큰이_필요하고_행위자와_함께_전달된다() throws Exception {
+        mvc.perform(post("/api/members/9/password-setup/reissue")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/members/9/password-setup/reissue").header("Authorization", limited()))
+            .andExpect(status().isForbidden());
+        verifyNoInteractions(managementUseCase);
+
+        mvc.perform(post("/api/members/9/password-setup/reissue").header("Authorization", partnerAdmin()))
+            .andExpect(status().isNoContent());
+        verify(managementUseCase).reissuePasswordSetup(new ManagementActor(5L, 7L, ShopRole.PARTNER_ADMIN), 9L);
     }
 }

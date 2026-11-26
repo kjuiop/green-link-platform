@@ -3,6 +3,7 @@ package com.greenlink.shop.adapter.out.identity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.greenlink.shopcore.application.access.port.CompanyAccessGranter;
 import com.greenlink.shopcore.application.auth.dto.AccountProfile;
+import com.greenlink.shopcore.application.auth.dto.ManagedAccountCommand;
 import com.greenlink.shopcore.application.auth.dto.RegisteredAccount;
 import com.greenlink.shopcore.application.auth.dto.SignupCommand;
 import com.greenlink.shopcore.application.auth.dto.VerifiedIdentity;
@@ -98,7 +99,7 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
                 throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
             }
             for (SummaryBody b : body) {
-                result.add(new AccountProfile(b.adminId(), b.loginId(), b.name(), b.companyName()));
+                result.add(new AccountProfile(b.adminId(), b.loginId(), b.name(), b.companyName(), Boolean.TRUE.equals(b.passwordSetupPending())));
             }
         }
         return result;
@@ -170,6 +171,39 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
         return body.exists();
     }
 
+    @Override
+    public VerifiedIdentity createManagedAccount(ManagedAccountCommand command) {
+        AccountBody body = executeWith(() -> restClient.post()
+            .uri("/internal/shop-auth/managed-accounts")
+            .header(SECRET_HEADER, secret)
+            .body(command)
+            .retrieve()
+            .body(AccountBody.class), this::mapManagedAccountError);
+        if (body == null || body.adminId() == null) {
+            throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+        }
+        return toIdentity(body);
+    }
+
+    @Override
+    public void completePasswordSetup(String loginId, String phone, String newPassword) {
+        executeWith(() -> restClient.post()
+            .uri("/internal/shop-auth/password-setup")
+            .header(SECRET_HEADER, secret)
+            .body(new PasswordSetupBody(loginId, phone, newPassword))
+            .retrieve()
+            .toBodilessEntity(), this::mapPasswordSetupError);
+    }
+
+    @Override
+    public void reissuePasswordSetup(Long adminId) {
+        executeWith(() -> restClient.post()
+            .uri("/internal/shop-auth/accounts/{adminId}/password-setup-reissue", adminId)
+            .header(SECRET_HEADER, secret)
+            .retrieve()
+            .toBodilessEntity(), this::mapReissueError);
+    }
+
     private VerifiedIdentity call(java.util.function.Supplier<AccountBody> request) {
         AccountBody body = execute(request);
         if (body == null || body.adminId() == null) {
@@ -221,6 +255,41 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
         return mapError(e);
     }
 
+    private ShopBusinessException mapManagedAccountError(RestClientResponseException e) {
+        int status = e.getStatusCode().value();
+        String body = e.getResponseBodyAsString();
+        if (status == 409 && body.contains("AUTH_015")) {
+            return new ShopBusinessException(ShopErrorCode.SIGNUP_LOGIN_ID_DUPLICATED);
+        }
+        if (status == 404 && body.contains("AUTH_021")) {
+            return new ShopBusinessException(ShopErrorCode.MEMBER_COMPANY_REQUIRED);
+        }
+        if (status == 400) {
+            return new ShopBusinessException(ShopErrorCode.SIGNUP_INVALID_INPUT);
+        }
+        return mapError(e);
+    }
+
+    private ShopBusinessException mapPasswordSetupError(RestClientResponseException e) {
+        int status = e.getStatusCode().value();
+        if (status == 400 || status == 404 || status == 409) {
+            return new ShopBusinessException(ShopErrorCode.AUTH_PASSWORD_SETUP_FAILED);
+        }
+        return mapError(e);
+    }
+
+    private ShopBusinessException mapReissueError(RestClientResponseException e) {
+        int status = e.getStatusCode().value();
+        String body = e.getResponseBodyAsString();
+        if (status == 409 && body.contains("AUTH_025")) {
+            return new ShopBusinessException(ShopErrorCode.AUTH_PASSWORD_SETUP_NOT_PENDING);
+        }
+        if (status == 404) {
+            return new ShopBusinessException(ShopErrorCode.ADMIN_REQUEST_NOT_FOUND);
+        }
+        return mapError(e);
+    }
+
     private ShopBusinessException mapGrantError(RestClientResponseException e) {
         if (e.getStatusCode().value() == 409 && e.getResponseBodyAsString().contains("AUTH_020")) {
             return new ShopBusinessException(ShopErrorCode.ACCESS_COMPANY_MISMATCH);
@@ -240,6 +309,9 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
         if (status == 401) {
             return new ShopBusinessException(ShopErrorCode.AUTH_INVALID_CREDENTIALS);
         }
+        if (status == 403 && body.contains("AUTH_023")) {
+            return new ShopBusinessException(ShopErrorCode.AUTH_PASSWORD_NOT_SET);
+        }
         if (status == 403 && (body.contains("AUTH_006") || body.contains("AUTH_007"))) {
             return new ShopBusinessException(ShopErrorCode.AUTH_ACCOUNT_INACTIVE);
         }
@@ -250,6 +322,13 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
     record VerifyBody(String loginId, String password) {}
 
     record BatchBody(List<Long> adminIds) {}
+
+    record PasswordSetupBody(String loginId, String phone, String newPassword) {
+        @Override
+        public String toString() {
+            return "PasswordSetupBody[loginId=" + loginId + ", newPassword=****]";
+        }
+    }
 
     record BusinessNoBody(String businessNo) {}
 
@@ -272,5 +351,6 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
                        boolean adminOnurimEnabled, boolean superAdmin) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record SummaryBody(Long adminId, String loginId, String name, Long companyId, String companyName) {}
+    record SummaryBody(Long adminId, String loginId, String name, Long companyId, String companyName,
+                       Boolean passwordSetupPending) {}
 }

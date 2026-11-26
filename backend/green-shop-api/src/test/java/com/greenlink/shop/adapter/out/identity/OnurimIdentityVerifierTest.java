@@ -1,6 +1,7 @@
 package com.greenlink.shop.adapter.out.identity;
 
 import com.greenlink.shopcore.application.auth.dto.AccountProfile;
+import com.greenlink.shopcore.application.auth.dto.ManagedAccountCommand;
 import com.greenlink.shopcore.application.auth.dto.RegisteredAccount;
 import com.greenlink.shopcore.application.auth.dto.SignupCommand;
 import com.greenlink.shopcore.application.auth.dto.VerifiedIdentity;
@@ -345,5 +346,90 @@ class OnurimIdentityVerifierTest {
     void 회사명_조회_대상이_비어_있으면_호출하지_않는다() {
         assertThat(verifier.getCompanyNames(java.util.List.of())).isEmpty();
         server.verify();
+    }
+
+    @Test
+    void 비밀번호_미설정_403은_AUTH_PASSWORD_NOT_SET으로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/verify"))
+            .andRespond(withStatus(HttpStatus.FORBIDDEN).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_023\",\"message\":\"x\"}"));
+
+        assertThatThrownBy(() -> verifier.verify("brand01", "pw")).isInstanceOfSatisfying(ShopBusinessException.class,
+            e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.AUTH_PASSWORD_NOT_SET));
+    }
+
+    @Test
+    void 관리_계정_생성은_명령을_보내고_계정을_매핑한다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/managed-accounts"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(header("X-Internal-Secret", "s3cret"))
+            .andExpect(jsonPath("$.loginId").value("brand01"))
+            .andExpect(jsonPath("$.phone").value("010-1234-5678"))
+            .andExpect(jsonPath("$.companyId").value(7))
+            .andRespond(withSuccess(ACCOUNT_JSON, MediaType.APPLICATION_JSON));
+
+        VerifiedIdentity id = verifier.createManagedAccount(
+            new ManagedAccountCommand("brand01", "홍길동", "010-1234-5678", null, 7L));
+
+        assertThat(id.adminId()).isEqualTo(5L);
+        server.verify();
+    }
+
+    @Test
+    void 관리_계정_생성_아이디_중복_409는_SIGNUP_LOGIN_ID_DUPLICATED로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/managed-accounts"))
+            .andRespond(withStatus(HttpStatus.CONFLICT).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_015\",\"message\":\"x\"}"));
+
+        assertThatThrownBy(() -> verifier.createManagedAccount(
+            new ManagedAccountCommand("brand01", "홍길동", "010-1234-5678", null, 7L)))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.SIGNUP_LOGIN_ID_DUPLICATED));
+    }
+
+    @Test
+    void 비밀번호_설정은_값을_보내고_본문_없는_응답을_받는다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/password-setup"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(header("X-Internal-Secret", "s3cret"))
+            .andExpect(jsonPath("$.loginId").value("brand01"))
+            .andExpect(jsonPath("$.phone").value("010-1234-5678"))
+            .andExpect(jsonPath("$.newPassword").value("Passw0rd!"))
+            .andRespond(withStatus(HttpStatus.NO_CONTENT));
+
+        verifier.completePasswordSetup("brand01", "010-1234-5678", "Passw0rd!");
+
+        server.verify();
+    }
+
+    @Test
+    void 비밀번호_설정_400은_단일_실패로_매핑되고_서버오류는_장애로_남는다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/password-setup"))
+            .andRespond(withStatus(HttpStatus.BAD_REQUEST).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_024\",\"message\":\"x\"}"));
+        server.expect(requestTo(BASE + "/internal/shop-auth/password-setup"))
+            .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+
+        assertThatThrownBy(() -> verifier.completePasswordSetup("brand01", "010", "Passw0rd!"))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.AUTH_PASSWORD_SETUP_FAILED));
+        assertThatThrownBy(() -> verifier.completePasswordSetup("brand01", "010", "Passw0rd!"))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE));
+    }
+
+    @Test
+    void 재발급은_어드민_ID로_호출하고_이미_설정된_409는_NOT_PENDING으로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/5/password-setup-reissue"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(header("X-Internal-Secret", "s3cret"))
+            .andRespond(withStatus(HttpStatus.NO_CONTENT));
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/5/password-setup-reissue"))
+            .andRespond(withStatus(HttpStatus.CONFLICT).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_025\",\"message\":\"x\"}"));
+
+        verifier.reissuePasswordSetup(5L);
+        assertThatThrownBy(() -> verifier.reissuePasswordSetup(5L)).isInstanceOfSatisfying(ShopBusinessException.class,
+            e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.AUTH_PASSWORD_SETUP_NOT_PENDING));
     }
 }

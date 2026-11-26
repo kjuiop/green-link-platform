@@ -60,4 +60,13 @@ class InMemorySignupRateLimiterTest {
             assertThat(limiter.tryAcquire(Bucket.SIGNUP, "1.1.1.1")).isTrue();
         }
     }
+
+    @Test
+    void 비밀번호_설정_버킷은_IP당_1시간에_10회까지_허용하고_다른_버킷과_독립이다() {
+        for (int i = 0; i < 10; i++) {
+            assertThat(limiter.tryAcquire(Bucket.PASSWORD_SETUP, "1.1.1.1")).isTrue();
+        }
+        assertThat(limiter.tryAcquire(Bucket.PASSWORD_SETUP, "1.1.1.1")).isFalse();
+        assertThat(limiter.tryAcquire(Bucket.SIGNUP, "1.1.1.1")).isTrue();
+    }
 }

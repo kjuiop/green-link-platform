@@ -19,8 +19,10 @@ import {
   approveShopAdmin,
   assignShopAdminBrands,
   changeShopAdminRole,
+  createShopAdmin,
   fetchCompanies,
   fetchShopAdmins,
+  reissuePasswordSetup,
   rejectShopAdmin,
   removeShopAdmin,
 } from '@/lib/api/shopAdminApi'
@@ -68,6 +70,20 @@ const EMPTY_TEXT: Record<Filter, string> = {
   ALL: '등록된 관리자가 없습니다.',
 }
 
+const EMPTY_FORM = { loginId: '', name: '', phone: '', email: '', role: 'BRAND_ADMIN' as CreateRole, company: '' }
+
+type CreateRole = 'PARTNER_ADMIN' | 'BRAND_ADMIN'
+
+function validateCreate(f: typeof EMPTY_FORM, isSuper: boolean, brandCount: number): string {
+  if (isSuper && !f.company) return '회사를 선택하세요.'
+  if (!/^[A-Za-z0-9_.-]{4,30}$/.test(f.loginId)) return '아이디는 영문·숫자·._- 4~30자로 입력하세요.'
+  if (!f.name.trim() || f.name.length > 50) return '이름을 입력하세요 (50자 이내).'
+  if (!/^[0-9-]{9,20}$/.test(f.phone)) return '연락처를 숫자와 하이픈으로 입력하세요.'
+  if (f.email.length > 100) return '이메일은 100자 이내로 입력하세요.'
+  if (f.role === 'BRAND_ADMIN' && brandCount === 0) return '브랜드 관리자는 브랜드를 1개 이상 선택해야 합니다.'
+  return ''
+}
+
 const SELECT_CLASS = 'h-8 rounded-md border border-gray-200 bg-white px-2 text-xs'
 const COLUMN_COUNT = 8
 
@@ -77,6 +93,49 @@ function formatDateTime(value: string): string {
 
 function toggle(list: number[], id: number): number[] {
   return list.includes(id) ? list.filter((v) => v !== id) : [...list, id]
+}
+
+function BrandPicker({ options, selected, disabled, onToggle }: {
+  options: Brand[]
+  selected: number[]
+  disabled: boolean
+  onToggle: (id: number) => void
+}) {
+  const remaining = options.filter((b) => !selected.includes(b.id))
+  return (
+    <div className="space-y-2">
+      <select
+        aria-label="브랜드 선택"
+        className={SELECT_CLASS}
+        value=""
+        disabled={disabled || remaining.length === 0}
+        onChange={(e) => { if (e.target.value) onToggle(Number(e.target.value)) }}
+      >
+        <option value="">{remaining.length === 0 ? '추가할 브랜드가 없습니다' : '브랜드 추가'}</option>
+        {remaining.map((b) => (
+          <option key={b.id} value={b.id}>{b.name}</option>
+        ))}
+      </select>
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {selected.map((id) => (
+            <span key={id} className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800">
+              {options.find((b) => b.id === id)?.name ?? `#${id}`}
+              <button
+                type="button"
+                aria-label="브랜드 제거"
+                className="text-green-700 hover:text-green-900 disabled:opacity-50"
+                disabled={disabled}
+                onClick={() => onToggle(id)}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function AdminsPage() {
@@ -97,6 +156,11 @@ export default function AdminsPage() {
   const [grantRoles, setGrantRoles] = useState<Record<number, ShopRole>>({})
   const [brandSelections, setBrandSelections] = useState<Record<number, number[]>>({})
   const [roleDrafts, setRoleDrafts] = useState<Record<number, ShopRole>>({})
+  const [notice, setNotice] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
+  const [form, setForm] = useState(EMPTY_FORM)
+  const [createBrandIds, setCreateBrandIds] = useState<number[]>([])
+  const [createBrands, setCreateBrands] = useState<Brand[]>([])
 
   const companyId = isSuper && companyFilter ? Number(companyFilter) : undefined
 
@@ -131,6 +195,18 @@ export default function AdminsPage() {
     return () => { cancelled = true }
   }, [session, filter, companyId, reloadKey])
 
+  const createCompanyId = isSuper ? (form.company ? Number(form.company) : undefined) : undefined
+  const createBrandOptions = createBrands.filter((b) => !isSuper || b.companyId === createCompanyId)
+
+  useEffect(() => {
+    if (!showCreate || !session || (isSuper && createCompanyId === undefined)) return
+    let cancelled = false
+    fetchBrands(createCompanyId)
+      .then((result) => { if (!cancelled) setCreateBrands(result) })
+      .catch(() => { if (!cancelled) setCreateBrands([]) })
+    return () => { cancelled = true }
+  }, [showCreate, session, isSuper, createCompanyId])
+
   function resetView() {
     setAdmins(null)
     setLoadError(false)
@@ -160,6 +236,7 @@ export default function AdminsPage() {
   async function run(id: number, action: () => Promise<void>, fallback: string): Promise<boolean> {
     if (busyId !== null) return false
     setActionError('')
+    setNotice('')
     setBusyId(id)
     try {
       await action()
@@ -171,6 +248,48 @@ export default function AdminsPage() {
     } finally {
       setBusyId(null)
     }
+  }
+
+  function updateForm(patch: Partial<typeof EMPTY_FORM>) {
+    setForm((prev) => ({ ...prev, ...patch }))
+    setActionError('')
+  }
+
+  function closeCreate() {
+    setShowCreate(false)
+    setForm(EMPTY_FORM)
+    setCreateBrandIds([])
+    setActionError('')
+  }
+
+  async function handleCreate() {
+    const brandIds = form.role === 'BRAND_ADMIN' ? createBrandIds : []
+    const message = validateCreate(form, isSuper, brandIds.length)
+    if (message) {
+      setActionError(message)
+      return
+    }
+    const ok = await run(0, async () => {
+      await createShopAdmin({
+        loginId: form.loginId,
+        name: form.name.trim(),
+        phone: form.phone,
+        email: form.email.trim() || undefined,
+        role: form.role,
+        companyId: isSuper ? Number(form.company) : undefined,
+        brandIds: form.role === 'BRAND_ADMIN' ? brandIds : undefined,
+      })
+    }, '계정을 만들지 못했습니다.')
+    if (ok) {
+      closeCreate()
+      setNotice('계정을 만들었습니다. 해당 담당자가 아이디와 등록한 연락처로 비밀번호를 설정하면 로그인할 수 있습니다 (7일 이내).')
+      if (filter !== 'APPROVED' && filter !== 'ALL') changeFilter('APPROVED')
+    }
+  }
+
+  async function handleReissue(admin: ShopAdmin) {
+    const ok = await run(admin.id, () => reissuePasswordSetup(admin.id), '재발급에 실패했습니다.')
+    if (ok) setNotice('비밀번호 설정 기간을 7일로 다시 열었습니다. 담당자에게 안내하세요.')
   }
 
   function handleApprove(admin: ShopAdmin) {
@@ -234,21 +353,7 @@ export default function AdminsPage() {
     if (options.length === 0) {
       return <p className="text-xs text-gray-500">이 회사에 등록된 브랜드가 없습니다. 브랜드 관리에서 먼저 추가하세요.</p>
     }
-    return (
-      <div className="flex flex-wrap gap-x-4 gap-y-1">
-        {options.map((b) => (
-          <label key={b.id} className="flex items-center gap-1 text-sm">
-            <input
-              type="checkbox"
-              checked={selected.includes(b.id)}
-              disabled={busyId !== null}
-              onChange={() => onToggle(b.id)}
-            />
-            {b.name}
-          </label>
-        ))}
-      </div>
-    )
+    return <BrandPicker options={options} selected={selected} disabled={busyId !== null} onToggle={onToggle} />
   }
 
   return (
@@ -285,6 +390,106 @@ export default function AdminsPage() {
           </div>
         </div>
       </div>
+
+      {notice && <p className="text-xs text-green-700">{notice}</p>}
+
+      {showCreate ? (
+        <Card>
+          <CardContent className="space-y-3">
+            <p className="text-sm font-medium">관리자 계정 추가</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {isSuper && (
+                <select
+                  aria-label="소속 회사"
+                  className="h-9 rounded-md border border-gray-200 bg-white px-2 text-sm"
+                  value={form.company}
+                  disabled={busyId !== null}
+                  onChange={(e) => { updateForm({ company: e.target.value }); setCreateBrandIds([]) }}
+                >
+                  <option value="">회사 선택</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )}
+              <select
+                aria-label="역할"
+                className="h-9 rounded-md border border-gray-200 bg-white px-2 text-sm"
+                value={form.role}
+                disabled={busyId !== null}
+                onChange={(e) => updateForm({ role: e.target.value as CreateRole })}
+              >
+                <option value="BRAND_ADMIN">{ROLE_LABEL.BRAND_ADMIN}</option>
+                <option value="PARTNER_ADMIN">{ROLE_LABEL.PARTNER_ADMIN}</option>
+              </select>
+              <Input
+                placeholder="아이디 (영문·숫자 4~30자)"
+                aria-label="아이디"
+                maxLength={30}
+                value={form.loginId}
+                disabled={busyId !== null}
+                onChange={(e) => updateForm({ loginId: e.target.value })}
+              />
+              <Input
+                placeholder="이름"
+                aria-label="이름"
+                maxLength={50}
+                value={form.name}
+                disabled={busyId !== null}
+                onChange={(e) => updateForm({ name: e.target.value })}
+              />
+              <Input
+                type="tel"
+                placeholder="연락처 (비밀번호 설정 시 본인 확인에 사용)"
+                aria-label="연락처"
+                maxLength={20}
+                value={form.phone}
+                disabled={busyId !== null}
+                onChange={(e) => updateForm({ phone: e.target.value })}
+              />
+              <Input
+                type="email"
+                placeholder="이메일 (선택)"
+                aria-label="이메일"
+                maxLength={100}
+                value={form.email}
+                disabled={busyId !== null}
+                onChange={(e) => updateForm({ email: e.target.value })}
+              />
+            </div>
+            {form.role === 'BRAND_ADMIN' && (
+              <div>
+                <p className="mb-1 text-xs font-medium text-gray-600">담당 브랜드 (1개 이상 선택)</p>
+                {isSuper && !form.company ? (
+                  <p className="text-xs text-gray-500">회사를 먼저 선택하세요.</p>
+                ) : createBrandOptions.length === 0 ? (
+                  <p className="text-xs text-gray-500">이 회사에 등록된 브랜드가 없습니다. 브랜드 관리에서 먼저 추가하세요.</p>
+                ) : (
+                  <BrandPicker
+                    options={createBrandOptions}
+                    selected={createBrandIds}
+                    disabled={busyId !== null}
+                    onToggle={(id) => setCreateBrandIds((prev) => toggle(prev, id))}
+                  />
+                )}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Button size="sm" className="bg-green-700 hover:bg-green-800" disabled={busyId !== null} onClick={handleCreate}>
+                {busyId === 0 ? '만드는 중...' : '계정 만들기'}
+              </Button>
+              <Button size="sm" variant="ghost" disabled={busyId !== null} onClick={closeCreate}>취소</Button>
+              <span className="text-xs text-gray-500">비밀번호는 담당자가 처음 로그인할 때 직접 설정합니다.</span>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div>
+          <Button size="sm" variant="outline" onClick={() => { setNotice(''); setActionError(''); setShowCreate(true) }}>
+            계정 추가
+          </Button>
+        </div>
+      )}
 
       {actionError && <p className="text-xs text-red-500">{actionError}</p>}
 
@@ -344,6 +549,9 @@ export default function AdminsPage() {
                             <Badge className={cn('whitespace-nowrap', STATUS_STYLE[admin.status])}>
                               {STATUS_LABEL[admin.status]}
                             </Badge>
+                            {isApproved && admin.passwordSetupPending && (
+                              <Badge className="mt-1 whitespace-nowrap bg-orange-100 text-orange-700">비밀번호 미설정</Badge>
+                            )}
                             {admin.status === 'REJECTED' && admin.rejectReason && (
                               <p className="mt-1 max-w-48 text-xs text-gray-500">{admin.rejectReason}</p>
                             )}
@@ -385,6 +593,16 @@ export default function AdminsPage() {
                             )}
                             {isApproved && (
                               <div className="flex items-center justify-end gap-1">
+                                {admin.passwordSetupPending && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={busyId !== null}
+                                    onClick={() => handleReissue(admin)}
+                                  >
+                                    설정 재발급
+                                  </Button>
+                                )}
                                 {isBrandAdmin && (
                                   <Button
                                     size="sm"

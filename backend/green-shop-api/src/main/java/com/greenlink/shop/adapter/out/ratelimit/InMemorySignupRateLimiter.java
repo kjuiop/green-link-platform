@@ -17,7 +17,7 @@ import java.util.function.LongSupplier;
 public class InMemorySignupRateLimiter implements SignupRateLimiter {
 
     private static final Duration WINDOW = Duration.ofHours(1);
-    private static final Map<Bucket, Integer> LIMITS = new EnumMap<>(Map.of(Bucket.SIGNUP, 5, Bucket.LOOKUP, 30));
+    private static final Map<Bucket, Integer> LIMITS = new EnumMap<>(Map.of(Bucket.SIGNUP, 5, Bucket.LOOKUP, 30, Bucket.PASSWORD_SETUP, 10));
 
     private final ConcurrentHashMap<String, Deque<Long>> hits = new ConcurrentHashMap<>();
     private final LongSupplier nowMillis;
