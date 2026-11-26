@@ -111,6 +111,29 @@ class VendorSignupWithDocumentsServiceTest {
     }
 
     @Test
+    void 업로드에서_예상치_못한_런타임_예외가_나도_가입은_유지한다() {
+        given(vendorSignupUseCase.signup(cmd)).willReturn(vendor(null, null));
+        given(uploadVendorDocumentUseCase.uploadDocument(10L, "businessReg", "biz.png", PNG, "image/png"))
+                .willReturn(new UploadVendorDocumentUseCase.Result("https://s3/biz.png", null));
+        given(uploadVendorDocumentUseCase.uploadDocument(10L, "bankBook", "bank.png", PNG, "image/png"))
+                .willThrow(new IllegalStateException("s3 down"));
+
+        VendorSignupWithDocumentsResult result = service.signup(cmd, businessReg, bankBook);
+
+        assertThat(result.failedDocuments()).containsExactly("bankBook");
+    }
+
+    @Test
+    void 클라이언트가_보낸_content_type이_아닌_판별된_값으로_업로드한다() {
+        given(vendorSignupUseCase.signup(cmd)).willReturn(vendor(null, null));
+        SignupDocument spoofed = new SignupDocument("biz.png", PNG, "text/html");
+
+        service.signup(cmd, spoofed, bankBook);
+
+        verify(uploadVendorDocumentUseCase).uploadDocument(10L, "businessReg", "biz.png", PNG, "image/png");
+    }
+
+    @Test
     void 가입이_실패하면_업로드하지_않는다() {
         given(vendorSignupUseCase.signup(cmd))
                 .willThrow(new BusinessException(VendorErrorCode.DUPLICATE_LOGIN_ID));

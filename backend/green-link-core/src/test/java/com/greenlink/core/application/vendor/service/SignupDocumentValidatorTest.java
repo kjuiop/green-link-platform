@@ -5,6 +5,7 @@ import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.vendor.VendorErrorCode;
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -57,6 +58,20 @@ class SignupDocumentValidatorTest {
     void 확장자와_무관하게_시그니처가_다르면_거부한다() {
         assertError(doc("a.png", "<script>alert(1)</script>".getBytes()), VendorErrorCode.DOCUMENT_INVALID_TYPE);
         assertError(doc("a.pdf", new byte[]{1, 2}), VendorErrorCode.DOCUMENT_INVALID_TYPE);
+    }
+
+    @Test
+    void 시그니처로_판별한_content_type으로_정규화한다() {
+        SignupDocument spoofed = new SignupDocument("a.png", PNG, "text/html");
+        assertThat(validator.validate(spoofed).contentType()).isEqualTo("image/png");
+        assertThat(validator.validate(doc("a.pdf", PDF)).contentType()).isEqualTo("application/pdf");
+        assertThat(validator.validate(doc("a.heic", HEIC)).contentType()).isEqualTo("image/heic");
+    }
+
+    @Test
+    void heic_brand가_아닌_ftyp_파일은_거부한다() {
+        byte[] mp4 = {0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6F, 0x6D};
+        assertError(doc("a.heic", mp4), VendorErrorCode.DOCUMENT_INVALID_TYPE);
     }
 
     @Test

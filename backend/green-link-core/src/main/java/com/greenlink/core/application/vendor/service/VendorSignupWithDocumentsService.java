@@ -7,7 +7,6 @@ import com.greenlink.core.application.vendor.dto.VendorSignupWithDocumentsResult
 import com.greenlink.core.application.vendor.usecase.UploadVendorDocumentUseCase;
 import com.greenlink.core.application.vendor.usecase.VendorSignupUseCase;
 import com.greenlink.core.application.vendor.usecase.VendorSignupWithDocumentsUseCase;
-import com.greenlink.core.global.exception.BusinessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -35,14 +34,14 @@ public class VendorSignupWithDocumentsService implements VendorSignupWithDocumen
     @Override
     public VendorSignupWithDocumentsResult signup(VendorSignupCommand cmd,
                                                   SignupDocument businessReg, SignupDocument bankBook) {
-        validator.validate(businessReg);
-        validator.validate(bankBook);
+        SignupDocument validBusinessReg = validator.validate(businessReg);
+        SignupDocument validBankBook = validator.validate(bankBook);
 
         VendorResult vendor = vendorSignupUseCase.signup(cmd);
 
         List<String> failed = new ArrayList<>();
-        upload(vendor, "businessReg", vendor.businessRegUrl(), businessReg, failed);
-        upload(vendor, "bankBook", vendor.bankBookUrl(), bankBook, failed);
+        upload(vendor, "businessReg", vendor.businessRegUrl(), validBusinessReg, failed);
+        upload(vendor, "bankBook", vendor.bankBookUrl(), validBankBook, failed);
         return new VendorSignupWithDocumentsResult(vendor, failed);
     }
 
@@ -52,7 +51,7 @@ public class VendorSignupWithDocumentsService implements VendorSignupWithDocumen
         try {
             uploadVendorDocumentUseCase.uploadDocument(
                     vendor.id(), docType, doc.fileName(), doc.content(), doc.contentType());
-        } catch (BusinessException e) {
+        } catch (RuntimeException e) {
             log.error("가입 서류 업로드 실패 vendorId={} docType={}", vendor.id(), docType, e);
             failed.add(docType);
         }
