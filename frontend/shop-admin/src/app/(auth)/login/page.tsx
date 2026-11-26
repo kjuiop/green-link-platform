@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { ApiError } from '@/lib/api/client'
 import { login } from '@/lib/api/authApi'
 import { getSession, setSession } from '@/lib/session'
 import { markTokenFresh } from '@/lib/useTokenRefresh'
@@ -17,7 +18,16 @@ function homeOf(session: Session): string {
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginForm() {
   const router = useRouter()
+  const passwordJustSet = useSearchParams().get('notice') === 'password-set'
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -40,6 +50,10 @@ export default function LoginPage() {
       markTokenFresh()
       router.push(homeOf(session))
     } catch (e) {
+      if (e instanceof ApiError && e.code === 'SHOP_AUTH_004') {
+        router.push(`/password-setup?loginId=${encodeURIComponent(loginId)}`)
+        return
+      }
       setError(e instanceof Error ? e.message : '서버 연결에 실패했습니다.')
     } finally {
       setLoading(false)
@@ -82,6 +96,9 @@ export default function LoginPage() {
                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
               />
             </div>
+            {passwordJustSet && !error && (
+              <p className="text-xs text-green-700">비밀번호가 설정되었습니다. 로그인하세요.</p>
+            )}
             {error && <p className="text-xs text-red-500">{error}</p>}
             <Button
               className="w-full bg-green-700 hover:bg-green-800"

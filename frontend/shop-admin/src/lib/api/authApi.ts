@@ -32,3 +32,11 @@ export async function businessNoExists(businessNo: string): Promise<boolean> {
   )
   return res.exists
 }
+
+export function setupPassword(loginId: string, phone: string, newPassword: string): Promise<void> {
+  return apiFetch<void>('/api/auth/password-setup', {
+    method: 'POST',
+    body: { loginId, phone, newPassword },
+    auth: false,
+  })
+}

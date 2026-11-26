@@ -44,3 +44,21 @@ export function assignShopAdminBrands(id: number, brandIds: number[]): Promise<v
 export function removeShopAdmin(id: number): Promise<void> {
   return apiFetch<void>(`/api/members/${id}`, { method: 'DELETE' })
 }
+
+export interface CreateShopAdminInput {
+  loginId: string
+  name: string
+  phone: string
+  email?: string
+  role: Extract<ShopRole, 'PARTNER_ADMIN' | 'BRAND_ADMIN'>
+  companyId?: number
+  brandIds?: number[]
+}
+
+export function createShopAdmin(input: CreateShopAdminInput): Promise<{ id: number }> {
+  return apiFetch<{ id: number }>('/api/members', { method: 'POST', body: input })
+}
+
+export function reissuePasswordSetup(id: number): Promise<void> {
+  return apiFetch<void>(`/api/members/${id}/password-setup/reissue`, { method: 'POST' })
+}
