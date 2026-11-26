@@ -52,6 +52,7 @@ export default function AccessPage() {
   const [requestType, setRequestType] = useState<AccessRequestType | null>(null)
   const [role, setRole] = useState<ShopRole>('BRAND_ADMIN')
   const [brands, setBrands] = useState<ApplicableBrand[]>([])
+  const [brandsLoaded, setBrandsLoaded] = useState(false)
   const [brandIds, setBrandIds] = useState<number[]>([])
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -94,7 +95,7 @@ export default function AccessPage() {
     if (!needsBrands) return
     let cancelled = false
     fetchApplicableBrands()
-      .then((list) => { if (!cancelled) setBrands(list) })
+      .then((list) => { if (!cancelled) { setBrands(list); setBrandsLoaded(true) } })
       .catch(() => { if (!cancelled) setError('브랜드 목록을 불러오지 못했습니다.') })
     return () => { cancelled = true }
   }, [needsBrands, reloadKey])
@@ -108,7 +109,7 @@ export default function AccessPage() {
   const body = status === 'NONE' && requestType ? NONE_BODY[requestType] : message.body
   const canApply = (status === 'NONE' || status === 'REJECTED') && requestType !== null
   const selectedBrandIds = brandIds.filter((id) => brands.some((b) => b.id === id))
-  const brandMissing = needsBrands && brands.length > 0 && selectedBrandIds.length === 0
+  const brandMissing = needsBrands && (!brandsLoaded || (brands.length > 0 && selectedBrandIds.length === 0))
 
   async function handleSubmit() {
     if (submitting) return
@@ -169,7 +170,9 @@ export default function AccessPage() {
             {canApply && needsBrands && (
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-gray-600">관리할 브랜드</p>
-                {brands.length === 0 ? (
+                {!brandsLoaded ? (
+                  <p className="text-xs text-gray-500">브랜드 목록을 불러오는 중입니다...</p>
+                ) : brands.length === 0 ? (
                   <p className="text-xs text-gray-500">등록된 브랜드가 없어 브랜드 없이 신청됩니다. 승인 후 배정받을 수 있습니다.</p>
                 ) : (
                   <>
