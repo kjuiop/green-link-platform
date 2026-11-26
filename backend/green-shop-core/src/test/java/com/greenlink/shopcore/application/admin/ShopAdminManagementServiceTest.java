@@ -4,7 +4,11 @@ import com.greenlink.shopcore.application.access.port.CompanyAccessGranter;
 import com.greenlink.shopcore.application.admin.dto.ShopAdminView;
 import com.greenlink.shopcore.application.admin.service.ShopAdminManagementService;
 import com.greenlink.shopcore.application.auth.dto.AccountProfile;
+import com.greenlink.shopcore.application.auth.dto.ManagedAccountCommand;
+import com.greenlink.shopcore.application.auth.dto.VerifiedIdentity;
+import com.greenlink.shopcore.application.auth.port.IdentityRegistrar;
 import com.greenlink.shopcore.application.auth.port.IdentityVerifier;
+import com.greenlink.shopcore.application.admin.dto.CreateMemberCommand;
 import com.greenlink.shopcore.application.admin.service.MemberApprovalWriter;
 import com.greenlink.shopcore.application.common.ManagementActor;
 import com.greenlink.shopcore.application.common.ManagementGuard;
@@ -55,6 +59,7 @@ class ShopAdminManagementServiceTest {
     @Mock ShopBrandRepository brandRepository;
     @Mock ShopBrandMemberRepository brandMemberRepository;
     @Mock IdentityVerifier identityVerifier;
+    @Mock IdentityRegistrar identityRegistrar;
     @Mock CompanyAccessGranter accessGranter;
 
     private ShopAdminManagementService service;
@@ -62,7 +67,7 @@ class ShopAdminManagementServiceTest {
     @BeforeEach
     void setUp() {
         service = new ShopAdminManagementService(memberRepository, brandRepository, brandMemberRepository,
-            identityVerifier, accessGranter, new ManagementGuard(memberRepository),
+            identityVerifier, identityRegistrar, accessGranter, new ManagementGuard(memberRepository),
             new MemberApprovalWriter(memberRepository, brandMemberRepository), CLOCK);
     }
 
@@ -103,7 +108,7 @@ class ShopAdminManagementServiceTest {
     void 목록은_상태_필터를_저장소에_전달하고_온우림_배치_조회로_이름을_채운다() {
         given(memberRepository.findAll(ShopAdminStatus.PENDING)).willReturn(List.of(member(ShopAdminStatus.PENDING)));
         given(identityVerifier.getAccounts(List.of(10L)))
-            .willReturn(List.of(new AccountProfile(10L, "login", "이름", "회사")));
+            .willReturn(List.of(new AccountProfile(10L, "login", "이름", "회사", false)));
 
         List<ShopAdminView> result = service.list(SUPER, ShopAdminStatus.PENDING, null);
 
@@ -261,7 +266,7 @@ class ShopAdminManagementServiceTest {
     void 목록은_소속없는_합류_신청자의_회사명을_회사_배치_조회로_채운다() {
         given(memberRepository.findAll(null)).willReturn(List.of(member(ShopAdminStatus.PENDING)));
         given(identityVerifier.getAccounts(List.of(10L)))
-            .willReturn(List.of(new AccountProfile(10L, "login", "이름", null)));
+            .willReturn(List.of(new AccountProfile(10L, "login", "이름", null, false)));
         given(identityVerifier.getCompanyNames(List.of(7L))).willReturn(Map.of(7L, "신청 회사"));
 
         assertThat(service.list(SUPER, null, null).get(0).companyName()).isEqualTo("신청 회사");
@@ -271,7 +276,7 @@ class ShopAdminManagementServiceTest {
     void 회사명_조회가_실패해도_목록은_반환된다() {
         given(memberRepository.findAll(null)).willReturn(List.of(member(ShopAdminStatus.PENDING)));
         given(identityVerifier.getAccounts(List.of(10L)))
-            .willReturn(List.of(new AccountProfile(10L, "login", "이름", null)));
+            .willReturn(List.of(new AccountProfile(10L, "login", "이름", null, false)));
         given(identityVerifier.getCompanyNames(any()))
             .willThrow(new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE));
 
@@ -626,5 +631,159 @@ class ShopAdminManagementServiceTest {
 
         assertCode(() -> service.remove(SUPER, 1L), ShopErrorCode.ACCESS_INVALID_TRANSITION);
         verify(memberRepository, never()).save(any());
+    }
+
+    private CreateMemberCommand createCmd(ShopRole role, Long companyId, Set<Long> brandIds) {
+        return new CreateMemberCommand("brand01", "홍길동", "010-1234-5678", null, role, companyId, brandIds);
+    }
+
+    private void accountWillBeCreated() {
+        given(identityRegistrar.createManagedAccount(any(ManagedAccountCommand.class)))
+            .willReturn(new VerifiedIdentity(70L, "brand01", "홍길동", 7L, "회사", false, true, false, false));
+        given(memberRepository.save(any(ShopAdminMember.class))).willAnswer(inv -> {
+            ShopAdminMember m = inv.getArgument(0);
+            return ShopAdminMember.of(77L, m.getAdminId(), m.getCompanyId(), m.getRole(), m.getRequestedRole(),
+                m.getStatus(), m.getRequestedAt(), m.getProcessedAt(), m.getProcessedBy(), null);
+        });
+    }
+
+    @Test
+    void 파트너는_자기_회사에_브랜드_관리자를_만들고_브랜드가_배정된다() {
+        partnerActorIsApproved();
+        given(memberRepository.existsApprovedByCompanyId(7L)).willReturn(true);
+        given(brandRepository.findAllByCompanyId(7L)).willReturn(List.of(brand(1L, 7L), brand(2L, 7L)));
+        accountWillBeCreated();
+
+        Long id = service.create(PARTNER, createCmd(ShopRole.BRAND_ADMIN, 999L, Set.of(1L)));
+
+        assertThat(id).isEqualTo(77L);
+        verify(identityRegistrar).createManagedAccount(
+            new ManagedAccountCommand("brand01", "홍길동", "010-1234-5678", null, 7L));
+        verify(brandMemberRepository).replaceAssignments(eq(77L), eq(Set.of(1L)), any());
+        org.mockito.ArgumentCaptor<ShopAdminMember> captor = org.mockito.ArgumentCaptor.forClass(ShopAdminMember.class);
+        verify(memberRepository).save(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(ShopAdminStatus.APPROVED);
+        assertThat(captor.getValue().getRole()).isEqualTo(ShopRole.BRAND_ADMIN);
+        assertThat(captor.getValue().getCompanyId()).isEqualTo(7L);
+        assertThat(captor.getValue().getProcessedBy()).isEqualTo(50L);
+    }
+
+    @Test
+    void 슈퍼관리자는_회사를_지정해_파트너_관리자를_만들면_브랜드_배정은_비어있다() {
+        accountWillBeCreated();
+
+        service.create(SUPER, createCmd(ShopRole.PARTNER_ADMIN, 7L, Set.of(1L)));
+
+        verify(identityRegistrar).createManagedAccount(
+            new ManagedAccountCommand("brand01", "홍길동", "010-1234-5678", null, 7L));
+        verify(brandMemberRepository).replaceAssignments(eq(77L), eq(Set.of()), any());
+    }
+
+    @Test
+    void 슈퍼관리자는_회사를_지정해야_한다() {
+        assertCode(() -> service.create(SUPER, createCmd(ShopRole.PARTNER_ADMIN, null, null)),
+            ShopErrorCode.MEMBER_COMPANY_REQUIRED);
+        verifyNoInteractions(identityRegistrar);
+    }
+
+    @Test
+    void 브랜드_관리자는_계정을_만들_수_없다() {
+        assertCode(() -> service.create(BRAND_ADMIN_ACTOR, createCmd(ShopRole.BRAND_ADMIN, 7L, Set.of(1L))),
+            ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
+        verifyNoInteractions(identityRegistrar);
+    }
+
+    @Test
+    void 슈퍼관리자_역할은_부여할_수_없다() {
+        partnerActorIsApproved();
+
+        assertCode(() -> service.create(PARTNER, createCmd(ShopRole.SUPER_ADMIN, null, null)),
+            ShopErrorCode.ACCESS_ROLE_NOT_ASSIGNABLE);
+        assertCode(() -> service.create(PARTNER, createCmd(null, null, null)),
+            ShopErrorCode.ACCESS_ROLE_NOT_ASSIGNABLE);
+        verifyNoInteractions(identityRegistrar);
+    }
+
+    @Test
+    void 회사의_첫_멤버는_파트너_관리자여야_한다() {
+        given(memberRepository.existsApprovedByCompanyId(7L)).willReturn(false);
+
+        assertCode(() -> service.create(SUPER, createCmd(ShopRole.BRAND_ADMIN, 7L, Set.of(1L))),
+            ShopErrorCode.ACCESS_FIRST_MEMBER_MUST_BE_PARTNER);
+        verifyNoInteractions(identityRegistrar);
+    }
+
+    @Test
+    void 브랜드_관리자는_브랜드를_1개_이상_지정해야_한다() {
+        partnerActorIsApproved();
+        given(memberRepository.existsApprovedByCompanyId(7L)).willReturn(true);
+
+        assertCode(() -> service.create(PARTNER, createCmd(ShopRole.BRAND_ADMIN, null, Set.of())),
+            ShopErrorCode.MEMBER_BRAND_REQUIRED);
+        verifyNoInteractions(identityRegistrar);
+    }
+
+    @Test
+    void 다른_회사_브랜드는_지정할_수_없고_계정도_만들지_않는다() {
+        partnerActorIsApproved();
+        given(memberRepository.existsApprovedByCompanyId(7L)).willReturn(true);
+        given(brandRepository.findAllByCompanyId(7L)).willReturn(List.of(brand(1L, 7L)));
+
+        assertCode(() -> service.create(PARTNER, createCmd(ShopRole.BRAND_ADMIN, null, Set.of(1L, 55L))),
+            ShopErrorCode.MEMBER_BRAND_INVALID);
+        verifyNoInteractions(identityRegistrar);
+    }
+
+    @Test
+    void 아이디가_중복이면_멤버를_저장하지_않는다() {
+        partnerActorIsApproved();
+        given(identityRegistrar.createManagedAccount(any(ManagedAccountCommand.class)))
+            .willThrow(new ShopBusinessException(ShopErrorCode.SIGNUP_LOGIN_ID_DUPLICATED));
+
+        assertCode(() -> service.create(PARTNER, createCmd(ShopRole.PARTNER_ADMIN, null, null)),
+            ShopErrorCode.SIGNUP_LOGIN_ID_DUPLICATED);
+        verify(memberRepository, never()).save(any());
+    }
+
+    @Test
+    void 파트너는_자기_회사_멤버의_비밀번호_설정을_재발급한다() {
+        partnerActorIsApproved();
+        given(memberRepository.findById(8L)).willReturn(Optional.of(approvedMember(8L, 80L, 7L, ShopRole.BRAND_ADMIN)));
+
+        service.reissuePasswordSetup(PARTNER, 8L);
+
+        verify(identityRegistrar).reissuePasswordSetup(80L);
+    }
+
+    @Test
+    void 다른_회사_멤버의_재발급은_거부한다() {
+        partnerActorIsApproved();
+        given(memberRepository.findById(8L)).willReturn(Optional.of(approvedMember(8L, 80L, 8L, ShopRole.BRAND_ADMIN)));
+
+        assertCode(() -> service.reissuePasswordSetup(PARTNER, 8L), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
+        verifyNoInteractions(identityRegistrar);
+    }
+
+    @Test
+    void 승인되지_않은_멤버의_재발급은_거부한다() {
+        given(memberRepository.findById(8L)).willReturn(Optional.of(pendingMember(8L, 80L, 7L, ShopRole.BRAND_ADMIN)));
+
+        assertCode(() -> service.reissuePasswordSetup(SUPER, 8L), ShopErrorCode.MEMBER_NOT_APPROVED);
+        verifyNoInteractions(identityRegistrar);
+    }
+
+    @Test
+    void 브랜드_관리자는_재발급할_수_없다() {
+        assertCode(() -> service.reissuePasswordSetup(BRAND_ADMIN_ACTOR, 8L), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
+        verifyNoInteractions(identityRegistrar);
+    }
+
+    @Test
+    void 목록은_비밀번호_설정_대기_여부를_노출한다() {
+        given(memberRepository.findAll(null)).willReturn(List.of(member(ShopAdminStatus.APPROVED)));
+        given(identityVerifier.getAccounts(List.of(10L)))
+            .willReturn(List.of(new AccountProfile(10L, "login", "이름", "회사", true)));
+
+        assertThat(service.list(SUPER, null, null).get(0).passwordSetupPending()).isTrue();
     }
 }

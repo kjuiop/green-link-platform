@@ -5,6 +5,9 @@ public enum ShopErrorCode implements ErrorCode {
     AUTH_INVALID_CREDENTIALS(401, "SHOP_AUTH_001", "아이디 또는 비밀번호가 올바르지 않습니다."),
     AUTH_ACCOUNT_INACTIVE(403, "SHOP_AUTH_002", "사용할 수 없는 계정입니다."),
     AUTH_UPSTREAM_UNAVAILABLE(503, "SHOP_AUTH_003", "계정 확인 서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요."),
+    AUTH_PASSWORD_NOT_SET(403, "SHOP_AUTH_004", "비밀번호가 아직 설정되지 않은 계정입니다. 비밀번호를 설정해주세요."),
+    AUTH_PASSWORD_SETUP_FAILED(400, "SHOP_AUTH_005", "설정할 수 없습니다. 아이디·휴대폰 번호·설정 기간을 확인해주세요."),
+    AUTH_PASSWORD_SETUP_NOT_PENDING(409, "SHOP_AUTH_006", "이미 비밀번호가 설정된 계정입니다."),
     ACCESS_ALREADY_REQUESTED(409, "SHOP_ACCESS_001", "이미 접근 신청했거나 승인된 계정입니다."),
     ACCESS_INVALID_TRANSITION(409, "SHOP_ACCESS_002", "처리할 수 없는 상태입니다."),
     ACCESS_REJECT_REASON_REQUIRED(400, "SHOP_ACCESS_003", "거절 사유를 입력해주세요."),
@@ -28,7 +31,8 @@ public enum ShopErrorCode implements ErrorCode {
     SIGNUP_RATE_LIMITED(429, "SHOP_SIGNUP_001", "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."),
     SIGNUP_LOGIN_ID_DUPLICATED(409, "SHOP_SIGNUP_002", "이미 사용 중인 아이디입니다."),
     SIGNUP_BUSINESS_NO_REGISTERED(409, "SHOP_SIGNUP_003", "이미 등록된 사업자번호입니다."),
-    SIGNUP_INVALID_INPUT(400, "SHOP_SIGNUP_004", "입력값을 확인해주세요.");
+    SIGNUP_INVALID_INPUT(400, "SHOP_SIGNUP_004", "입력값을 확인해주세요."),
+    MEMBER_COMPANY_REQUIRED(400, "SHOP_MEMBER_005", "계정을 만들 회사를 지정해주세요.");
 
     private final int status;
     private final String code;

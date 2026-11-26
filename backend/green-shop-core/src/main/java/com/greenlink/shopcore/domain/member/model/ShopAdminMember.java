@@ -44,6 +44,21 @@ public class ShopAdminMember {
         return m;
     }
 
+    public static ShopAdminMember createApproved(Long adminId, Long companyId, ShopRole role,
+                                                 Long processedBy, LocalDateTime now) {
+        requireAssignable(role);
+        ShopAdminMember m = new ShopAdminMember();
+        m.adminId = adminId;
+        m.companyId = companyId;
+        m.role = role;
+        m.requestedRole = role;
+        m.status = ShopAdminStatus.APPROVED;
+        m.requestedAt = now;
+        m.processedAt = now;
+        m.processedBy = processedBy;
+        return m;
+    }
+
     public static ShopAdminMember of(Long id, Long adminId, Long companyId, ShopRole role, ShopRole requestedRole,
                                      ShopAdminStatus status, LocalDateTime requestedAt, LocalDateTime processedAt,
                                      Long processedBy, String rejectReason) {

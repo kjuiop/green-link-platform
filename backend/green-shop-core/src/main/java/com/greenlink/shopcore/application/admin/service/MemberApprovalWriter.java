@@ -26,4 +26,11 @@ public class MemberApprovalWriter {
         memberRepository.save(member);
         brandMemberRepository.replaceAssignments(member.getId(), brandIds, now);
     }
+
+    @Transactional
+    public Long saveNew(ShopAdminMember member, Set<Long> brandIds, LocalDateTime now) {
+        ShopAdminMember saved = memberRepository.save(member);
+        brandMemberRepository.replaceAssignments(saved.getId(), brandIds, now);
+        return saved.getId();
+    }
 }
