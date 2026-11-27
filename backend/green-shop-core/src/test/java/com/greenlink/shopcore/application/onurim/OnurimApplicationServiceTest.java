@@ -6,6 +6,8 @@ import com.greenlink.shopcore.application.onurim.dto.OnurimApplicationStatus;
 import com.greenlink.shopcore.application.onurim.dto.OnurimApplicationView;
 import com.greenlink.shopcore.application.onurim.dto.OnurimApplyCommand;
 import com.greenlink.shopcore.application.onurim.dto.OnurimCompanyType;
+import com.greenlink.shopcore.application.onurim.dto.OnurimDocument;
+import com.greenlink.shopcore.application.onurim.dto.OnurimDocumentRequirement;
 import com.greenlink.shopcore.application.onurim.port.OnurimApplicationGateway;
 import com.greenlink.shopcore.application.onurim.service.OnurimApplicationService;
 import com.greenlink.shopcore.domain.auth.ShopRole;
@@ -48,7 +50,7 @@ class OnurimApplicationServiceTest {
 
     private static OnurimApplyCommand command() {
         return new OnurimApplyCommand(OnurimCompanyType.BOTH, "02-111-2222", "서울시 강남구", null, null, null,
-            null, null, null, null, List.of());
+            null, null, null, null, List.of(), null, null);
     }
 
     private static OnurimApplicationView view(OnurimApplicationStatus status) {
@@ -123,5 +125,38 @@ class OnurimApplicationServiceTest {
         given(gateway.findLatest(7L)).willReturn(Optional.empty());
 
         assertThat(service.getLatest(PARTNER)).isEmpty();
+    }
+
+    @Test
+    void 서류가_담긴_신청도_그대로_게이트웨이로_위임된다() {
+        approvedPartner(50L, 7L);
+        OnurimDocument biz = new OnurimDocument("biz.png", "image/png", new byte[]{1});
+        OnurimDocument bank = new OnurimDocument("bank.pdf", "application/pdf", new byte[]{2});
+        OnurimApplyCommand cmd = new OnurimApplyCommand(OnurimCompanyType.BOTH, "02-111-2222", "서울시 강남구", null,
+            null, null, null, null, null, null, List.of(), biz, bank);
+        given(gateway.apply(50L, 7L, cmd)).willReturn(view(OnurimApplicationStatus.PENDING));
+
+        service.apply(PARTNER, cmd);
+
+        verify(gateway).apply(50L, 7L, cmd);
+    }
+
+    @Test
+    void 서류_필요_여부는_DB_기준_회사로_조회한다() {
+        approvedPartner(50L, 7L);
+        given(gateway.getDocumentRequirement(50L, 7L)).willReturn(new OnurimDocumentRequirement(true, false));
+
+        OnurimDocumentRequirement result = service.getDocumentRequirement(new ManagementActor(50L, 999L, ShopRole.PARTNER_ADMIN));
+
+        assertThat(result.needsBusinessReg()).isTrue();
+        assertThat(result.needsBankBook()).isFalse();
+    }
+
+    @Test
+    void 서류_필요_여부_조회도_파트너_관리자만_가능하다() {
+        assertThatThrownBy(() -> service.getDocumentRequirement(new ManagementActor(60L, 7L, ShopRole.BRAND_ADMIN)))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.ACCESS_MANAGE_FORBIDDEN));
+        verifyNoInteractions(gateway);
     }
 }

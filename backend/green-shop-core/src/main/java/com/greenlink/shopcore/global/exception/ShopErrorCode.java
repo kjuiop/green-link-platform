@@ -35,7 +35,11 @@ public enum ShopErrorCode implements ErrorCode {
     MEMBER_COMPANY_REQUIRED(400, "SHOP_MEMBER_005", "계정을 만들 회사를 지정해주세요."),
     ONURIM_ALREADY_ENABLED(409, "SHOP_ONURIM_001", "이미 온우림을 이용 중인 회사입니다."),
     ONURIM_APPLICATION_ALREADY_PENDING(409, "SHOP_ONURIM_002", "심사 중인 신청이 이미 있습니다."),
-    ONURIM_APPLICATION_INVALID(400, "SHOP_ONURIM_003", "신청 내용을 확인해주세요. (이용 유형, 연락처, 주소는 필수입니다.)");
+    ONURIM_APPLICATION_INVALID(400, "SHOP_ONURIM_003", "신청 내용을 확인해주세요. (이용 유형, 연락처, 주소는 필수입니다.)"),
+    ONURIM_DOCUMENT_REQUIRED(400, "SHOP_ONURIM_004", "사업자등록증 사본과 통장 사본 중 등록되지 않은 서류를 첨부해주세요."),
+    ONURIM_DOCUMENT_NOT_ALLOWED(400, "SHOP_ONURIM_005", "이미 등록된 서류는 다시 첨부할 수 없습니다. 화면을 새로고침해주세요."),
+    ONURIM_DOCUMENT_INVALID(400, "SHOP_ONURIM_006", "이미지(JPG, PNG, WEBP, GIF, HEIC) 또는 PDF 파일만, 10MB 이하로 첨부할 수 있습니다."),
+    ONURIM_DOCUMENT_UPLOAD_FAILED(502, "SHOP_ONURIM_007", "서류 업로드에 실패했습니다. 잠시 후 다시 시도해주세요.");
 
     private final int status;
     private final String code;

@@ -2,6 +2,7 @@ package com.greenlink.shop.adapter.in.web.dto;
 
 import com.greenlink.shopcore.application.onurim.dto.OnurimApplyCommand;
 import com.greenlink.shopcore.application.onurim.dto.OnurimCompanyType;
+import com.greenlink.shopcore.application.onurim.dto.OnurimDocument;
 import com.greenlink.shopcore.application.onurim.dto.OnurimRegion;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -30,10 +31,10 @@ public record OnurimApplicationRequest(
         @Size(max = 30) @Pattern(regexp = "[^,|]*") String sigungu
     ) {}
 
-    public OnurimApplyCommand toCommand() {
+    public OnurimApplyCommand toCommand(OnurimDocument businessDoc, OnurimDocument bankDoc) {
         List<OnurimRegion> mapped = regions == null ? List.of()
             : regions.stream().map(r -> new OnurimRegion(r.sido(), r.sigungu())).toList();
         return new OnurimApplyCommand(desiredType, companyPhone, address, detailAddress, taxInvoiceEmail, memo,
-            faxNumber, bankName, accountNumber, accountHolder, mapped);
+            faxNumber, bankName, accountNumber, accountHolder, mapped, businessDoc, bankDoc);
     }
 }

@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { applyOnurim, fetchOnurimApplication } from '@/lib/api/onurimApi'
-import type { OnurimApplication, OnurimApplyForm, OnurimCompanyType } from '@/types/onurim'
+import { applyOnurim, fetchOnurimApplication, fetchOnurimDocumentRequirement } from '@/lib/api/onurimApi'
+import { compressImage } from '@/lib/imageCompress'
+import type { OnurimApplication, OnurimApplyDocuments, OnurimApplyForm, OnurimCompanyType, OnurimDocumentRequirement } from '@/types/onurim'
 
 const TYPE_LABEL: Record<OnurimCompanyType, string> = {
   ORDERING: '발주',
@@ -21,6 +22,8 @@ const TYPE_HINT: Record<OnurimCompanyType, string> = {
 }
 
 const MAX_REGIONS = 20
+const MAX_TOTAL_BYTES = 4 * 1024 * 1024
+const MAX_FILE_BYTES = 10 * 1024 * 1024
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const EMPTY_FORM: OnurimApplyForm = {
@@ -35,6 +38,12 @@ const EMPTY_FORM: OnurimApplyForm = {
   accountNumber: '',
   accountHolder: '',
   regions: [],
+}
+
+const NO_DOCS: OnurimApplyDocuments = { businessDoc: null, bankDoc: null }
+
+function formatSize(bytes: number): string {
+  return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.ceil(bytes / 1024)}KB`
 }
 
 function formatDate(value: string | null): string {
@@ -60,6 +69,8 @@ export default function OnurimApplicationPage() {
   const [reapplying, setReapplying] = useState(false)
 
   const [form, setForm] = useState<OnurimApplyForm>(EMPTY_FORM)
+  const [docReq, setDocReq] = useState<OnurimDocumentRequirement | null | undefined>(undefined)
+  const [docs, setDocs] = useState<OnurimApplyDocuments>(NO_DOCS)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -75,12 +86,34 @@ export default function OnurimApplicationPage() {
     return () => { cancelled = true }
   }, [reloadKey])
 
-  const includesVendor = form.desiredType === 'VENDOR' || form.desiredType === 'BOTH'
   const showForm = application === null || (application?.status === 'REJECTED' && reapplying)
+
+  useEffect(() => {
+    if (!showForm) return
+    let cancelled = false
+    fetchOnurimDocumentRequirement()
+      .then((result) => { if (!cancelled) setDocReq(result) })
+      .catch(() => { if (!cancelled) setDocReq(null) })
+    return () => { cancelled = true }
+  }, [showForm, reloadKey])
+
+  const includesVendor = form.desiredType === 'VENDOR' || form.desiredType === 'BOTH'
 
   function update<K extends keyof OnurimApplyForm>(key: K, value: OnurimApplyForm[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
     setError('')
+  }
+
+  async function pickDoc(key: keyof OnurimApplyDocuments, file: File | null) {
+    setError('')
+    if (!file) return setDocs((prev) => ({ ...prev, [key]: null }))
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+      return setError('이미지 또는 PDF 파일만 첨부할 수 있습니다.')
+    }
+    if (file.size > MAX_FILE_BYTES * 5) return setError('파일이 너무 큽니다. 10MB 이하 파일을 선택하세요.')
+    const prepared = await compressImage(file)
+    if (prepared.size > MAX_FILE_BYTES) return setError('파일은 10MB 이하만 첨부할 수 있습니다.')
+    setDocs((prev) => ({ ...prev, [key]: prepared }))
   }
 
   function updateRegion(index: number, key: 'sido' | 'sigungu', value: string) {
@@ -95,6 +128,18 @@ export default function OnurimApplicationPage() {
       return setError('세금계산서 이메일 형식을 확인하세요.')
     }
 
+    if (docReq === undefined || docReq === null) return setError('서류 정보를 불러온 뒤 다시 시도하세요.')
+    if (docReq.needsBusinessReg && !docs.businessDoc) return setError('사업자등록증 사본을 첨부하세요.')
+    if (docReq.needsBankBook && !docs.bankDoc) return setError('통장 사본을 첨부하세요.')
+    const attached: OnurimApplyDocuments = {
+      businessDoc: docReq.needsBusinessReg ? docs.businessDoc : null,
+      bankDoc: docReq.needsBankBook ? docs.bankDoc : null,
+    }
+    const totalBytes = (attached.businessDoc?.size ?? 0) + (attached.bankDoc?.size ?? 0)
+    if (totalBytes > MAX_TOTAL_BYTES) {
+      return setError(`첨부 파일 합계가 ${formatSize(totalBytes)}입니다. 합계 4MB 이하로 줄여 첨부하세요.`)
+    }
+
     const payload: OnurimApplyForm = {
       ...form,
       taxInvoiceEmail: form.taxInvoiceEmail.trim(),
@@ -104,9 +149,11 @@ export default function OnurimApplicationPage() {
     setBusy(true)
     setError('')
     try {
-      await applyOnurim(payload)
+      await applyOnurim(payload, attached)
       setReapplying(false)
       setForm(EMPTY_FORM)
+      setDocs(NO_DOCS)
+      setDocReq(undefined)
       setApplication(undefined)
       setReloadKey((key) => key + 1)
     } catch (e) {
@@ -279,6 +326,40 @@ export default function OnurimApplicationPage() {
                   </div>
                 )}
 
+                {docReq === null && (
+                  <p className="text-xs text-red-500">서류 정보를 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도하세요.</p>
+                )}
+                {docReq && (docReq.needsBusinessReg || docReq.needsBankBook) && (
+                  <div className="space-y-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+                    <p className="text-sm font-semibold text-gray-700">서류 첨부</p>
+                    <p className="text-xs text-gray-500">
+                      회사에 아직 등록되지 않은 서류만 첨부합니다. 이미지 또는 PDF, 첨부 파일 합계 4MB 이하(큰 사진은 자동으로 줄여집니다).
+                    </p>
+                    {docReq.needsBusinessReg && (
+                      <Field label="사업자등록증 사본" required>
+                        <Input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          disabled={busy}
+                          onChange={(e) => { void pickDoc('businessDoc', e.target.files?.[0] ?? null); e.target.value = '' }}
+                        />
+                        {docs.businessDoc && <span className="text-xs text-gray-500">{docs.businessDoc.name} ({formatSize(docs.businessDoc.size)})</span>}
+                      </Field>
+                    )}
+                    {docReq.needsBankBook && (
+                      <Field label="통장 사본" required>
+                        <Input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          disabled={busy}
+                          onChange={(e) => { void pickDoc('bankDoc', e.target.files?.[0] ?? null); e.target.value = '' }}
+                        />
+                        {docs.bankDoc && <span className="text-xs text-gray-500">{docs.bankDoc.name} ({formatSize(docs.bankDoc.size)})</span>}
+                      </Field>
+                    )}
+                  </div>
+                )}
+
                 <Field label="메모">
                   <textarea
                     className="min-h-20 w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -293,11 +374,11 @@ export default function OnurimApplicationPage() {
 
                 <div className="flex justify-end gap-2">
                   {reapplying && (
-                    <Button variant="outline" disabled={busy} onClick={() => { setReapplying(false); setError('') }}>
+                    <Button variant="outline" disabled={busy} onClick={() => { setReapplying(false); setDocReq(undefined); setDocs(NO_DOCS); setError('') }}>
                       취소
                     </Button>
                   )}
-                  <Button className="bg-green-700 hover:bg-green-800" disabled={busy} onClick={handleSubmit}>
+                  <Button className="bg-green-700 hover:bg-green-800" disabled={busy || !docReq} onClick={handleSubmit}>
                     {busy ? '신청 중...' : '신청하기'}
                   </Button>
                 </div>

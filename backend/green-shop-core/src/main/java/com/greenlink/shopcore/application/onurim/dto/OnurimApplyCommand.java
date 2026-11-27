@@ -13,5 +13,7 @@ public record OnurimApplyCommand(
     String bankName,
     String accountNumber,
     String accountHolder,
-    List<OnurimRegion> regions
+    List<OnurimRegion> regions,
+    OnurimDocument businessDoc,
+    OnurimDocument bankDoc
 ) {}
