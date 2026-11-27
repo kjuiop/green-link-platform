@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { saveSession } from '@/lib/session'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -31,7 +32,7 @@ export default function LoginPage() {
         setError(data.message ?? '아이디 또는 비밀번호가 올바르지 않습니다.')
         return
       }
-      const { accessToken, name, vendorId, companyName } = await res.json()
+      const { accessToken, name, vendorId, companyName, role, companyType } = await res.json()
       localStorage.setItem('accessToken', accessToken)
       if (name) localStorage.setItem('name', name)
       localStorage.removeItem('vendorId')
@@ -39,18 +40,9 @@ export default function LoginPage() {
       if (vendorId != null) localStorage.setItem('vendorId', String(vendorId))
       if (companyName) localStorage.setItem('companyName', companyName)
       localStorage.setItem('loginId', loginId)
-      let role = ''
-      try {
-        const base64 = accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-        const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
-        const payload = JSON.parse(atob(padded))
-        const roles: string[] = payload.roles ?? []
-        role = roles[0]?.replace('ROLE_', '') ?? ''
-        if (role) localStorage.setItem('role', role)
-      } catch {
-        // JWT 디코드 실패해도 로그인은 계속 진행
-      }
-      router.push(role === 'VENDOR' ? '/vendor/dashboard' : '/dashboard')
+      saveSession(role, companyType)
+      const vendorOnly = role === 'PARTNER_ADMIN' && companyType === 'VENDOR'
+      router.push(vendorOnly ? '/vendor/dashboard' : '/dashboard')
     } catch {
       setError('서버 연결에 실패했습니다.')
     } finally {

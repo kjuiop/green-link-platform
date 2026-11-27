@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { fetchOrders } from '@/lib/api/orderApi'
 import { Order } from '@/types/order'
+import { getViewRole } from '@/lib/session'
 
 export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([])
@@ -11,7 +12,7 @@ export default function DashboardPage() {
   const [role, setRole] = useState<string | null>(null)
 
   useEffect(() => {
-    setRole(localStorage.getItem('role') ?? 'SUPER_ADMIN')
+    setRole(getViewRole() || 'SUPER_ADMIN')
     fetchOrders()
       .then(setOrders)
       .catch(() => {})

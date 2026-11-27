@@ -13,6 +13,7 @@ import { fetchAdminPointList, fetchMyPoint } from '@/lib/api/pointApi'
 import VendorSelectModal from '@/components/common/VendorSelectModal'
 import { fetchCoupangOrder, approveCoupangOrder, CoupangOrder } from '@/lib/api/coupangApi'
 import { fetchShopOrder, approveShopOrder, type ShopOrder } from '@/lib/api/shopApi'
+import { isSuperAdmin as sessionIsSuperAdmin } from '@/lib/session'
 
 
 export default function NewOrderPage() {
@@ -104,8 +105,7 @@ export default function NewOrderPage() {
   }, [roleChecked, isSuperAdmin, orderingCompanyId])
 
   useEffect(() => {
-    const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null
-    if (role === 'SUPER_ADMIN') {
+    if (sessionIsSuperAdmin()) {
       setIsSuperAdmin(true)
       fetchOrderingCompanies().then(setOrderingCompanies).catch(() => {})
     }

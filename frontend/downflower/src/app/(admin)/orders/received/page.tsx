@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AcceptOrderBadge, AcceptOrderButton, RejectOrderButton, OrderStatusBadge, AdjustmentRequestBadge } from '@/components/common/StatusBadge'
 import { ClickableMessageBadge } from '@/components/common/DeliveryPhotoCell'
+import { canOrder, canReceive, isSuperAdmin as sessionIsSuperAdmin } from '@/lib/session'
 import { fetchOrdersPaged, downloadOrdersExcel, updateOrderStatus, OrderSearchParams } from '@/lib/api/orderApi'
 import { PageResult } from '@/types/page'
 import { Pagination } from '@/components/ui/Pagination'
@@ -31,7 +32,7 @@ const STATUS_TO_API: Partial<Record<OrderStatus, string>> = {
   '주문취소': 'CANCELLED',
 }
 
-type StringOrderSearchKey = { [K in keyof OrderSearchParams]: OrderSearchParams[K] extends string | undefined ? K : never }[keyof OrderSearchParams]
+type StringOrderSearchKey = Exclude<{ [K in keyof OrderSearchParams]: OrderSearchParams[K] extends string | undefined ? K : never }[keyof OrderSearchParams], 'view'>
 const SERVER_FIELD_MAP: Partial<Record<SearchField, StringOrderSearchKey>> = {
   '주문번호': 'orderNumber',
   '주문자': 'ordererName',
@@ -123,9 +124,8 @@ export default function ReceivedOrdersPage() {
   const [completedAtFrom, setCompletedAtFrom] = useState('')
   const [completedAtTo, setCompletedAtTo] = useState('')
 
-  const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null
-  const isSuperAdmin = role === 'SUPER_ADMIN'
-  const canSeeMsgTime = isSuperAdmin || role === 'ORDERING'
+  const isSuperAdmin = typeof window !== 'undefined' && sessionIsSuperAdmin()
+  const canSeeMsgTime = isSuperAdmin || (typeof window !== 'undefined' && canOrder() && !canReceive())
 
   const [msgTimeSortDir, setMsgTimeSortDir] = useState<'asc' | 'desc' | null>(null)
 
@@ -157,7 +157,7 @@ export default function ReceivedOrdersPage() {
   }
 
   function buildServerParams(fromDate = dateFrom, toDate = dateTo): OrderSearchParams {
-    const params: OrderSearchParams = {}
+    const params: OrderSearchParams = { view: 'VENDOR' }
     if (statusFilter !== 'ALL') params.status = STATUS_TO_API[statusFilter]
     if (msgStatusFilter !== 'ALL') params.messageStatus = msgStatusFilter
     if (fromDate) params.deliveryDateFrom = fromDate

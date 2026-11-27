@@ -1,11 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AdminSidebar } from '@/components/layout/AdminSidebar'
 import { Header } from '@/components/layout/Header'
+import { clearSession, hasCurrentSession } from '@/lib/session'
 
 export default function VendorLayout({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false)
+
+  useEffect(() => {
+    if (!hasCurrentSession()) {
+      localStorage.removeItem('accessToken')
+      clearSession()
+      window.location.href = '/login'
+    }
+  }, [])
 
   return (
     <div className="flex h-screen overflow-hidden">

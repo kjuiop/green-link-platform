@@ -4,9 +4,10 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Paperclip, X } from 'lucide-react'
 import { createPost } from '@/lib/api/postApi'
+import { isSuperAdmin as sessionIsSuperAdmin } from '@/lib/session'
 
 function isSuperAdmin(): boolean {
-  return typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
+  return typeof window !== 'undefined' && sessionIsSuperAdmin()
 }
 
 export default function CommunityNewPage() {

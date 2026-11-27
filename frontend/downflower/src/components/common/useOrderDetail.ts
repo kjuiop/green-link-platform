@@ -10,6 +10,7 @@ import {
 } from '@/lib/api/orderApi'
 import { Order, PriceAdjustment } from '@/types/order'
 import { orderTotalOf } from '@/lib/utils/orderAmount'
+import { canOrder, isSuperAdmin as sessionIsSuperAdmin, isVendorSideOf } from '@/lib/session'
 
 export type AdjustDialogMode = 'request' | 'decide' | 'confirmAccept' | 'reject'
 
@@ -32,11 +33,11 @@ export function useOrderDetail(orderId: string, { onUpdated, onClose }: Options)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const isSuperAdmin = typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
-  const role = typeof window === 'undefined' ? null : localStorage.getItem('role')
-  const canEdit = role !== 'VENDOR'
-  const canRequestAdjust = role === 'SUPER_ADMIN' || role === 'ORDERING'
-  const canDecideAdjust = role === 'SUPER_ADMIN' || role === 'VENDOR'
+  const isSuperAdmin = typeof window !== 'undefined' && sessionIsSuperAdmin()
+  const vendorSide = typeof window !== 'undefined' && order !== null && isVendorSideOf(order)
+  const canEdit = !vendorSide
+  const canRequestAdjust = isSuperAdmin || (typeof window !== 'undefined' && canOrder() && !vendorSide)
+  const canDecideAdjust = isSuperAdmin || vendorSide
   const [saveError, setSaveError] = useState<string | null>(null)
   const [receiptConfirmation, setReceiptConfirmation] = useState<ReceiptConfirmationResult | null>(null)
   const [history, setHistory] = useState<OrderHistoryItem[]>([])
