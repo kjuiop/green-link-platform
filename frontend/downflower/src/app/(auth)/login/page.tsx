@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { saveSession } from '@/lib/session'
+import { isVendorOnly, saveSession } from '@/lib/session'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -41,8 +41,7 @@ export default function LoginPage() {
       if (companyName) localStorage.setItem('companyName', companyName)
       localStorage.setItem('loginId', loginId)
       saveSession(role, companyType)
-      const vendorOnly = role === 'PARTNER_ADMIN' && companyType === 'VENDOR'
-      router.push(vendorOnly ? '/vendor/dashboard' : '/dashboard')
+      router.push(isVendorOnly() ? '/vendor/dashboard' : '/dashboard')
     } catch {
       setError('서버 연결에 실패했습니다.')
     } finally {

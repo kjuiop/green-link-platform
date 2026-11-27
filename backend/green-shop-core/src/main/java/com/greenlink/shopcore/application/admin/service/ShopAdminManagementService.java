@@ -107,7 +107,7 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
             ? requireBrands(member.getCompanyId(), brandIds, true)
             : Set.of();
 
-        accessGranter.grant(member.getAdminId(), member.getCompanyId());
+        accessGranter.grant(member.getAdminId(), member.getCompanyId(), role);
 
         LocalDateTime now = LocalDateTime.now(clock);
         member.approve(role, actor.adminId(), now);
@@ -129,6 +129,7 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
         if (previousRole == ShopRole.PARTNER_ADMIN && newRole != ShopRole.PARTNER_ADMIN) {
             requireNotLastPartner(member);
         }
+        accessGranter.changeRole(member.getAdminId(), newRole);
         memberRepository.save(member);
         if (newRole == ShopRole.PARTNER_ADMIN) {
             brandMemberRepository.unassignAllByMemberId(member.getId(), LocalDateTime.now(clock));
@@ -180,7 +181,7 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
             : Set.of();
 
         VerifiedIdentity account = identityRegistrar.createManagedAccount(
-            new ManagedAccountCommand(cmd.loginId(), cmd.name(), cmd.phone(), cmd.email(), companyId));
+            new ManagedAccountCommand(cmd.loginId(), cmd.name(), cmd.phone(), cmd.email(), companyId, role));
 
         LocalDateTime now = LocalDateTime.now(clock);
         try {

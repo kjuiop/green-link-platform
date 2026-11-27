@@ -14,7 +14,7 @@ public class Admin {
     private String email;
     private Long companyId;
     private AdminStatus status;
-    private AdminRole role = AdminRole.PARTNER_ADMIN;
+    private AdminRole role;
     private boolean onurimEnabled = true;
     private String createdAt;
     private String deletedAt;
@@ -32,15 +32,6 @@ public class Admin {
         return a;
     }
 
-    public static Admin createOrdering(String loginId, String encodedPassword, Long companyId) {
-        Admin a = new Admin();
-        a.loginId = loginId;
-        a.password = encodedPassword;
-        a.companyId = companyId;
-        a.status = AdminStatus.ACTIVE;
-        return a;
-    }
-
     public static Admin createVendor(String loginId, String encodedPassword,
                                       String name, String phone, String email, Long companyId) {
         Admin a = new Admin();
@@ -51,6 +42,7 @@ public class Admin {
         a.email = email;
         a.companyId = companyId;
         a.status = AdminStatus.ACTIVE;
+        a.role = AdminRole.PARTNER_ADMIN;
         return a;
     }
 
@@ -60,19 +52,23 @@ public class Admin {
     }
 
     public static Admin createShopApplicant(String loginId, String encodedPassword,
-                                            String name, String phone, String email) {
+                                            String name, String phone, String email, AdminRole role) {
+        requireShopRole(role);
         Admin a = createVendor(loginId, encodedPassword, name, phone, email, null);
+        a.role = role;
         a.onurimEnabled = false;
         return a;
     }
 
     public static Admin createShopManaged(String loginId, String unusableEncodedPassword,
                                           String name, String phone, String email, Long companyId,
-                                          LocalDateTime setupExpiresAt) {
+                                          LocalDateTime setupExpiresAt, AdminRole role) {
         if (companyId == null || setupExpiresAt == null) {
             throw new IllegalArgumentException("companyId and setupExpiresAt are required");
         }
+        requireShopRole(role);
         Admin a = createVendor(loginId, unusableEncodedPassword, name, phone, email, companyId);
+        a.role = role;
         a.onurimEnabled = false;
         a.passwordSetupExpiresAt = setupExpiresAt;
         return a;
@@ -88,7 +84,14 @@ public class Admin {
         a.email = email;
         a.companyId = companyId;
         a.status = AdminStatus.PENDING;
+        a.role = AdminRole.PARTNER_ADMIN;
         return a;
+    }
+
+    private static void requireShopRole(AdminRole role) {
+        if (role != AdminRole.PARTNER_ADMIN && role != AdminRole.BRAND_ADMIN) {
+            throw new IllegalArgumentException("shop 계정 role은 PARTNER_ADMIN/BRAND_ADMIN만 가능합니다.");
+        }
     }
 
     public static Admin of(Long id, String loginId, String password, String name, String phone, String email,
@@ -109,6 +112,14 @@ public class Admin {
 
     public void enableOnurim() {
         this.onurimEnabled = true;
+    }
+
+    public void changeRole(AdminRole newRole) {
+        requireShopRole(newRole);
+        if (role == AdminRole.SUPER_ADMIN) {
+            throw new IllegalStateException("슈퍼관리자의 role은 변경할 수 없습니다.");
+        }
+        this.role = newRole;
     }
 
     public void restoreAccess(AdminRole role, boolean onurimEnabled) {

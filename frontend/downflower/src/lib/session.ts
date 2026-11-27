@@ -34,17 +34,22 @@ export function isSuperAdmin(): boolean {
   return getAdminRole() === 'SUPER_ADMIN'
 }
 
-/** 발주 능력: 슈퍼관리자이거나 파트너관리자의 회사 유형이 ORDERING/BOTH */
+function isCompanyAdmin(): boolean {
+  const role = getAdminRole()
+  return role === 'PARTNER_ADMIN' || role === 'BRAND_ADMIN'
+}
+
+/** 발주 능력: 슈퍼관리자이거나 파트너·브랜드 관리자의 회사 유형이 ORDERING/BOTH */
 export function canOrder(): boolean {
   if (isSuperAdmin()) return true
-  if (getAdminRole() !== 'PARTNER_ADMIN') return false
+  if (!isCompanyAdmin()) return false
   const type = getCompanyType()
   return type === 'ORDERING' || type === 'BOTH'
 }
 
-/** 수주 능력: 파트너관리자의 회사 유형이 VENDOR/BOTH (슈퍼관리자는 수주 관점이 아님) */
+/** 수주 능력: 파트너·브랜드 관리자의 회사 유형이 VENDOR/BOTH (슈퍼관리자는 수주 관점이 아님) */
 export function canReceive(): boolean {
-  if (getAdminRole() !== 'PARTNER_ADMIN') return false
+  if (!isCompanyAdmin()) return false
   const type = getCompanyType()
   return type === 'VENDOR' || type === 'BOTH'
 }

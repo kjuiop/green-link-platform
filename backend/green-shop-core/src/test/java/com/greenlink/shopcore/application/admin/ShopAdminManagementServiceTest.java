@@ -177,7 +177,7 @@ class ShopAdminManagementServiceTest {
         assertThat(m.getProcessedBy()).isEqualTo(99L);
         assertThat(m.getProcessedAt()).isEqualTo(NOW);
         InOrder order = inOrder(accessGranter, memberRepository);
-        order.verify(accessGranter).grant(10L, 7L);
+        order.verify(accessGranter).grant(10L, 7L, ShopRole.PARTNER_ADMIN);
         order.verify(memberRepository).save(m);
     }
 
@@ -191,6 +191,7 @@ class ShopAdminManagementServiceTest {
         service.approve(SUPER, 1L, ShopRole.BRAND_ADMIN, Set.of(100L));
 
         assertThat(m.getRole()).isEqualTo(ShopRole.BRAND_ADMIN);
+        verify(accessGranter).grant(10L, 7L, ShopRole.BRAND_ADMIN);
         verify(memberRepository).save(m);
     }
 
@@ -239,7 +240,7 @@ class ShopAdminManagementServiceTest {
     void 온우림_권한부여가_실패하면_멤버는_PENDING으로_남고_저장되지_않는다() {
         ShopAdminMember m = member(ShopAdminStatus.PENDING);
         given(memberRepository.findById(1L)).willReturn(Optional.of(m));
-        doThrow(new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE)).when(accessGranter).grant(10L, 7L);
+        doThrow(new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE)).when(accessGranter).grant(10L, 7L, ShopRole.PARTNER_ADMIN);
 
         assertCode(() -> service.approve(SUPER, 1L, null, null), ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
 
@@ -253,7 +254,7 @@ class ShopAdminManagementServiceTest {
         ShopAdminMember m = member(ShopAdminStatus.PENDING);
         given(memberRepository.findById(1L)).willReturn(Optional.of(m));
         doThrow(new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE))
-            .doNothing().when(accessGranter).grant(10L, 7L);
+            .doNothing().when(accessGranter).grant(10L, 7L, ShopRole.PARTNER_ADMIN);
 
         assertCode(() -> service.approve(SUPER, 1L, null, null), ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
         service.approve(SUPER, 1L, null, null);
@@ -356,7 +357,7 @@ class ShopAdminManagementServiceTest {
         service.approve(SUPER, 1L, null, Set.of(100L, 101L));
 
         InOrder order = inOrder(accessGranter, memberRepository, brandMemberRepository);
-        order.verify(accessGranter).grant(10L, 7L);
+        order.verify(accessGranter).grant(10L, 7L, ShopRole.BRAND_ADMIN);
         order.verify(memberRepository).save(m);
         order.verify(brandMemberRepository).replaceAssignments(1L, Set.of(100L, 101L), NOW);
     }
@@ -410,7 +411,7 @@ class ShopAdminManagementServiceTest {
         assertThat(m.getStatus()).isEqualTo(ShopAdminStatus.APPROVED);
         assertThat(m.getRole()).isEqualTo(ShopRole.PARTNER_ADMIN);
         assertThat(m.getProcessedBy()).isEqualTo(50L);
-        verify(accessGranter).grant(10L, 7L);
+        verify(accessGranter).grant(10L, 7L, ShopRole.PARTNER_ADMIN);
     }
 
     @Test
@@ -506,7 +507,9 @@ class ShopAdminManagementServiceTest {
         service.changeRole(PARTNER, 1L, ShopRole.PARTNER_ADMIN);
 
         assertThat(m.getRole()).isEqualTo(ShopRole.PARTNER_ADMIN);
-        verify(memberRepository).save(m);
+        InOrder order = inOrder(accessGranter, memberRepository);
+        order.verify(accessGranter).changeRole(10L, ShopRole.PARTNER_ADMIN);
+        order.verify(memberRepository).save(m);
         verify(brandMemberRepository).unassignAllByMemberId(1L, NOW);
     }
 
@@ -530,6 +533,31 @@ class ShopAdminManagementServiceTest {
 
         assertCode(() -> service.changeRole(SUPER, 1L, ShopRole.BRAND_ADMIN), ShopErrorCode.MEMBER_LAST_PARTNER);
         verify(memberRepository, never()).save(any());
+        verifyNoInteractions(accessGranter);
+    }
+
+    @Test
+    void 온우림_role_동기화가_실패하면_멤버_role은_저장되지_않는다() {
+        ShopAdminMember m = approvedMember(1L, 10L, 7L, ShopRole.BRAND_ADMIN);
+        given(memberRepository.findById(1L)).willReturn(Optional.of(m));
+        doThrow(new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE))
+            .when(accessGranter).changeRole(10L, ShopRole.PARTNER_ADMIN);
+
+        assertCode(() -> service.changeRole(SUPER, 1L, ShopRole.PARTNER_ADMIN), ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+
+        verify(memberRepository, never()).save(any());
+        verify(brandMemberRepository, never()).unassignAllByMemberId(any(), any());
+    }
+
+    @Test
+    void 슈퍼관리자_역할로는_변경할_수_없고_온우림도_호출하지_않는다() {
+        ShopAdminMember m = approvedMember(1L, 10L, 7L, ShopRole.BRAND_ADMIN);
+        given(memberRepository.findById(1L)).willReturn(Optional.of(m));
+
+        assertCode(() -> service.changeRole(SUPER, 1L, ShopRole.SUPER_ADMIN), ShopErrorCode.ACCESS_ROLE_NOT_ASSIGNABLE);
+
+        verify(memberRepository, never()).save(any());
+        verifyNoInteractions(accessGranter);
     }
 
     @Test
@@ -541,6 +569,7 @@ class ShopAdminManagementServiceTest {
         service.changeRole(SUPER, 1L, ShopRole.BRAND_ADMIN);
 
         assertThat(m.getRole()).isEqualTo(ShopRole.BRAND_ADMIN);
+        verify(accessGranter).changeRole(10L, ShopRole.BRAND_ADMIN);
         verify(memberRepository).save(m);
         verify(brandMemberRepository, never()).unassignAllByMemberId(any(), any());
     }
@@ -671,7 +700,7 @@ class ShopAdminManagementServiceTest {
 
         assertThat(id).isEqualTo(77L);
         verify(identityRegistrar).createManagedAccount(
-            new ManagedAccountCommand("brand01", "홍길동", "010-1234-5678", null, 7L));
+            new ManagedAccountCommand("brand01", "홍길동", "010-1234-5678", null, 7L, ShopRole.BRAND_ADMIN));
         verify(brandMemberRepository).replaceAssignments(eq(77L), eq(Set.of(1L)), any());
         org.mockito.ArgumentCaptor<ShopAdminMember> captor = org.mockito.ArgumentCaptor.forClass(ShopAdminMember.class);
         verify(memberRepository).save(captor.capture());
@@ -688,7 +717,7 @@ class ShopAdminManagementServiceTest {
         service.create(SUPER, createCmd(ShopRole.PARTNER_ADMIN, 7L, Set.of(1L)));
 
         verify(identityRegistrar).createManagedAccount(
-            new ManagedAccountCommand("brand01", "홍길동", "010-1234-5678", null, 7L));
+            new ManagedAccountCommand("brand01", "홍길동", "010-1234-5678", null, 7L, ShopRole.PARTNER_ADMIN));
         verify(brandMemberRepository).replaceAssignments(eq(77L), eq(Set.of()), any());
     }
 

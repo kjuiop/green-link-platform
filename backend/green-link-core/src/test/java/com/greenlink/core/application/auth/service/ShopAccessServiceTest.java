@@ -72,7 +72,7 @@ class ShopAccessServiceTest {
         given(companyRepository.findById(7L)).willReturn(Optional.of(company(false)));
         stubSaves();
 
-        VerifiedAccount result = service.grant(1L, 7L);
+        VerifiedAccount result = service.grant(1L, 7L, AdminRole.PARTNER_ADMIN);
 
         assertThat(result.companyId()).isEqualTo(7L);
         assertThat(result.companyName()).isEqualTo("기존업체");
@@ -84,31 +84,94 @@ class ShopAccessServiceTest {
         ArgumentCaptor<Admin> adminCaptor = ArgumentCaptor.forClass(Admin.class);
         verify(adminRepository).save(adminCaptor.capture());
         assertThat(adminCaptor.getValue().getCompanyId()).isEqualTo(7L);
+        assertThat(adminCaptor.getValue().getRole()).isEqualTo(AdminRole.PARTNER_ADMIN);
     }
 
     @Test
-    void 이미_사이트가_켜져있고_같은_회사_소속이면_아무것도_저장하지_않는다() {
+    void 승인된_role로_온우림_role이_바뀐다() {
+        given(adminRepository.findById(1L)).willReturn(Optional.of(admin(null, AdminStatus.ACTIVE, null)));
+        given(companyRepository.findById(7L)).willReturn(Optional.of(company(true)));
+        given(adminRepository.save(any(Admin.class))).willAnswer(inv -> inv.getArgument(0));
+
+        VerifiedAccount result = service.grant(1L, 7L, AdminRole.BRAND_ADMIN);
+
+        assertThat(result.role()).isEqualTo("BRAND_ADMIN");
+        ArgumentCaptor<Admin> captor = ArgumentCaptor.forClass(Admin.class);
+        verify(adminRepository).save(captor.capture());
+        assertThat(captor.getValue().getRole()).isEqualTo(AdminRole.BRAND_ADMIN);
+    }
+
+    @Test
+    void 슈퍼관리자_role로는_승인할_수_없다() {
+        assertCode(() -> service.grant(1L, 7L, AdminRole.SUPER_ADMIN), AuthErrorCode.SHOP_SIGNUP_ROLE_INVALID);
+        assertCode(() -> service.grant(1L, 7L, null), AuthErrorCode.SHOP_SIGNUP_ROLE_INVALID);
+        verify(adminRepository, never()).save(any());
+    }
+
+    @Test
+    void 슈퍼관리자_계정에는_승인을_적용하지_않는다() {
+        Admin superAdmin = Admin.of(1L, "root", "pw", null, null, null, null, AdminStatus.ACTIVE, null, null);
+        superAdmin.restoreAccess(AdminRole.SUPER_ADMIN, true);
+        given(adminRepository.findById(1L)).willReturn(Optional.of(superAdmin));
+
+        assertCode(() -> service.grant(1L, 7L, AdminRole.PARTNER_ADMIN), AuthErrorCode.SHOP_SIGNUP_ROLE_INVALID);
+        verify(adminRepository, never()).save(any());
+    }
+
+    @Test
+    void changeRole은_온우림_계정의_role을_바꾼다() {
+        given(adminRepository.findById(1L)).willReturn(Optional.of(admin(7L, AdminStatus.ACTIVE, null)));
+        given(adminRepository.save(any(Admin.class))).willAnswer(inv -> inv.getArgument(0));
+
+        service.changeRole(1L, AdminRole.BRAND_ADMIN);
+
+        ArgumentCaptor<Admin> captor = ArgumentCaptor.forClass(Admin.class);
+        verify(adminRepository).save(captor.capture());
+        assertThat(captor.getValue().getRole()).isEqualTo(AdminRole.BRAND_ADMIN);
+    }
+
+    @Test
+    void changeRole은_슈퍼관리자_role_변경과_슈퍼관리자_계정을_거부한다() {
+        Admin superAdmin = Admin.of(2L, "root", "pw", null, null, null, null, AdminStatus.ACTIVE, null, null);
+        superAdmin.restoreAccess(AdminRole.SUPER_ADMIN, true);
+        given(adminRepository.findById(2L)).willReturn(Optional.of(superAdmin));
+
+        assertCode(() -> service.changeRole(1L, AdminRole.SUPER_ADMIN), AuthErrorCode.SHOP_SIGNUP_ROLE_INVALID);
+        assertCode(() -> service.changeRole(2L, AdminRole.PARTNER_ADMIN), AuthErrorCode.SHOP_SIGNUP_ROLE_INVALID);
+        verify(adminRepository, never()).save(any());
+    }
+
+    @Test
+    void changeRole은_없는_계정이면_404() {
+        given(adminRepository.findById(1L)).willReturn(Optional.empty());
+
+        assertCode(() -> service.changeRole(1L, AdminRole.BRAND_ADMIN), AuthErrorCode.SHOP_ACCESS_ADMIN_NOT_FOUND);
+    }
+
+    @Test
+    void 이미_사이트가_켜져있고_같은_회사_소속이면_회사는_저장하지_않는다() {
         given(adminRepository.findById(1L)).willReturn(Optional.of(admin(7L, AdminStatus.ACTIVE, null)));
         given(companyRepository.findById(7L)).willReturn(Optional.of(company(true)));
+        given(adminRepository.save(any(Admin.class))).willAnswer(inv -> inv.getArgument(0));
 
-        VerifiedAccount result = service.grant(1L, 7L);
+        VerifiedAccount result = service.grant(1L, 7L, AdminRole.PARTNER_ADMIN);
 
         assertThat(result.companySiteEnabled()).isTrue();
         assertThat(result.companyId()).isEqualTo(7L);
         verify(companyRepository, never()).save(any());
-        verify(adminRepository, never()).save(any());
+        verify(adminRepository).save(any(Admin.class));
     }
 
     @Test
-    void 사이트가_꺼진_회사의_같은_회사_계정은_회사만_켠다() {
+    void 사이트가_꺼진_회사의_같은_회사_계정은_회사를_켜고_role을_반영한다() {
         given(adminRepository.findById(1L)).willReturn(Optional.of(admin(7L, AdminStatus.ACTIVE, null)));
         given(companyRepository.findById(7L)).willReturn(Optional.of(company(false)));
-        given(companyRepository.save(any(Company.class))).willAnswer(inv -> inv.getArgument(0));
+        stubSaves();
 
-        VerifiedAccount result = service.grant(1L, 7L);
+        VerifiedAccount result = service.grant(1L, 7L, AdminRole.PARTNER_ADMIN);
 
         assertThat(result.companySiteEnabled()).isTrue();
-        verify(adminRepository, never()).save(any());
+        verify(adminRepository).save(any(Admin.class));
     }
 
     @Test
@@ -119,8 +182,8 @@ class ShopAccessServiceTest {
         given(companyRepository.findById(7L)).willReturn(Optional.of(target));
         stubSaves();
 
-        VerifiedAccount first = service.grant(1L, 7L);
-        VerifiedAccount second = service.grant(1L, 7L);
+        VerifiedAccount first = service.grant(1L, 7L, AdminRole.PARTNER_ADMIN);
+        VerifiedAccount second = service.grant(1L, 7L, AdminRole.PARTNER_ADMIN);
 
         assertThat(second).isEqualTo(first);
     }
@@ -130,7 +193,7 @@ class ShopAccessServiceTest {
         given(adminRepository.findById(1L)).willReturn(Optional.of(admin(9L, AdminStatus.ACTIVE, null)));
         given(companyRepository.findById(7L)).willReturn(Optional.of(company(false)));
 
-        assertCode(() -> service.grant(1L, 7L), AuthErrorCode.SHOP_ACCESS_COMPANY_MISMATCH);
+        assertCode(() -> service.grant(1L, 7L, AdminRole.PARTNER_ADMIN), AuthErrorCode.SHOP_ACCESS_COMPANY_MISMATCH);
         verify(companyRepository, never()).save(any());
         verify(adminRepository, never()).save(any());
     }
@@ -140,7 +203,7 @@ class ShopAccessServiceTest {
         given(adminRepository.findById(1L)).willReturn(Optional.of(admin(null, AdminStatus.ACTIVE, null)));
         given(companyRepository.findById(7L)).willReturn(Optional.empty());
 
-        assertCode(() -> service.grant(1L, 7L), AuthErrorCode.SHOP_ACCESS_COMPANY_NOT_FOUND);
+        assertCode(() -> service.grant(1L, 7L, AdminRole.PARTNER_ADMIN), AuthErrorCode.SHOP_ACCESS_COMPANY_NOT_FOUND);
         verify(adminRepository, never()).save(any());
     }
 
@@ -150,8 +213,8 @@ class ShopAccessServiceTest {
         given(adminRepository.findById(2L))
             .willReturn(Optional.of(admin(null, AdminStatus.INACTIVE, "2026-11-01 00:00:00")));
 
-        assertCode(() -> service.grant(1L, 7L), AuthErrorCode.SHOP_ACCESS_ADMIN_NOT_FOUND);
-        assertCode(() -> service.grant(2L, 7L), AuthErrorCode.SHOP_ACCESS_ADMIN_NOT_FOUND);
+        assertCode(() -> service.grant(1L, 7L, AdminRole.PARTNER_ADMIN), AuthErrorCode.SHOP_ACCESS_ADMIN_NOT_FOUND);
+        assertCode(() -> service.grant(2L, 7L, AdminRole.PARTNER_ADMIN), AuthErrorCode.SHOP_ACCESS_ADMIN_NOT_FOUND);
     }
 
     @Test
@@ -159,8 +222,8 @@ class ShopAccessServiceTest {
         given(adminRepository.findById(1L)).willReturn(Optional.of(admin(null, AdminStatus.INACTIVE, null)));
         given(adminRepository.findById(2L)).willReturn(Optional.of(admin(null, AdminStatus.PENDING, null)));
 
-        assertCode(() -> service.grant(1L, 7L), AuthErrorCode.ACCOUNT_INACTIVE);
-        assertCode(() -> service.grant(2L, 7L), AuthErrorCode.ACCOUNT_PENDING);
+        assertCode(() -> service.grant(1L, 7L, AdminRole.PARTNER_ADMIN), AuthErrorCode.ACCOUNT_INACTIVE);
+        assertCode(() -> service.grant(2L, 7L, AdminRole.PARTNER_ADMIN), AuthErrorCode.ACCOUNT_PENDING);
         verify(companyRepository, never()).save(any());
     }
 

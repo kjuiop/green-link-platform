@@ -12,7 +12,8 @@ class AdminPasswordSetupTest {
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 11, 26, 12, 0);
 
     private Admin pending() {
-        return Admin.createShopManaged("shop01", "randomHash", "홍길동", "010-1234-5678", null, 7L, NOW.plusDays(7));
+        return Admin.createShopManaged("shop01", "randomHash", "홍길동", "010-1234-5678", null, 7L, NOW.plusDays(7),
+            AdminRole.BRAND_ADMIN);
     }
 
     @Test
@@ -22,15 +23,24 @@ class AdminPasswordSetupTest {
         assertThat(a.isOnurimEnabled()).isFalse();
         assertThat(a.getStatus()).isEqualTo(AdminStatus.ACTIVE);
         assertThat(a.getCompanyId()).isEqualTo(7L);
+        assertThat(a.getRole()).isEqualTo(AdminRole.BRAND_ADMIN);
         assertThat(a.isPasswordSetupPending()).isTrue();
         assertThat(a.canSetupPassword(NOW)).isTrue();
     }
 
     @Test
     void 회사나_만료시각이_없으면_생성할_수_없다() {
-        assertThatThrownBy(() -> Admin.createShopManaged("shop01", "h", "n", "p", null, null, NOW))
+        assertThatThrownBy(() -> Admin.createShopManaged("shop01", "h", "n", "p", null, null, NOW, AdminRole.BRAND_ADMIN))
             .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> Admin.createShopManaged("shop01", "h", "n", "p", null, 7L, null))
+        assertThatThrownBy(() -> Admin.createShopManaged("shop01", "h", "n", "p", null, 7L, null, AdminRole.BRAND_ADMIN))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void 슈퍼관리자나_null_role로는_생성할_수_없다() {
+        assertThatThrownBy(() -> Admin.createShopManaged("shop01", "h", "n", "p", null, 7L, NOW, AdminRole.SUPER_ADMIN))
+            .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Admin.createShopManaged("shop01", "h", "n", "p", null, 7L, NOW, null))
             .isInstanceOf(IllegalArgumentException.class);
     }
 

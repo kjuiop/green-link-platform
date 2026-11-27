@@ -3,6 +3,7 @@ package com.greenlink.core.application.auth.service;
 import com.greenlink.core.application.auth.dto.ShopSignupCommand;
 import com.greenlink.core.application.auth.dto.ShopSignupResult;
 import com.greenlink.core.domain.admin.model.Admin;
+import com.greenlink.core.domain.admin.model.AdminRole;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.Company;
 import com.greenlink.core.domain.company.model.CompanyType;
@@ -102,6 +103,7 @@ class ShopSignupServiceTest {
         verify(adminRepository).save(adminCaptor.capture());
         assertThat(adminCaptor.getValue().getPassword()).isEqualTo("hashed");
         assertThat(adminCaptor.getValue().getCompanyId()).isEqualTo(20L);
+        assertThat(adminCaptor.getValue().getRole()).isEqualTo(AdminRole.PARTNER_ADMIN);
     }
 
     @Test
@@ -117,7 +119,19 @@ class ShopSignupServiceTest {
         assertThat(result.account().companyId()).isNull();
         assertThat(result.account().companyName()).isNull();
         assertThat(result.account().adminOnurimEnabled()).isFalse();
+        assertThat(result.account().role()).isEqualTo("BRAND_ADMIN");
         verify(companyRepository, never()).save(any());
+    }
+
+    @Test
+    void 파트너_관리자로_신청하면_온우림_초기_role도_파트너다() {
+        stubSaves();
+        given(adminRepository.existsByLoginId("shop01")).willReturn(false);
+        given(companyRepository.findByBusinessNo("123-45-67890")).willReturn(Optional.of(existingCompany()));
+
+        ShopSignupResult result = service.signup(cmd("123-45-67890", "PARTNER_ADMIN"));
+
+        assertThat(result.account().role()).isEqualTo("PARTNER_ADMIN");
     }
 
     @Test

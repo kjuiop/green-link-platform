@@ -7,6 +7,7 @@ import com.greenlink.admin.adapter.in.web.dto.ShopAccessGrantRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopBusinessNoRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopManagedAccountRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopPasswordSetupRequest;
+import com.greenlink.admin.adapter.in.web.dto.ShopRoleChangeRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopSignupRequest;
 import com.greenlink.admin.adapter.in.web.dto.VerifyShopAccountRequest;
 import com.greenlink.core.application.auth.dto.AccountSummary;
@@ -107,7 +108,16 @@ public class InternalShopAuthController {
     public VerifiedAccount grantAccess(@RequestHeader(value = SECRET_HEADER, required = false) String secret,
                                        @RequestBody @Valid ShopAccessGrantRequest req) {
         requireSecret(secret);
-        return accessUseCase.grant(req.adminId(), req.companyId());
+        return accessUseCase.grant(req.adminId(), req.companyId(), req.role());
+    }
+
+    @PutMapping("/accounts/{adminId}/role")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changeRole(@RequestHeader(value = SECRET_HEADER, required = false) String secret,
+                           @PathVariable Long adminId,
+                           @RequestBody @Valid ShopRoleChangeRequest req) {
+        requireSecret(secret);
+        accessUseCase.changeRole(adminId, req.role());
     }
 
     @PostMapping("/companies/batch")
