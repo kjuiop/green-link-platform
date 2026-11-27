@@ -4,6 +4,7 @@ import com.greenlink.core.application.auth.dto.CompanySummary;
 import com.greenlink.core.application.auth.dto.VerifiedAccount;
 import com.greenlink.core.application.auth.usecase.ShopAccessUseCase;
 import com.greenlink.core.domain.admin.model.Admin;
+import com.greenlink.core.domain.admin.model.AdminRole;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.Company;
@@ -30,10 +31,12 @@ public class ShopAccessService implements ShopAccessUseCase {
 
     @Override
     @Transactional
-    public VerifiedAccount grant(Long adminId, Long companyId) {
+    public VerifiedAccount grant(Long adminId, Long companyId, AdminRole role) {
+        requireAssignable(role);
         Admin admin = adminRepository.findById(adminId)
             .filter(a -> !a.isDeleted())
             .orElseThrow(() -> new BusinessException(AuthErrorCode.SHOP_ACCESS_ADMIN_NOT_FOUND));
+        requireNotSuperAdmin(admin);
         if (admin.getStatus() == AdminStatus.PENDING) {
             throw new BusinessException(AuthErrorCode.ACCOUNT_PENDING);
         }
@@ -50,15 +53,38 @@ public class ShopAccessService implements ShopAccessUseCase {
             company.enableSite();
             company = companyRepository.save(company);
         }
-        if (admin.getCompanyId() == null) {
-            admin.attachToCompany(companyId);
-            admin = adminRepository.save(admin);
-        }
+        admin.attachToCompany(companyId);
+        admin.changeRole(role);
+        admin = adminRepository.save(admin);
         return new VerifiedAccount(
             admin.getId(), admin.getLoginId(), admin.getName(),
             company.getId(), company.getCompanyName(),
             company.isOnurimEnabled(), company.isSiteEnabled(),
             admin.isOnurimEnabled(), admin.getRole().name());
+    }
+
+    @Override
+    @Transactional
+    public void changeRole(Long adminId, AdminRole role) {
+        requireAssignable(role);
+        Admin admin = adminRepository.findById(adminId)
+            .filter(a -> !a.isDeleted())
+            .orElseThrow(() -> new BusinessException(AuthErrorCode.SHOP_ACCESS_ADMIN_NOT_FOUND));
+        requireNotSuperAdmin(admin);
+        admin.changeRole(role);
+        adminRepository.save(admin);
+    }
+
+    private static void requireAssignable(AdminRole role) {
+        if (role != AdminRole.PARTNER_ADMIN && role != AdminRole.BRAND_ADMIN) {
+            throw new BusinessException(AuthErrorCode.SHOP_SIGNUP_ROLE_INVALID);
+        }
+    }
+
+    private static void requireNotSuperAdmin(Admin admin) {
+        if (admin.isSuperAdmin()) {
+            throw new BusinessException(AuthErrorCode.SHOP_SIGNUP_ROLE_INVALID);
+        }
     }
 
     @Override

@@ -43,9 +43,25 @@ class AdminAuthoritiesTest {
     }
 
     @Test
-    void 브랜드관리자는_온우림_회사유형_권한을_갖지_않는다() {
-        assertThat(AdminAuthorities.from(AdminRole.BRAND_ADMIN, CompanyType.BOTH)).containsExactly("BRAND_ADMIN");
-        assertThat(AdminAuthorities.capabilities(AdminRole.BRAND_ADMIN, CompanyType.BOTH)).isEmpty();
+    void 브랜드관리자도_회사유형에서_발주_수주_권한을_파생한다() {
+        assertThat(AdminAuthorities.from(AdminRole.BRAND_ADMIN, CompanyType.ORDERING))
+            .containsExactly("BRAND_ADMIN", "ORDERING");
+        assertThat(AdminAuthorities.from(AdminRole.BRAND_ADMIN, CompanyType.VENDOR))
+            .containsExactly("BRAND_ADMIN", "VENDOR");
+        assertThat(AdminAuthorities.from(AdminRole.BRAND_ADMIN, CompanyType.BOTH))
+            .containsExactly("BRAND_ADMIN", "ORDERING", "VENDOR");
+    }
+
+    @Test
+    void 슈퍼관리자는_회사유형과_무관하게_capability가_없다() {
+        assertThat(AdminAuthorities.capabilities(AdminRole.SUPER_ADMIN, CompanyType.BOTH)).isEmpty();
+        assertThat(AdminAuthorities.from(AdminRole.SUPER_ADMIN, CompanyType.BOTH)).containsExactly("SUPER_ADMIN");
+    }
+
+    @Test
+    void 회사유형이_없으면_파트너와_브랜드도_capability가_없다() {
+        assertThat(AdminAuthorities.capabilities(AdminRole.PARTNER_ADMIN, null)).isEmpty();
+        assertThat(AdminAuthorities.capabilities(AdminRole.BRAND_ADMIN, null)).isEmpty();
     }
 
     @Test

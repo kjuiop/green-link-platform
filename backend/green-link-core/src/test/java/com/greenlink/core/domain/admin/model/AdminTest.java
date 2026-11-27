@@ -25,9 +25,11 @@ class AdminTest {
 
     @Test
     void createShopApplicant_소속없고_온우림_접근이_꺼진_활성_계정이다() {
-        Admin admin = Admin.createShopApplicant("shop02", "encodedPw", "김철수", "010-1234-5678", null);
+        Admin admin = Admin.createShopApplicant("shop02", "encodedPw", "김철수", "010-1234-5678", null,
+            AdminRole.BRAND_ADMIN);
 
         assertThat(admin.getStatus()).isEqualTo(AdminStatus.ACTIVE);
+        assertThat(admin.getRole()).isEqualTo(AdminRole.BRAND_ADMIN);
         assertThat(admin.getCompanyId()).isNull();
         assertThat(admin.isOnurimEnabled()).isFalse();
         assertThat(admin.isSuperAdmin()).isFalse();
@@ -117,7 +119,8 @@ class AdminTest {
 
     @Test
     void attachToCompany_소속없는_계정은_회사에_연결된다() {
-        Admin admin = Admin.createShopApplicant("shop02", "encodedPw", "김철수", "010-1234-5678", null);
+        Admin admin = Admin.createShopApplicant("shop02", "encodedPw", "김철수", "010-1234-5678", null,
+            AdminRole.PARTNER_ADMIN);
 
         admin.attachToCompany(7L);
 
@@ -145,9 +148,49 @@ class AdminTest {
 
     @Test
     void attachToCompany_회사_id가_없으면_거부한다() {
-        Admin admin = Admin.createShopApplicant("shop02", "encodedPw", "김철수", "010-1234-5678", null);
+        Admin admin = Admin.createShopApplicant("shop02", "encodedPw", "김철수", "010-1234-5678", null,
+            AdminRole.PARTNER_ADMIN);
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> admin.attachToCompany(null))
             .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void createShopApplicant_슈퍼관리자나_null_role은_거부한다() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                Admin.createShopApplicant("shop02", "pw", "김철수", "010-1234-5678", null, AdminRole.SUPER_ADMIN))
+            .isInstanceOf(IllegalArgumentException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                Admin.createShopApplicant("shop02", "pw", "김철수", "010-1234-5678", null, null))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void createShopFounder_파트너관리자다() {
+        Admin admin = Admin.createShopFounder("shop01", "pw", "홍길동", "010-1234-5678", null, 9L);
+
+        assertThat(admin.getRole()).isEqualTo(AdminRole.PARTNER_ADMIN);
+    }
+
+    @Test
+    void changeRole_파트너와_브랜드_사이에서_바꾼다() {
+        Admin admin = Admin.createShopFounder("shop01", "pw", "홍길동", "010-1234-5678", null, 9L);
+
+        admin.changeRole(AdminRole.BRAND_ADMIN);
+        assertThat(admin.getRole()).isEqualTo(AdminRole.BRAND_ADMIN);
+        admin.changeRole(AdminRole.PARTNER_ADMIN);
+        assertThat(admin.getRole()).isEqualTo(AdminRole.PARTNER_ADMIN);
+    }
+
+    @Test
+    void changeRole_슈퍼관리자로_바꾸거나_슈퍼관리자를_바꿀_수_없다() {
+        Admin partner = Admin.createShopFounder("shop01", "pw", "홍길동", "010-1234-5678", null, 9L);
+        Admin superAdmin = Admin.create("root", "pw");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> partner.changeRole(AdminRole.SUPER_ADMIN))
+            .isInstanceOf(IllegalArgumentException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> superAdmin.changeRole(AdminRole.PARTNER_ADMIN))
+            .isInstanceOf(IllegalStateException.class);
+        assertThat(superAdmin.getRole()).isEqualTo(AdminRole.SUPER_ADMIN);
     }
 }

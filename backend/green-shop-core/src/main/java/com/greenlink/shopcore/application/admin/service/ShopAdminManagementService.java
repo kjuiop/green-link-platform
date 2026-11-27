@@ -107,7 +107,7 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
             ? requireBrands(member.getCompanyId(), brandIds, true)
             : Set.of();
 
-        accessGranter.grant(member.getAdminId(), member.getCompanyId());
+        accessGranter.grant(member.getAdminId(), member.getCompanyId(), role);
 
         LocalDateTime now = LocalDateTime.now(clock);
         member.approve(role, actor.adminId(), now);
@@ -122,6 +122,7 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
     }
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void changeRole(ManagementActor actor, Long id, ShopRole newRole) {
         ShopAdminMember member = findManageable(actor, id);
         ShopRole previousRole = member.getRole();
@@ -129,10 +130,8 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
         if (previousRole == ShopRole.PARTNER_ADMIN && newRole != ShopRole.PARTNER_ADMIN) {
             requireNotLastPartner(member);
         }
-        memberRepository.save(member);
-        if (newRole == ShopRole.PARTNER_ADMIN) {
-            brandMemberRepository.unassignAllByMemberId(member.getId(), LocalDateTime.now(clock));
-        }
+        accessGranter.changeRole(member.getAdminId(), newRole);
+        approvalWriter.saveRoleChange(member, newRole == ShopRole.PARTNER_ADMIN, LocalDateTime.now(clock));
     }
 
     @Override
@@ -180,7 +179,7 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
             : Set.of();
 
         VerifiedIdentity account = identityRegistrar.createManagedAccount(
-            new ManagedAccountCommand(cmd.loginId(), cmd.name(), cmd.phone(), cmd.email(), companyId));
+            new ManagedAccountCommand(cmd.loginId(), cmd.name(), cmd.phone(), cmd.email(), companyId, role));
 
         LocalDateTime now = LocalDateTime.now(clock);
         try {

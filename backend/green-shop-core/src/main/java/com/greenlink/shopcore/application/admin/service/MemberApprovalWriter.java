@@ -28,6 +28,14 @@ public class MemberApprovalWriter {
     }
 
     @Transactional
+    public void saveRoleChange(ShopAdminMember member, boolean unassignBrands, LocalDateTime now) {
+        memberRepository.save(member);
+        if (unassignBrands) {
+            brandMemberRepository.unassignAllByMemberId(member.getId(), now);
+        }
+    }
+
+    @Transactional
     public Long saveNew(ShopAdminMember member, Set<Long> brandIds, LocalDateTime now) {
         ShopAdminMember saved = memberRepository.save(member);
         brandMemberRepository.replaceAssignments(saved.getId(), brandIds, now);

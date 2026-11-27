@@ -139,6 +139,7 @@ class AdminLoginServiceTest {
     @Test
     void login_asVendor_generatesVendorRoleToken() {
         Admin vendor = Admin.of(4L, "vendor03", "hashedPw", "홍길동", "010-5555-6666", null, 1L, AdminStatus.ACTIVE, null, null);
+        vendor.restoreAccess(AdminRole.PARTNER_ADMIN, true);
         given(adminRepository.findByLoginId("vendor03")).willReturn(Optional.of(vendor));
         given(passwordEncoder.matches("rawPw", "hashedPw")).willReturn(true);
         given(companyRepository.findById(1L)).willReturn(Optional.of(vendorCompany()));

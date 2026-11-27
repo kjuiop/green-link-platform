@@ -7,6 +7,7 @@ import com.greenlink.core.domain.admin.model.AdminStatus;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 
 @Entity
 @Table(name = "admins")
@@ -39,8 +40,8 @@ public class AdminJpaEntity extends BaseJpaEntity {
     private AdminStatus status = AdminStatus.ACTIVE;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(20) NOT NULL DEFAULT 'PARTNER_ADMIN'")
-    private AdminRole role = AdminRole.PARTNER_ADMIN;
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(20) NOT NULL")
+    private AdminRole role;
 
     @Column(name = "onurim_enabled", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
     private boolean onurimEnabled = true;
@@ -66,7 +67,7 @@ public class AdminJpaEntity extends BaseJpaEntity {
         e.email = admin.getEmail();
         e.companyId = admin.getCompanyId();
         e.status = admin.getStatus() != null ? admin.getStatus() : AdminStatus.ACTIVE;
-        e.role = admin.getRole() != null ? admin.getRole() : AdminRole.PARTNER_ADMIN;
+        e.role = Objects.requireNonNull(admin.getRole(), "admin role must not be null");
         e.onurimEnabled = admin.isOnurimEnabled();
         e.deletedAt = admin.getDeletedAt();
         e.passwordSetupExpiresAt = admin.getPasswordSetupExpiresAt();

@@ -15,6 +15,7 @@ import com.greenlink.core.application.onurimapplication.dto.OnurimDocumentRequir
 import com.greenlink.core.application.onurimapplication.usecase.ApplyOnurimUseCase;
 import com.greenlink.core.application.onurimapplication.usecase.ApplyOnurimWithDocumentsUseCase;
 import com.greenlink.core.application.vendor.dto.SignupDocument;
+import com.greenlink.core.domain.admin.model.AdminRole;
 import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.onurimapplication.model.OnurimApplicationStatus;
 import com.greenlink.core.global.exception.onurimapplication.OnurimApplicationErrorCode;
@@ -38,6 +39,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -45,6 +47,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -266,18 +269,18 @@ class InternalShopAuthControllerTest {
     void 접근_부여_시크릿이_틀리면_403() throws Exception {
         mvc("s3cret").perform(post("/internal/shop-auth/access-grants")
                         .header("X-Internal-Secret", "wrong")
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"adminId\":1,\"companyId\":7}"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"adminId\":1,\"companyId\":7,\"role\":\"BRAND_ADMIN\"}"))
                 .andExpect(status().isForbidden());
         verifyNoInteractions(accessUseCase);
     }
 
     @Test
     void 접근_부여_정상이면_계정을_반환한다() throws Exception {
-        when(accessUseCase.grant(1L, 7L)).thenReturn(ACCOUNT);
+        when(accessUseCase.grant(1L, 7L, AdminRole.BRAND_ADMIN)).thenReturn(ACCOUNT);
 
         mvc("s3cret").perform(post("/internal/shop-auth/access-grants")
                         .header("X-Internal-Secret", "s3cret")
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"adminId\":1,\"companyId\":7}"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"adminId\":1,\"companyId\":7,\"role\":\"BRAND_ADMIN\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.adminId").value(1))
                 .andExpect(jsonPath("$.companyId").value(7));
@@ -293,23 +296,86 @@ class InternalShopAuthControllerTest {
     }
 
     @Test
-    void 접근_부여_다른_회사_소속이면_409로_매핑() throws Exception {
-        when(accessUseCase.grant(1L, 7L)).thenThrow(new BusinessException(AuthErrorCode.SHOP_ACCESS_COMPANY_MISMATCH));
-
+    void 접근_부여_role이_없거나_알수없는_값이면_400() throws Exception {
         mvc("s3cret").perform(post("/internal/shop-auth/access-grants")
                         .header("X-Internal-Secret", "s3cret")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"adminId\":1,\"companyId\":7}"))
+                .andExpect(status().isBadRequest());
+        mvc("s3cret").perform(post("/internal/shop-auth/access-grants")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"adminId\":1,\"companyId\":7,\"role\":\"NOPE\"}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(accessUseCase);
+    }
+
+    @Test
+    void role_변경_시크릿이_틀리면_403() throws Exception {
+        mvc("s3cret").perform(put("/internal/shop-auth/accounts/1/role")
+                        .header("X-Internal-Secret", "wrong")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"BRAND_ADMIN\"}"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(accessUseCase);
+    }
+
+    @Test
+    void role_변경_정상이면_204() throws Exception {
+        mvc("s3cret").perform(put("/internal/shop-auth/accounts/1/role")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"BRAND_ADMIN\"}"))
+                .andExpect(status().isNoContent());
+        verify(accessUseCase).changeRole(1L, AdminRole.BRAND_ADMIN);
+    }
+
+    @Test
+    void role_변경_role이_없으면_400() throws Exception {
+        mvc("s3cret").perform(put("/internal/shop-auth/accounts/1/role")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(accessUseCase);
+    }
+
+    @Test
+    void role_변경_부여할_수_없는_role이면_서비스_에러를_그대로_매핑한다() throws Exception {
+        doThrow(new BusinessException(AuthErrorCode.SHOP_SIGNUP_ROLE_INVALID))
+                .when(accessUseCase).changeRole(1L, AdminRole.SUPER_ADMIN);
+
+        mvc("s3cret").perform(put("/internal/shop-auth/accounts/1/role")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"SUPER_ADMIN\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void managed_accounts_role이_없으면_400() throws Exception {
+        mvc("s3cret").perform(post("/internal/shop-auth/managed-accounts")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"loginId\":\"brand01\",\"name\":\"홍길동\","
+                                + "\"phone\":\"010-1234-5678\",\"companyId\":7}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(managedUseCase);
+    }
+
+    @Test
+    void 접근_부여_다른_회사_소속이면_409로_매핑() throws Exception {
+        when(accessUseCase.grant(1L, 7L, AdminRole.BRAND_ADMIN)).thenThrow(new BusinessException(AuthErrorCode.SHOP_ACCESS_COMPANY_MISMATCH));
+
+        mvc("s3cret").perform(post("/internal/shop-auth/access-grants")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"adminId\":1,\"companyId\":7,\"role\":\"BRAND_ADMIN\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("AUTH_020"));
     }
 
     @Test
     void 접근_부여_없는_회사는_404로_매핑() throws Exception {
-        when(accessUseCase.grant(1L, 7L)).thenThrow(new BusinessException(AuthErrorCode.SHOP_ACCESS_COMPANY_NOT_FOUND));
+        when(accessUseCase.grant(1L, 7L, AdminRole.BRAND_ADMIN)).thenThrow(new BusinessException(AuthErrorCode.SHOP_ACCESS_COMPANY_NOT_FOUND));
 
         mvc("s3cret").perform(post("/internal/shop-auth/access-grants")
                         .header("X-Internal-Secret", "s3cret")
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"adminId\":1,\"companyId\":7}"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"adminId\":1,\"companyId\":7,\"role\":\"BRAND_ADMIN\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("AUTH_021"));
     }
@@ -347,7 +413,7 @@ class InternalShopAuthControllerTest {
     }
 
     private static final String MANAGED_BODY = "{\"loginId\":\"brand01\",\"name\":\"홍길동\","
-            + "\"phone\":\"010-1234-5678\",\"companyId\":7}";
+            + "\"phone\":\"010-1234-5678\",\"companyId\":7,\"role\":\"BRAND_ADMIN\"}";
     private static final String SETUP_BODY = "{\"loginId\":\"brand01\",\"phone\":\"010-1234-5678\",\"newPassword\":\"Passw0rd!\"}";
 
     @Test

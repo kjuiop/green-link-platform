@@ -17,6 +17,7 @@ import com.greenlink.shopcore.application.onurim.dto.OnurimDocument;
 import com.greenlink.shopcore.application.onurim.dto.OnurimDocumentRequirement;
 import com.greenlink.shopcore.application.onurim.dto.OnurimRegion;
 import com.greenlink.shopcore.application.onurim.port.OnurimApplicationGateway;
+import com.greenlink.shopcore.domain.auth.ShopRole;
 import com.greenlink.shopcore.global.exception.ShopBusinessException;
 import com.greenlink.shopcore.global.exception.ShopErrorCode;
 import org.slf4j.Logger;
@@ -155,16 +156,26 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
     }
 
     @Override
-    public void grant(Long adminId, Long companyId) {
+    public void grant(Long adminId, Long companyId, ShopRole role) {
         AccountBody body = executeWith(() -> restClient.post()
             .uri("/internal/shop-auth/access-grants")
             .header(SECRET_HEADER, secret)
-            .body(new AccessGrantBody(adminId, companyId))
+            .body(new AccessGrantBody(adminId, companyId, role.name()))
             .retrieve()
             .body(AccountBody.class), this::mapGrantError);
         if (body == null || body.adminId() == null) {
             throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
         }
+    }
+
+    @Override
+    public void changeRole(Long adminId, ShopRole role) {
+        executeWith(() -> restClient.put()
+            .uri("/internal/shop-auth/accounts/{adminId}/role", adminId)
+            .header(SECRET_HEADER, secret)
+            .body(new RoleChangeBody(role.name()))
+            .retrieve()
+            .toBodilessEntity(), this::mapGrantError);
     }
 
     @Override
@@ -490,7 +501,8 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
 
     record CompanyBatchBody(List<Long> companyIds) {}
 
-    record AccessGrantBody(Long adminId, Long companyId) {}
+    record AccessGrantBody(Long adminId, Long companyId, String role) {}
+    record RoleChangeBody(String role) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record CompanyBody(Long companyId, String companyName) {}

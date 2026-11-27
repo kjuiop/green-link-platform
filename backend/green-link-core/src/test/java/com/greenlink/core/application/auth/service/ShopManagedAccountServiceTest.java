@@ -52,7 +52,7 @@ class ShopManagedAccountServiceTest {
     }
 
     private ShopManagedAccountCommand cmd() {
-        return new ShopManagedAccountCommand("brand01", "홍길동", "010-1234-5678", null, 7L);
+        return new ShopManagedAccountCommand("brand01", "홍길동", "010-1234-5678", null, 7L, AdminRole.BRAND_ADMIN);
     }
 
     private Admin pending(LocalDateTime expiresAt, int attempts) {
@@ -88,6 +88,7 @@ class ShopManagedAccountServiceTest {
         Admin saved = captor.getValue();
         assertThat(result.adminId()).isEqualTo(10L);
         assertThat(result.companyId()).isEqualTo(7L);
+        assertThat(saved.getRole()).isEqualTo(AdminRole.BRAND_ADMIN);
         assertThat(saved.isOnurimEnabled()).isFalse();
         assertThat(saved.isPasswordSetupPending()).isTrue();
         assertThat(saved.getPasswordSetupExpiresAt()).isAfter(LocalDateTime.now().plusDays(6));
@@ -107,6 +108,18 @@ class ShopManagedAccountServiceTest {
         assertThat(passwordEncoder.matches("", hash)).isFalse();
         assertThat(passwordEncoder.matches("brand01", hash)).isFalse();
         assertThat(passwordEncoder.matches("01012345678", hash)).isFalse();
+    }
+
+    @Test
+    void 슈퍼관리자나_빈_role로는_계정을_만들_수_없다() {
+        ShopManagedAccountCommand superRole = new ShopManagedAccountCommand(
+            "brand01", "홍길동", "010-1234-5678", null, 7L, AdminRole.SUPER_ADMIN);
+        ShopManagedAccountCommand nullRole = new ShopManagedAccountCommand(
+            "brand01", "홍길동", "010-1234-5678", null, 7L, null);
+
+        assertCode(() -> service.create(superRole), AuthErrorCode.SHOP_SIGNUP_ROLE_INVALID);
+        assertCode(() -> service.create(nullRole), AuthErrorCode.SHOP_SIGNUP_ROLE_INVALID);
+        verify(adminRepository, never()).save(any());
     }
 
     @Test

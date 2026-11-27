@@ -66,6 +66,9 @@ class AdminSecurityRulesTest {
     private String vendor() { return bearer(AdminRole.PARTNER_ADMIN, CompanyType.VENDOR); }
     private String both() { return bearer(AdminRole.PARTNER_ADMIN, CompanyType.BOTH); }
     private String brand() { return bearer(AdminRole.BRAND_ADMIN, null); }
+    private String brandOrdering() { return bearer(AdminRole.BRAND_ADMIN, CompanyType.ORDERING); }
+    private String brandVendor() { return bearer(AdminRole.BRAND_ADMIN, CompanyType.VENDOR); }
+    private String brandBoth() { return bearer(AdminRole.BRAND_ADMIN, CompanyType.BOTH); }
 
     private void expect(String path, String auth, ResultMatcher matcher) throws Exception {
         var req = get(path);
@@ -97,6 +100,22 @@ class AdminSecurityRulesTest {
     void 관리자_API는_슈퍼관리자와_ORDERING만_접근한다() throws Exception {
         allowed("/api/admin/something", superAdmin(), ordering(), both());
         denied("/api/admin/something", null, vendor(), brand());
+    }
+
+    @Test
+    void 브랜드관리자도_회사유형에_따라_발주_수주_API를_사용한다() throws Exception {
+        allowed("/api/ordering/anything", brandOrdering(), brandBoth());
+        denied("/api/ordering/anything", brandVendor());
+        allowed("/api/vendor/orders", brandVendor(), brandBoth());
+        denied("/api/vendor/orders", brandOrdering());
+        allowed("/api/admin/something", brandOrdering(), brandBoth());
+        denied("/api/admin/something", brandVendor());
+    }
+
+    @Test
+    void 슈퍼관리자_전용_API는_브랜드관리자가_회사유형과_무관하게_접근할_수_없다() throws Exception {
+        denied("/api/admin/vendor-fees", brandOrdering(), brandVendor(), brandBoth());
+        denied("/api/base-products", brandOrdering(), brandBoth());
     }
 
     @Test

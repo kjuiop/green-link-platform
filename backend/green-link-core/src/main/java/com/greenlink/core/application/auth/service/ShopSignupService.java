@@ -5,6 +5,7 @@ import com.greenlink.core.application.auth.dto.ShopSignupResult;
 import com.greenlink.core.application.auth.dto.VerifiedAccount;
 import com.greenlink.core.application.auth.usecase.ShopSignupUseCase;
 import com.greenlink.core.domain.admin.model.Admin;
+import com.greenlink.core.domain.admin.model.AdminRole;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.Company;
 import com.greenlink.core.domain.company.port.CompanyRepository;
@@ -83,7 +84,8 @@ public class ShopSignupService implements ShopSignupUseCase {
             throw new BusinessException(AuthErrorCode.SHOP_SIGNUP_ROLE_INVALID);
         }
         Admin admin = adminRepository.save(Admin.createShopApplicant(
-            cmd.loginId(), encodedPassword, cmd.name(), cmd.phone(), cmd.email()));
+            cmd.loginId(), encodedPassword, cmd.name(), cmd.phone(), cmd.email(),
+            AdminRole.valueOf(cmd.requestedRole())));
         return new ShopSignupResult(toAccount(admin, null), target.getId(), false);
     }
 

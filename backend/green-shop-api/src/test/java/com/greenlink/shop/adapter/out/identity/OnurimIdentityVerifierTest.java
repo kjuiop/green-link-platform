@@ -12,6 +12,7 @@ import com.greenlink.shopcore.application.onurim.dto.OnurimCompanyType;
 import com.greenlink.shopcore.application.onurim.dto.OnurimDocument;
 import com.greenlink.shopcore.application.onurim.dto.OnurimDocumentRequirement;
 import com.greenlink.shopcore.application.onurim.dto.OnurimRegion;
+import com.greenlink.shopcore.domain.auth.ShopRole;
 import com.greenlink.shopcore.global.exception.ShopBusinessException;
 import com.greenlink.shopcore.global.exception.ShopErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -309,9 +310,10 @@ class OnurimIdentityVerifierTest {
             .andExpect(header("X-Internal-Secret", "s3cret"))
             .andExpect(jsonPath("$.adminId").value(5))
             .andExpect(jsonPath("$.companyId").value(7))
+            .andExpect(jsonPath("$.role").value("BRAND_ADMIN"))
             .andRespond(withSuccess(ACCOUNT_JSON, MediaType.APPLICATION_JSON));
 
-        verifier.grant(5L, 7L);
+        verifier.grant(5L, 7L, ShopRole.BRAND_ADMIN);
 
         server.verify();
     }
@@ -322,7 +324,7 @@ class OnurimIdentityVerifierTest {
             .andRespond(withStatus(HttpStatus.CONFLICT).contentType(MediaType.APPLICATION_JSON)
                 .body("{\"code\":\"AUTH_020\"}"));
 
-        assertThatThrownBy(() -> verifier.grant(5L, 7L))
+        assertThatThrownBy(() -> verifier.grant(5L, 7L, ShopRole.BRAND_ADMIN))
             .isInstanceOfSatisfying(ShopBusinessException.class,
                 e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.ACCESS_COMPANY_MISMATCH));
     }
@@ -333,7 +335,7 @@ class OnurimIdentityVerifierTest {
             .andRespond(withStatus(HttpStatus.NOT_FOUND).contentType(MediaType.APPLICATION_JSON)
                 .body("{\"code\":\"AUTH_022\"}"));
 
-        assertThatThrownBy(() -> verifier.grant(5L, 7L))
+        assertThatThrownBy(() -> verifier.grant(5L, 7L, ShopRole.BRAND_ADMIN))
             .isInstanceOfSatisfying(ShopBusinessException.class,
                 e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.ADMIN_REQUEST_NOT_FOUND));
     }
@@ -343,7 +345,41 @@ class OnurimIdentityVerifierTest {
         server.expect(requestTo(BASE + "/internal/shop-auth/access-grants"))
             .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
 
-        assertThatThrownBy(() -> verifier.grant(5L, 7L))
+        assertThatThrownBy(() -> verifier.grant(5L, 7L, ShopRole.BRAND_ADMIN))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE));
+    }
+
+    @Test
+    void role_변경은_PUT으로_role을_보내고_시크릿_헤더를_붙인다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/5/role"))
+            .andExpect(method(HttpMethod.PUT))
+            .andExpect(header("X-Internal-Secret", "s3cret"))
+            .andExpect(jsonPath("$.role").value("PARTNER_ADMIN"))
+            .andRespond(withStatus(HttpStatus.NO_CONTENT));
+
+        verifier.changeRole(5L, ShopRole.PARTNER_ADMIN);
+
+        server.verify();
+    }
+
+    @Test
+    void role_변경_계정_없음_404는_ADMIN_REQUEST_NOT_FOUND로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/5/role"))
+            .andRespond(withStatus(HttpStatus.NOT_FOUND).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_022\"}"));
+
+        assertThatThrownBy(() -> verifier.changeRole(5L, ShopRole.BRAND_ADMIN))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.ADMIN_REQUEST_NOT_FOUND));
+    }
+
+    @Test
+    void role_변경_그_외_오류는_업스트림_장애로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/5/role"))
+            .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        assertThatThrownBy(() -> verifier.changeRole(5L, ShopRole.BRAND_ADMIN))
             .isInstanceOfSatisfying(ShopBusinessException.class,
                 e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE));
     }
@@ -384,10 +420,11 @@ class OnurimIdentityVerifierTest {
             .andExpect(jsonPath("$.loginId").value("brand01"))
             .andExpect(jsonPath("$.phone").value("010-1234-5678"))
             .andExpect(jsonPath("$.companyId").value(7))
+            .andExpect(jsonPath("$.role").value("BRAND_ADMIN"))
             .andRespond(withSuccess(ACCOUNT_JSON, MediaType.APPLICATION_JSON));
 
         VerifiedIdentity id = verifier.createManagedAccount(
-            new ManagedAccountCommand("brand01", "홍길동", "010-1234-5678", null, 7L));
+            new ManagedAccountCommand("brand01", "홍길동", "010-1234-5678", null, 7L, ShopRole.BRAND_ADMIN));
 
         assertThat(id.adminId()).isEqualTo(5L);
         server.verify();
@@ -400,7 +437,7 @@ class OnurimIdentityVerifierTest {
                 .body("{\"code\":\"AUTH_015\",\"message\":\"x\"}"));
 
         assertThatThrownBy(() -> verifier.createManagedAccount(
-            new ManagedAccountCommand("brand01", "홍길동", "010-1234-5678", null, 7L)))
+            new ManagedAccountCommand("brand01", "홍길동", "010-1234-5678", null, 7L, ShopRole.BRAND_ADMIN)))
             .isInstanceOfSatisfying(ShopBusinessException.class,
                 e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.SIGNUP_LOGIN_ID_DUPLICATED));
     }
