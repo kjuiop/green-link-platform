@@ -1,6 +1,7 @@
 package com.greenlink.core.application.onurimapplication.service;
 
 import com.greenlink.core.application.onurimapplication.dto.OnurimApplicationResult;
+import com.greenlink.core.application.onurimapplication.dto.OnurimDocumentRequirement;
 import com.greenlink.core.application.onurimapplication.usecase.ApplyOnurimUseCase;
 import com.greenlink.core.application.onurimapplication.usecase.ManageOnurimApplicationUseCase;
 import com.greenlink.core.domain.admin.model.Admin;
@@ -49,28 +50,75 @@ public class OnurimApplicationService implements ApplyOnurimUseCase, ManageOnuri
     @Override
     @Transactional
     public OnurimApplicationResult apply(Long adminId, Long companyId, CompanyType desiredType,
-                                         OnurimApplicationInfo info) {
+                                         OnurimApplicationInfo info, String businessRegUrl, String bankBookUrl) {
+        Admin admin = loadApplicant(adminId, companyId);
+        Company company = loadApplicableCompany(companyId);
+        if (applicationRepository.existsPendingByCompanyId(companyId)) {
+            throw new BusinessException(OnurimApplicationErrorCode.ALREADY_PENDING);
+        }
+        validateDocuments(company, businessRegUrl, bankBookUrl);
+        OnurimApplication saved;
+        try {
+            saved = applicationRepository.save(
+                OnurimApplication.request(companyId, adminId, desiredType, info, businessRegUrl, bankBookUrl));
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(OnurimApplicationErrorCode.ALREADY_PENDING);
+        }
+        return toResult(saved, company, admin);
+    }
+
+    @Override
+    public OnurimDocumentRequirement getDocumentRequirement(Long adminId, Long companyId) {
+        loadApplicant(adminId, companyId);
+        Company company = companyRepository.findById(companyId)
+            .orElseThrow(() -> new BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND));
+        return requirementOf(company);
+    }
+
+    @Override
+    public void ensureApplicable(Long adminId, Long companyId) {
+        loadApplicant(adminId, companyId);
+        loadApplicableCompany(companyId);
+        if (applicationRepository.existsPendingByCompanyId(companyId)) {
+            throw new BusinessException(OnurimApplicationErrorCode.ALREADY_PENDING);
+        }
+    }
+
+    private Admin loadApplicant(Long adminId, Long companyId) {
         Admin admin = adminRepository.findById(adminId)
             .filter(a -> !a.isDeleted())
             .orElseThrow(() -> new BusinessException(AuthErrorCode.SHOP_ACCESS_ADMIN_NOT_FOUND));
         if (!companyId.equals(admin.getCompanyId())) {
             throw new BusinessException(OnurimApplicationErrorCode.APPLICANT_MISMATCH);
         }
+        return admin;
+    }
+
+    private Company loadApplicableCompany(Long companyId) {
         Company company = companyRepository.findById(companyId)
             .orElseThrow(() -> new BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND));
         if (company.isOnurimEnabled()) {
             throw new BusinessException(OnurimApplicationErrorCode.ALREADY_ENABLED);
         }
-        if (applicationRepository.existsPendingByCompanyId(companyId)) {
-            throw new BusinessException(OnurimApplicationErrorCode.ALREADY_PENDING);
+        return company;
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
+    }
+
+    private OnurimDocumentRequirement requirementOf(Company company) {
+        return new OnurimDocumentRequirement(isBlank(company.getBusinessRegUrl()), isBlank(company.getBankBookUrl()));
+    }
+
+    private void validateDocuments(Company company, String businessRegUrl, String bankBookUrl) {
+        OnurimDocumentRequirement need = requirementOf(company);
+        if ((need.needsBusinessReg() && businessRegUrl == null) || (need.needsBankBook() && bankBookUrl == null)) {
+            throw new BusinessException(OnurimApplicationErrorCode.DOCUMENT_REQUIRED);
         }
-        OnurimApplication saved;
-        try {
-            saved = applicationRepository.save(OnurimApplication.request(companyId, adminId, desiredType, info));
-        } catch (DataIntegrityViolationException e) {
-            throw new BusinessException(OnurimApplicationErrorCode.ALREADY_PENDING);
+        if ((!need.needsBusinessReg() && businessRegUrl != null) || (!need.needsBankBook() && bankBookUrl != null)) {
+            throw new BusinessException(OnurimApplicationErrorCode.DOCUMENT_NOT_ALLOWED);
         }
-        return toResult(saved, company, admin);
     }
 
     @Override
@@ -117,6 +165,12 @@ public class OnurimApplicationService implements ApplyOnurimUseCase, ManageOnuri
             info.faxNumber() != null ? info.faxNumber() : company.getFaxNumber(),
             info.address(), info.detailAddress());
         company.changeTaxInvoiceEmail(info.taxInvoiceEmail());
+        if (isBlank(company.getBusinessRegUrl()) && application.getBusinessRegUrl() != null) {
+            company.updateDocumentUrl("businessReg", application.getBusinessRegUrl());
+        }
+        if (isBlank(company.getBankBookUrl()) && application.getBankBookUrl() != null) {
+            company.updateDocumentUrl("bankBook", application.getBankBookUrl());
+        }
         company.enableOnurim(type);
         boolean vendor = type == CompanyType.VENDOR || type == CompanyType.BOTH;
         if (vendor) {
@@ -162,6 +216,7 @@ public class OnurimApplicationService implements ApplyOnurimUseCase, ManageOnuri
             a.getDesiredType(), a.getStatus(),
             i.companyPhone(), i.address(), i.detailAddress(), i.taxInvoiceEmail(), i.memo(),
             i.faxNumber(), i.bankName(), i.accountNumber(), i.accountHolder(), i.regions(),
+            a.getBusinessRegUrl(), a.getBankBookUrl(),
             a.getApprovedType(), a.getRejectReason(), a.getProcessedAt(), a.getCreatedAt());
     }
 }

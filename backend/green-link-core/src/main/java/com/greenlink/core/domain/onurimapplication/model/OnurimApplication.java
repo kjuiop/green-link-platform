@@ -17,6 +17,8 @@ public class OnurimApplication {
     private CompanyType desiredType;
     private OnurimApplicationStatus status;
     private OnurimApplicationInfo info;
+    private String businessRegUrl;
+    private String bankBookUrl;
     private CompanyType approvedType;
     private String rejectReason;
     private Long processedBy;
@@ -26,7 +28,8 @@ public class OnurimApplication {
     private OnurimApplication() {}
 
     public static OnurimApplication request(Long companyId, Long applicantAdminId,
-                                            CompanyType desiredType, OnurimApplicationInfo info) {
+                                            CompanyType desiredType, OnurimApplicationInfo info,
+                                            String businessRegUrl, String bankBookUrl) {
         if (desiredType == null || info == null || isBlank(info.companyPhone()) || isBlank(info.address())) {
             throw new BusinessException(OnurimApplicationErrorCode.INVALID_APPLICATION);
         }
@@ -35,13 +38,15 @@ public class OnurimApplication {
         a.applicantAdminId = applicantAdminId;
         a.desiredType = desiredType;
         a.info = normalize(info);
+        a.businessRegUrl = businessRegUrl;
+        a.bankBookUrl = bankBookUrl;
         a.status = OnurimApplicationStatus.PENDING;
         return a;
     }
 
     public static OnurimApplication of(Long id, Long companyId, Long applicantAdminId, CompanyType desiredType,
                                        OnurimApplicationStatus status, OnurimApplicationInfo info,
-                                       CompanyType approvedType, String rejectReason,
+                                       String businessRegUrl, String bankBookUrl, CompanyType approvedType, String rejectReason,
                                        Long processedBy, LocalDateTime processedAt, LocalDateTime createdAt) {
         OnurimApplication a = new OnurimApplication();
         a.id = id;
@@ -50,6 +55,8 @@ public class OnurimApplication {
         a.desiredType = desiredType;
         a.status = status;
         a.info = info;
+        a.businessRegUrl = businessRegUrl;
+        a.bankBookUrl = bankBookUrl;
         a.approvedType = approvedType;
         a.rejectReason = rejectReason;
         a.processedBy = processedBy;
@@ -120,6 +127,8 @@ public class OnurimApplication {
     public CompanyType getDesiredType() { return desiredType; }
     public OnurimApplicationStatus getStatus() { return status; }
     public OnurimApplicationInfo getInfo() { return info; }
+    public String getBusinessRegUrl() { return businessRegUrl; }
+    public String getBankBookUrl() { return bankBookUrl; }
     public CompanyType getApprovedType() { return approvedType; }
     public String getRejectReason() { return rejectReason; }
     public Long getProcessedBy() { return processedBy; }

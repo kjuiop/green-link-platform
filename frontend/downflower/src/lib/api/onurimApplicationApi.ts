@@ -22,6 +22,8 @@ export interface OnurimApplication {
   accountNumber: string | null
   accountHolder: string | null
   regions: { sido: string; sigungu: string | null }[]
+  businessRegUrl: string | null
+  bankBookUrl: string | null
   approvedType: OnurimCompanyType | null
   rejectReason: string | null
   processedAt: string | null

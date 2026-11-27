@@ -24,7 +24,7 @@ class OnurimApplicationTest {
     }
 
     private static OnurimApplication pending() {
-        return OnurimApplication.request(10L, 5L, CompanyType.BOTH, info());
+        return OnurimApplication.request(10L, 5L, CompanyType.BOTH, info(), null, null);
     }
 
     private static ErrorCode codeOf(Runnable r) {
@@ -50,13 +50,13 @@ class OnurimApplicationTest {
 
     @Test
     void 희망유형_연락처_주소가_없으면_신청_거부() {
-        assertThat(codeOf(() -> OnurimApplication.request(1L, 1L, null, info())))
+        assertThat(codeOf(() -> OnurimApplication.request(1L, 1L, null, info(), null, null)))
             .isEqualTo(OnurimApplicationErrorCode.INVALID_APPLICATION);
         OnurimApplicationInfo noPhone = new OnurimApplicationInfo(" ", "주소", null, null, null, null, null, null, null, null);
-        assertThat(codeOf(() -> OnurimApplication.request(1L, 1L, CompanyType.VENDOR, noPhone)))
+        assertThat(codeOf(() -> OnurimApplication.request(1L, 1L, CompanyType.VENDOR, noPhone, null, null)))
             .isEqualTo(OnurimApplicationErrorCode.INVALID_APPLICATION);
         OnurimApplicationInfo noAddress = new OnurimApplicationInfo("02", null, null, null, null, null, null, null, null, null);
-        assertThat(codeOf(() -> OnurimApplication.request(1L, 1L, CompanyType.VENDOR, noAddress)))
+        assertThat(codeOf(() -> OnurimApplication.request(1L, 1L, CompanyType.VENDOR, noAddress, null, null)))
             .isEqualTo(OnurimApplicationErrorCode.INVALID_APPLICATION);
     }
 
@@ -110,5 +110,13 @@ class OnurimApplicationTest {
         assertThat(codeOf(() -> approved.reject("사유", 1L, NOW))).isEqualTo(OnurimApplicationErrorCode.NOT_PENDING);
         assertThat(codeOf(() -> rejected.approve(CompanyType.BOTH, 1L, NOW))).isEqualTo(OnurimApplicationErrorCode.NOT_PENDING);
         assertThatThrownBy(() -> rejected.reject("재거절", 1L, NOW)).isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void 신청에_서류_URL을_보관한다() {
+        OnurimApplication a = OnurimApplication.request(10L, 5L, CompanyType.BOTH, info(), "biz-url", "bank-url");
+
+        assertThat(a.getBusinessRegUrl()).isEqualTo("biz-url");
+        assertThat(a.getBankBookUrl()).isEqualTo("bank-url");
     }
 }

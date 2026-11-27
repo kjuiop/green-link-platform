@@ -15,7 +15,10 @@ import com.greenlink.core.application.auth.dto.ShopSignupResult;
 import com.greenlink.core.application.auth.dto.VerifiedAccount;
 import com.greenlink.core.application.auth.usecase.ShopAccessUseCase;
 import com.greenlink.core.application.onurimapplication.dto.OnurimApplicationResult;
+import com.greenlink.core.application.onurimapplication.dto.OnurimDocumentRequirement;
 import com.greenlink.core.application.onurimapplication.usecase.ApplyOnurimUseCase;
+import com.greenlink.core.application.onurimapplication.usecase.ApplyOnurimWithDocumentsUseCase;
+import com.greenlink.core.application.vendor.dto.SignupDocument;
 import com.greenlink.core.application.auth.usecase.ShopManagedAccountUseCase;
 import com.greenlink.core.application.auth.usecase.ShopSignupUseCase;
 import com.greenlink.core.application.auth.usecase.VerifyAdminAccountUseCase;
@@ -24,9 +27,12 @@ import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.List;
@@ -43,6 +49,7 @@ public class InternalShopAuthController {
     private final ShopAccessUseCase accessUseCase;
     private final ShopManagedAccountUseCase managedAccountUseCase;
     private final ApplyOnurimUseCase onurimApplicationUseCase;
+    private final ApplyOnurimWithDocumentsUseCase onurimWithDocumentsUseCase;
     private final byte[] internalSecret;
 
     public InternalShopAuthController(VerifyAdminAccountUseCase useCase,
@@ -50,12 +57,14 @@ public class InternalShopAuthController {
                                       ShopAccessUseCase accessUseCase,
                                       ShopManagedAccountUseCase managedAccountUseCase,
                                       ApplyOnurimUseCase onurimApplicationUseCase,
+                                      ApplyOnurimWithDocumentsUseCase onurimWithDocumentsUseCase,
                                       @Value("${shop.internal.secret:}") String internalSecret) {
         this.useCase = useCase;
         this.signupUseCase = signupUseCase;
         this.accessUseCase = accessUseCase;
         this.managedAccountUseCase = managedAccountUseCase;
         this.onurimApplicationUseCase = onurimApplicationUseCase;
+        this.onurimWithDocumentsUseCase = onurimWithDocumentsUseCase;
         this.internalSecret = internalSecret.getBytes(StandardCharsets.UTF_8);
     }
 
@@ -131,11 +140,29 @@ public class InternalShopAuthController {
         managedAccountUseCase.reissuePasswordSetup(adminId);
     }
 
-    @PostMapping("/onurim-applications")
-    public OnurimApplicationResult applyOnurim(@RequestHeader(value = SECRET_HEADER, required = false) String secret,
-                                               @RequestBody @Valid OnurimApplicationApplyRequest req) {
+    @PostMapping(value = "/onurim-applications", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public OnurimApplicationResult applyOnurim(
+            @RequestHeader(value = SECRET_HEADER, required = false) String secret,
+            @RequestPart("data") @Valid OnurimApplicationApplyRequest req,
+            @RequestPart(value = "businessDoc", required = false) MultipartFile businessDoc,
+            @RequestPart(value = "bankDoc", required = false) MultipartFile bankDoc) throws IOException {
         requireSecret(secret);
-        return onurimApplicationUseCase.apply(req.adminId(), req.companyId(), req.desiredType(), req.toInfo());
+        return onurimWithDocumentsUseCase.apply(req.adminId(), req.companyId(), req.desiredType(), req.toInfo(),
+            toDocument(businessDoc), toDocument(bankDoc));
+    }
+
+    @GetMapping("/onurim-applications/documents")
+    public OnurimDocumentRequirement onurimDocumentRequirement(
+            @RequestHeader(value = SECRET_HEADER, required = false) String secret,
+            @RequestParam Long adminId,
+            @RequestParam Long companyId) {
+        requireSecret(secret);
+        return onurimApplicationUseCase.getDocumentRequirement(adminId, companyId);
+    }
+
+    private SignupDocument toDocument(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) return null;
+        return new SignupDocument(file.getOriginalFilename(), file.getBytes(), file.getContentType());
     }
 
     @GetMapping("/onurim-applications/latest")

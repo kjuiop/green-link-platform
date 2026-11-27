@@ -72,6 +72,12 @@ public class OnurimApplicationJpaEntity extends BaseJpaEntity {
     @Column(length = 4000)
     private String regions;
 
+    @Column(name = "business_reg_url", length = 500)
+    private String businessRegUrl;
+
+    @Column(name = "bank_book_url", length = 500)
+    private String bankBookUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "approved_type", length = 20)
     private CompanyType approvedType;
@@ -106,6 +112,8 @@ public class OnurimApplicationJpaEntity extends BaseJpaEntity {
         e.accountNumber = i.accountNumber();
         e.accountHolder = i.accountHolder();
         e.regions = joinRegions(i.regions());
+        e.businessRegUrl = a.getBusinessRegUrl();
+        e.bankBookUrl = a.getBankBookUrl();
         e.approvedType = a.getApprovedType();
         e.rejectReason = a.getRejectReason();
         e.processedBy = a.getProcessedBy();
@@ -117,7 +125,7 @@ public class OnurimApplicationJpaEntity extends BaseJpaEntity {
         OnurimApplicationInfo info = new OnurimApplicationInfo(companyPhone, address, detailAddress,
             taxInvoiceEmail, memo, faxNumber, bankName, accountNumber, accountHolder, splitRegions(regions));
         return OnurimApplication.of(id, companyId, applicantAdminId, desiredType, status, info,
-            approvedType, rejectReason, processedBy, processedAt, getCreatedAt());
+            businessRegUrl, bankBookUrl, approvedType, rejectReason, processedBy, processedAt, getCreatedAt());
     }
 
     static String joinRegions(List<OnurimApplicationRegion> list) {
