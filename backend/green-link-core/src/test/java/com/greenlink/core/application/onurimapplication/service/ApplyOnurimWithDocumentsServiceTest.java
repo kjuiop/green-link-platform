@@ -82,6 +82,7 @@ class ApplyOnurimWithDocumentsServiceTest {
 
         InOrder order = inOrder(applyUseCase, storage);
         order.verify(applyUseCase).ensureApplicable(ADMIN_ID, COMPANY_ID);
+        order.verify(applyUseCase).getDocumentRequirement(ADMIN_ID, COMPANY_ID);
         order.verify(storage, org.mockito.Mockito.times(2)).store(anyLong(), anyString(), anyString(), any(), anyString());
         order.verify(applyUseCase).apply(ADMIN_ID, COMPANY_ID, CompanyType.BOTH, info, "https://s3/biz", "https://s3/bank");
     }
@@ -136,12 +137,22 @@ class ApplyOnurimWithDocumentsServiceTest {
         assertCode(() -> call(fake, png("bank.png")), VendorErrorCode.DOCUMENT_INVALID_TYPE);
 
         verifyNoInteractions(storage);
-        verify(applyUseCase, never()).ensureApplicable(anyLong(), anyLong());
+        verify(applyUseCase, never()).apply(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void 이미_심사중이면_서류가_없어도_서류_오류보다_중복_오류를_먼저_낸다() {
+        org.mockito.Mockito.doThrow(new BusinessException(OnurimApplicationErrorCode.ALREADY_PENDING))
+            .when(applyUseCase).ensureApplicable(ADMIN_ID, COMPANY_ID);
+
+        assertCode(() -> call(null, null), OnurimApplicationErrorCode.ALREADY_PENDING);
+
+        verify(applyUseCase, never()).getDocumentRequirement(anyLong(), anyLong());
+        verifyNoInteractions(storage);
     }
 
     @Test
     void 사전검증에_실패하면_업로드하지_않는다() {
-        need(true, true);
         org.mockito.Mockito.doThrow(new BusinessException(OnurimApplicationErrorCode.ALREADY_PENDING))
             .when(applyUseCase).ensureApplicable(ADMIN_ID, COMPANY_ID);
 

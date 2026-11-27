@@ -32,13 +32,13 @@ public class ApplyOnurimWithDocumentsService implements ApplyOnurimWithDocuments
     public OnurimApplicationResult apply(Long adminId, Long companyId, CompanyType desiredType,
                                          OnurimApplicationInfo info,
                                          SignupDocument businessReg, SignupDocument bankBook) {
+        applyOnurimUseCase.ensureApplicable(adminId, companyId);
+
         OnurimDocumentRequirement need = applyOnurimUseCase.getDocumentRequirement(adminId, companyId);
         requireMatches(need.needsBusinessReg(), businessReg);
         requireMatches(need.needsBankBook(), bankBook);
         SignupDocument validBusinessReg = need.needsBusinessReg() ? validator.validate(businessReg) : null;
         SignupDocument validBankBook = need.needsBankBook() ? validator.validate(bankBook) : null;
-
-        applyOnurimUseCase.ensureApplicable(adminId, companyId);
 
         String businessRegUrl = store(companyId, "businessReg", validBusinessReg);
         String bankBookUrl = store(companyId, "bankBook", validBankBook);
