@@ -16,7 +16,8 @@ interface Options {
 
 export async function apiFetch<T>(path: string, { method = 'GET', body, auth = true }: Options = {}): Promise<T> {
   const headers: Record<string, string> = {}
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  const isForm = body instanceof FormData
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json'
   if (auth) {
     const token = getSession()?.accessToken
     if (token) headers.Authorization = `Bearer ${token}`
@@ -24,7 +25,7 @@ export async function apiFetch<T>(path: string, { method = 'GET', body, auth = t
 
   let res: Response
   try {
-    res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
+    res = await fetch(path, { method, headers, body: body === undefined ? undefined : isForm ? body : JSON.stringify(body) })
   } catch {
     throw new ApiError(503, 'NETWORK', NETWORK_MESSAGE)
   }

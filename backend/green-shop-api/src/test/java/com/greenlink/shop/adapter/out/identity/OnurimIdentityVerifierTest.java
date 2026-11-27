@@ -9,6 +9,8 @@ import com.greenlink.shopcore.application.onurim.dto.OnurimApplicationStatus;
 import com.greenlink.shopcore.application.onurim.dto.OnurimApplicationView;
 import com.greenlink.shopcore.application.onurim.dto.OnurimApplyCommand;
 import com.greenlink.shopcore.application.onurim.dto.OnurimCompanyType;
+import com.greenlink.shopcore.application.onurim.dto.OnurimDocument;
+import com.greenlink.shopcore.application.onurim.dto.OnurimDocumentRequirement;
 import com.greenlink.shopcore.application.onurim.dto.OnurimRegion;
 import com.greenlink.shopcore.global.exception.ShopBusinessException;
 import com.greenlink.shopcore.global.exception.ShopErrorCode;
@@ -25,6 +27,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
@@ -445,7 +449,15 @@ class OnurimIdentityVerifierTest {
 
     private static OnurimApplyCommand applyCommand() {
         return new OnurimApplyCommand(OnurimCompanyType.BOTH, "02-111-2222", "서울시 강남구", "101호", "a@b.com", "메모",
-            "021112222", "국민", "123-456", "홍길동", List.of(new OnurimRegion("서울", "강남구")));
+            "021112222", "국민", "123-456", "홍길동", List.of(new OnurimRegion("서울", "강남구")), null, null);
+    }
+
+    private static OnurimApplyCommand applyCommandWithDocs() {
+        OnurimApplyCommand c = applyCommand();
+        return new OnurimApplyCommand(c.desiredType(), c.companyPhone(), c.address(), c.detailAddress(),
+            c.taxInvoiceEmail(), c.memo(), c.faxNumber(), c.bankName(), c.accountNumber(), c.accountHolder(),
+            c.regions(), new OnurimDocument("biz.png", "image/png", new byte[]{1, 2, 3}),
+            new OnurimDocument("bank.pdf", "application/pdf", new byte[]{4, 5}));
     }
 
     @Test
@@ -453,11 +465,15 @@ class OnurimIdentityVerifierTest {
         server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications"))
             .andExpect(method(HttpMethod.POST))
             .andExpect(header("X-Internal-Secret", "s3cret"))
-            .andExpect(jsonPath("$.adminId").value(5))
-            .andExpect(jsonPath("$.companyId").value(7))
-            .andExpect(jsonPath("$.desiredType").value("BOTH"))
-            .andExpect(jsonPath("$.companyPhone").value("02-111-2222"))
-            .andExpect(jsonPath("$.regions[0].sido").value("서울"))
+            .andExpect(content().contentTypeCompatibleWith(MediaType.MULTIPART_FORM_DATA))
+            .andExpect(content().string(containsString("name=\"data\"")))
+            .andExpect(content().string(containsString("\"adminId\":5")))
+            .andExpect(content().string(containsString("\"companyId\":7")))
+            .andExpect(content().string(containsString("\"desiredType\":\"BOTH\"")))
+            .andExpect(content().string(containsString("\"companyPhone\":\"02-111-2222\"")))
+            .andExpect(content().string(containsString("\"sido\":\"서울\"")))
+            .andExpect(content().string(not(containsString("businessDoc"))))
+            .andExpect(content().string(not(containsString("bankDoc"))))
             .andRespond(withSuccess(APPLICATION_JSON, MediaType.APPLICATION_JSON));
 
         OnurimApplicationView view = verifier.apply(5L, 7L, applyCommand());
@@ -468,6 +484,65 @@ class OnurimIdentityVerifierTest {
         assertThat(view.rejectReason()).isEqualTo("서류 미비");
         assertThat(view.processedAt()).isEqualTo(java.time.LocalDateTime.of(2026, 11, 26, 10, 0));
         server.verify();
+    }
+
+    @Test
+    void 서류가_있으면_파일_파트로_함께_보낸다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(content().contentTypeCompatibleWith(MediaType.MULTIPART_FORM_DATA))
+            .andExpect(content().string(containsString("name=\"businessDoc\"; filename=\"biz.png\"")))
+            .andExpect(content().string(containsString("Content-Type: image/png")))
+            .andExpect(content().string(containsString("name=\"bankDoc\"; filename=\"bank.pdf\"")))
+            .andExpect(content().string(containsString("Content-Type: application/pdf")))
+            .andRespond(withSuccess(APPLICATION_JSON, MediaType.APPLICATION_JSON));
+
+        assertThat(verifier.apply(5L, 7L, applyCommandWithDocs()).id()).isEqualTo(3L);
+        server.verify();
+    }
+
+    @Test
+    void 서류_오류_응답은_전용_코드로_매핑된다() {
+        String[][] cases = {
+            {"400", "ONURIM_APP_009"}, {"400", "ONURIM_APP_010"}, {"400", "VENDOR_006"}, {"400", "VENDOR_007"},
+            {"413", "-"}, {"500", "PHOTO_002"}};
+        for (String[] c : cases) {
+            server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications"))
+                .andRespond(withStatus(HttpStatus.valueOf(Integer.parseInt(c[0]))).contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"code\":\"" + c[1] + "\",\"message\":\"x\"}"));
+        }
+
+        assertApplyError(ShopErrorCode.ONURIM_DOCUMENT_REQUIRED);
+        assertApplyError(ShopErrorCode.ONURIM_DOCUMENT_NOT_ALLOWED);
+        assertApplyError(ShopErrorCode.ONURIM_DOCUMENT_INVALID);
+        assertApplyError(ShopErrorCode.ONURIM_DOCUMENT_INVALID);
+        assertApplyError(ShopErrorCode.ONURIM_DOCUMENT_INVALID);
+        assertApplyError(ShopErrorCode.ONURIM_DOCUMENT_UPLOAD_FAILED);
+    }
+
+    @Test
+    void 서류_필요_여부_조회는_관리자_회사_ID로_호출한다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications/documents?adminId=5&companyId=7"))
+            .andExpect(method(HttpMethod.GET))
+            .andExpect(header("X-Internal-Secret", "s3cret"))
+            .andRespond(withSuccess("{\"needsBusinessReg\":true,\"needsBankBook\":false}", MediaType.APPLICATION_JSON));
+
+        OnurimDocumentRequirement result = verifier.getDocumentRequirement(5L, 7L);
+
+        assertThat(result.needsBusinessReg()).isTrue();
+        assertThat(result.needsBankBook()).isFalse();
+        server.verify();
+    }
+
+    @Test
+    void 서류_필요_여부_조회_오류는_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/onurim-applications/documents?adminId=5&companyId=7"))
+            .andRespond(withStatus(HttpStatus.FORBIDDEN).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"ONURIM_APP_008\",\"message\":\"x\"}"));
+
+        assertThatThrownBy(() -> verifier.getDocumentRequirement(5L, 7L))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.ACCESS_MANAGE_FORBIDDEN));
     }
 
     @Test

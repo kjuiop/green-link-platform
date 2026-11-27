@@ -29,3 +29,13 @@ export interface OnurimApplyForm {
   accountHolder: string
   regions: OnurimRegion[]
 }
+
+export interface OnurimDocumentRequirement {
+  needsBusinessReg: boolean
+  needsBankBook: boolean
+}
+
+export interface OnurimApplyDocuments {
+  businessDoc: File | null
+  bankDoc: File | null
+}

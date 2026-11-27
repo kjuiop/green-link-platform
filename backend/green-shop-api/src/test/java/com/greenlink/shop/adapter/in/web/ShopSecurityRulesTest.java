@@ -58,6 +58,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -458,12 +459,22 @@ class ShopSecurityRulesTest {
     private static final String ONURIM_BODY = "{\"desiredType\":\"ORDERING\",\"companyPhone\":\"02-111-2222\","
         + "\"address\":\"서울시 강남구\"}";
 
+    private static org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder onurimApply(
+            String authorization, String json, org.springframework.mock.web.MockMultipartFile... files) {
+        var builder = multipart("/api/onurim-application").header("Authorization", authorization)
+            .file(new org.springframework.mock.web.MockMultipartFile(
+                "data", "", MediaType.APPLICATION_JSON_VALUE, json.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        for (var file : files) {
+            builder.file(file);
+        }
+        return builder;
+    }
+
     @Test
     void 온우림_신청_API는_토큰이_없으면_401_LIMITED는_403() throws Exception {
         mvc.perform(get("/api/onurim-application")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/onurim-application").header("Authorization", limited())).andExpect(status().isForbidden());
-        mvc.perform(post("/api/onurim-application").header("Authorization", limited())
-                .contentType(MediaType.APPLICATION_JSON).content(ONURIM_BODY))
+        mvc.perform(onurimApply(limited(), ONURIM_BODY))
             .andExpect(status().isForbidden());
         verifyNoInteractions(onurimUseCase);
     }
@@ -474,8 +485,7 @@ class ShopSecurityRulesTest {
         when(onurimUseCase.apply(any(), any())).thenReturn(new OnurimApplicationView(
             3L, OnurimApplicationStatus.PENDING, OnurimCompanyType.ORDERING, null, null, null, null));
 
-        mvc.perform(post("/api/onurim-application").header("Authorization", partnerAdmin())
-                .contentType(MediaType.APPLICATION_JSON).content(ONURIM_BODY))
+        mvc.perform(onurimApply(partnerAdmin(), ONURIM_BODY))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.status").value("PENDING"))
             .andExpect(jsonPath("$.desiredType").value("ORDERING"));
@@ -484,20 +494,53 @@ class ShopSecurityRulesTest {
     }
 
     @Test
+    void 온우림_신청의_서류_파트는_명령으로_변환되어_전달된다() throws Exception {
+        when(onurimUseCase.apply(any(), any())).thenReturn(new OnurimApplicationView(
+            3L, OnurimApplicationStatus.PENDING, OnurimCompanyType.ORDERING, null, null, null, null));
+        var biz = new org.springframework.mock.web.MockMultipartFile("businessDoc", "biz.png", "image/png", new byte[]{1, 2});
+        var empty = new org.springframework.mock.web.MockMultipartFile("bankDoc", "", "application/octet-stream", new byte[0]);
+
+        mvc.perform(onurimApply(partnerAdmin(), ONURIM_BODY, biz, empty)).andExpect(status().isCreated());
+
+        var captor = org.mockito.ArgumentCaptor.forClass(com.greenlink.shopcore.application.onurim.dto.OnurimApplyCommand.class);
+        verify(onurimUseCase).apply(any(), captor.capture());
+        org.assertj.core.api.Assertions.assertThat(captor.getValue().businessDoc().fileName()).isEqualTo("biz.png");
+        org.assertj.core.api.Assertions.assertThat(captor.getValue().businessDoc().contentType()).isEqualTo("image/png");
+        org.assertj.core.api.Assertions.assertThat(captor.getValue().businessDoc().content()).containsExactly(1, 2);
+        org.assertj.core.api.Assertions.assertThat(captor.getValue().bankDoc()).isNull();
+    }
+
+    @Test
+    void 온우림_신청은_data_파트가_없으면_400() throws Exception {
+        mvc.perform(multipart("/api/onurim-application").header("Authorization", partnerAdmin())
+                .file(new org.springframework.mock.web.MockMultipartFile("businessDoc", "biz.png", "image/png", new byte[]{1})))
+            .andExpect(status().isBadRequest());
+        verify(onurimUseCase, never()).apply(any(), any());
+    }
+
+    @Test
+    void 서류_필요_여부_API는_토큰이_필요하고_결과를_돌려준다() throws Exception {
+        mvc.perform(get("/api/onurim-application/documents")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/onurim-application/documents").header("Authorization", limited()))
+            .andExpect(status().isForbidden());
+
+        when(onurimUseCase.getDocumentRequirement(any()))
+            .thenReturn(new com.greenlink.shopcore.application.onurim.dto.OnurimDocumentRequirement(true, false));
+        mvc.perform(get("/api/onurim-application/documents").header("Authorization", partnerAdmin()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.needsBusinessReg").value(true))
+            .andExpect(jsonPath("$.needsBankBook").value(false));
+    }
+
+    @Test
     void 온우림_신청_입력이_규칙에_맞지_않으면_400이고_서비스를_호출하지_않는다() throws Exception {
-        mvc.perform(post("/api/onurim-application").header("Authorization", partnerAdmin())
-                .contentType(MediaType.APPLICATION_JSON).content(ONURIM_BODY.replace("02-111-2222", " ")))
+        mvc.perform(onurimApply(partnerAdmin(), ONURIM_BODY.replace("02-111-2222", " ")))
             .andExpect(status().isBadRequest());
-        mvc.perform(post("/api/onurim-application").header("Authorization", partnerAdmin())
-                .contentType(MediaType.APPLICATION_JSON).content(ONURIM_BODY.replace("ORDERING", "UNKNOWN")))
+        mvc.perform(onurimApply(partnerAdmin(), ONURIM_BODY.replace("ORDERING", "UNKNOWN")))
             .andExpect(status().isBadRequest());
-        mvc.perform(post("/api/onurim-application").header("Authorization", partnerAdmin())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(ONURIM_BODY.replace("}", ",\"regions\":[{\"sido\":\"서울,경기\"}]}")))
+        mvc.perform(onurimApply(partnerAdmin(), ONURIM_BODY.replace("}", ",\"regions\":[{\"sido\":\"서울,경기\"}]}")))
             .andExpect(status().isBadRequest());
-        mvc.perform(post("/api/onurim-application").header("Authorization", partnerAdmin())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(ONURIM_BODY.replace("}", ",\"taxInvoiceEmail\":\"not-email\"}")))
+        mvc.perform(onurimApply(partnerAdmin(), ONURIM_BODY.replace("}", ",\"taxInvoiceEmail\":\"not-email\"}")))
             .andExpect(status().isBadRequest());
         verify(onurimUseCase, never()).apply(any(), any());
     }

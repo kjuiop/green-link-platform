@@ -13,6 +13,8 @@ import com.greenlink.shopcore.application.onurim.dto.OnurimApplicationStatus;
 import com.greenlink.shopcore.application.onurim.dto.OnurimApplicationView;
 import com.greenlink.shopcore.application.onurim.dto.OnurimApplyCommand;
 import com.greenlink.shopcore.application.onurim.dto.OnurimCompanyType;
+import com.greenlink.shopcore.application.onurim.dto.OnurimDocument;
+import com.greenlink.shopcore.application.onurim.dto.OnurimDocumentRequirement;
 import com.greenlink.shopcore.application.onurim.dto.OnurimRegion;
 import com.greenlink.shopcore.application.onurim.port.OnurimApplicationGateway;
 import com.greenlink.shopcore.global.exception.ShopBusinessException;
@@ -21,8 +23,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.InvalidMediaTypeException;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -43,25 +52,32 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
     private static final String SECRET_HEADER = "X-Internal-Secret";
     private static final int BATCH_LIMIT = 100;
     private static final Duration TIMEOUT = Duration.ofSeconds(3);
+    private static final Duration UPLOAD_READ_TIMEOUT = Duration.ofSeconds(30);
 
     private final RestClient restClient;
+    private final RestClient uploadClient;
     private final String secret;
 
     @Autowired
     public OnurimIdentityVerifier(@Value("${shop.identity.base-url:}") String baseUrl,
                                   @Value("${shop.identity.secret:}") String secret) {
-        this(buildClient(baseUrl), secret);
+        this(buildClient(baseUrl, TIMEOUT), buildClient(baseUrl, UPLOAD_READ_TIMEOUT), secret);
     }
 
     OnurimIdentityVerifier(RestClient restClient, String secret) {
+        this(restClient, restClient, secret);
+    }
+
+    OnurimIdentityVerifier(RestClient restClient, RestClient uploadClient, String secret) {
         this.restClient = restClient;
+        this.uploadClient = uploadClient;
         this.secret = secret;
     }
 
-    private static RestClient buildClient(String baseUrl) {
+    private static RestClient buildClient(String baseUrl, Duration readTimeout) {
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(
             HttpClient.newBuilder().connectTimeout(TIMEOUT).build());
-        factory.setReadTimeout(TIMEOUT);
+        factory.setReadTimeout(readTimeout);
         RestClient.Builder builder = RestClient.builder().requestFactory(factory);
         if (baseUrl != null && !baseUrl.isBlank()) {
             builder.baseUrl(baseUrl);
@@ -214,16 +230,66 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
 
     @Override
     public OnurimApplicationView apply(Long adminId, Long companyId, OnurimApplyCommand command) {
-        ApplicationBody body = executeWith(() -> restClient.post()
+        MultiValueMap<String, HttpEntity<?>> parts = new LinkedMultiValueMap<>();
+        parts.add("data", jsonPart(new ApplyBody(adminId, companyId, command)));
+        addDocument(parts, "businessDoc", command.businessDoc());
+        addDocument(parts, "bankDoc", command.bankDoc());
+        ApplicationBody body = executeWith(() -> uploadClient.post()
             .uri("/internal/shop-auth/onurim-applications")
             .header(SECRET_HEADER, secret)
-            .body(new ApplyBody(adminId, companyId, command))
+            .contentType(MediaType.MULTIPART_FORM_DATA)
+            .body(parts)
             .retrieve()
             .body(ApplicationBody.class), this::mapApplicationError);
         if (body == null || body.id() == null) {
             throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
         }
         return body.toView();
+    }
+
+    private static HttpEntity<Object> jsonPart(Object body) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return new HttpEntity<>(body, headers);
+    }
+
+    private static void addDocument(MultiValueMap<String, HttpEntity<?>> parts, String name, OnurimDocument doc) {
+        if (doc == null) {
+            return;
+        }
+        String fileName = doc.fileName() == null || doc.fileName().isBlank() ? name : doc.fileName();
+        MediaType type = parseMediaType(doc.contentType());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(type);
+        parts.add(name, new HttpEntity<>(new ByteArrayResource(doc.content()) {
+            @Override
+            public String getFilename() {
+                return fileName;
+            }
+        }, headers));
+    }
+
+    private static MediaType parseMediaType(String contentType) {
+        try {
+            return contentType == null || contentType.isBlank()
+                ? MediaType.APPLICATION_OCTET_STREAM : MediaType.parseMediaType(contentType);
+        } catch (InvalidMediaTypeException e) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+    }
+
+    @Override
+    public OnurimDocumentRequirement getDocumentRequirement(Long adminId, Long companyId) {
+        RequirementBody body = executeWith(() -> restClient.get()
+            .uri("/internal/shop-auth/onurim-applications/documents?adminId={adminId}&companyId={companyId}",
+                adminId, companyId)
+            .header(SECRET_HEADER, secret)
+            .retrieve()
+            .body(RequirementBody.class), this::mapApplicationError);
+        if (body == null) {
+            throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
+        }
+        return new OnurimDocumentRequirement(body.needsBusinessReg(), body.needsBankBook());
     }
 
     @Override
@@ -350,6 +416,19 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
         if (status == 404) {
             return new ShopBusinessException(ShopErrorCode.ADMIN_REQUEST_NOT_FOUND);
         }
+        if (status == 400 && body.contains("ONURIM_APP_009")) {
+            return new ShopBusinessException(ShopErrorCode.ONURIM_DOCUMENT_REQUIRED);
+        }
+        if (status == 400 && body.contains("ONURIM_APP_010")) {
+            return new ShopBusinessException(ShopErrorCode.ONURIM_DOCUMENT_NOT_ALLOWED);
+        }
+        if ((status == 400 && (body.contains("VENDOR_005") || body.contains("VENDOR_006") || body.contains("VENDOR_007")))
+                || status == 413) {
+            return new ShopBusinessException(ShopErrorCode.ONURIM_DOCUMENT_INVALID);
+        }
+        if (status == 500 && body.contains("PHOTO_002")) {
+            return new ShopBusinessException(ShopErrorCode.ONURIM_DOCUMENT_UPLOAD_FAILED);
+        }
         if (status == 400) {
             return new ShopBusinessException(ShopErrorCode.ONURIM_APPLICATION_INVALID);
         }
@@ -404,6 +483,9 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
             return new OnurimApplicationView(id, status, desiredType, approvedType, rejectReason, processedAt, createdAt);
         }
     }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record RequirementBody(boolean needsBusinessReg, boolean needsBankBook) {}
 
     record CompanyBatchBody(List<Long> companyIds) {}
 

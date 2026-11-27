@@ -4,6 +4,7 @@ import com.greenlink.shopcore.application.common.ManagementActor;
 import com.greenlink.shopcore.application.common.ManagementGuard;
 import com.greenlink.shopcore.application.onurim.dto.OnurimApplicationView;
 import com.greenlink.shopcore.application.onurim.dto.OnurimApplyCommand;
+import com.greenlink.shopcore.application.onurim.dto.OnurimDocumentRequirement;
 import com.greenlink.shopcore.application.onurim.port.OnurimApplicationGateway;
 import com.greenlink.shopcore.application.onurim.usecase.OnurimApplicationUseCase;
 import com.greenlink.shopcore.domain.auth.ShopRole;
@@ -34,6 +35,11 @@ public class OnurimApplicationService implements OnurimApplicationUseCase {
     @Override
     public Optional<OnurimApplicationView> getLatest(ManagementActor actor) {
         return gateway.findLatest(requirePartnerCompany(actor));
+    }
+
+    @Override
+    public OnurimDocumentRequirement getDocumentRequirement(ManagementActor actor) {
+        return gateway.getDocumentRequirement(actor.adminId(), requirePartnerCompany(actor));
     }
 
     private Long requirePartnerCompany(ManagementActor actor) {
