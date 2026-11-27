@@ -9,5 +9,5 @@ public record VerifiedAccount(
     boolean companyOnurimEnabled,
     boolean companySiteEnabled,
     boolean adminOnurimEnabled,
-    boolean superAdmin
+    String role
 ) {}

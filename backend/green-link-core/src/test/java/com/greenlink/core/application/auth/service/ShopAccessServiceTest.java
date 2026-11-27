@@ -3,6 +3,7 @@ package com.greenlink.core.application.auth.service;
 import com.greenlink.core.application.auth.dto.CompanySummary;
 import com.greenlink.core.application.auth.dto.VerifiedAccount;
 import com.greenlink.core.domain.admin.model.Admin;
+import com.greenlink.core.domain.admin.model.AdminRole;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.Company;
@@ -50,7 +51,7 @@ class ShopAccessServiceTest {
 
     private Admin admin(Long companyId, AdminStatus status, String deletedAt) {
         Admin a = Admin.of(1L, "shop01", "pw", "홍길동", "010-1234-5678", null, companyId, status, null, deletedAt);
-        a.restoreAccessFlags(false, companyId != null);
+        a.restoreAccess(AdminRole.PARTNER_ADMIN, companyId != null);
         return a;
     }
 

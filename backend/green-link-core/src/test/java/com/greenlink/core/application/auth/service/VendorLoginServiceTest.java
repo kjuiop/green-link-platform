@@ -4,6 +4,7 @@ import com.greenlink.core.application.auth.dto.VendorLoginCommand;
 import com.greenlink.core.application.auth.dto.VendorLoginResult;
 import com.greenlink.core.application.auth.port.TokenProvider;
 import com.greenlink.core.domain.admin.model.Admin;
+import com.greenlink.core.domain.admin.model.AdminRole;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.BusinessStatus;
@@ -20,7 +21,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,7 +45,7 @@ class VendorLoginServiceTest {
 
     private Admin vendorAdmin(boolean onurimEnabled) {
         Admin admin = Admin.of(4L, "vendor03", "hashedPw", "홍길동", "010-5555-6666", null, 1L, AdminStatus.ACTIVE, null, null);
-        admin.restoreAccessFlags(false, onurimEnabled);
+        admin.restoreAccess(AdminRole.PARTNER_ADMIN, onurimEnabled);
         return admin;
     }
 
@@ -72,11 +72,25 @@ class VendorLoginServiceTest {
     void login_온우림_사용_회사와_관리자는_토큰_발급() {
         givenCredentialsOk(vendorAdmin(true));
         given(companyRepository.findById(1L)).willReturn(Optional.of(company(CompanyType.VENDOR, true)));
-        given(tokenProvider.generateToken(4L, List.of("VENDOR"), 1L)).willReturn("vendor-token");
+        given(tokenProvider.generateToken(4L, AdminRole.PARTNER_ADMIN, CompanyType.VENDOR, 1L)).willReturn("vendor-token");
 
         VendorLoginResult result = service.login(new VendorLoginCommand("vendor03", "rawPw"));
 
         assertThat(result.accessToken()).isEqualTo("vendor-token");
+        assertThat(result.role()).isEqualTo("PARTNER_ADMIN");
+        assertThat(result.companyType()).isEqualTo("VENDOR");
+    }
+
+    @Test
+    void login_수발주사는_BOTH_회사유형으로_토큰_발급() {
+        givenCredentialsOk(vendorAdmin(true));
+        given(companyRepository.findById(1L)).willReturn(Optional.of(company(CompanyType.BOTH, true)));
+        given(tokenProvider.generateToken(4L, AdminRole.PARTNER_ADMIN, CompanyType.BOTH, 1L)).willReturn("both-token");
+
+        VendorLoginResult result = service.login(new VendorLoginCommand("vendor03", "rawPw"));
+
+        assertThat(result.accessToken()).isEqualTo("both-token");
+        assertThat(result.companyType()).isEqualTo("BOTH");
     }
 
     @Test

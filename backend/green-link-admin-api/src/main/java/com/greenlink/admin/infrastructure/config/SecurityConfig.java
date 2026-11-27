@@ -50,7 +50,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/region-guides", "/api/admin/region-guides/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/admin/fax", "/api/admin/fax/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/admin/onurim-applications", "/api/admin/onurim-applications/**").hasRole("SUPER_ADMIN")
-                .requestMatchers("/api/admin/customer-orders", "/api/admin/customer-orders/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+                .requestMatchers("/api/admin/customer-orders", "/api/admin/customer-orders/**").hasAnyRole("SUPER_ADMIN", "ORDERING")
                 .requestMatchers("/api/admin/**").hasAnyRole("SUPER_ADMIN", "ORDERING")
                 .requestMatchers("/api/member/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/menus/by-role").authenticated()

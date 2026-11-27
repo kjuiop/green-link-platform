@@ -61,7 +61,7 @@ public class ShopManagedAccountService implements ShopManagedAccountUseCase {
             admin.getId(), admin.getLoginId(), admin.getName(),
             company.getId(), company.getCompanyName(),
             company.isOnurimEnabled(), company.isSiteEnabled(),
-            admin.isOnurimEnabled(), admin.isSuperAdmin());
+            admin.isOnurimEnabled(), admin.getRole().name());
     }
 
     @Override

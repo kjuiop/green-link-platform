@@ -1,7 +1,7 @@
 package com.greenlink.core.domain.admin.model;
 
-public enum Role {
+public enum AdminRole {
     SUPER_ADMIN,
-    ORDERING,
-    VENDOR
+    PARTNER_ADMIN,
+    BRAND_ADMIN
 }

@@ -1,5 +1,6 @@
 package com.greenlink.admin.security;
 
+import com.greenlink.core.application.auth.AdminAuthorities;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,7 +13,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -32,8 +32,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
         if (token != null) {
             JwtProvider.JwtClaims claims = jwtProvider.extractClaims(token);
-            if (claims != null && claims.roles() != null) {
-                var authorities = claims.roles().stream()
+            if (claims != null) {
+                var authorities = AdminAuthorities.from(claims.role(), claims.companyType()).stream()
                     .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
                     .toList();
                 var auth = new UsernamePasswordAuthenticationToken(

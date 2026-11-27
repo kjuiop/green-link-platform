@@ -51,7 +51,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class InternalShopAuthControllerTest {
 
     private static final String BODY = "{\"loginId\":\"admin01\",\"password\":\"rawPw\"}";
-    private static final VerifiedAccount ACCOUNT = new VerifiedAccount(1L, "admin01", "관리자", 7L, "테스트업체", true, false, true, false);
+    private static final VerifiedAccount ACCOUNT = new VerifiedAccount(1L, "admin01", "관리자", 7L, "테스트업체", true, false, true, "PARTNER_ADMIN");
 
     private static final String SIGNUP_BODY = "{\"loginId\":\"shop01\",\"password\":\"Passw0rd!\",\"name\":\"홍길동\","
             + "\"phone\":\"010-1234-5678\",\"email\":\"a@test.com\",\"businessNo\":\"123-45-67890\","
@@ -111,7 +111,7 @@ class InternalShopAuthControllerTest {
                 .andExpect(jsonPath("$.companyOnurimEnabled").value(true))
                 .andExpect(jsonPath("$.companySiteEnabled").value(false))
                 .andExpect(jsonPath("$.adminOnurimEnabled").value(true))
-                .andExpect(jsonPath("$.superAdmin").value(false));
+                .andExpect(jsonPath("$.role").value("PARTNER_ADMIN"));
     }
 
     @Test
@@ -207,7 +207,7 @@ class InternalShopAuthControllerTest {
     @Test
     void signup_정상이면_결과를_반환하고_커맨드로_변환한다() throws Exception {
         when(signupUseCase.signup(any(ShopSignupCommand.class)))
-                .thenReturn(new ShopSignupResult(new VerifiedAccount(10L, "shop01", "홍길동", 20L, "꽃집", false, true, true, false), 20L, true));
+                .thenReturn(new ShopSignupResult(new VerifiedAccount(10L, "shop01", "홍길동", 20L, "꽃집", false, true, true, "PARTNER_ADMIN"), 20L, true));
 
         mvc("s3cret").perform(post("/internal/shop-auth/signup")
                         .header("X-Internal-Secret", "s3cret")
@@ -372,7 +372,7 @@ class InternalShopAuthControllerTest {
     @Test
     void managed_accounts_정상이면_계정을_반환() throws Exception {
         when(managedUseCase.create(any())).thenReturn(
-                new VerifiedAccount(10L, "brand01", "홍길동", 7L, "파트너사", false, true, false, false));
+                new VerifiedAccount(10L, "brand01", "홍길동", 7L, "파트너사", false, true, false, "PARTNER_ADMIN"));
 
         mvc("s3cret").perform(post("/internal/shop-auth/managed-accounts")
                         .header("X-Internal-Secret", "s3cret")

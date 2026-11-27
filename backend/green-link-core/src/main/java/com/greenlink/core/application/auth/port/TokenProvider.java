@@ -1,8 +1,8 @@
 package com.greenlink.core.application.auth.port;
 
-import java.util.List;
+import com.greenlink.core.domain.admin.model.AdminRole;
+import com.greenlink.core.domain.company.model.CompanyType;
 
 public interface TokenProvider {
-    String generateToken(Long id, List<String> roles);
-    String generateToken(Long id, List<String> roles, Long companyId);
+    String generateToken(Long id, AdminRole role, CompanyType companyType, Long companyId);
 }

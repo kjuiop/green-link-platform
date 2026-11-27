@@ -1,6 +1,6 @@
 package com.greenlink.admin.adapter.out.persistence.menu;
 
-import com.greenlink.core.domain.admin.model.Role;
+import com.greenlink.core.domain.admin.model.AdminRole;
 import jakarta.persistence.*;
 
 @Entity
@@ -18,16 +18,16 @@ public class MenuRoleJpaEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private Role role;
+    private AdminRole role;
 
     protected MenuRoleJpaEntity() {}
 
-    public static MenuRoleJpaEntity of(MenuJpaEntity menu, Role role) {
+    public static MenuRoleJpaEntity of(MenuJpaEntity menu, AdminRole role) {
         MenuRoleJpaEntity e = new MenuRoleJpaEntity();
         e.menu = menu;
         e.role = role;
         return e;
     }
 
-    public Role getRole() { return role; }
+    public AdminRole getRole() { return role; }
 }

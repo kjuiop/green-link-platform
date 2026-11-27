@@ -2,6 +2,7 @@ package com.greenlink.admin.adapter.out.persistence.admin;
 
 import com.greenlink.admin.adapter.out.persistence.BaseJpaEntity;
 import com.greenlink.core.domain.admin.model.Admin;
+import com.greenlink.core.domain.admin.model.AdminRole;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -37,8 +38,9 @@ public class AdminJpaEntity extends BaseJpaEntity {
     @Column(nullable = false, length = 20)
     private AdminStatus status = AdminStatus.ACTIVE;
 
-    @Column(name = "super_admin", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
-    private boolean superAdmin;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(20) NOT NULL DEFAULT 'PARTNER_ADMIN'")
+    private AdminRole role = AdminRole.PARTNER_ADMIN;
 
     @Column(name = "onurim_enabled", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
     private boolean onurimEnabled = true;
@@ -64,7 +66,7 @@ public class AdminJpaEntity extends BaseJpaEntity {
         e.email = admin.getEmail();
         e.companyId = admin.getCompanyId();
         e.status = admin.getStatus() != null ? admin.getStatus() : AdminStatus.ACTIVE;
-        e.superAdmin = admin.isSuperAdmin();
+        e.role = admin.getRole() != null ? admin.getRole() : AdminRole.PARTNER_ADMIN;
         e.onurimEnabled = admin.isOnurimEnabled();
         e.deletedAt = admin.getDeletedAt();
         e.passwordSetupExpiresAt = admin.getPasswordSetupExpiresAt();
@@ -76,7 +78,7 @@ public class AdminJpaEntity extends BaseJpaEntity {
         String createdAtStr = getCreatedAt() != null
                 ? getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null;
         Admin admin = Admin.of(id, loginId, password, name, phone, email, companyId, status, createdAtStr, deletedAt);
-        admin.restoreAccessFlags(superAdmin, onurimEnabled);
+        admin.restoreAccess(role, onurimEnabled);
         admin.restorePasswordSetup(passwordSetupExpiresAt, passwordSetupAttempts);
         return admin;
     }

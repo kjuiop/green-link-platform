@@ -95,7 +95,7 @@ public class ShopSignupService implements ShopSignupUseCase {
             company != null && company.isOnurimEnabled(),
             company != null && company.isSiteEnabled(),
             admin.isOnurimEnabled(),
-            admin.isSuperAdmin());
+            admin.getRole().name());
     }
 
     private String normalizeBusinessNo(String raw) {

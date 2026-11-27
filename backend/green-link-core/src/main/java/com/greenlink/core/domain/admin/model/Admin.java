@@ -14,7 +14,7 @@ public class Admin {
     private String email;
     private Long companyId;
     private AdminStatus status;
-    private boolean superAdmin;
+    private AdminRole role = AdminRole.PARTNER_ADMIN;
     private boolean onurimEnabled = true;
     private String createdAt;
     private String deletedAt;
@@ -28,7 +28,7 @@ public class Admin {
         a.loginId = loginId;
         a.password = encodedPassword;
         a.status = AdminStatus.ACTIVE;
-        a.superAdmin = true;
+        a.role = AdminRole.SUPER_ADMIN;
         return a;
     }
 
@@ -111,8 +111,8 @@ public class Admin {
         this.onurimEnabled = true;
     }
 
-    public void restoreAccessFlags(boolean superAdmin, boolean onurimEnabled) {
-        this.superAdmin = superAdmin;
+    public void restoreAccess(AdminRole role, boolean onurimEnabled) {
+        this.role = role;
         this.onurimEnabled = onurimEnabled;
     }
 
@@ -188,7 +188,8 @@ public class Admin {
     public String getEmail() { return email; }
     public Long getCompanyId() { return companyId; }
     public AdminStatus getStatus() { return status; }
-    public boolean isSuperAdmin() { return superAdmin; }
+    public AdminRole getRole() { return role; }
+    public boolean isSuperAdmin() { return role == AdminRole.SUPER_ADMIN; }
     public boolean isOnurimEnabled() { return onurimEnabled; }
     public String getCreatedAt() { return createdAt; }
     public String getDeletedAt() { return deletedAt; }

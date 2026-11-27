@@ -58,7 +58,7 @@ class ShopSignupServiceTest {
             Admin a = inv.getArgument(0);
             Admin saved = Admin.of(10L, a.getLoginId(), a.getPassword(), a.getName(), a.getPhone(), a.getEmail(),
                 a.getCompanyId(), a.getStatus(), null, null);
-            saved.restoreAccessFlags(a.isSuperAdmin(), a.isOnurimEnabled());
+            saved.restoreAccess(a.getRole(), a.isOnurimEnabled());
             return saved;
         });
     }

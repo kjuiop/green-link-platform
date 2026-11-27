@@ -1,12 +1,14 @@
 package com.greenlink.admin.adapter.out.persistence.menu;
 
 import com.greenlink.admin.adapter.out.persistence.BaseJpaEntity;
-import com.greenlink.core.domain.admin.model.Role;
+import com.greenlink.core.domain.admin.model.AdminRole;
+import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.menu.model.Menu;
 import jakarta.persistence.*;
 
-import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "menus")
@@ -29,7 +31,10 @@ public class MenuJpaEntity extends BaseJpaEntity {
     private Long parentId;
 
     @OneToMany(mappedBy = "menu", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<MenuRoleJpaEntity> roles = new ArrayList<>();
+    private Set<MenuRoleJpaEntity> roles = new LinkedHashSet<>();
+
+    @OneToMany(mappedBy = "menu", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Set<MenuCompanyTypeJpaEntity> companyTypes = new LinkedHashSet<>();
 
     protected MenuJpaEntity() {}
 
@@ -44,8 +49,9 @@ public class MenuJpaEntity extends BaseJpaEntity {
     }
 
     public Menu toDomain() {
-        List<Role> roleList = roles.stream().map(MenuRoleJpaEntity::getRole).toList();
-        return Menu.of(id, name, url, sortOrder, parentId, roleList, List.of());
+        List<AdminRole> roleList = roles.stream().map(MenuRoleJpaEntity::getRole).toList();
+        List<CompanyType> typeList = companyTypes.stream().map(MenuCompanyTypeJpaEntity::getCompanyType).toList();
+        return Menu.of(id, name, url, sortOrder, parentId, roleList, typeList, List.of());
     }
 
     public void updateFields(Menu menu) {
@@ -56,5 +62,6 @@ public class MenuJpaEntity extends BaseJpaEntity {
     }
 
     public Long getId() { return id; }
-    public List<MenuRoleJpaEntity> getRoles() { return roles; }
+    public Set<MenuRoleJpaEntity> getRoles() { return roles; }
+    public Set<MenuCompanyTypeJpaEntity> getCompanyTypes() { return companyTypes; }
 }

@@ -43,7 +43,7 @@ class OnurimIdentityVerifierTest {
     private static final String BASE = "https://onurim.test";
     private static final String ACCOUNT_JSON =
         "{\"adminId\":5,\"loginId\":\"shop01\",\"name\":\"홍길동\",\"companyId\":7,\"companyName\":\"테스트업체\","
-        + "\"companyOnurimEnabled\":true,\"companySiteEnabled\":false,\"adminOnurimEnabled\":true,\"superAdmin\":false}";
+        + "\"companyOnurimEnabled\":true,\"companySiteEnabled\":false,\"adminOnurimEnabled\":true,\"role\":\"PARTNER_ADMIN\"}";
 
     private MockRestServiceServer server;
     private OnurimIdentityVerifier verifier;
@@ -72,6 +72,15 @@ class OnurimIdentityVerifierTest {
         assertThat(id.companySiteEnabled()).isFalse();
         assertThat(id.adminOnurimEnabled()).isTrue();
         assertThat(id.superAdmin()).isFalse();
+        server.verify();
+    }
+
+    @Test
+    void 슈퍼관리자_역할은_superAdmin으로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/verify"))
+            .andRespond(withSuccess(ACCOUNT_JSON.replace("PARTNER_ADMIN", "SUPER_ADMIN"), MediaType.APPLICATION_JSON));
+
+        assertThat(verifier.verify("shop01", "pw").superAdmin()).isTrue();
         server.verify();
     }
 

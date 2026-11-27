@@ -95,9 +95,22 @@ class AdminTest {
     }
 
     @Test
-    void restoreAccessFlags_저장된_값으로_복원한다() {
+    void create_시드_관리자는_슈퍼관리자_권한이다() {
+        Admin admin = Admin.create("admin", "encodedPw");
+        assertThat(admin.getRole()).isEqualTo(AdminRole.SUPER_ADMIN);
+        assertThat(admin.isSuperAdmin()).isTrue();
+    }
+
+    @Test
+    void createVendor_기본_권한은_파트너_관리자다() {
         Admin admin = Admin.createVendor("vendor01", "encodedPw", "홍길동", "010-1234-5678", "vendor01@test.com", 1L);
-        admin.restoreAccessFlags(false, false);
+        assertThat(admin.getRole()).isEqualTo(AdminRole.PARTNER_ADMIN);
+    }
+
+    @Test
+    void restoreAccess_저장된_값으로_복원한다() {
+        Admin admin = Admin.createVendor("vendor01", "encodedPw", "홍길동", "010-1234-5678", "vendor01@test.com", 1L);
+        admin.restoreAccess(AdminRole.PARTNER_ADMIN, false);
         assertThat(admin.isSuperAdmin()).isFalse();
         assertThat(admin.isOnurimEnabled()).isFalse();
     }

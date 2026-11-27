@@ -3,6 +3,7 @@ package com.greenlink.core.application.onurimapplication.service;
 import com.greenlink.core.application.onurimapplication.dto.OnurimApplicationResult;
 import com.greenlink.core.application.onurimapplication.dto.OnurimDocumentRequirement;
 import com.greenlink.core.domain.admin.model.Admin;
+import com.greenlink.core.domain.admin.model.AdminRole;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.Company;
@@ -75,7 +76,7 @@ class OnurimApplicationServiceTest {
 
     private static Admin admin(Long id, Long companyId) {
         Admin a = Admin.of(id, "shop" + id, "pw", "홍길동", "010-1234-5678", null, companyId, AdminStatus.ACTIVE, null, null);
-        a.restoreAccessFlags(false, false);
+        a.restoreAccess(AdminRole.PARTNER_ADMIN, false);
         return a;
     }
 

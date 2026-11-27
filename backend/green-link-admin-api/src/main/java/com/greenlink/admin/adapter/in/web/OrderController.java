@@ -101,21 +101,22 @@ public class OrderController {
             @RequestParam(required = false) String sortDir,
             @RequestParam(required = false) String completedAtFrom,
             @RequestParam(required = false) String completedAtTo,
+            @RequestParam(required = false) String view,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Long resolvedVendorId = vendorId;
         Long resolvedOrderingCompanyId = orderingCompanyId;
         Boolean resolvedDeleted = null;
         boolean isVendor = false;
+        boolean isOrdering = false;
         boolean isSuperAdmin = false;
 
         if (auth != null && auth.isAuthenticated()) {
-            isVendor = auth.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
-            boolean isOrdering = auth.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_ORDERING"));
-            isSuperAdmin = auth.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+            boolean hasVendor = hasRole(auth, "ROLE_VENDOR");
+            boolean hasOrdering = hasRole(auth, "ROLE_ORDERING");
+            isVendor = hasVendor && (!hasOrdering || !"ORDERING".equalsIgnoreCase(view));
+            isOrdering = hasOrdering && !isVendor;
+            isSuperAdmin = hasRole(auth, "ROLE_SUPER_ADMIN");
             if (isVendor) {
                 resolvedVendorId = Long.parseLong(String.valueOf(auth.getPrincipal()));
             } else if (isOrdering) {
@@ -142,7 +143,7 @@ public class OrderController {
         if (isVendor) {
             List<OrderResult> masked = result.content().stream().map(OrderController::maskPhones).toList();
             result = new PageResult<>(masked, result.page(), result.size(), result.totalElements(), result.totalPages(), result.totalAmount());
-        } else if (hasRole(auth, "ROLE_ORDERING")) {
+        } else if (isOrdering) {
             List<OrderResult> hidden = result.content().stream().map(OrderResult::toOrderingView).toList();
             result = new PageResult<>(hidden, result.page(), result.size(), result.totalElements(), result.totalPages(), result.totalAmount());
         }
@@ -151,10 +152,8 @@ public class OrderController {
 
     @GetMapping("/{id}")
     public ResponseEntity<OrderResult> getOne(@PathVariable Long id, Authentication auth) {
-        boolean isVendor = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
         OrderResult result = getOrderUseCase.getOrder(id, hasRole(auth, "ROLE_SUPER_ADMIN"));
-        return ResponseEntity.ok(isVendor ? maskPhones(result).toVendorView() : forOrderingCaller(auth, result));
+        return ResponseEntity.ok(isVendorFor(auth, result) ? maskPhones(result).toVendorView() : forOrderingCaller(auth, result));
     }
 
     @PostMapping
@@ -178,13 +177,10 @@ public class OrderController {
                                               @RequestBody @Valid UpdateOrderRequest req) {
         UpdateOrderCommand cmd = req.toCommand();
         if (auth != null && auth.isAuthenticated()) {
-            boolean isVendor = auth.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
-            if (isVendor) {
+            boolean isOrdering = hasRole(auth, "ROLE_ORDERING");
+            if (hasRole(auth, "ROLE_VENDOR") && !isOrdering) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
-            boolean isOrdering = auth.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_ORDERING"));
             if (isOrdering) {
                 OrderResult existing = getOrderUseCase.getOrder(id);
                 Long callerCompanyId = (auth instanceof org.springframework.security.authentication.UsernamePasswordAuthenticationToken token
@@ -215,15 +211,13 @@ public class OrderController {
                 // 알림톡 발송 실패는 배송완료 처리를 막지 않음
             }
         }
-        boolean isVendor = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
-        return ResponseEntity.ok(isVendor ? result.toVendorView() : forOrderingCaller(auth, result));
+        return ResponseEntity.ok(isVendorFor(auth, result) ? result.toVendorView() : forOrderingCaller(auth, result));
     }
 
     @GetMapping("/{id}/history")
     public ResponseEntity<List<OrderHistoryResult>> getHistory(@PathVariable Long id, Authentication auth) {
-        boolean isVendor = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_VENDOR"));
+        boolean isVendor = hasRole(auth, "ROLE_VENDOR")
+                && (!hasRole(auth, "ROLE_ORDERING") || isVendorFor(auth, getOrderUseCase.getOrder(id)));
         List<OrderHistoryResult> history = getOrderHistoryUseCase.getHistory(id);
         if (isVendor) {
             history = history.stream()
@@ -281,7 +275,7 @@ public class OrderController {
         OrderResult order = getOrderUseCase.getOrder(id, superAdmin);
         if (!superAdmin && !canViewAdjustments(auth, order)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         List<PriceAdjustmentResult> adjustments = getPriceAdjustmentsUseCase.getAdjustments(id);
-        if (hasRole(auth, "ROLE_VENDOR")) {
+        if (isVendorFor(auth, order)) {
             Long fee = order.vendorFee();
             adjustments = adjustments.stream().map(a -> a.toVendorView(fee)).toList();
         }
@@ -289,7 +283,7 @@ public class OrderController {
     }
 
     private boolean canViewAdjustments(Authentication auth, OrderResult order) {
-        if (hasRole(auth, "ROLE_VENDOR")) {
+        if (isVendorFor(auth, order)) {
             return order.vendorId() != null && order.vendorId().equals(Long.parseLong(String.valueOf(auth.getPrincipal())));
         }
         if (hasRole(auth, "ROLE_ORDERING")) {
@@ -306,13 +300,22 @@ public class OrderController {
 
     private PriceAdjustmentResult forViewer(Authentication auth, Long orderId, PriceAdjustmentResult result) {
         if (!hasRole(auth, "ROLE_VENDOR")) return result;
-        return result.toVendorView(getOrderUseCase.getOrder(orderId).vendorFee());
+        OrderResult order = getOrderUseCase.getOrder(orderId);
+        if (!isVendorFor(auth, order)) return result;
+        return result.toVendorView(order.vendorFee());
     }
 
     private boolean isAssignedVendor(Authentication auth, Long orderId) {
         if (!hasRole(auth, "ROLE_VENDOR")) return false;
         Long vendorId = getOrderUseCase.getOrder(orderId).vendorId();
         return vendorId != null && vendorId.equals(Long.parseLong(String.valueOf(auth.getPrincipal())));
+    }
+
+    /** 수주 capability가 있고, 발주 capability가 없거나(수주 전용) 이 주문의 배정 수주사일 때 수주 관점으로 본다. */
+    private static boolean isVendorFor(Authentication auth, OrderResult order) {
+        if (!hasRole(auth, "ROLE_VENDOR")) return false;
+        if (!hasRole(auth, "ROLE_ORDERING")) return true;
+        return order.vendorId() != null && order.vendorId().equals(Long.parseLong(String.valueOf(auth.getPrincipal())));
     }
 
     private static boolean hasRole(Authentication auth, String role) {
