@@ -8,7 +8,8 @@ import com.greenlink.core.application.menu.usecase.DeleteMenuUseCase;
 import com.greenlink.core.application.menu.usecase.GetAllMenusUseCase;
 import com.greenlink.core.application.menu.usecase.GetMenusByRoleUseCase;
 import com.greenlink.core.application.menu.usecase.UpdateMenuUseCase;
-import com.greenlink.core.domain.admin.model.Role;
+import com.greenlink.core.domain.admin.model.AdminRole;
+import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.menu.model.Menu;
 import com.greenlink.core.domain.menu.port.MenuRepository;
 import com.greenlink.core.global.exception.BusinessException;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,10 +41,10 @@ public class MenuService implements GetAllMenusUseCase, GetMenusByRoleUseCase,
     }
 
     @Override
-    public List<MenuResult> getMenusByRole(Role role) {
+    public List<MenuResult> getMenusByRole(AdminRole role, Set<CompanyType> capabilities) {
         List<Menu> all = menuRepository.findAll();
         List<Menu> filtered = all.stream()
-            .filter(m -> m.isAccessibleBy(role))
+            .filter(m -> m.isAccessibleBy(role, capabilities))
             .toList();
         return buildTree(filtered);
     }
@@ -50,7 +52,8 @@ public class MenuService implements GetAllMenusUseCase, GetMenusByRoleUseCase,
     @Override
     @Transactional
     public MenuResult createMenu(CreateMenuCommand cmd) {
-        Menu menu = Menu.create(cmd.name(), cmd.url(), cmd.sortOrder(), cmd.parentId(), cmd.roles());
+        Menu menu = Menu.create(cmd.name(), cmd.url(), cmd.sortOrder(), cmd.parentId(),
+            cmd.roles(), cmd.companyTypes());
         Menu saved = menuRepository.save(menu);
         return MenuResult.from(saved);
     }
@@ -60,7 +63,7 @@ public class MenuService implements GetAllMenusUseCase, GetMenusByRoleUseCase,
     public MenuResult updateMenu(Long id, UpdateMenuCommand cmd) {
         Menu menu = menuRepository.findById(id)
             .orElseThrow(() -> new BusinessException(MenuErrorCode.MENU_NOT_FOUND));
-        menu.updateInfo(cmd.name(), cmd.url(), cmd.sortOrder(), cmd.roles());
+        menu.updateInfo(cmd.name(), cmd.url(), cmd.sortOrder(), cmd.roles(), cmd.companyTypes());
         Menu saved = menuRepository.save(menu);
         return MenuResult.from(saved);
     }
@@ -96,17 +99,14 @@ public class MenuService implements GetAllMenusUseCase, GetMenusByRoleUseCase,
             .map(child -> toResult(child, byParent))
             .toList();
 
-        List<String> roleNames = menu.getRoles().stream()
-            .map(Enum::name)
-            .toList();
-
         return new MenuResult(
             menu.getId(),
             menu.getName(),
             menu.getUrl(),
             menu.getSortOrder(),
             menu.getParentId(),
-            roleNames,
+            menu.getRoles().stream().map(Enum::name).toList(),
+            menu.getCompanyTypes().stream().map(Enum::name).toList(),
             childResults
         );
     }

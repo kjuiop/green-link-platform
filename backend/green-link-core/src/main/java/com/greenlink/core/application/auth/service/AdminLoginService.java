@@ -7,7 +7,6 @@ import com.greenlink.core.application.auth.usecase.AdminLoginUseCase;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.Company;
-import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.company.port.CompanyRepository;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
@@ -15,7 +14,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -54,8 +52,8 @@ public class AdminLoginService implements AdminLoginUseCase {
         }
 
         if (admin.isSuperAdmin()) {
-            String token = tokenProvider.generateToken(admin.getId(), List.of("SUPER_ADMIN"), admin.getCompanyId());
-            return new AdminLoginResult(token, admin.getName(), admin.getCompanyId(), null);
+            String token = tokenProvider.generateToken(admin.getId(), admin.getRole(), null, admin.getCompanyId());
+            return new AdminLoginResult(token, admin.getName(), admin.getCompanyId(), null, admin.getRole().name(), null);
         }
 
         Company company = Optional.ofNullable(admin.getCompanyId())
@@ -66,10 +64,9 @@ public class AdminLoginService implements AdminLoginUseCase {
             throw new BusinessException(AuthErrorCode.ONURIM_NOT_ENABLED);
         }
 
-        // BOTH 타입은 VENDOR로 처리
-        String role = company.getType() == CompanyType.ORDERING ? "ORDERING" : "VENDOR";
-        String token = tokenProvider.generateToken(admin.getId(), List.of(role), company.getId());
+        String token = tokenProvider.generateToken(admin.getId(), admin.getRole(), company.getType(), company.getId());
 
-        return new AdminLoginResult(token, admin.getName(), company.getId(), company.getCompanyName());
+        return new AdminLoginResult(token, admin.getName(), company.getId(), company.getCompanyName(),
+            admin.getRole().name(), company.getType().name());
     }
 }

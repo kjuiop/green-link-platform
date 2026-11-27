@@ -8,7 +8,8 @@ import com.greenlink.core.application.menu.usecase.DeleteMenuUseCase;
 import com.greenlink.core.application.menu.usecase.GetAllMenusUseCase;
 import com.greenlink.core.application.menu.usecase.GetMenusByRoleUseCase;
 import com.greenlink.core.application.menu.usecase.UpdateMenuUseCase;
-import com.greenlink.core.domain.admin.model.Role;
+import com.greenlink.core.domain.admin.model.AdminRole;
+import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import jakarta.validation.Valid;
@@ -17,7 +18,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/menus")
@@ -48,16 +53,17 @@ public class MenuController {
 
     @GetMapping("/by-role")
     public ResponseEntity<List<MenuResult>> getByRole(Authentication authentication) {
-        String roleName = authentication.getAuthorities().stream()
-            .findFirst()
+        Set<String> authorities = authentication.getAuthorities().stream()
             .map(a -> a.getAuthority().replace("ROLE_", ""))
+            .collect(Collectors.toSet());
+        AdminRole role = Arrays.stream(AdminRole.values())
+            .filter(r -> authorities.contains(r.name()))
+            .findFirst()
             .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_ROLE));
-        try {
-            Role role = Role.valueOf(roleName);
-            return ResponseEntity.ok(getMenusByRoleUseCase.getMenusByRole(role));
-        } catch (IllegalArgumentException e) {
-            throw new BusinessException(AuthErrorCode.INVALID_ROLE);
-        }
+        Set<CompanyType> capabilities = EnumSet.noneOf(CompanyType.class);
+        if (authorities.contains(CompanyType.ORDERING.name())) capabilities.add(CompanyType.ORDERING);
+        if (authorities.contains(CompanyType.VENDOR.name())) capabilities.add(CompanyType.VENDOR);
+        return ResponseEntity.ok(getMenusByRoleUseCase.getMenusByRole(role, capabilities));
     }
 
     @PostMapping

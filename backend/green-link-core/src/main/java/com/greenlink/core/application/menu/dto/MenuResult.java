@@ -11,12 +11,10 @@ public record MenuResult(
     int sortOrder,
     Long parentId,
     List<String> roles,
+    List<String> companyTypes,
     List<MenuResult> children
 ) {
     public static MenuResult from(Menu menu) {
-        List<String> roleNames = menu.getRoles().stream()
-            .map(Enum::name)
-            .toList();
         List<MenuResult> childResults = menu.getChildren().stream()
             .map(MenuResult::from)
             .toList();
@@ -26,7 +24,8 @@ public record MenuResult(
             menu.getUrl(),
             menu.getSortOrder(),
             menu.getParentId(),
-            roleNames,
+            menu.getRoles().stream().map(Enum::name).toList(),
+            menu.getCompanyTypes().stream().map(Enum::name).toList(),
             childResults
         );
     }

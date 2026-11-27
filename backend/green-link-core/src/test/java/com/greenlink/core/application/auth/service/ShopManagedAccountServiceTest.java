@@ -3,6 +3,7 @@ package com.greenlink.core.application.auth.service;
 import com.greenlink.core.application.auth.dto.ShopManagedAccountCommand;
 import com.greenlink.core.application.auth.dto.VerifiedAccount;
 import com.greenlink.core.domain.admin.model.Admin;
+import com.greenlink.core.domain.admin.model.AdminRole;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.Company;
@@ -56,7 +57,7 @@ class ShopManagedAccountServiceTest {
 
     private Admin pending(LocalDateTime expiresAt, int attempts) {
         Admin a = Admin.of(1L, "brand01", "randomHash", "홍길동", "010-1234-5678", null, 7L, AdminStatus.ACTIVE, null, null);
-        a.restoreAccessFlags(false, false);
+        a.restoreAccess(AdminRole.PARTNER_ADMIN, false);
         a.restorePasswordSetup(expiresAt, attempts);
         return a;
     }
@@ -75,7 +76,7 @@ class ShopManagedAccountServiceTest {
             Admin a = inv.getArgument(0);
             Admin saved = Admin.of(10L, a.getLoginId(), a.getPassword(), a.getName(), a.getPhone(), a.getEmail(),
                 a.getCompanyId(), a.getStatus(), null, null);
-            saved.restoreAccessFlags(false, a.isOnurimEnabled());
+            saved.restoreAccess(AdminRole.PARTNER_ADMIN, a.isOnurimEnabled());
             saved.restorePasswordSetup(a.getPasswordSetupExpiresAt(), 0);
             return saved;
         });

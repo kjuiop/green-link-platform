@@ -312,7 +312,8 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
 
     private VerifiedIdentity toIdentity(AccountBody body) {
         return new VerifiedIdentity(body.adminId(), body.loginId(), body.name(), body.companyId(), body.companyName(),
-            body.companyOnurimEnabled(), body.companySiteEnabled(), body.adminOnurimEnabled(), body.superAdmin());
+            body.companyOnurimEnabled(), body.companySiteEnabled(), body.adminOnurimEnabled(),
+            "SUPER_ADMIN".equals(body.role()));
     }
 
     private <T> T execute(java.util.function.Supplier<T> request) {
@@ -503,7 +504,7 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
     @JsonIgnoreProperties(ignoreUnknown = true)
     record AccountBody(Long adminId, String loginId, String name, Long companyId, String companyName,
                        boolean companyOnurimEnabled, boolean companySiteEnabled,
-                       boolean adminOnurimEnabled, boolean superAdmin) {}
+                       boolean adminOnurimEnabled, String role) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record SummaryBody(Long adminId, String loginId, String name, Long companyId, String companyName,

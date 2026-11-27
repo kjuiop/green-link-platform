@@ -58,7 +58,7 @@ public class ShopAccessService implements ShopAccessUseCase {
             admin.getId(), admin.getLoginId(), admin.getName(),
             company.getId(), company.getCompanyName(),
             company.isOnurimEnabled(), company.isSiteEnabled(),
-            admin.isOnurimEnabled(), admin.isSuperAdmin());
+            admin.isOnurimEnabled(), admin.getRole().name());
     }
 
     @Override

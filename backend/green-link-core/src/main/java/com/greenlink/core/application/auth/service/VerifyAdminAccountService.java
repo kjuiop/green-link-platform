@@ -100,6 +100,6 @@ public class VerifyAdminAccountService implements VerifyAdminAccountUseCase {
             company != null && company.isOnurimEnabled(),
             company != null && company.isSiteEnabled(),
             admin.isOnurimEnabled(),
-            admin.isSuperAdmin());
+            admin.getRole().name());
     }
 }

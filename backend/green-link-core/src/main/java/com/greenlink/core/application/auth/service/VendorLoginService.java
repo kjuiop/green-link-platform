@@ -15,8 +15,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @Transactional(readOnly = true)
 public class VendorLoginService implements VendorLoginUseCase {
@@ -57,14 +55,14 @@ public class VendorLoginService implements VendorLoginUseCase {
             throw new BusinessException(AuthErrorCode.ACCOUNT_INACTIVE);
         }
 
-        boolean onurimCompany = companyRepository.findById(admin.getCompanyId())
+        Company company = companyRepository.findById(admin.getCompanyId())
             .filter(Company::isOnurimCompany)
-            .isPresent();
-        if (!onurimCompany || !admin.isOnurimEnabled()) {
+            .orElseThrow(() -> new BusinessException(AuthErrorCode.ONURIM_NOT_ENABLED));
+        if (!admin.isOnurimEnabled()) {
             throw new BusinessException(AuthErrorCode.ONURIM_NOT_ENABLED);
         }
 
-        String token = tokenProvider.generateToken(admin.getId(), List.of("VENDOR"), admin.getCompanyId());
-        return new VendorLoginResult(token, admin.getCompanyId());
+        String token = tokenProvider.generateToken(admin.getId(), admin.getRole(), company.getType(), company.getId());
+        return new VendorLoginResult(token, company.getId(), admin.getRole().name(), company.getType().name());
     }
 }

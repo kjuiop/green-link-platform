@@ -1,6 +1,7 @@
 package com.greenlink.admin.adapter.out.persistence.menu;
 
-import com.greenlink.core.domain.admin.model.Role;
+import com.greenlink.core.domain.admin.model.AdminRole;
+import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.menu.model.Menu;
 import com.greenlink.core.domain.menu.port.MenuRepository;
 import org.springframework.stereotype.Component;
@@ -44,16 +45,25 @@ public class MenuRepositoryAdapter implements MenuRepository {
             entity = MenuJpaEntity.from(menu);
         }
 
-        Set<Role> newRoles = new HashSet<>(menu.getRoles());
-        Set<Role> existingRoles = entity.getRoles().stream()
+        Set<AdminRole> newRoles = new HashSet<>(menu.getRoles());
+        Set<AdminRole> existingRoles = entity.getRoles().stream()
             .map(MenuRoleJpaEntity::getRole)
             .collect(Collectors.toSet());
-
         entity.getRoles().removeIf(r -> !newRoles.contains(r.getRole()));
-
-        for (Role role : menu.getRoles()) {
+        for (AdminRole role : newRoles) {
             if (!existingRoles.contains(role)) {
                 entity.getRoles().add(MenuRoleJpaEntity.of(entity, role));
+            }
+        }
+
+        Set<CompanyType> newTypes = new HashSet<>(menu.getCompanyTypes());
+        Set<CompanyType> existingTypes = entity.getCompanyTypes().stream()
+            .map(MenuCompanyTypeJpaEntity::getCompanyType)
+            .collect(Collectors.toSet());
+        entity.getCompanyTypes().removeIf(t -> !newTypes.contains(t.getCompanyType()));
+        for (CompanyType type : newTypes) {
+            if (!existingTypes.contains(type)) {
+                entity.getCompanyTypes().add(MenuCompanyTypeJpaEntity.of(entity, type));
             }
         }
 

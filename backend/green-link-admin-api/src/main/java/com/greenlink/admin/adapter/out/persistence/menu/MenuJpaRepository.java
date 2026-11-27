@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface MenuJpaRepository extends JpaRepository<MenuJpaEntity, Long> {
 
-    @EntityGraph(attributePaths = "roles")
+    @EntityGraph(attributePaths = {"roles", "companyTypes"})
     @Override
     List<MenuJpaEntity> findAll();
 

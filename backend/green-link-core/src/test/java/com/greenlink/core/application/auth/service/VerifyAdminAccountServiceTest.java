@@ -3,6 +3,7 @@ package com.greenlink.core.application.auth.service;
 import com.greenlink.core.application.auth.dto.AccountSummary;
 import com.greenlink.core.application.auth.dto.VerifiedAccount;
 import com.greenlink.core.domain.admin.model.Admin;
+import com.greenlink.core.domain.admin.model.AdminRole;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.Company;
@@ -42,7 +43,7 @@ class VerifyAdminAccountServiceTest {
 
     private Admin admin(Long companyId, AdminStatus status, String deletedAt) {
         Admin admin = Admin.of(1L, "admin01", "hashedPw", "관리자", "010-0000-0000", null, companyId, status, null, deletedAt);
-        admin.restoreAccessFlags(companyId == null, true);
+        admin.restoreAccess(companyId == null ? AdminRole.SUPER_ADMIN : AdminRole.PARTNER_ADMIN, true);
         return admin;
     }
 
@@ -69,7 +70,7 @@ class VerifyAdminAccountServiceTest {
         assertThat(result.loginId()).isEqualTo("admin01");
         assertThat(result.name()).isEqualTo("관리자");
         assertThat(result.companyName()).isEqualTo("테스트업체");
-        assertThat(result.superAdmin()).isFalse();
+        assertThat(result.role()).isEqualTo("PARTNER_ADMIN");
         assertThat(result.companyId()).isEqualTo(7L);
         assertThat(result.companyOnurimEnabled()).isTrue();
         assertThat(result.companySiteEnabled()).isFalse();
@@ -79,13 +80,13 @@ class VerifyAdminAccountServiceTest {
     @Test
     void verify_슈퍼관리자_플래그는_회사_유무가_아니라_관리자_플래그를_따른다() {
         Admin noCompanyNotSuper = Admin.of(1L, "admin01", "hashedPw", "관리자", "010-0000-0000", null, null, AdminStatus.ACTIVE, null, null);
-        noCompanyNotSuper.restoreAccessFlags(false, false);
+        noCompanyNotSuper.restoreAccess(AdminRole.PARTNER_ADMIN, false);
         given(adminRepository.findByLoginId("admin01")).willReturn(Optional.of(noCompanyNotSuper));
         given(passwordEncoder.matches("rawPw", "hashedPw")).willReturn(true);
 
         VerifiedAccount result = service.verify("admin01", "rawPw");
 
-        assertThat(result.superAdmin()).isFalse();
+        assertThat(result.role()).isEqualTo("PARTNER_ADMIN");
         assertThat(result.companyId()).isNull();
         assertThat(result.companyOnurimEnabled()).isFalse();
         assertThat(result.adminOnurimEnabled()).isFalse();
@@ -112,7 +113,7 @@ class VerifyAdminAccountServiceTest {
 
         VerifiedAccount result = service.verify("admin01", "rawPw");
 
-        assertThat(result.superAdmin()).isTrue();
+        assertThat(result.role()).isEqualTo("SUPER_ADMIN");
         assertThat(result.companyName()).isNull();
     }
 

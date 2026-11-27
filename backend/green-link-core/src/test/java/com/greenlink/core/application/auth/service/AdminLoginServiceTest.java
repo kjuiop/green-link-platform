@@ -4,6 +4,7 @@ import com.greenlink.core.application.auth.dto.AdminLoginCommand;
 import com.greenlink.core.application.auth.dto.AdminLoginResult;
 import com.greenlink.core.application.auth.port.TokenProvider;
 import com.greenlink.core.domain.admin.model.Admin;
+import com.greenlink.core.domain.admin.model.AdminRole;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
 import com.greenlink.core.domain.company.model.Company;
@@ -19,7 +20,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,13 +45,13 @@ class AdminLoginServiceTest {
 
     private Admin activeAdmin() {
         Admin admin = Admin.of(1L, "admin01", "hashedPw", "관리자", "010-0000-0000", null, null, AdminStatus.ACTIVE, null, null);
-        admin.restoreAccessFlags(true, true);
+        admin.restoreAccess(AdminRole.SUPER_ADMIN, true);
         return admin;
     }
 
     private Admin vendorAdmin(boolean onurimEnabled) {
         Admin admin = Admin.of(4L, "vendor03", "hashedPw", "홍길동", "010-5555-6666", null, 1L, AdminStatus.ACTIVE, null, null);
-        admin.restoreAccessFlags(false, onurimEnabled);
+        admin.restoreAccess(AdminRole.PARTNER_ADMIN, onurimEnabled);
         return admin;
     }
 
@@ -84,7 +84,7 @@ class AdminLoginServiceTest {
     void login_withValidCredentials_returnsToken() {
         given(adminRepository.findByLoginId("admin01")).willReturn(Optional.of(activeAdmin()));
         given(passwordEncoder.matches("rawPw", "hashedPw")).willReturn(true);
-        given(tokenProvider.generateToken(anyLong(), anyList(), isNull())).willReturn("jwt-token");
+        given(tokenProvider.generateToken(anyLong(), eq(AdminRole.SUPER_ADMIN), isNull(), isNull())).willReturn("jwt-token");
 
         AdminLoginResult result = service.login(new AdminLoginCommand("admin01", "rawPw"));
 
@@ -142,7 +142,7 @@ class AdminLoginServiceTest {
         given(adminRepository.findByLoginId("vendor03")).willReturn(Optional.of(vendor));
         given(passwordEncoder.matches("rawPw", "hashedPw")).willReturn(true);
         given(companyRepository.findById(1L)).willReturn(Optional.of(vendorCompany()));
-        given(tokenProvider.generateToken(eq(4L), eq(List.of("VENDOR")), eq(1L))).willReturn("vendor-token");
+        given(tokenProvider.generateToken(eq(4L), eq(AdminRole.PARTNER_ADMIN), eq(CompanyType.VENDOR), eq(1L))).willReturn("vendor-token");
 
         AdminLoginResult result = service.login(new AdminLoginCommand("vendor03", "rawPw"));
 
@@ -153,7 +153,7 @@ class AdminLoginServiceTest {
     void login_asSuperAdmin_generatesSuperAdminRoleToken() {
         given(adminRepository.findByLoginId("admin01")).willReturn(Optional.of(activeAdmin()));
         given(passwordEncoder.matches("rawPw", "hashedPw")).willReturn(true);
-        given(tokenProvider.generateToken(eq(1L), eq(List.of("SUPER_ADMIN")), isNull())).willReturn("admin-token");
+        given(tokenProvider.generateToken(eq(1L), eq(AdminRole.SUPER_ADMIN), isNull(), isNull())).willReturn("admin-token");
 
         AdminLoginResult result = service.login(new AdminLoginCommand("admin01", "rawPw"));
 
@@ -163,7 +163,7 @@ class AdminLoginServiceTest {
     @Test
     void login_회사없는_일반관리자는_슈퍼관리자가_아니므로_차단() {
         Admin noCompany = Admin.of(5L, "shop01", "hashedPw", "샵가입", "010-0000-0000", null, null, AdminStatus.ACTIVE, null, null);
-        noCompany.restoreAccessFlags(false, true);
+        noCompany.restoreAccess(AdminRole.PARTNER_ADMIN, true);
         assertLoginFails(noCompany, AuthErrorCode.ONURIM_NOT_ENABLED);
     }
 
@@ -198,39 +198,44 @@ class AdminLoginServiceTest {
     @Test
     void login_슈퍼관리자는_회사_플래그와_무관하게_허용() {
         Admin superAdmin = activeAdmin();
-        superAdmin.restoreAccessFlags(true, false);
+        superAdmin.restoreAccess(AdminRole.SUPER_ADMIN, false);
         givenCredentialsOk(superAdmin);
-        given(tokenProvider.generateToken(eq(1L), eq(List.of("SUPER_ADMIN")), isNull())).willReturn("admin-token");
+        given(tokenProvider.generateToken(eq(1L), eq(AdminRole.SUPER_ADMIN), isNull(), isNull())).willReturn("admin-token");
 
         AdminLoginResult result = service.login(new AdminLoginCommand("admin01", "rawPw"));
 
         assertThat(result.accessToken()).isEqualTo("admin-token");
         assertThat(result.companyName()).isNull();
+        assertThat(result.role()).isEqualTo("SUPER_ADMIN");
+        assertThat(result.companyType()).isNull();
     }
 
     @Test
-    void login_발주사는_ORDERING_토큰() {
+    void login_발주사는_ORDERING_회사유형_토큰() {
         Admin admin = vendorAdmin(true);
         givenCredentialsOk(admin);
         given(companyRepository.findById(1L)).willReturn(Optional.of(companyOf(CompanyType.ORDERING, true, false)));
-        given(tokenProvider.generateToken(eq(4L), eq(List.of("ORDERING")), eq(1L))).willReturn("ordering-token");
+        given(tokenProvider.generateToken(eq(4L), eq(AdminRole.PARTNER_ADMIN), eq(CompanyType.ORDERING), eq(1L))).willReturn("ordering-token");
 
         AdminLoginResult result = service.login(new AdminLoginCommand("vendor03", "rawPw"));
 
         assertThat(result.accessToken()).isEqualTo("ordering-token");
         assertThat(result.vendorId()).isEqualTo(1L);
         assertThat(result.companyName()).isEqualTo("테스트업체");
+        assertThat(result.role()).isEqualTo("PARTNER_ADMIN");
+        assertThat(result.companyType()).isEqualTo("ORDERING");
     }
 
     @Test
-    void login_수발주사는_VENDOR_토큰() {
+    void login_수발주사는_BOTH_회사유형_토큰() {
         Admin admin = vendorAdmin(true);
         givenCredentialsOk(admin);
         given(companyRepository.findById(1L)).willReturn(Optional.of(companyOf(CompanyType.BOTH, true, true)));
-        given(tokenProvider.generateToken(eq(4L), eq(List.of("VENDOR")), eq(1L))).willReturn("vendor-token");
+        given(tokenProvider.generateToken(eq(4L), eq(AdminRole.PARTNER_ADMIN), eq(CompanyType.BOTH), eq(1L))).willReturn("both-token");
 
         AdminLoginResult result = service.login(new AdminLoginCommand("vendor03", "rawPw"));
 
-        assertThat(result.accessToken()).isEqualTo("vendor-token");
+        assertThat(result.accessToken()).isEqualTo("both-token");
+        assertThat(result.companyType()).isEqualTo("BOTH");
     }
 }
