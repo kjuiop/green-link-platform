@@ -25,6 +25,8 @@ public record OnurimApplicationResult(
     String accountNumber,
     String accountHolder,
     List<OnurimApplicationRegion> regions,
+    String businessRegUrl,
+    String bankBookUrl,
     CompanyType approvedType,
     String rejectReason,
     LocalDateTime processedAt,

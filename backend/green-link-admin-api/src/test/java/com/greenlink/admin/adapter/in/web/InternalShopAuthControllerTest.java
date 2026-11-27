@@ -11,17 +11,23 @@ import com.greenlink.core.application.auth.usecase.ShopManagedAccountUseCase;
 import com.greenlink.core.application.auth.usecase.ShopSignupUseCase;
 import com.greenlink.core.application.auth.usecase.VerifyAdminAccountUseCase;
 import com.greenlink.core.application.onurimapplication.dto.OnurimApplicationResult;
+import com.greenlink.core.application.onurimapplication.dto.OnurimDocumentRequirement;
 import com.greenlink.core.application.onurimapplication.usecase.ApplyOnurimUseCase;
+import com.greenlink.core.application.onurimapplication.usecase.ApplyOnurimWithDocumentsUseCase;
+import com.greenlink.core.application.vendor.dto.SignupDocument;
 import com.greenlink.core.domain.company.model.CompanyType;
 import com.greenlink.core.domain.onurimapplication.model.OnurimApplicationStatus;
 import com.greenlink.core.global.exception.onurimapplication.OnurimApplicationErrorCode;
 import com.greenlink.core.global.exception.BusinessException;
 import com.greenlink.core.global.exception.auth.AuthErrorCode;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -29,11 +35,15 @@ import java.util.stream.IntStream;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -52,9 +62,10 @@ class InternalShopAuthControllerTest {
     private final ShopAccessUseCase accessUseCase = mock(ShopAccessUseCase.class);
     private final ShopManagedAccountUseCase managedUseCase = mock(ShopManagedAccountUseCase.class);
     private final ApplyOnurimUseCase onurimUseCase = mock(ApplyOnurimUseCase.class);
+    private final ApplyOnurimWithDocumentsUseCase onurimWithDocsUseCase = mock(ApplyOnurimWithDocumentsUseCase.class);
 
     private MockMvc mvc(String secret) {
-        return MockMvcBuilders.standaloneSetup(new InternalShopAuthController(useCase, signupUseCase, accessUseCase, managedUseCase, onurimUseCase, secret))
+        return MockMvcBuilders.standaloneSetup(new InternalShopAuthController(useCase, signupUseCase, accessUseCase, managedUseCase, onurimUseCase, onurimWithDocsUseCase, secret))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -430,49 +441,113 @@ class InternalShopAuthControllerTest {
     private static OnurimApplicationResult onurimResult() {
         return new OnurimApplicationResult(50L, 7L, "꽃집", 1L, "홍길동", CompanyType.BOTH,
                 OnurimApplicationStatus.PENDING, "02-123-4567", "서울시 강남구", null, null, null,
-                null, null, null, null, List.of(), null, null, null, null);
+                null, null, null, null, List.of(), null, null, null, null, null, null);
+    }
+
+    private static MockMultipartFile data(String json) {
+        return new MockMultipartFile("data", "", MediaType.APPLICATION_JSON_VALUE, json.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static MockMultipartFile doc(String part, String name) {
+        return new MockMultipartFile(part, name, "image/png", new byte[]{1, 2, 3});
     }
 
     @Test
     void 온우림_이용신청_시크릿이_틀리면_403() throws Exception {
-        mvc("s3cret").perform(post("/internal/shop-auth/onurim-applications")
-                        .header("X-Internal-Secret", "wrong")
-                        .contentType(MediaType.APPLICATION_JSON).content(ONURIM_BODY))
+        mvc("s3cret").perform(multipart("/internal/shop-auth/onurim-applications")
+                        .file(data(ONURIM_BODY))
+                        .header("X-Internal-Secret", "wrong"))
                 .andExpect(status().isForbidden());
-        verifyNoInteractions(onurimUseCase);
+        verifyNoInteractions(onurimWithDocsUseCase);
     }
 
     @Test
-    void 온우림_이용신청_정상이면_결과를_반환() throws Exception {
-        when(onurimUseCase.apply(anyLong(), anyLong(), any(), any())).thenReturn(onurimResult());
+    void 온우림_이용신청_서류없이_정상이면_결과를_반환() throws Exception {
+        when(onurimWithDocsUseCase.apply(anyLong(), anyLong(), any(), any(), isNull(), isNull()))
+                .thenReturn(onurimResult());
 
-        mvc("s3cret").perform(post("/internal/shop-auth/onurim-applications")
-                        .header("X-Internal-Secret", "s3cret")
-                        .contentType(MediaType.APPLICATION_JSON).content(ONURIM_BODY))
+        mvc("s3cret").perform(multipart("/internal/shop-auth/onurim-applications")
+                        .file(data(ONURIM_BODY))
+                        .header("X-Internal-Secret", "s3cret"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PENDING"));
     }
 
     @Test
+    void 온우림_이용신청_서류_파트를_문서로_변환해_전달() throws Exception {
+        when(onurimWithDocsUseCase.apply(anyLong(), anyLong(), any(), any(), any(), any()))
+                .thenReturn(onurimResult());
+
+        mvc("s3cret").perform(multipart("/internal/shop-auth/onurim-applications")
+                        .file(data(ONURIM_BODY))
+                        .file(doc("businessDoc", "biz.png"))
+                        .file(doc("bankDoc", "bank.png"))
+                        .header("X-Internal-Secret", "s3cret"))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<SignupDocument> biz = ArgumentCaptor.forClass(SignupDocument.class);
+        ArgumentCaptor<SignupDocument> bank = ArgumentCaptor.forClass(SignupDocument.class);
+        verify(onurimWithDocsUseCase).apply(eq(1L), eq(7L), eq(CompanyType.BOTH), any(), biz.capture(), bank.capture());
+        assertThat(biz.getValue().fileName()).isEqualTo("biz.png");
+        assertThat(bank.getValue().fileName()).isEqualTo("bank.png");
+        assertThat(biz.getValue().content()).containsExactly(1, 2, 3);
+    }
+
+    @Test
+    void 온우림_이용신청_필수서류_누락은_400으로_매핑() throws Exception {
+        when(onurimWithDocsUseCase.apply(anyLong(), anyLong(), any(), any(), any(), any()))
+                .thenThrow(new BusinessException(OnurimApplicationErrorCode.DOCUMENT_REQUIRED));
+
+        mvc("s3cret").perform(multipart("/internal/shop-auth/onurim-applications")
+                        .file(data(ONURIM_BODY))
+                        .header("X-Internal-Secret", "s3cret"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ONURIM_APP_009"));
+    }
+
+    @Test
     void 온우림_이용신청_필수값이_없으면_400() throws Exception {
-        mvc("s3cret").perform(post("/internal/shop-auth/onurim-applications")
-                        .header("X-Internal-Secret", "s3cret")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"adminId\":1,\"companyId\":7,\"desiredType\":\"BOTH\"}"))
+        mvc("s3cret").perform(multipart("/internal/shop-auth/onurim-applications")
+                        .file(data("{\"adminId\":1,\"companyId\":7,\"desiredType\":\"BOTH\"}"))
+                        .header("X-Internal-Secret", "s3cret"))
                 .andExpect(status().isBadRequest());
-        verifyNoInteractions(onurimUseCase);
+        verifyNoInteractions(onurimWithDocsUseCase);
+    }
+
+    @Test
+    void 온우림_이용신청_data_파트가_없으면_400() throws Exception {
+        mvc("s3cret").perform(multipart("/internal/shop-auth/onurim-applications")
+                        .file(doc("businessDoc", "biz.png"))
+                        .header("X-Internal-Secret", "s3cret"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(onurimWithDocsUseCase);
     }
 
     @Test
     void 온우림_이용신청_중복은_409로_매핑() throws Exception {
-        when(onurimUseCase.apply(anyLong(), anyLong(), any(), any()))
+        when(onurimWithDocsUseCase.apply(anyLong(), anyLong(), any(), any(), any(), any()))
                 .thenThrow(new BusinessException(OnurimApplicationErrorCode.ALREADY_PENDING));
 
-        mvc("s3cret").perform(post("/internal/shop-auth/onurim-applications")
-                        .header("X-Internal-Secret", "s3cret")
-                        .contentType(MediaType.APPLICATION_JSON).content(ONURIM_BODY))
+        mvc("s3cret").perform(multipart("/internal/shop-auth/onurim-applications")
+                        .file(data(ONURIM_BODY))
+                        .header("X-Internal-Secret", "s3cret"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("ONURIM_APP_003"));
+    }
+
+    @Test
+    void 온우림_필요서류_조회는_시크릿_검증후_결과를_반환() throws Exception {
+        when(onurimUseCase.getDocumentRequirement(1L, 7L)).thenReturn(new OnurimDocumentRequirement(true, false));
+
+        mvc("s3cret").perform(get("/internal/shop-auth/onurim-applications/documents")
+                        .param("adminId", "1").param("companyId", "7").header("X-Internal-Secret", "s3cret"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.needsBusinessReg").value(true))
+                .andExpect(jsonPath("$.needsBankBook").value(false));
+
+        mvc("s3cret").perform(get("/internal/shop-auth/onurim-applications/documents")
+                        .param("adminId", "1").param("companyId", "7").header("X-Internal-Secret", "wrong"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.greenlink.core.application.onurimapplication.service;
 
 import com.greenlink.core.application.onurimapplication.dto.OnurimApplicationResult;
+import com.greenlink.core.application.onurimapplication.dto.OnurimDocumentRequirement;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.model.AdminStatus;
 import com.greenlink.core.domain.admin.port.AdminRepository;
@@ -44,6 +45,8 @@ class OnurimApplicationServiceTest {
     private static final Long APPLICANT_ID = 1L;
     private static final Long OPERATOR_ID = 99L;
     private static final Long APP_ID = 50L;
+    private static final String BIZ_URL = "https://s3/biz.png";
+    private static final String BANK_URL = "https://s3/bank.png";
 
     @Mock OnurimApplicationRepository applicationRepository;
     @Mock CompanyRepository companyRepository;
@@ -63,6 +66,13 @@ class OnurimApplicationServiceTest {
         return c;
     }
 
+    private static Company companyWithDocs(String biz, String bank) {
+        Company c = Company.of(COMPANY_ID, "123-45-67890", "꽃집", "김대표", null, null, null, null,
+            null, CompanyStatus.ACTIVE, true, biz, bank, null, null, null, null);
+        c.restoreServiceFlags(false, true);
+        return c;
+    }
+
     private static Admin admin(Long id, Long companyId) {
         Admin a = Admin.of(id, "shop" + id, "pw", "홍길동", "010-1234-5678", null, companyId, AdminStatus.ACTIVE, null, null);
         a.restoreAccessFlags(false, false);
@@ -76,10 +86,14 @@ class OnurimApplicationServiceTest {
     }
 
     private static OnurimApplication persisted(OnurimApplicationStatus status) {
+        return persisted(status, BIZ_URL, BANK_URL);
+    }
+
+    private static OnurimApplication persisted(OnurimApplicationStatus status, String biz, String bank) {
         OnurimApplicationInfo normalized = OnurimApplication
-            .request(COMPANY_ID, APPLICANT_ID, CompanyType.BOTH, info()).getInfo();
+            .request(COMPANY_ID, APPLICANT_ID, CompanyType.BOTH, info(), null, null).getInfo();
         return OnurimApplication.of(APP_ID, COMPANY_ID, APPLICANT_ID, CompanyType.BOTH, status, normalized,
-            null, null, null, null, LocalDateTime.now());
+            biz, bank, null, null, null, null, LocalDateTime.now());
     }
 
     private static void assertCode(Runnable call, ErrorCode expected) {
@@ -105,7 +119,7 @@ class OnurimApplicationServiceTest {
         given(applicationRepository.existsPendingByCompanyId(COMPANY_ID)).willReturn(false);
         given(applicationRepository.save(any(OnurimApplication.class))).willAnswer(inv -> inv.getArgument(0));
 
-        OnurimApplicationResult result = service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.BOTH, info());
+        OnurimApplicationResult result = service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.BOTH, info(), BIZ_URL, BANK_URL);
 
         assertThat(result.status()).isEqualTo(OnurimApplicationStatus.PENDING);
         assertThat(result.companyName()).isEqualTo("꽃집");
@@ -120,7 +134,7 @@ class OnurimApplicationServiceTest {
         given(companyRepository.findById(COMPANY_ID)).willReturn(Optional.of(company));
         given(applicationRepository.save(any(OnurimApplication.class))).willAnswer(inv -> inv.getArgument(0));
 
-        service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.VENDOR, info());
+        service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.VENDOR, info(), BIZ_URL, BANK_URL);
 
         assertThat(company.isOnurimCompany()).isFalse();
         assertThat(admin.isOnurimEnabled()).isFalse();
@@ -131,11 +145,11 @@ class OnurimApplicationServiceTest {
     @Test
     void 다른_회사_소속이거나_소속없는_계정은_신청_거부() {
         given(adminRepository.findById(APPLICANT_ID)).willReturn(Optional.of(admin(APPLICANT_ID, 8L)));
-        assertCode(() -> service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.BOTH, info()),
+        assertCode(() -> service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.BOTH, info(), BIZ_URL, BANK_URL),
             OnurimApplicationErrorCode.APPLICANT_MISMATCH);
 
         given(adminRepository.findById(2L)).willReturn(Optional.of(admin(2L, null)));
-        assertCode(() -> service.apply(2L, COMPANY_ID, CompanyType.BOTH, info()),
+        assertCode(() -> service.apply(2L, COMPANY_ID, CompanyType.BOTH, info(), BIZ_URL, BANK_URL),
             OnurimApplicationErrorCode.APPLICANT_MISMATCH);
         verify(applicationRepository, never()).save(any());
     }
@@ -147,7 +161,7 @@ class OnurimApplicationServiceTest {
         given(adminRepository.findById(APPLICANT_ID)).willReturn(Optional.of(admin(APPLICANT_ID, COMPANY_ID)));
         given(companyRepository.findById(COMPANY_ID)).willReturn(Optional.of(enabled));
 
-        assertCode(() -> service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.BOTH, info()),
+        assertCode(() -> service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.BOTH, info(), BIZ_URL, BANK_URL),
             OnurimApplicationErrorCode.ALREADY_ENABLED);
         verify(applicationRepository, never()).save(any());
     }
@@ -158,7 +172,7 @@ class OnurimApplicationServiceTest {
         given(companyRepository.findById(COMPANY_ID)).willReturn(Optional.of(shopCompany()));
         given(applicationRepository.existsPendingByCompanyId(COMPANY_ID)).willReturn(true);
 
-        assertCode(() -> service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.BOTH, info()),
+        assertCode(() -> service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.BOTH, info(), BIZ_URL, BANK_URL),
             OnurimApplicationErrorCode.ALREADY_PENDING);
         verify(applicationRepository, never()).save(any());
     }
@@ -170,8 +184,145 @@ class OnurimApplicationServiceTest {
         given(applicationRepository.existsPendingByCompanyId(COMPANY_ID)).willReturn(false);
         given(applicationRepository.save(any(OnurimApplication.class))).willAnswer(inv -> inv.getArgument(0));
 
-        assertThat(service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.ORDERING, info()).status())
+        assertThat(service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.ORDERING, info(), BIZ_URL, BANK_URL).status())
             .isEqualTo(OnurimApplicationStatus.PENDING);
+    }
+
+    // ---- 서류 ----
+
+    private void stubApplyTargets(Company company) {
+        given(adminRepository.findById(APPLICANT_ID)).willReturn(Optional.of(admin(APPLICANT_ID, COMPANY_ID)));
+        given(companyRepository.findById(COMPANY_ID)).willReturn(Optional.of(company));
+    }
+
+    @Test
+    void 신청에_첨부한_서류_URL이_저장된다() {
+        stubApplyTargets(shopCompany());
+        given(applicationRepository.save(any(OnurimApplication.class))).willAnswer(inv -> inv.getArgument(0));
+
+        OnurimApplicationResult result =
+            service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.BOTH, info(), BIZ_URL, BANK_URL);
+
+        assertThat(result.businessRegUrl()).isEqualTo(BIZ_URL);
+        assertThat(result.bankBookUrl()).isEqualTo(BANK_URL);
+    }
+
+    @Test
+    void 회사에_서류가_없는데_첨부하지_않으면_거부() {
+        stubApplyTargets(shopCompany());
+
+        assertCode(() -> service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.BOTH, info(), BIZ_URL, null),
+            OnurimApplicationErrorCode.DOCUMENT_REQUIRED);
+        assertCode(() -> service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.BOTH, info(), null, BANK_URL),
+            OnurimApplicationErrorCode.DOCUMENT_REQUIRED);
+        verify(applicationRepository, never()).save(any());
+    }
+
+    @Test
+    void 회사에_이미_있는_서류를_첨부하면_거부() {
+        stubApplyTargets(companyWithDocs("https://old/biz.png", null));
+
+        assertCode(() -> service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.BOTH, info(), BIZ_URL, BANK_URL),
+            OnurimApplicationErrorCode.DOCUMENT_NOT_ALLOWED);
+        verify(applicationRepository, never()).save(any());
+    }
+
+    @Test
+    void 회사에_서류가_모두_있으면_첨부없이_신청된다() {
+        stubApplyTargets(companyWithDocs("https://old/biz.png", "https://old/bank.png"));
+        given(applicationRepository.save(any(OnurimApplication.class))).willAnswer(inv -> inv.getArgument(0));
+
+        OnurimApplicationResult result =
+            service.apply(APPLICANT_ID, COMPANY_ID, CompanyType.BOTH, info(), null, null);
+
+        assertThat(result.status()).isEqualTo(OnurimApplicationStatus.PENDING);
+        assertThat(result.businessRegUrl()).isNull();
+    }
+
+    @Test
+    void 필요서류는_회사에_없는_항목만_true() {
+        given(adminRepository.findById(APPLICANT_ID)).willReturn(Optional.of(admin(APPLICANT_ID, COMPANY_ID)));
+        given(companyRepository.findById(COMPANY_ID)).willReturn(Optional.of(companyWithDocs("https://old/biz.png", " ")));
+
+        OnurimDocumentRequirement need = service.getDocumentRequirement(APPLICANT_ID, COMPANY_ID);
+
+        assertThat(need.needsBusinessReg()).isFalse();
+        assertThat(need.needsBankBook()).isTrue();
+    }
+
+    @Test
+    void 필요서류_조회는_다른_회사_계정이면_거부() {
+        given(adminRepository.findById(APPLICANT_ID)).willReturn(Optional.of(admin(APPLICANT_ID, 8L)));
+
+        assertCode(() -> service.getDocumentRequirement(APPLICANT_ID, COMPANY_ID),
+            OnurimApplicationErrorCode.APPLICANT_MISMATCH);
+    }
+
+    @Test
+    void 사전검증은_이미_이용중이거나_심사중이면_거부하고_통과하면_저장하지_않는다() {
+        Company enabled = shopCompany();
+        enabled.enableOnurim(CompanyType.ORDERING);
+        stubApplyTargets(enabled);
+        assertCode(() -> service.ensureApplicable(APPLICANT_ID, COMPANY_ID), OnurimApplicationErrorCode.ALREADY_ENABLED);
+
+        stubApplyTargets(shopCompany());
+        given(applicationRepository.existsPendingByCompanyId(COMPANY_ID)).willReturn(true);
+        assertCode(() -> service.ensureApplicable(APPLICANT_ID, COMPANY_ID), OnurimApplicationErrorCode.ALREADY_PENDING);
+
+        given(applicationRepository.existsPendingByCompanyId(COMPANY_ID)).willReturn(false);
+        service.ensureApplicable(APPLICANT_ID, COMPANY_ID);
+        verify(applicationRepository, never()).save(any());
+    }
+
+    @Test
+    void 승인하면_회사에_없는_서류만_신청서에서_복사된다() {
+        Company company = shopCompany();
+        stubApprovalTargets(company, admin(APPLICANT_ID, COMPANY_ID));
+
+        service.approve(APP_ID, CompanyType.BOTH, OPERATOR_ID);
+
+        assertThat(company.getBusinessRegUrl()).isEqualTo(BIZ_URL);
+        assertThat(company.getBankBookUrl()).isEqualTo(BANK_URL);
+    }
+
+    @Test
+    void 승인해도_회사의_기존_서류는_덮어쓰지_않는다() {
+        Company company = companyWithDocs("https://old/biz.png", null);
+        stubApprovalTargets(company, admin(APPLICANT_ID, COMPANY_ID));
+
+        service.approve(APP_ID, CompanyType.BOTH, OPERATOR_ID);
+
+        assertThat(company.getBusinessRegUrl()).isEqualTo("https://old/biz.png");
+        assertThat(company.getBankBookUrl()).isEqualTo(BANK_URL);
+    }
+
+    @Test
+    void 신청에_서류가_없으면_승인해도_회사_서류는_그대로다() {
+        Company company = companyWithDocs("https://old/biz.png", "https://old/bank.png");
+        given(applicationRepository.findById(APP_ID))
+            .willReturn(Optional.of(persisted(OnurimApplicationStatus.PENDING, null, null)));
+        given(companyRepository.findById(COMPANY_ID)).willReturn(Optional.of(company));
+        given(adminRepository.findById(APPLICANT_ID)).willReturn(Optional.of(admin(APPLICANT_ID, COMPANY_ID)));
+        given(companyRepository.save(any(Company.class))).willAnswer(inv -> inv.getArgument(0));
+        given(adminRepository.save(any(Admin.class))).willAnswer(inv -> inv.getArgument(0));
+        given(applicationRepository.save(any(OnurimApplication.class))).willAnswer(inv -> inv.getArgument(0));
+
+        service.approve(APP_ID, CompanyType.ORDERING, OPERATOR_ID);
+
+        assertThat(company.getBusinessRegUrl()).isEqualTo("https://old/biz.png");
+        assertThat(company.getBankBookUrl()).isEqualTo("https://old/bank.png");
+    }
+
+    @Test
+    void 거절하면_회사에_서류가_복사되지_않는다() {
+        Company company = shopCompany();
+        given(applicationRepository.findById(APP_ID)).willReturn(Optional.of(persisted(OnurimApplicationStatus.PENDING)));
+        given(applicationRepository.save(any(OnurimApplication.class))).willAnswer(inv -> inv.getArgument(0));
+
+        service.reject(APP_ID, "서류 불충분", OPERATOR_ID);
+
+        assertThat(company.getBusinessRegUrl()).isNull();
+        verify(companyRepository, never()).save(any(Company.class));
     }
 
     // ---- approve ----

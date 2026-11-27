@@ -55,6 +55,21 @@ function Field({ label, value }: { label: string; value: string | null | undefin
   )
 }
 
+function DocLink({ label, url }: { label: string; url: string | null }) {
+  return (
+    <div className="flex gap-2 text-sm">
+      <span className="w-28 shrink-0 text-gray-500">{label}</span>
+      {url ? (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="text-green-700 underline">
+          첨부 서류 열기
+        </a>
+      ) : (
+        <span className="text-gray-500">첨부 없음 (회사 등록 서류 사용)</span>
+      )}
+    </div>
+  )
+}
+
 export default function OnurimApplicationsPage() {
   const [status, setStatus] = useState<OnurimApplicationStatus>('PENDING')
   const [page, setPage] = useState(0)
@@ -206,6 +221,8 @@ export default function OnurimApplicationsPage() {
               <Field label="주소" value={[target.address, target.detailAddress].filter(Boolean).join(' ')} />
               <Field label="세금계산서 이메일" value={target.taxInvoiceEmail} />
               <Field label="메모" value={target.memo} />
+              <DocLink label="사업자등록증 사본" url={target.businessRegUrl} />
+              <DocLink label="통장 사본" url={target.bankBookUrl} />
               {includesVendor(target.desiredType) && (
                 <>
                   <Field label="팩스" value={target.faxNumber} />
