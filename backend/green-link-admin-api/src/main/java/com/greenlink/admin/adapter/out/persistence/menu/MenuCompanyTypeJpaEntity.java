@@ -17,7 +17,7 @@ public class MenuCompanyTypeJpaEntity {
     private MenuJpaEntity menu;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "company_type", nullable = false, length = 20)
+    @Column(name = "company_type", nullable = false, length = 20, columnDefinition = "VARCHAR(20) NOT NULL")
     private CompanyType companyType;
 
     protected MenuCompanyTypeJpaEntity() {}

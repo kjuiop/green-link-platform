@@ -17,7 +17,7 @@ public class MenuRoleJpaEntity {
     private MenuJpaEntity menu;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(20) NOT NULL")
     private AdminRole role;
 
     protected MenuRoleJpaEntity() {}
