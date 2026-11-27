@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { type MenuItem, type UserRole, ALL_ROLES, ROLE_LABELS } from '@/types/menu'
+import { type MenuItem, type AdminRole, type CompanyType, ALL_ROLES, ROLE_LABELS, MENU_COMPANY_TYPES, COMPANY_TYPE_LABELS } from '@/types/menu'
 import { fetchAllMenus, createMenu, updateMenu, deleteMenu } from '@/lib/api/menuApi'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -13,7 +13,8 @@ type FormState = {
   url: string
   parentUrl: string
   sortOrder: number
-  roles: UserRole[]
+  roles: AdminRole[]
+  companyTypes: CompanyType[]
 }
 
 const EMPTY_FORM: FormState = {
@@ -24,14 +25,110 @@ const EMPTY_FORM: FormState = {
   parentUrl: '',
   sortOrder: 0,
   roles: [],
+  companyTypes: [],
+}
+
+function DualList<T extends string>({
+  label, hint, all, labels, value, onChange,
+}: {
+  label: string
+  hint?: string
+  all: T[]
+  labels: Record<T, string>
+  value: T[]
+  onChange: (next: T[]) => void
+}) {
+  const [inactiveSelected, setInactiveSelected] = useState<T | null>(null)
+  const [activeSelected, setActiveSelected] = useState<T | null>(null)
+  const inactive = all.filter((v) => !value.includes(v))
+  const active = all.filter((v) => value.includes(v))
+
+  function include() {
+    if (!inactiveSelected) return
+    onChange([...value, inactiveSelected])
+    setInactiveSelected(null)
+  }
+
+  function exclude() {
+    if (!activeSelected) return
+    onChange(value.filter((v) => v !== activeSelected))
+    setActiveSelected(null)
+  }
+
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-medium text-gray-500">{label}</label>
+      {hint && <p className="text-xs text-gray-400">{hint}</p>}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex-1">
+          <p className="mb-1 text-center text-xs text-gray-400">비활성</p>
+          <div className="h-24 overflow-y-auto rounded-md border bg-gray-50">
+            {inactive.map((item) => (
+              <div
+                key={item}
+                onClick={() => { setInactiveSelected(item); setActiveSelected(null) }}
+                className={cn(
+                  'cursor-pointer px-3 py-2 text-sm transition-colors',
+                  inactiveSelected === item
+                    ? 'bg-green-50 font-medium text-green-700'
+                    : 'text-gray-500 hover:bg-gray-100',
+                )}
+              >
+                {labels[item]}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-row justify-center gap-1.5 sm:flex-col">
+          <button
+            type="button"
+            onClick={include}
+            disabled={!inactiveSelected}
+            className="flex h-7 w-7 items-center justify-center rounded border bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+            title="추가"
+          >
+            <ChevronRight className="h-4 w-4 rotate-90 sm:rotate-0" />
+          </button>
+          <button
+            type="button"
+            onClick={exclude}
+            disabled={!activeSelected}
+            className="flex h-7 w-7 items-center justify-center rounded border bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+            title="제거"
+          >
+            <ChevronRight className="h-4 w-4 -rotate-90 sm:rotate-180" />
+          </button>
+        </div>
+
+        <div className="flex-1">
+          <p className="mb-1 text-center text-xs text-gray-400">활성</p>
+          <div className="h-24 overflow-y-auto rounded-md border bg-gray-50">
+            {active.map((item) => (
+              <div
+                key={item}
+                onClick={() => { setActiveSelected(item); setInactiveSelected(null) }}
+                className={cn(
+                  'cursor-pointer px-3 py-2 text-sm transition-colors',
+                  activeSelected === item
+                    ? 'bg-green-50 font-medium text-green-700'
+                    : 'text-gray-600 hover:bg-gray-100',
+                )}
+              >
+                {labels[item]}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function MenuManagePage() {
   const [menus, setMenus] = useState<MenuItem[]>([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
-  const [inactiveSelected, setInactiveSelected] = useState<UserRole | null>(null)
-  const [activeSelected, setActiveSelected] = useState<UserRole | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -44,8 +141,6 @@ export default function MenuManagePage() {
 
   function selectMenu(menu: MenuItem, parent?: MenuItem) {
     setError('')
-    setInactiveSelected(null)
-    setActiveSelected(null)
     setForm({
       id: menu.id,
       parentId: parent?.id ?? null,
@@ -54,6 +149,7 @@ export default function MenuManagePage() {
       parentUrl: parent?.url ?? '',
       sortOrder: menu.sortOrder,
       roles: [...menu.roles],
+      companyTypes: [...(menu.companyTypes ?? [])],
     })
   }
 
@@ -82,6 +178,7 @@ export default function MenuManagePage() {
           url: fullUrl,
           sortOrder: form.sortOrder,
           roles: form.roles,
+          companyTypes: form.companyTypes,
         })
       } else {
         await createMenu({
@@ -90,6 +187,7 @@ export default function MenuManagePage() {
           sortOrder: form.sortOrder,
           parentId: form.parentId,
           roles: form.roles,
+          companyTypes: form.companyTypes,
         })
       }
       const updated = await fetchAllMenus()
@@ -119,26 +217,11 @@ export default function MenuManagePage() {
     }
   }
 
-  function includeRole() {
-    if (!inactiveSelected) return
-    setForm((prev) => ({ ...prev, roles: [...prev.roles, inactiveSelected] }))
-    setInactiveSelected(null)
-  }
-
-  function excludeRole() {
-    if (!activeSelected) return
-    setForm((prev) => ({ ...prev, roles: prev.roles.filter((r) => r !== activeSelected) }))
-    setActiveSelected(null)
-  }
-
-  const inactiveRoles = ALL_ROLES.filter((r) => !form.roles.includes(r))
-  const activeRoles = ALL_ROLES.filter((r) => form.roles.includes(r))
-
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold">메뉴 관리</h1>
-        <p className="mt-0.5 text-sm text-gray-500">사이드바 메뉴 구성 및 역할별 접근 권한을 관리합니다.</p>
+        <p className="mt-0.5 text-sm text-gray-500">사이드바 메뉴 구성 및 권한·회사 유형별 접근을 관리합니다.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -248,75 +331,22 @@ export default function MenuManagePage() {
               />
             </div>
 
-            {/* 접근 권한 */}
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-gray-500">접근 권한</label>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                {/* 비활성 권한 */}
-                <div className="flex-1">
-                  <p className="mb-1 text-center text-xs text-gray-400">비활성</p>
-                  <div className="h-24 overflow-y-auto rounded-md border bg-gray-50">
-                    {inactiveRoles.map((role) => (
-                      <div
-                        key={role}
-                        onClick={() => { setInactiveSelected(role); setActiveSelected(null) }}
-                        className={cn(
-                          'cursor-pointer px-3 py-2 text-sm transition-colors',
-                          inactiveSelected === role
-                            ? 'bg-green-50 font-medium text-green-700'
-                            : 'text-gray-500 hover:bg-gray-100',
-                        )}
-                      >
-                        {ROLE_LABELS[role]}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            <DualList
+              label="접근 권한"
+              all={ALL_ROLES}
+              labels={ROLE_LABELS}
+              value={form.roles}
+              onChange={(roles) => setForm((p) => ({ ...p, roles }))}
+            />
 
-                {/* 이동 버튼 */}
-                <div className="flex flex-row justify-center gap-1.5 sm:flex-col">
-                  <button
-                    type="button"
-                    onClick={includeRole}
-                    disabled={!inactiveSelected}
-                    className="flex h-7 w-7 items-center justify-center rounded border bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-30"
-                    title="추가"
-                  >
-                    <ChevronRight className="h-4 w-4 rotate-90 sm:rotate-0" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={excludeRole}
-                    disabled={!activeSelected}
-                    className="flex h-7 w-7 items-center justify-center rounded border bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-30"
-                    title="제거"
-                  >
-                    <ChevronRight className="h-4 w-4 -rotate-90 sm:rotate-180" />
-                  </button>
-                </div>
-
-                {/* 활성 권한 */}
-                <div className="flex-1">
-                  <p className="mb-1 text-center text-xs text-gray-400">활성</p>
-                  <div className="h-24 overflow-y-auto rounded-md border bg-gray-50">
-                    {activeRoles.map((role) => (
-                      <div
-                        key={role}
-                        onClick={() => { setActiveSelected(role); setInactiveSelected(null) }}
-                        className={cn(
-                          'cursor-pointer px-3 py-2 text-sm transition-colors',
-                          activeSelected === role
-                            ? 'bg-green-50 font-medium text-green-700'
-                            : 'text-gray-600 hover:bg-gray-100',
-                        )}
-                      >
-                        {ROLE_LABELS[role]}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <DualList
+              label="회사 유형"
+              hint="접근 권한과 회사 유형을 모두 만족해야 보입니다. 아무것도 활성화하지 않으면 모든 회사 유형에 노출됩니다. 수발주사는 발주사·수주사 메뉴를 모두 봅니다."
+              all={MENU_COMPANY_TYPES}
+              labels={COMPANY_TYPE_LABELS}
+              value={form.companyTypes}
+              onChange={(companyTypes) => setForm((p) => ({ ...p, companyTypes }))}
+            />
 
             {error && (
               <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>

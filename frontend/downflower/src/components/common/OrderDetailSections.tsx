@@ -15,6 +15,7 @@ import type { LoadedOrderDetail } from '@/components/common/useOrderDetail'
 import type { DeliveryTimeType } from '@/types/order'
 import VendorSelectModal from '@/components/common/VendorSelectModal'
 import { orderTotalOf } from '@/lib/utils/orderAmount'
+import { isVendorSideOf } from '@/lib/session'
 
 type D = LoadedOrderDetail
 interface SectionProps { d: D; className?: string }
@@ -951,7 +952,7 @@ export function AdjustmentDialog({ d, overlayClassName }: { d: D; overlayClassNa
   const mode = d.adjustDialog
   if (!mode) return null
   const { order } = d
-  const isVendorView = typeof window !== 'undefined' && localStorage.getItem('role') === 'VENDOR'
+  const isVendorView = typeof window !== 'undefined' && isVendorSideOf(order)
   const amountLabel = isVendorView ? '수주금액(수수료 제외)' : '발주금액'
   const pending = order.pendingAdjustment
 

@@ -16,6 +16,7 @@ import {
 } from '@/lib/api/companyApi'
 import { BarobillSenderCheck } from '@/components/sms/BarobillSenderCheck'
 import { BarobillKakaoTools } from '@/components/sms/BarobillKakaoTools'
+import { getViewRole } from '@/lib/session'
 
 const PROVIDERS: { value: SmsProvider; label: string }[] = [
   { value: 'MESSAGEME', label: '메세지미 (MessageMe)' },
@@ -253,7 +254,7 @@ export default function SmsSettingsPage() {
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    const r = localStorage.getItem('role') ?? ''
+    const r = getViewRole()
     const cid = localStorage.getItem('vendorId')
     setRole(r)
     setMyCompanyId(cid ? Number(cid) : null)

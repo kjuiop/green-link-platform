@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { fetchCompanies, type CompanyInfo } from '@/lib/api/companyApi'
+import { isSuperAdmin as sessionIsSuperAdmin } from '@/lib/session'
 
 export interface ShopScope {
   ready: boolean
@@ -19,8 +20,7 @@ export function useShopScope(): ShopScope {
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
   useEffect(() => {
-    const role = localStorage.getItem('role') ?? ''
-    if (role !== 'SUPER_ADMIN') {
+    if (!sessionIsSuperAdmin()) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setReady(true)
       return

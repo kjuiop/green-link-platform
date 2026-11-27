@@ -12,6 +12,7 @@ import { Product } from '@/types/product'
 import { PageResult } from '@/types/page'
 import { PRODUCT_CATEGORIES, categoryLabel, type ProductCategory } from '@/lib/constants/productCategory'
 import { fetchBaseProducts, createBaseProduct, updateBaseProduct, deleteBaseProduct } from '@/lib/api/productApi'
+import { isSuperAdmin as sessionIsSuperAdmin } from '@/lib/session'
 
 const PAGE_SIZE = 20
 
@@ -25,7 +26,7 @@ function formatPrice(value: string) {
 }
 
 export default function ProductsPage() {
-  const role = useSyncExternalStore(subscribeNoop, () => localStorage.getItem('role') ?? '', () => '')
+  const role = useSyncExternalStore(subscribeNoop, () => (sessionIsSuperAdmin() ? 'SUPER_ADMIN' : ''), () => '')
 
   const [result, setResult] = useState<PageResult<Product> | null>(null)
   const [page, setPage] = useState(0)

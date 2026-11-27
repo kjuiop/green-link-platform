@@ -14,6 +14,7 @@ import {
 } from '@/lib/api/settlementApi'
 import { fetchCompanies, type CompanyInfo, type CompanyType } from '@/lib/api/companyApi'
 import { AccountInfoBanner } from '@/components/settlement/AccountInfoBanner'
+import { isSuperAdmin as sessionIsSuperAdmin } from '@/lib/session'
 
 function formatKRW(n: number) {
   return n.toLocaleString('ko-KR') + '원'
@@ -318,8 +319,7 @@ export default function SettlementPage() {
   const isVendorOnly = companyType === 'VENDOR'
 
   useEffect(() => {
-    const role = localStorage.getItem('role') ?? ''
-    if (role === 'SUPER_ADMIN') {
+    if (sessionIsSuperAdmin()) {
       setIsSuperAdmin(true)
       fetchCompanies()
         .then((list) => {

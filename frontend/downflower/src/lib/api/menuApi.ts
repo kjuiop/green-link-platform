@@ -1,4 +1,4 @@
-import { MenuItem, UserRole } from '@/types/menu'
+import { MenuItem, AdminRole, CompanyType } from '@/types/menu'
 import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
 type CreateMenuPayload = {
@@ -6,14 +6,16 @@ type CreateMenuPayload = {
   url: string
   sortOrder: number
   parentId: number | null
-  roles: UserRole[]
+  roles: AdminRole[]
+  companyTypes: CompanyType[]
 }
 
 type UpdateMenuPayload = {
   name: string
   url: string
   sortOrder: number
-  roles: UserRole[]
+  roles: AdminRole[]
+  companyTypes: CompanyType[]
 }
 
 export async function fetchAllMenus(): Promise<MenuItem[]> {

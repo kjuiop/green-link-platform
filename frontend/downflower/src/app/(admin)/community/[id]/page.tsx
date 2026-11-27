@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Pin, Paperclip, ExternalLink } from 'lucide-react'
 import { fetchPost, deletePost, updateNoticeSettings, type UpdateNoticePayload } from '@/lib/api/postApi'
 import type { Post } from '@/types/post'
+import { isSuperAdmin as sessionIsSuperAdmin } from '@/lib/session'
 
 function getCurrentAdminId(): number | null {
   try {
@@ -20,7 +21,7 @@ function getCurrentAdminId(): number | null {
 }
 
 function isSuperAdmin(): boolean {
-  return typeof window !== 'undefined' && localStorage.getItem('role') === 'SUPER_ADMIN'
+  return typeof window !== 'undefined' && sessionIsSuperAdmin()
 }
 
 function formatDateTime(dt: string | null) {

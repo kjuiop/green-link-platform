@@ -198,6 +198,7 @@ export type OrderSearchParams = {
   sortDir?: string
   completedAtFrom?: string
   completedAtTo?: string
+  view?: 'ORDERING' | 'VENDOR'
 }
 
 function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: number): string {
@@ -222,6 +223,7 @@ function buildOrderQuery(params?: OrderSearchParams, page?: number, size?: numbe
   if (params?.sortDir) query.set('sortDir', params.sortDir)
   if (params?.completedAtFrom) query.set('completedAtFrom', params.completedAtFrom)
   if (params?.completedAtTo) query.set('completedAtTo', params.completedAtTo)
+  if (params?.view) query.set('view', params.view)
   if (page !== undefined) query.set('page', String(page))
   if (size !== undefined) query.set('size', String(size))
   return query.toString()
