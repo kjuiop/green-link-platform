@@ -9,8 +9,6 @@ import { Pagination } from '@/components/ui/Pagination'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { CompanySelect } from '@/components/coupang/CompanySelect'
 import { useCoupangScope } from '@/components/coupang/useCoupangScope'
-import { useShopScope } from '@/components/shop/useShopScope'
-import { ShopProductsPanel } from '@/components/shop/ShopProductsPanel'
 import {
   fetchCustomerOrders,
   holdCustomerOrder,
@@ -27,7 +25,6 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 const CHANNEL_TABS: { value: OrderChannel | null; label: string }[] = [
   { value: null, label: '전체' },
   { value: 'COUPANG', label: '쿠팡' },
-  { value: 'SHOP', label: '쇼핑몰' },
   { value: 'DIRECT', label: '직접입력' },
 ]
 
@@ -77,7 +74,7 @@ function addressOf(o: CustomerOrder) {
   return [o.receiverAddress, o.receiverAddressDetail].filter(Boolean).join(' ')
 }
 
-const VALID_CHANNELS: OrderChannel[] = ['COUPANG', 'SHOP', 'DIRECT']
+const VALID_CHANNELS: OrderChannel[] = ['COUPANG', 'DIRECT']
 
 function OrderActions({ order, busy, onHoldToggle }: {
   order: CustomerOrder
@@ -102,15 +99,11 @@ function OrderActions({ order, busy, onHoldToggle }: {
 function CustomerOrdersContent() {
   const searchParams = useSearchParams()
   const scope = useCoupangScope()
-  const shopScope = useShopScope()
   const companyId = scope.selectedId
 
   const rawChannel = searchParams.get('channel')
   const [channel, setChannel] = useState<OrderChannel | null>(
     VALID_CHANNELS.includes(rawChannel as OrderChannel) ? (rawChannel as OrderChannel) : null
-  )
-  const [shopSubTab, setShopSubTab] = useState<'orders' | 'products'>(
-    searchParams.get('sub') === 'products' ? 'products' : 'orders'
   )
   const [status, setStatus] = useState<CustomerOrderStatus | null>('PENDING')
   const [page, setPage] = useState(0)
@@ -158,7 +151,6 @@ function CustomerOrdersContent() {
 
   function changeChannel(c: OrderChannel | null) {
     setChannel(c)
-    setShopSubTab('orders')
     setPage(0)
   }
 
@@ -193,8 +185,6 @@ function CustomerOrdersContent() {
 
   const showCoupangTools = channel === null || channel === 'COUPANG'
   const expiring = credential && !credential.expired && credential.daysUntilExpire !== null && credential.daysUntilExpire <= 14
-  const showShopSubTabs = channel === 'SHOP'
-  const showProductsPanel = showShopSubTabs && shopSubTab === 'products'
 
   if (!scope.ready) return null
 
@@ -262,191 +252,165 @@ function CustomerOrdersContent() {
         ))}
       </div>
 
-      {/* 쇼핑몰 서브탭 */}
-      {showShopSubTabs && (
-        <div className="flex gap-1">
-          {(['orders', 'products'] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setShopSubTab(t)}
-              className={
-                shopSubTab === t
-                  ? 'rounded-full bg-green-700 px-3 py-1 text-xs font-medium text-white'
-                  : 'rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600 hover:bg-gray-200'
-              }
-            >
-              {t === 'orders' ? '주문 목록' : '상품 관리'}
-            </button>
+      {/* 상태 탭 */}
+      <div className="flex gap-1">
+        {STATUS_TABS.map((t) => (
+          <button
+            key={t.value ?? 'all'}
+            onClick={() => { setStatus(t.value); setPage(0) }}
+            className={
+              status === t.value
+                ? 'rounded-full bg-green-700 px-3 py-1 text-xs font-medium text-white'
+                : 'rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600 hover:bg-gray-200'
+            }
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+        <span className="text-gray-500">건수 <strong className="text-gray-900">{data?.totalElements ?? 0}</strong>건</span>
+        <select
+          value={pageSize}
+          onChange={(e) => setPageSize(Number(e.target.value))}
+          className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+        >
+          {PAGE_SIZE_OPTIONS.map((s) => (
+            <option key={s} value={s}>{s}개씩</option>
           ))}
-        </div>
-      )}
+        </select>
+      </div>
 
-      {/* 쇼핑몰 상품 패널 */}
-      {showProductsPanel ? (
-        <ShopProductsPanel scope={shopScope} showHeader={false} />
-      ) : (
-        <>
-          {/* 상태 탭 */}
-          <div className="flex gap-1">
-            {STATUS_TABS.map((t) => (
-              <button
-                key={t.value ?? 'all'}
-                onClick={() => { setStatus(t.value); setPage(0) }}
-                className={
-                  status === t.value
-                    ? 'rounded-full bg-green-700 px-3 py-1 text-xs font-medium text-white'
-                    : 'rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600 hover:bg-gray-200'
-                }
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-            <span className="text-gray-500">건수 <strong className="text-gray-900">{data?.totalElements ?? 0}</strong>건</span>
-            <select
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-              className="rounded-md border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-            >
-              {PAGE_SIZE_OPTIONS.map((s) => (
-                <option key={s} value={s}>{s}개씩</option>
-              ))}
-            </select>
-          </div>
-
-          {/* 데스크톱 테이블 */}
-          <div className="hidden rounded-lg border bg-white md:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-24"><div>채널</div><div className="font-normal text-gray-400">상태</div></TableHead>
-                  <TableHead><div>주문번호</div><div className="font-normal text-gray-400">주문일시</div></TableHead>
-                  <TableHead>상품명</TableHead>
-                  <TableHead className="text-right">합계금액</TableHead>
-                  <TableHead>주문자</TableHead>
-                  <TableHead>받는 분</TableHead>
-                  <TableHead><div>배송지</div><div className="font-normal text-gray-400">배송메시지</div></TableHead>
-                  <TableHead>작업</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">불러오는 중…</TableCell>
-                  </TableRow>
-                ) : !data || data.content.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">해당 조건의 주문이 없습니다.</TableCell>
-                  </TableRow>
-                ) : (
-                  data.content.map((o) => {
-                    const summary = itemSummary(o)
-                    return (
-                      <TableRow key={o.id} className="[&>td]:py-2">
-                        <TableCell>
-                          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{CHANNEL_LABEL[o.channel]}</span>
-                          <div className="mt-1">
-                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[o.status]}`}>
-                              {STATUS_LABEL[o.status]}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-mono text-xs">{o.coupangMeta?.coupangOrderId ?? '-'}</div>
-                          <div className="text-xs text-gray-400">{formatDateTime(o.orderedAt)}</div>
-                        </TableCell>
-                        <TableCell className="max-w-[14rem] whitespace-normal break-words text-sm">
-                          {summary
-                            ? `${summary.first.name} × ${summary.first.quantity}${summary.others > 0 ? ` 외 ${summary.others}건` : ''}`
-                            : '-'}
-                        </TableCell>
-                        <TableCell className="text-right text-sm font-medium">{won(o.totalPrice)}</TableCell>
-                        <TableCell>
-                          <div className="text-sm">{o.ordererName || '-'}</div>
-                          <div className="text-xs text-gray-400">{o.ordererPhone || ''}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">{o.receiverName || '-'}</div>
-                          <div className="text-xs text-gray-400">{o.receiverPhone || ''}</div>
-                        </TableCell>
-                        <TableCell className="max-w-[16rem] whitespace-normal break-words text-sm">
-                          <div>{addressOf(o) || '-'}</div>
-                          {o.deliveryMessage && <div className="text-xs text-gray-400">{o.deliveryMessage}</div>}
-                        </TableCell>
-                        <TableCell>
-                          <OrderActions order={o} busy={busyId === o.id} onHoldToggle={handleHoldToggle} />
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
-            {data && (
-              <div className="border-t px-4 py-3">
-                <Pagination page={page} totalPages={data.totalPages} totalElements={data.totalElements} size={pageSize} onPageChange={changePage} />
-              </div>
-            )}
-          </div>
-
-          {/* 모바일 카드 */}
-          <div className="space-y-3 md:hidden">
+      {/* 데스크톱 테이블 */}
+      <div className="hidden rounded-lg border bg-white md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-24"><div>채널</div><div className="font-normal text-gray-400">상태</div></TableHead>
+              <TableHead><div>주문번호</div><div className="font-normal text-gray-400">주문일시</div></TableHead>
+              <TableHead>상품명</TableHead>
+              <TableHead className="text-right">합계금액</TableHead>
+              <TableHead>주문자</TableHead>
+              <TableHead>받는 분</TableHead>
+              <TableHead><div>배송지</div><div className="font-normal text-gray-400">배송메시지</div></TableHead>
+              <TableHead>작업</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {loading ? (
-              <p className="py-8 text-center text-sm text-gray-400">불러오는 중…</p>
+              <TableRow>
+                <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">불러오는 중…</TableCell>
+              </TableRow>
             ) : !data || data.content.length === 0 ? (
-              <p className="py-8 text-center text-sm text-gray-400">해당 조건의 주문이 없습니다.</p>
+              <TableRow>
+                <TableCell colSpan={8} className="py-10 text-center text-sm text-gray-400">해당 조건의 주문이 없습니다.</TableCell>
+              </TableRow>
             ) : (
-              data.content.map((o) => (
-                <Card key={o.id}>
-                  <CardContent className="space-y-2 pt-4 text-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
-                          {CHANNEL_LABEL[o.channel]}
-                        </span>
+              data.content.map((o) => {
+                const summary = itemSummary(o)
+                return (
+                  <TableRow key={o.id} className="[&>td]:py-2">
+                    <TableCell>
+                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{CHANNEL_LABEL[o.channel]}</span>
+                      <div className="mt-1">
                         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[o.status]}`}>
                           {STATUS_LABEL[o.status]}
                         </span>
-                        {o.coupangMeta && (
-                          <span className="font-medium text-gray-700">주문번호 {o.coupangMeta.coupangOrderId}</span>
-                        )}
                       </div>
-                      <span className="text-xs text-gray-400">주문 {formatDateTime(o.orderedAt)}</span>
-                    </div>
-
-                    {o.coupangMeta && o.coupangMeta.items.length > 0 && (
-                      <div className="text-gray-700">
-                        {o.coupangMeta.items.map((i, idx) => (
-                          <div key={idx}>{i.name} × {i.quantity} ({won(i.salesPrice)})</div>
-                        ))}
-                        <div className="font-medium">합계 {won(o.totalPrice)}</div>
-                      </div>
-                    )}
-
-                    <div className="grid gap-1 text-gray-600">
-                      <div>주문자: {o.ordererName || '-'} {o.ordererPhone || ''}</div>
-                      <div>받는 분: {o.receiverName || '-'} {o.receiverPhone || ''}</div>
-                      {addressOf(o) && <div>주소: {addressOf(o)}</div>}
-                      {o.deliveryMessage && <div>배송메시지: {o.deliveryMessage}</div>}
-                    </div>
-
-                    {(o.status === 'PENDING' || o.status === 'HELD') && (
-                      <div className="flex justify-end pt-1">
-                        <OrderActions order={o} busy={busyId === o.id} onHoldToggle={handleHoldToggle} />
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-mono text-xs">{o.coupangMeta?.coupangOrderId ?? '-'}</div>
+                      <div className="text-xs text-gray-400">{formatDateTime(o.orderedAt)}</div>
+                    </TableCell>
+                    <TableCell className="max-w-[14rem] whitespace-normal break-words text-sm">
+                      {summary
+                        ? `${summary.first.name} × ${summary.first.quantity}${summary.others > 0 ? ` 외 ${summary.others}건` : ''}`
+                        : '-'}
+                    </TableCell>
+                    <TableCell className="text-right text-sm font-medium">{won(o.totalPrice)}</TableCell>
+                    <TableCell>
+                      <div className="text-sm">{o.ordererName || '-'}</div>
+                      <div className="text-xs text-gray-400">{o.ordererPhone || ''}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">{o.receiverName || '-'}</div>
+                      <div className="text-xs text-gray-400">{o.receiverPhone || ''}</div>
+                    </TableCell>
+                    <TableCell className="max-w-[16rem] whitespace-normal break-words text-sm">
+                      <div>{addressOf(o) || '-'}</div>
+                      {o.deliveryMessage && <div className="text-xs text-gray-400">{o.deliveryMessage}</div>}
+                    </TableCell>
+                    <TableCell>
+                      <OrderActions order={o} busy={busyId === o.id} onHoldToggle={handleHoldToggle} />
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             )}
-            {data && (
-              <Pagination page={page} totalPages={data.totalPages} totalElements={data.totalElements} size={pageSize} onPageChange={changePage} />
-            )}
+          </TableBody>
+        </Table>
+        {data && (
+          <div className="border-t px-4 py-3">
+            <Pagination page={page} totalPages={data.totalPages} totalElements={data.totalElements} size={pageSize} onPageChange={changePage} />
           </div>
-        </>
-      )}
+        )}
+      </div>
+
+      {/* 모바일 카드 */}
+      <div className="space-y-3 md:hidden">
+        {loading ? (
+          <p className="py-8 text-center text-sm text-gray-400">불러오는 중…</p>
+        ) : !data || data.content.length === 0 ? (
+          <p className="py-8 text-center text-sm text-gray-400">해당 조건의 주문이 없습니다.</p>
+        ) : (
+          data.content.map((o) => (
+            <Card key={o.id}>
+              <CardContent className="space-y-2 pt-4 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                      {CHANNEL_LABEL[o.channel]}
+                    </span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[o.status]}`}>
+                      {STATUS_LABEL[o.status]}
+                    </span>
+                    {o.coupangMeta && (
+                      <span className="font-medium text-gray-700">주문번호 {o.coupangMeta.coupangOrderId}</span>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-400">주문 {formatDateTime(o.orderedAt)}</span>
+                </div>
+
+                {o.coupangMeta && o.coupangMeta.items.length > 0 && (
+                  <div className="text-gray-700">
+                    {o.coupangMeta.items.map((i, idx) => (
+                      <div key={idx}>{i.name} × {i.quantity} ({won(i.salesPrice)})</div>
+                    ))}
+                    <div className="font-medium">합계 {won(o.totalPrice)}</div>
+                  </div>
+                )}
+
+                <div className="grid gap-1 text-gray-600">
+                  <div>주문자: {o.ordererName || '-'} {o.ordererPhone || ''}</div>
+                  <div>받는 분: {o.receiverName || '-'} {o.receiverPhone || ''}</div>
+                  {addressOf(o) && <div>주소: {addressOf(o)}</div>}
+                  {o.deliveryMessage && <div>배송메시지: {o.deliveryMessage}</div>}
+                </div>
+
+                {(o.status === 'PENDING' || o.status === 'HELD') && (
+                  <div className="flex justify-end pt-1">
+                    <OrderActions order={o} busy={busyId === o.id} onHoldToggle={handleHoldToggle} />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+        {data && (
+          <Pagination page={page} totalPages={data.totalPages} totalElements={data.totalElements} size={pageSize} onPageChange={changePage} />
+        )}
+      </div>
     </div>
   )
 }

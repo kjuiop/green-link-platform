@@ -20,7 +20,6 @@ import {
   Coins,
   Percent,
   ShoppingCart,
-  Store,
   MapPin,
   UserCheck,
   type LucideIcon,
@@ -63,10 +62,6 @@ const ICON_MAP: Record<string, LucideIcon> = {
   '/integration-settings': SlidersHorizontal,
   '/coupang': ShoppingCart,
   '/coupang/settings': SlidersHorizontal,
-  '/shop': Store,
-  '/shop/settings': SlidersHorizontal,
-  '/shop/products': Package,
-  '/shop/orders': Store,
 }
 
 const CUSTOMER_ORDERS_URL = '/customer-orders/listing'
