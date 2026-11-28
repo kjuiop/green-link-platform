@@ -64,7 +64,7 @@ public class MessageMeSmsClient implements SmsClient {
             }
             return SmsResult.rejected(result);
         } catch (Exception e) {
-            return new SmsResult(false, null, e.getMessage());
+            return new SmsResult(false, null, SmsResult.reasonOf(e));
         }
     }
 

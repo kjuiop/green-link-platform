@@ -107,4 +107,30 @@ class SmsServiceTest {
         assertThat(captor.getValue().getStatus()).isEqualTo(SmsStatus.FAIL);
         assertThat(captor.getValue().getFailReason()).isEqualTo("인증 오류");
     }
+
+    @Test
+    void 메시지가_없는_예외로_실패해도_실패사유가_저장된다() {
+        given(smsClient.send(any(), any(), any(), any(), any(), any(), any()))
+                .willThrow(new NullPointerException());
+
+        smsService.send(1L, null);
+
+        ArgumentCaptor<SmsMessage> captor = ArgumentCaptor.forClass(SmsMessage.class);
+        verify(smsMessageRepository).save(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(SmsStatus.FAIL);
+        assertThat(captor.getValue().getFailReason()).isEqualTo("NullPointerException");
+    }
+
+    @Test
+    void 실패사유가_null이어도_FAIL_기록에는_기본_사유가_저장된다() {
+        given(smsClient.send(any(), any(), any(), any(), any(), any(), any()))
+                .willReturn(new SmsResult(false, null, null));
+
+        smsService.send(1L, null);
+
+        ArgumentCaptor<SmsMessage> captor = ArgumentCaptor.forClass(SmsMessage.class);
+        verify(smsMessageRepository).save(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(SmsStatus.FAIL);
+        assertThat(captor.getValue().getFailReason()).isEqualTo("알 수 없는 오류");
+    }
 }

@@ -9,4 +9,9 @@ public record SmsResult(boolean success, String msgId, String failReason, boolea
     public static SmsResult rejected(String failReason) {
         return new SmsResult(false, null, failReason, true);
     }
+
+    public static String reasonOf(Throwable e) {
+        String message = e.getMessage();
+        return (message == null || message.isBlank()) ? e.getClass().getSimpleName() : message;
+    }
 }

@@ -39,6 +39,7 @@ import java.util.List;
 @Service
 public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, GetSmsMessagesUseCase, SendOrderNotificationUseCase {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(SmsService.class);
     private static final String NOTIFICATION_TITLE = "[온우림] 새 발주가 접수되었습니다.";
 
     private final OrderRepository orderRepository;
@@ -191,9 +192,11 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
                     smsMessage.markSuccess(result.msgId(), now);
                 } else {
                     smsMessage.markFail(result.failReason(), now);
+                    LOG.warn("[문자 발송 실패] orderId={} provider={} reason={}", orderId, companyConfig.provider(), smsMessage.getFailReason());
                 }
             } catch (Exception e) {
-                smsMessage.markFail(e.getMessage(), now);
+                smsMessage.markFail(SmsResult.reasonOf(e), now);
+                LOG.warn("[문자 발송 실패] orderId={} provider={} reason={}", orderId, companyConfig.provider(), smsMessage.getFailReason(), e);
             }
             smsMessageRepository.save(smsMessage);
         } catch (Exception e) {
@@ -270,9 +273,11 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
                 smsMessage.markSuccess(result.msgId(), sentAt);
             } else {
                 smsMessage.markFail(result.failReason(), sentAt);
+                LOG.warn("[문자 발송 실패] orderId={} provider={} reason={}", orderId, companyConfig.provider(), smsMessage.getFailReason());
             }
         } catch (Exception e) {
-            smsMessage.markFail(e.getMessage(), sentAt);
+            smsMessage.markFail(SmsResult.reasonOf(e), sentAt);
+            LOG.warn("[문자 발송 실패] orderId={} provider={} reason={}", orderId, companyConfig.provider(), smsMessage.getFailReason(), e);
         }
         smsMessageRepository.save(smsMessage);
     }
