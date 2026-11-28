@@ -85,8 +85,7 @@ public class AligoSmsClient implements SmsClient {
                 String msgId = String.valueOf(responseBody.get("msg_id"));
                 return new SmsResult(true, msgId, null);
             } else {
-                String message = String.valueOf(responseBody.get("message"));
-                return SmsResult.rejected(message);
+                return SmsResult.rejected(SmsResult.rejectionReason(resultCode, responseBody.get("message")));
             }
         } catch (Exception e) {
             log.warn("[알리고 발송 실패] {}", SmsResult.reasonOf(e), e);

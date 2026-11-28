@@ -51,7 +51,7 @@ export default function MessagesPage() {
     Promise.all([fetchSettingsSmsMessages(companyId), fetchOrders()])
       .then(([messages, orders]) => {
         const orderMap = new Map(orders.map((o) => [Number(o.id), o]))
-        setRows(messages.map((sms) => ({ sms, order: orderMap.get(sms.orderId) })))
+        setRows(messages.map((sms) => ({ sms, order: sms.orderId != null ? orderMap.get(sms.orderId) : undefined })))
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -192,7 +192,7 @@ export default function MessagesPage() {
                         {order.orderNumber}
                       </button>
                     ) : (
-                      <span className="font-mono text-xs text-gray-400">주문 #{sms.orderId}</span>
+                      <span className="font-mono text-xs text-gray-400">{sms.type === 'PHONE_VERIFICATION' ? '본인인증' : `주문 #${sms.orderId}`}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-sm">{sms.sentAt}</TableCell>
@@ -212,10 +212,10 @@ export default function MessagesPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {sms.status === 'FAIL' && (
+                    {sms.status === 'FAIL' && sms.orderId != null && (
                       <button
-                        onClick={() => handleResend(sms.orderId)}
-                        disabled={resendingIds.has(sms.orderId)}
+                        onClick={() => handleResend(sms.orderId!)}
+                        disabled={resendingIds.has(sms.orderId!)}
                         className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                       >
                         <RefreshCw className="h-3 w-3" />
@@ -259,7 +259,7 @@ export default function MessagesPage() {
                       {order.orderNumber}
                     </button>
                   ) : (
-                    <span className="font-mono text-xs text-gray-400">주문 #{sms.orderId}</span>
+                    <span className="font-mono text-xs text-gray-400">{sms.type === 'PHONE_VERIFICATION' ? '본인인증' : `주문 #${sms.orderId}`}</span>
                   )}
                   <div className="mt-1 truncate text-sm font-medium">{order?.productName ?? '-'}</div>
                   <div className="mt-0.5 text-xs text-gray-500">{order?.vendorName ?? '-'} · {order?.ordererName ?? '-'}</div>
@@ -276,10 +276,10 @@ export default function MessagesPage() {
               </div>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-xs text-gray-400">
                 <span>발송 {sms.sentAt} · {sms.receiver}</span>
-                {sms.status === 'FAIL' && (
+                {sms.status === 'FAIL' && sms.orderId != null && (
                   <button
-                    onClick={() => handleResend(sms.orderId)}
-                    disabled={resendingIds.has(sms.orderId)}
+                    onClick={() => handleResend(sms.orderId!)}
+                    disabled={resendingIds.has(sms.orderId!)}
                     className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                   >
                     <RefreshCw className="h-3 w-3" />

@@ -6,6 +6,8 @@ import com.greenlink.core.application.auth.usecase.ResetPasswordUseCase;
 import com.greenlink.core.application.auth.usecase.SendPhoneVerificationUseCase;
 import com.greenlink.core.application.auth.usecase.VerifyPhoneCodeUseCase;
 import com.greenlink.core.domain.sms.model.SmsAccount;
+import com.greenlink.core.domain.sms.model.SmsMessage;
+import com.greenlink.core.domain.sms.port.SmsMessageRepository;
 import com.greenlink.core.domain.sms.model.SmsResult;
 import com.greenlink.core.domain.admin.model.Admin;
 import com.greenlink.core.domain.admin.port.AdminRepository;
@@ -22,6 +24,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 @Service
 @Transactional
 public class PhoneVerificationService implements
@@ -32,6 +37,9 @@ public class PhoneVerificationService implements
 
     private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(PhoneVerificationService.class);
 
+    private static final DateTimeFormatter SENT_AT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    private final SmsMessageRepository smsMessageRepository;
     private final PhoneVerificationRepository verificationRepository;
     private final AdminRepository adminRepository;
     private final SmsClientFactory smsClientFactory;
@@ -42,7 +50,9 @@ public class PhoneVerificationService implements
                                     AdminRepository adminRepository,
                                     SmsClientFactory smsClientFactory,
                                     SmsSettingsRepository smsSettingsRepository,
+                                    SmsMessageRepository smsMessageRepository,
                                     PasswordEncoder passwordEncoder) {
+        this.smsMessageRepository = smsMessageRepository;
         this.verificationRepository = verificationRepository;
         this.adminRepository = adminRepository;
         this.smsClientFactory = smsClientFactory;
@@ -60,19 +70,44 @@ public class PhoneVerificationService implements
         SmsClient client = smsClientFactory.getByProvider(settings.getProvider());
         String msg = "[온우림] 인증번호: " + verification.getCode() + " (3분 이내 입력)";
         SmsResult result;
-        if ("MESSAGEME".equalsIgnoreCase(settings.getProvider())) {
-            result = client.sendWithCredentials(settings.getApiKey(), settings.getSenderNumber(),
-                    phone, msg, null, "0", null);
-        } else if ("BAROBILL".equalsIgnoreCase(settings.getProvider())) {
-            SmsAccount account = new SmsAccount(settings.getProvider(), settings.getApiKey(),
-                    settings.getSenderNumber(), settings.getUserId(), settings.getCorpNum());
-            result = client.sendWithAccount(account, phone, msg, null, null, null, null);
-        } else {
-            result = client.send(phone, msg, null, settings.getSenderNumber(), null, null, null);
+        boolean threw = false;
+        try {
+            if ("MESSAGEME".equalsIgnoreCase(settings.getProvider())) {
+                result = client.sendWithCredentials(settings.getApiKey(), settings.getSenderNumber(),
+                        phone, msg, null, "0", null);
+            } else if ("BAROBILL".equalsIgnoreCase(settings.getProvider())) {
+                SmsAccount account = new SmsAccount(settings.getProvider(), settings.getApiKey(),
+                        settings.getSenderNumber(), settings.getUserId(), settings.getCorpNum());
+                result = client.sendWithAccount(account, phone, msg, null, null, null, null);
+            } else {
+                result = client.send(phone, msg, null, settings.getSenderNumber(), null, null, null);
+            }
+        } catch (Exception e) {
+            LOG.warn("[본인인증 문자 발송 실패] provider={} reason={}", settings.getProvider(), SmsResult.reasonOf(e), e);
+            threw = true;
+            result = new SmsResult(false, null, SmsResult.reasonOf(e));
         }
+        recordHistory(phone, result);
         if (!result.success()) {
-            LOG.warn("[본인인증 문자 발송 실패] provider={} reason={}", settings.getProvider(), result.failReason());
+            if (!threw) {
+                LOG.warn("[본인인증 문자 발송 실패] provider={} reason={}", settings.getProvider(), result.failReason());
+            }
             throw new BusinessException(AuthErrorCode.SMS_SEND_FAILED);
+        }
+    }
+
+    private void recordHistory(String phone, SmsResult result) {
+        try {
+            SmsMessage history = SmsMessage.createPhoneVerification(phone);
+            String now = LocalDateTime.now().format(SENT_AT_FORMAT);
+            if (result.success()) {
+                history.markSuccess(result.msgId(), now);
+            } else {
+                history.markFail(result.failReason(), now);
+            }
+            smsMessageRepository.save(history);
+        } catch (Exception e) {
+            LOG.warn("[본인인증 문자 이력 저장 실패] reason={}", SmsResult.reasonOf(e), e);
         }
     }
 

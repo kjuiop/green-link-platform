@@ -12,9 +12,16 @@ public record SmsResult(boolean success, String msgId, String failReason, boolea
 
     public static String reasonOf(Throwable e) {
         String message = e.getMessage();
-        String base = (message == null || message.isBlank()) ? e.getClass().getSimpleName() : message;
+        if (message != null && !message.isBlank()) return message;
+        String name = e.getClass().getSimpleName();
         String location = locationOf(e);
-        return location == null ? base : base + " (" + location + ")";
+        return location == null ? name : name + " (" + location + ")";
+    }
+
+    public static String rejectionReason(String code, Object message) {
+        String m = message == null ? null : String.valueOf(message);
+        if (m == null || m.isBlank()) return code;
+        return code + ": " + m;
     }
 
     private static String locationOf(Throwable e) {

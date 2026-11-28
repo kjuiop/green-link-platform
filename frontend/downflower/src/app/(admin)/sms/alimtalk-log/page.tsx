@@ -38,7 +38,7 @@ export default function AlimtalkLogPage() {
       .then(([messages, orders]) => {
         const orderMap = new Map(orders.map((o) => [Number(o.id), o]))
         const alimtalk = messages.filter((m) => m.channel === 'ALIMTALK')
-        setRows(alimtalk.map((sms) => ({ sms, order: orderMap.get(sms.orderId) })))
+        setRows(alimtalk.map((sms) => ({ sms, order: sms.orderId != null ? orderMap.get(sms.orderId) : undefined })))
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -153,7 +153,7 @@ export default function AlimtalkLogPage() {
                         {order.orderNumber}
                       </button>
                     ) : (
-                      <span className="font-mono text-xs text-gray-400">주문 #{sms.orderId}</span>
+                      <span className="font-mono text-xs text-gray-400">{sms.type === 'PHONE_VERIFICATION' ? '본인인증' : `주문 #${sms.orderId}`}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-sm">{sms.sentAt}</TableCell>
@@ -217,7 +217,7 @@ export default function AlimtalkLogPage() {
                       {order.orderNumber}
                     </button>
                   ) : (
-                    <span className="font-mono text-xs text-gray-400">주문 #{sms.orderId}</span>
+                    <span className="font-mono text-xs text-gray-400">{sms.type === 'PHONE_VERIFICATION' ? '본인인증' : `주문 #${sms.orderId}`}</span>
                   )}
                   <div className="mt-1 truncate text-sm font-medium">{order?.productName ?? '-'}</div>
                   <div className="mt-0.5 text-xs text-gray-500">{order?.vendorName ?? '-'}</div>
