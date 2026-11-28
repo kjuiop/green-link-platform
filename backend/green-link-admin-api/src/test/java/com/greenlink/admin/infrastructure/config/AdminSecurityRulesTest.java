@@ -140,12 +140,6 @@ class AdminSecurityRulesTest {
     }
 
     @Test
-    void 쇼핑몰_API는_슈퍼관리자_발주사_수주사가_접근한다() throws Exception {
-        allowed("/api/shop/anything", superAdmin(), ordering(), vendor(), both());
-        denied("/api/shop/anything", null, brand());
-    }
-
-    @Test
     void 주문과_메뉴_조회는_로그인한_모든_관리자가_접근한다() throws Exception {
         allowed("/api/orders", superAdmin(), ordering(), vendor(), both());
         allowed("/api/menus/by-role", superAdmin(), ordering(), vendor(), both());

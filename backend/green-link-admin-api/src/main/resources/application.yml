@@ -56,9 +56,6 @@ coupang:
     verify-live: true
 
 shop:
-  public:
-    # 쇼핑몰 앱(Vercel) 서버가 실제 고객 IP를 X-Shop-Client-Ip 로 전달할 때 쓰는 공유 시크릿. 비우면 비활성
-    proxy-secret: ${SHOP_PROXY_SECRET:}
   internal:
     # shop-api가 온우림 계정 검증을 호출할 때 쓰는 공유 시크릿. 비우면 내부 엔드포인트 비활성
     secret: ${SHOP_INTERNAL_SECRET:}

@@ -4,13 +4,10 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { Suspense } from 'react'
 import { useCoupangScope } from '@/components/coupang/useCoupangScope'
 import { CoupangSettingsPanel } from '@/components/coupang/CoupangSettingsPanel'
-import { useShopScope } from '@/components/shop/useShopScope'
-import { ShopSettingsPanel } from '@/components/shop/ShopSettingsPanel'
 
-type Market = 'coupang' | 'shop'
+type Market = 'coupang'
 const MARKETS: { value: Market; label: string }[] = [
   { value: 'coupang', label: '쿠팡' },
-  { value: 'shop', label: '쇼핑몰' },
 ]
 
 function IntegrationSettingsContent() {
@@ -19,7 +16,6 @@ function IntegrationSettingsContent() {
   const market = (searchParams.get('market') as Market) ?? 'coupang'
 
   const coupangScope = useCoupangScope()
-  const shopScope = useShopScope()
 
   function switchMarket(m: Market) {
     router.replace(`/integration-settings?market=${m}`)
@@ -46,7 +42,6 @@ function IntegrationSettingsContent() {
       </div>
 
       {market === 'coupang' && <CoupangSettingsPanel scope={coupangScope} />}
-      {market === 'shop' && <ShopSettingsPanel scope={shopScope} />}
     </div>
   )
 }
