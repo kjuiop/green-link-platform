@@ -18,6 +18,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -71,16 +72,21 @@ public class VerifyAdminAccountService implements VerifyAdminAccountUseCase {
             .filter(Objects::nonNull)
             .distinct()
             .toList();
-        Map<Long, String> companyNames = companyIds.isEmpty()
-            ? Map.of()
-            : companyRepository.findAllByIdIn(companyIds).stream()
-                .collect(Collectors.toMap(Company::getId, Company::getCompanyName, (a, b) -> a));
+        List<Company> companies = companyIds.isEmpty() ? List.of() : companyRepository.findAllByIdIn(companyIds);
+        Map<Long, String> companyNames = companies.stream()
+            .collect(Collectors.toMap(Company::getId, Company::getCompanyName, (a, b) -> a));
+        Set<Long> onurimCompanyIds = companies.stream()
+            .filter(Company::isOnurimEnabled)
+            .map(Company::getId)
+            .collect(Collectors.toSet());
         return admins.stream()
             .map(a -> new AccountSummary(
                 a.getId(), a.getLoginId(), a.getName(),
                 a.getCompanyId(),
                 a.getCompanyId() == null ? null : companyNames.get(a.getCompanyId()),
-                a.isPasswordSetupPending()))
+                a.isPasswordSetupPending(),
+                a.isOnurimEnabled(),
+                a.getCompanyId() != null && onurimCompanyIds.contains(a.getCompanyId())))
             .toList();
     }
 

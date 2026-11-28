@@ -202,6 +202,16 @@ public class ShopAdminManagementService implements ShopAdminManagementUseCase {
         identityRegistrar.reissuePasswordSetup(member.getAdminId());
     }
 
+    @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public void changeOnurimAccess(ManagementActor actor, Long id, boolean enabled) {
+        ShopAdminMember member = findManageable(actor, id);
+        if (member.getStatus() != ShopAdminStatus.APPROVED) {
+            throw new ShopBusinessException(ShopErrorCode.MEMBER_NOT_APPROVED);
+        }
+        accessGranter.changeOnurimAccess(member.getAdminId(), member.getCompanyId(), enabled);
+    }
+
     private Set<Long> requireBrands(Long companyId, Set<Long> brandIds, boolean atLeastOne) {
         Set<Long> requested = brandIds == null ? Set.of() : brandIds;
         if (atLeastOne && requested.isEmpty()) {

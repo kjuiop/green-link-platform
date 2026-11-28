@@ -10,5 +10,6 @@ import java.util.List;
 public interface ShopAccessUseCase {
     VerifiedAccount grant(Long adminId, Long companyId, AdminRole role);
     void changeRole(Long adminId, AdminRole role);
+    void changeOnurimAccess(Long adminId, Long companyId, boolean enabled);
     List<CompanySummary> getCompanySummaries(Collection<Long> companyIds);
 }

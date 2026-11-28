@@ -75,6 +75,31 @@ public class ShopAccessService implements ShopAccessUseCase {
         adminRepository.save(admin);
     }
 
+    @Override
+    @Transactional
+    public void changeOnurimAccess(Long adminId, Long companyId, boolean enabled) {
+        Admin admin = adminRepository.findById(adminId)
+            .filter(a -> !a.isDeleted())
+            .orElseThrow(() -> new BusinessException(AuthErrorCode.SHOP_ACCESS_ADMIN_NOT_FOUND));
+        if (admin.isSuperAdmin() || admin.getCompanyId() == null) {
+            throw new BusinessException(AuthErrorCode.SHOP_ONURIM_ACCESS_NOT_ALLOWED);
+        }
+        if (!admin.getCompanyId().equals(companyId)) {
+            throw new BusinessException(AuthErrorCode.SHOP_ACCESS_COMPANY_MISMATCH);
+        }
+        if (enabled) {
+            Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.SHOP_ACCESS_COMPANY_NOT_FOUND));
+            if (!company.isOnurimEnabled()) {
+                throw new BusinessException(AuthErrorCode.COMPANY_ONURIM_NOT_ENABLED);
+            }
+            admin.enableOnurim();
+        } else {
+            admin.disableOnurim();
+        }
+        adminRepository.save(admin);
+    }
+
     private static void requireAssignable(AdminRole role) {
         if (role != AdminRole.PARTNER_ADMIN && role != AdminRole.BRAND_ADMIN) {
             throw new BusinessException(AuthErrorCode.SHOP_SIGNUP_ROLE_INVALID);

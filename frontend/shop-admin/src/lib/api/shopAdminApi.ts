@@ -59,6 +59,10 @@ export function createShopAdmin(input: CreateShopAdminInput): Promise<{ id: numb
   return apiFetch<{ id: number }>('/api/members', { method: 'POST', body: input })
 }
 
+export function changeOnurimAccess(id: number, enabled: boolean): Promise<void> {
+  return apiFetch<void>(`/api/members/${id}/onurim-access`, { method: 'PATCH', body: { enabled } })
+}
+
 export function reissuePasswordSetup(id: number): Promise<void> {
   return apiFetch<void>(`/api/members/${id}/password-setup/reissue`, { method: 'POST' })
 }

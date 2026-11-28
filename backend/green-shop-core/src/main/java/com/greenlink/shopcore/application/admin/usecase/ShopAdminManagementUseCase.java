@@ -18,4 +18,5 @@ public interface ShopAdminManagementUseCase {
     void remove(ManagementActor actor, Long id);
     Long create(ManagementActor actor, CreateMemberCommand command);
     void reissuePasswordSetup(ManagementActor actor, Long id);
+    void changeOnurimAccess(ManagementActor actor, Long id, boolean enabled);
 }

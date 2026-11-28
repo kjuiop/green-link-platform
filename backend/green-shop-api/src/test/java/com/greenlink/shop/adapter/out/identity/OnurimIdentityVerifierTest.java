@@ -642,4 +642,81 @@ class OnurimIdentityVerifierTest {
 
         assertThat(verifier.findLatest(7L)).isEmpty();
     }
+
+    @Test
+    void 배치_조회는_온우림_이용_여부를_매핑하고_없으면_false로_본다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/batch"))
+            .andRespond(withSuccess(
+                "[{\"adminId\":5,\"loginId\":\"a\",\"name\":\"A\",\"onurimEnabled\":true,\"companyOnurimEnabled\":true},"
+                + "{\"adminId\":6,\"loginId\":\"b\",\"name\":\"B\"}]",
+                MediaType.APPLICATION_JSON));
+
+        List<AccountProfile> result = verifier.getAccounts(List.of(5L, 6L));
+
+        assertThat(result.get(0).onurimEnabled()).isTrue();
+        assertThat(result.get(0).companyOnurimEnabled()).isTrue();
+        assertThat(result.get(1).onurimEnabled()).isFalse();
+        assertThat(result.get(1).companyOnurimEnabled()).isFalse();
+    }
+
+    @Test
+    void 온우림_접근_변경은_PUT으로_회사와_값을_보내고_시크릿_헤더를_붙인다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/5/onurim-access"))
+            .andExpect(method(HttpMethod.PUT))
+            .andExpect(header("X-Internal-Secret", "s3cret"))
+            .andExpect(jsonPath("$.companyId").value(7))
+            .andExpect(jsonPath("$.enabled").value(true))
+            .andRespond(withStatus(HttpStatus.NO_CONTENT));
+
+        verifier.changeOnurimAccess(5L, 7L, true);
+
+        server.verify();
+    }
+
+    @Test
+    void 온우림_접근_변경_회사_미승인_403은_ONURIM_COMPANY_NOT_ENABLED로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/5/onurim-access"))
+            .andRespond(withStatus(HttpStatus.FORBIDDEN).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_014\"}"));
+
+        assertThatThrownBy(() -> verifier.changeOnurimAccess(5L, 7L, true))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.ONURIM_COMPANY_NOT_ENABLED));
+    }
+
+    @Test
+    void 온우림_접근_변경_불가_계정_400은_ONURIM_ACCESS_NOT_ALLOWED로_매핑된다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/5/onurim-access"))
+            .andRespond(withStatus(HttpStatus.BAD_REQUEST).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_026\"}"));
+
+        assertThatThrownBy(() -> verifier.changeOnurimAccess(5L, 7L, false))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.ONURIM_ACCESS_NOT_ALLOWED));
+    }
+
+    @Test
+    void 온우림_접근_변경_회사_불일치와_계정_없음과_그_외_오류를_매핑한다() {
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/5/onurim-access"))
+            .andRespond(withStatus(HttpStatus.CONFLICT).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_020\"}"));
+        assertThatThrownBy(() -> verifier.changeOnurimAccess(5L, 7L, false))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.ACCESS_COMPANY_MISMATCH));
+
+        server.reset();
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/5/onurim-access"))
+            .andRespond(withStatus(HttpStatus.NOT_FOUND).contentType(MediaType.APPLICATION_JSON)
+                .body("{\"code\":\"AUTH_022\"}"));
+        assertThatThrownBy(() -> verifier.changeOnurimAccess(5L, 7L, false))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.ADMIN_REQUEST_NOT_FOUND));
+
+        server.reset();
+        server.expect(requestTo(BASE + "/internal/shop-auth/accounts/5/onurim-access"))
+            .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+        assertThatThrownBy(() -> verifier.changeOnurimAccess(5L, 7L, false))
+            .isInstanceOfSatisfying(ShopBusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE));
+    }
 }

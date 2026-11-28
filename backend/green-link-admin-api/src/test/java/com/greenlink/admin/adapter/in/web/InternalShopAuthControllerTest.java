@@ -151,8 +151,8 @@ class InternalShopAuthControllerTest {
     @Test
     void batch_정상_시크릿이면_요약_목록을_반환() throws Exception {
         when(useCase.getAccountSummaries(List.of(1L, 2L))).thenReturn(List.of(
-                new AccountSummary(1L, "admin01", "관리자", 7L, "테스트업체", false),
-                new AccountSummary(2L, "admin02", "직원", null, null, false)));
+                new AccountSummary(1L, "admin01", "관리자", 7L, "테스트업체", false, true, true),
+                new AccountSummary(2L, "admin02", "직원", null, null, false, false, false)));
 
         mvc("s3cret").perform(post("/internal/shop-auth/accounts/batch")
                         .header("X-Internal-Secret", "s3cret")
@@ -632,5 +632,44 @@ class InternalShopAuthControllerTest {
         mvc("s3cret").perform(get("/internal/shop-auth/onurim-applications/latest")
                         .param("companyId", "7").header("X-Internal-Secret", "wrong"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void 온우림_접근_변경_시크릿이_틀리면_403() throws Exception {
+        mvc("s3cret").perform(put("/internal/shop-auth/accounts/1/onurim-access")
+                        .header("X-Internal-Secret", "wrong")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"companyId\":7,\"enabled\":true}"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(accessUseCase);
+    }
+
+    @Test
+    void 온우림_접근_변경_정상이면_204() throws Exception {
+        mvc("s3cret").perform(put("/internal/shop-auth/accounts/1/onurim-access")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"companyId\":7,\"enabled\":false}"))
+                .andExpect(status().isNoContent());
+        verify(accessUseCase).changeOnurimAccess(1L, 7L, false);
+    }
+
+    @Test
+    void 온우림_접근_변경_필수값이_없으면_400() throws Exception {
+        mvc("s3cret").perform(put("/internal/shop-auth/accounts/1/onurim-access")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"companyId\":7}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(accessUseCase);
+    }
+
+    @Test
+    void 온우림_접근_변경_회사가_온우림_미승인이면_403으로_매핑() throws Exception {
+        doThrow(new BusinessException(AuthErrorCode.COMPANY_ONURIM_NOT_ENABLED))
+                .when(accessUseCase).changeOnurimAccess(1L, 7L, true);
+
+        mvc("s3cret").perform(put("/internal/shop-auth/accounts/1/onurim-access")
+                        .header("X-Internal-Secret", "s3cret")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"companyId\":7,\"enabled\":true}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("AUTH_014"));
     }
 }
