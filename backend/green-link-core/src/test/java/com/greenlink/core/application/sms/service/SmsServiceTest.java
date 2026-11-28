@@ -118,7 +118,7 @@ class SmsServiceTest {
         ArgumentCaptor<SmsMessage> captor = ArgumentCaptor.forClass(SmsMessage.class);
         verify(smsMessageRepository).save(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(SmsStatus.FAIL);
-        assertThat(captor.getValue().getFailReason()).isEqualTo("NullPointerException");
+        assertThat(captor.getValue().getFailReason()).startsWith("NullPointerException (SmsService.");
     }
 
     @Test

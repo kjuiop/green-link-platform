@@ -82,20 +82,23 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
                 ? photoUrls
                 : Collections.singletonList(null);
 
-        SmsSettings settings = smsSettingsRepository.get();
-        String msg = buildMessage(order, settings);
-        String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-
-        String[] schedule = resolveSchedule(order);
-        String rdate = schedule[0];
-        String rtime = schedule[1];
-
-        SmsAccount companyConfig = resolveCompanyConfig(order.getOrderingCompanyId(), settings);
-
         boolean ordererValid = order.isSendPhotoToOrderer() && isValidPhone(order.getOrdererPhone());
         boolean recipientValid = order.isSendPhotoToRecipient() && isValidPhone(order.getRecipientPhone());
         boolean samePhone = ordererValid && recipientValid
                 && order.getOrdererPhone().equals(order.getRecipientPhone());
+
+        SendContext ctx;
+        try {
+            ctx = prepareContext(order);
+        } catch (Exception e) {
+            recordPreparationFailure(order, ordererValid, recipientValid, samePhone, e);
+            return;
+        }
+        String msg = ctx.msg();
+        String now = ctx.now();
+        String rdate = ctx.rdate();
+        String rtime = ctx.rtime();
+        SmsAccount companyConfig = ctx.companyConfig();
 
         for (String imageUrl : urls) {
             if (ordererValid) {
@@ -104,6 +107,33 @@ public class SmsService implements SendDeliveryMmsUseCase, ResendMmsUseCase, Get
             if (recipientValid && !samePhone) {
                 sendAndRecord(orderId, order.getRecipientPhone(), msg, imageUrl, companyConfig, now, rdate, rtime, order.getOrderingCompanyId());
             }
+        }
+    }
+
+    private record SendContext(String msg, String now, String rdate, String rtime, SmsAccount companyConfig) {}
+
+    private SendContext prepareContext(Order order) {
+        SmsSettings settings = smsSettingsRepository.get();
+        String msg = buildMessage(order, settings);
+        String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        String[] schedule = resolveSchedule(order);
+        SmsAccount companyConfig = resolveCompanyConfig(order.getOrderingCompanyId(), settings);
+        return new SendContext(msg, now, schedule[0], schedule[1], companyConfig);
+    }
+
+    private void recordPreparationFailure(Order order, boolean ordererValid, boolean recipientValid,
+                                          boolean samePhone, Exception e) {
+        String reason = SmsResult.reasonOf(e);
+        String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        LOG.warn("[문자 발송 준비 실패] orderId={} reason={}", order.getId(), reason, e);
+        List<String> receivers = new java.util.ArrayList<>();
+        if (ordererValid) receivers.add(order.getOrdererPhone());
+        if (recipientValid && !samePhone) receivers.add(order.getRecipientPhone());
+        for (String receiver : receivers) {
+            SmsMessage failed = SmsMessage.create(order.getId(), receiver, null, null);
+            failed.setCompanyId(order.getOrderingCompanyId());
+            failed.markFail("발송 준비 실패: " + reason, now);
+            smsMessageRepository.save(failed);
         }
     }
 
