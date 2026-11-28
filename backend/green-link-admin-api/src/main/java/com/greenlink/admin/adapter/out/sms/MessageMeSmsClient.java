@@ -1,6 +1,8 @@
 package com.greenlink.admin.adapter.out.sms;
 
 import com.greenlink.core.domain.sms.model.SmsResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.greenlink.core.domain.sms.port.SmsClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.*;
@@ -14,6 +16,8 @@ import java.util.Map;
 @Component
 @Qualifier("messageme")
 public class MessageMeSmsClient implements SmsClient {
+
+    private static final Logger log = LoggerFactory.getLogger(MessageMeSmsClient.class);
 
     private static final String API_URL = "http://221.139.14.136/APIV2/API/sms_send";
 
@@ -64,6 +68,7 @@ public class MessageMeSmsClient implements SmsClient {
             }
             return SmsResult.rejected(result);
         } catch (Exception e) {
+            log.warn("[메시지미 발송 실패] {}", SmsResult.reasonOf(e), e);
             return new SmsResult(false, null, SmsResult.reasonOf(e));
         }
     }

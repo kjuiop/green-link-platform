@@ -102,8 +102,9 @@ public class BarobillSmsClient implements SmsClient, BarobillGateway {
             }
             return new SmsResult(true, result, null);
         } catch (Exception e) {
-            log.warn("[바로빌 발송 실패] {}", e.getClass().getSimpleName());
-            return new SmsResult(false, null, describe(e));
+            String reason = describe(e);
+            log.warn("[바로빌 발송 실패] {}", reason, e);
+            return new SmsResult(false, null, reason);
         }
     }
 
@@ -147,9 +148,19 @@ public class BarobillSmsClient implements SmsClient, BarobillGateway {
 
     private String describe(Exception e) {
         if (e instanceof RestClientResponseException re) {
-            return "바로빌 응답 오류 (HTTP " + re.getStatusCode().value() + ")";
+            return "바로빌 응답 오류 (HTTP " + re.getStatusCode().value() + " " + re.getStatusText() + ")";
         }
-        return "바로빌 호출 실패: " + e.getClass().getSimpleName();
+        Throwable root = e;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        String detail = root == e ? "" : " (" + root.getClass().getSimpleName() + ": " + abbreviate(root.getMessage()) + ")";
+        return "바로빌 호출 실패: " + e.getClass().getSimpleName() + detail;
+    }
+
+    private String abbreviate(String s) {
+        if (s == null || s.isBlank()) return "-";
+        return s.length() > 200 ? s.substring(0, 200) + "..." : s;
     }
 
     private String toSendDt(String rdate, String rtime) {

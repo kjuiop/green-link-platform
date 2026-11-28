@@ -24,6 +24,9 @@ import com.greenlink.core.application.orderpriceadjustment.usecase.GetPriceAdjus
 import com.greenlink.core.application.orderpriceadjustment.usecase.RequestPriceAdjustmentUseCase;
 import com.greenlink.core.application.sms.usecase.SendDeliveryAlimtalkUseCase;
 import com.greenlink.core.application.sms.usecase.SendDeliveryMmsUseCase;
+import com.greenlink.core.domain.sms.model.SmsResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -38,6 +41,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/orders")
 public class OrderController {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderController.class);
 
     private final GetOrdersUseCase getOrdersUseCase;
     private final GetOrderUseCase getOrderUseCase;
@@ -202,13 +207,15 @@ public class OrderController {
         if ("complete".equalsIgnoreCase(req.action())) {
             try {
                 sendDeliveryMmsUseCase.send(id, req.photoUrls());
-            } catch (Exception ignored) {
+            } catch (Exception e) {
                 // MMS 발송 실패는 배송완료 처리를 막지 않음
+                log.warn("[배송완료 문자 발송 중 오류] orderId={} reason={}", id, SmsResult.reasonOf(e), e);
             }
             try {
                 sendDeliveryAlimtalkUseCase.send(id);
-            } catch (Exception ignored) {
+            } catch (Exception e) {
                 // 알림톡 발송 실패는 배송완료 처리를 막지 않음
+                log.warn("[배송완료 알림톡 발송 중 오류] orderId={} reason={}", id, SmsResult.reasonOf(e), e);
             }
         }
         return ResponseEntity.ok(isVendorFor(auth, result) ? result.toVendorView() : forOrderingCaller(auth, result));
