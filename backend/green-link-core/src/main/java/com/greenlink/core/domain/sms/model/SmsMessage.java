@@ -91,7 +91,7 @@ public class SmsMessage {
 
     public void markFail(String failReason, String sentAt) {
         this.status = SmsStatus.FAIL;
-        this.failReason = failReason;
+        this.failReason = (failReason == null || failReason.isBlank()) ? "알 수 없는 오류" : failReason;
         this.sentAt = sentAt;
     }
 

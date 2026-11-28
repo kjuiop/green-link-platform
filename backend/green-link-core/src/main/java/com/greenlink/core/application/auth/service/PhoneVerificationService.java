@@ -30,6 +30,8 @@ public class PhoneVerificationService implements
         FindIdByPhoneUseCase,
         ResetPasswordUseCase {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(PhoneVerificationService.class);
+
     private final PhoneVerificationRepository verificationRepository;
     private final AdminRepository adminRepository;
     private final SmsClientFactory smsClientFactory;
@@ -69,6 +71,7 @@ public class PhoneVerificationService implements
             result = client.send(phone, msg, null, settings.getSenderNumber(), null, null, null);
         }
         if (!result.success()) {
+            LOG.warn("[본인인증 문자 발송 실패] provider={} reason={}", settings.getProvider(), result.failReason());
             throw new BusinessException(AuthErrorCode.SMS_SEND_FAILED);
         }
     }

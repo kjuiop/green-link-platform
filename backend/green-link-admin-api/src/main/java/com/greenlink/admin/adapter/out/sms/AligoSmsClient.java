@@ -1,6 +1,8 @@
 package com.greenlink.admin.adapter.out.sms;
 
 import com.greenlink.core.domain.sms.model.SmsResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.greenlink.core.domain.sms.port.SmsClient;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
@@ -15,6 +17,8 @@ import java.util.Map;
 @Component
 @Qualifier("aligo")
 public class AligoSmsClient implements SmsClient {
+
+    private static final Logger log = LoggerFactory.getLogger(AligoSmsClient.class);
 
     private final AligoProperties props;
     private final RestTemplate restTemplate;
@@ -85,7 +89,8 @@ public class AligoSmsClient implements SmsClient {
                 return SmsResult.rejected(message);
             }
         } catch (Exception e) {
-            return new SmsResult(false, null, e.getMessage());
+            log.warn("[알리고 발송 실패] {}", SmsResult.reasonOf(e), e);
+            return new SmsResult(false, null, SmsResult.reasonOf(e));
         }
     }
 }
