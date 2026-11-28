@@ -124,7 +124,10 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
                 throw new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE);
             }
             for (SummaryBody b : body) {
-                result.add(new AccountProfile(b.adminId(), b.loginId(), b.name(), b.companyName(), Boolean.TRUE.equals(b.passwordSetupPending())));
+                result.add(new AccountProfile(b.adminId(), b.loginId(), b.name(), b.companyName(),
+                    Boolean.TRUE.equals(b.passwordSetupPending()),
+                    Boolean.TRUE.equals(b.onurimEnabled()),
+                    Boolean.TRUE.equals(b.companyOnurimEnabled())));
             }
         }
         return result;
@@ -176,6 +179,16 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
             .body(new RoleChangeBody(role.name()))
             .retrieve()
             .toBodilessEntity(), this::mapGrantError);
+    }
+
+    @Override
+    public void changeOnurimAccess(Long adminId, Long companyId, boolean enabled) {
+        executeWith(() -> restClient.put()
+            .uri("/internal/shop-auth/accounts/{adminId}/onurim-access", adminId)
+            .header(SECRET_HEADER, secret)
+            .body(new OnurimAccessBody(companyId, enabled))
+            .retrieve()
+            .toBodilessEntity(), this::mapOnurimAccessError);
     }
 
     @Override
@@ -413,6 +426,18 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
         return mapError(e);
     }
 
+    private ShopBusinessException mapOnurimAccessError(RestClientResponseException e) {
+        int status = e.getStatusCode().value();
+        String body = e.getResponseBodyAsString();
+        if (status == 403 && body.contains("AUTH_014")) {
+            return new ShopBusinessException(ShopErrorCode.ONURIM_COMPANY_NOT_ENABLED);
+        }
+        if (status == 400 && body.contains("AUTH_026")) {
+            return new ShopBusinessException(ShopErrorCode.ONURIM_ACCESS_NOT_ALLOWED);
+        }
+        return mapGrantError(e);
+    }
+
     private ShopBusinessException mapApplicationError(RestClientResponseException e) {
         int status = e.getStatusCode().value();
         String body = e.getResponseBodyAsString();
@@ -504,6 +529,8 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
     record AccessGrantBody(Long adminId, Long companyId, String role) {}
     record RoleChangeBody(String role) {}
 
+    record OnurimAccessBody(Long companyId, boolean enabled) {}
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     record CompanyBody(Long companyId, String companyName) {}
 
@@ -520,5 +547,5 @@ public class OnurimIdentityVerifier implements IdentityVerifier, IdentityRegistr
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record SummaryBody(Long adminId, String loginId, String name, Long companyId, String companyName,
-                       Boolean passwordSetupPending) {}
+                       Boolean passwordSetupPending, Boolean onurimEnabled, Boolean companyOnurimEnabled) {}
 }

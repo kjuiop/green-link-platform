@@ -254,4 +254,25 @@ class VerifyAdminAccountServiceTest {
 
         assertThat(service.getAccountSummaries(List.of(1L)).get(0).passwordSetupPending()).isTrue();
     }
+
+    @Test
+    void getAccountSummaries_계정과_회사의_온우림_이용_여부를_구분해서_반영한다() {
+        Admin enabled = admin(7L, AdminStatus.ACTIVE, null);
+        Admin disabled = Admin.of(2L, "admin02", "pw", "직원", "010", null, 7L, AdminStatus.ACTIVE, null, null);
+        disabled.restoreAccess(AdminRole.BRAND_ADMIN, false);
+        Admin otherCompany = Admin.of(3L, "admin03", "pw", "타사", "010", null, 8L, AdminStatus.ACTIVE, null, null);
+        otherCompany.restoreAccess(AdminRole.BRAND_ADMIN, false);
+        Company approved = company();
+        approved.restoreServiceFlags(true, true);
+        Company notApproved = Company.of(8L, null, "미승인업체", null, null, null, null, null, CompanyType.VENDOR,
+                CompanyStatus.ACTIVE, true, null, null, null, null, null, null);
+        notApproved.restoreServiceFlags(false, true);
+        given(adminRepository.findAllByIdIn(List.of(1L, 2L, 3L))).willReturn(List.of(enabled, disabled, otherCompany));
+        given(companyRepository.findAllByIdIn(List.of(7L, 8L))).willReturn(List.of(approved, notApproved));
+
+        List<AccountSummary> result = service.getAccountSummaries(List.of(1L, 2L, 3L));
+
+        assertThat(result).extracting(AccountSummary::onurimEnabled).containsExactly(true, false, false);
+        assertThat(result).extracting(AccountSummary::companyOnurimEnabled).containsExactly(true, true, false);
+    }
 }

@@ -108,7 +108,7 @@ class ShopAdminManagementServiceTest {
     void 목록은_상태_필터를_저장소에_전달하고_온우림_배치_조회로_이름을_채운다() {
         given(memberRepository.findAll(ShopAdminStatus.PENDING)).willReturn(List.of(member(ShopAdminStatus.PENDING)));
         given(identityVerifier.getAccounts(List.of(10L)))
-            .willReturn(List.of(new AccountProfile(10L, "login", "이름", "회사", false)));
+            .willReturn(List.of(new AccountProfile(10L, "login", "이름", "회사", false, false, false)));
 
         List<ShopAdminView> result = service.list(SUPER, ShopAdminStatus.PENDING, null);
 
@@ -267,7 +267,7 @@ class ShopAdminManagementServiceTest {
     void 목록은_소속없는_합류_신청자의_회사명을_회사_배치_조회로_채운다() {
         given(memberRepository.findAll(null)).willReturn(List.of(member(ShopAdminStatus.PENDING)));
         given(identityVerifier.getAccounts(List.of(10L)))
-            .willReturn(List.of(new AccountProfile(10L, "login", "이름", null, false)));
+            .willReturn(List.of(new AccountProfile(10L, "login", "이름", null, false, false, false)));
         given(identityVerifier.getCompanyNames(List.of(7L))).willReturn(Map.of(7L, "신청 회사"));
 
         assertThat(service.list(SUPER, null, null).get(0).companyName()).isEqualTo("신청 회사");
@@ -277,7 +277,7 @@ class ShopAdminManagementServiceTest {
     void 회사명_조회가_실패해도_목록은_반환된다() {
         given(memberRepository.findAll(null)).willReturn(List.of(member(ShopAdminStatus.PENDING)));
         given(identityVerifier.getAccounts(List.of(10L)))
-            .willReturn(List.of(new AccountProfile(10L, "login", "이름", null, false)));
+            .willReturn(List.of(new AccountProfile(10L, "login", "이름", null, false, false, false)));
         given(identityVerifier.getCompanyNames(any()))
             .willThrow(new ShopBusinessException(ShopErrorCode.AUTH_UPSTREAM_UNAVAILABLE));
 
@@ -824,8 +824,72 @@ class ShopAdminManagementServiceTest {
     void 목록은_비밀번호_설정_대기_여부를_노출한다() {
         given(memberRepository.findAll(null)).willReturn(List.of(member(ShopAdminStatus.APPROVED)));
         given(identityVerifier.getAccounts(List.of(10L)))
-            .willReturn(List.of(new AccountProfile(10L, "login", "이름", "회사", true)));
+            .willReturn(List.of(new AccountProfile(10L, "login", "이름", "회사", true, false, false)));
 
         assertThat(service.list(SUPER, null, null).get(0).passwordSetupPending()).isTrue();
+    }
+
+    @Test
+    void 파트너는_자기_회사_멤버의_온우림_접근을_켜고_끈다() {
+        partnerActorIsApproved();
+        given(memberRepository.findById(8L)).willReturn(Optional.of(approvedMember(8L, 80L, 7L, ShopRole.BRAND_ADMIN)));
+
+        service.changeOnurimAccess(PARTNER, 8L, true);
+        service.changeOnurimAccess(PARTNER, 8L, false);
+
+        verify(accessGranter).changeOnurimAccess(80L, 7L, true);
+        verify(accessGranter).changeOnurimAccess(80L, 7L, false);
+    }
+
+    @Test
+    void 슈퍼관리자도_온우림_접근을_변경할_수_있다() {
+        given(memberRepository.findById(8L)).willReturn(Optional.of(approvedMember(8L, 80L, 7L, ShopRole.BRAND_ADMIN)));
+
+        service.changeOnurimAccess(SUPER, 8L, true);
+
+        verify(accessGranter).changeOnurimAccess(80L, 7L, true);
+    }
+
+    @Test
+    void 다른_회사_멤버의_온우림_접근_변경은_거부한다() {
+        partnerActorIsApproved();
+        given(memberRepository.findById(8L)).willReturn(Optional.of(approvedMember(8L, 80L, 8L, ShopRole.BRAND_ADMIN)));
+
+        assertCode(() -> service.changeOnurimAccess(PARTNER, 8L, true), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
+        verifyNoInteractions(accessGranter);
+    }
+
+    @Test
+    void 승인되지_않은_멤버의_온우림_접근_변경은_거부한다() {
+        given(memberRepository.findById(8L)).willReturn(Optional.of(pendingMember(8L, 80L, 7L, ShopRole.BRAND_ADMIN)));
+
+        assertCode(() -> service.changeOnurimAccess(SUPER, 8L, true), ShopErrorCode.MEMBER_NOT_APPROVED);
+        verifyNoInteractions(accessGranter);
+    }
+
+    @Test
+    void 브랜드_관리자는_온우림_접근을_변경할_수_없다() {
+        assertCode(() -> service.changeOnurimAccess(BRAND_ADMIN_ACTOR, 8L, true), ShopErrorCode.ACCESS_MANAGE_FORBIDDEN);
+        verifyNoInteractions(accessGranter);
+    }
+
+    @Test
+    void 없는_멤버의_온우림_접근_변경은_404() {
+        given(memberRepository.findById(8L)).willReturn(Optional.empty());
+
+        assertCode(() -> service.changeOnurimAccess(SUPER, 8L, true), ShopErrorCode.ADMIN_REQUEST_NOT_FOUND);
+        verifyNoInteractions(accessGranter);
+    }
+
+    @Test
+    void 목록은_온우림_접근_여부를_노출한다() {
+        given(memberRepository.findAll(null)).willReturn(List.of(member(ShopAdminStatus.APPROVED)));
+        given(identityVerifier.getAccounts(List.of(10L)))
+            .willReturn(List.of(new AccountProfile(10L, "login", "이름", "회사", false, true, true)));
+
+        var view = service.list(SUPER, null, null).get(0);
+
+        assertThat(view.onurimEnabled()).isTrue();
+        assertThat(view.companyOnurimEnabled()).isTrue();
     }
 }

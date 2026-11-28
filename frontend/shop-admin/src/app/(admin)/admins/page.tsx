@@ -24,6 +24,7 @@ import {
   fetchCompanies,
   fetchShopAdmins,
   reissuePasswordSetup,
+  changeOnurimAccess,
   rejectShopAdmin,
   removeShopAdmin,
 } from '@/lib/api/shopAdminApi'
@@ -250,6 +251,17 @@ export default function AdminsPage() {
   async function handleReissue(admin: ShopAdmin) {
     const ok = await run(admin.id, () => reissuePasswordSetup(admin.id), '재발급에 실패했습니다.')
     if (ok) setNotice('비밀번호 설정 기간을 7일로 다시 열었습니다. 담당자에게 안내하세요.')
+  }
+
+  async function handleToggleOnurim(admin: ShopAdmin) {
+    const label = admin.name ?? admin.loginId ?? `#${admin.adminId}`
+    const enable = !admin.onurimEnabled
+    const message = enable
+      ? `'${label}' 님의 온우림 접근을 허용할까요?`
+      : `'${label}' 님의 온우림 접근을 해제할까요?\n이미 로그인한 세션은 최대 12시간 동안 유지될 수 있고, 이후 로그인부터 차단됩니다.`
+    if (!window.confirm(message)) return
+    const ok = await run(admin.id, () => changeOnurimAccess(admin.id, enable), '온우림 접근 변경에 실패했습니다.')
+    if (ok) setNotice(enable ? '온우림 접근을 허용했습니다.' : '온우림 접근을 해제했습니다.')
   }
 
   function handleApprove(admin: ShopAdmin) {
@@ -512,6 +524,11 @@ export default function AdminsPage() {
                             {isApproved && admin.passwordSetupPending && (
                               <Badge className="mt-1 whitespace-nowrap bg-orange-100 text-orange-700">비밀번호 미설정</Badge>
                             )}
+                            {isApproved && admin.companyOnurimEnabled && (
+                              <Badge className={cn('mt-1 whitespace-nowrap', admin.onurimEnabled ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600')}>
+                                {admin.onurimEnabled ? '온우림 이용' : '온우림 미이용'}
+                              </Badge>
+                            )}
                             {admin.status === 'REJECTED' && admin.rejectReason && (
                               <p className="mt-1 max-w-48 text-xs text-gray-500">{admin.rejectReason}</p>
                             )}
@@ -561,6 +578,16 @@ export default function AdminsPage() {
                                     onClick={() => handleReissue(admin)}
                                   >
                                     설정 재발급
+                                  </Button>
+                                )}
+                                {admin.companyOnurimEnabled && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={busyId !== null}
+                                    onClick={() => handleToggleOnurim(admin)}
+                                  >
+                                    {admin.onurimEnabled ? '온우림 해제' : '온우림 허용'}
                                   </Button>
                                 )}
                                 {isBrandAdmin && (

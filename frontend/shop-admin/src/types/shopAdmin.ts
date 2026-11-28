@@ -18,6 +18,8 @@ export interface ShopAdmin {
   brandIds: number[]
   requestedBrandIds: number[]
   passwordSetupPending: boolean
+  onurimEnabled: boolean
+  companyOnurimEnabled: boolean
 }
 
 export interface MyAccess {

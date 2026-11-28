@@ -241,4 +241,94 @@ class ShopAccessServiceTest {
         assertThat(service.getCompanySummaries(null)).isEmpty();
         verify(companyRepository, never()).findAllByIdIn(any());
     }
+
+    private Admin accessAdmin(Long companyId, AdminRole role, boolean onurimEnabled) {
+        Admin a = Admin.of(1L, "shop01", "pw", "홍길동", "010-1234-5678", null, companyId, AdminStatus.ACTIVE, null, null);
+        a.restoreAccess(role, onurimEnabled);
+        return a;
+    }
+
+    @Test
+    void 온우림_접근을_켜면_회사가_온우림_승인된_경우_계정_플래그가_켜진다() {
+        Admin target = accessAdmin(7L, AdminRole.BRAND_ADMIN, false);
+        given(adminRepository.findById(1L)).willReturn(Optional.of(target));
+        given(companyRepository.findById(7L)).willReturn(Optional.of(company(true)));
+        given(adminRepository.save(any(Admin.class))).willAnswer(inv -> inv.getArgument(0));
+
+        service.changeOnurimAccess(1L, 7L, true);
+
+        ArgumentCaptor<Admin> captor = ArgumentCaptor.forClass(Admin.class);
+        verify(adminRepository).save(captor.capture());
+        assertThat(captor.getValue().isOnurimEnabled()).isTrue();
+        assertThat(captor.getValue().getRole()).isEqualTo(AdminRole.BRAND_ADMIN);
+    }
+
+    @Test
+    void 온우림_접근을_끄면_계정_플래그만_꺼지고_role은_유지된다() {
+        Admin target = accessAdmin(7L, AdminRole.PARTNER_ADMIN, true);
+        given(adminRepository.findById(1L)).willReturn(Optional.of(target));
+        given(adminRepository.save(any(Admin.class))).willAnswer(inv -> inv.getArgument(0));
+
+        service.changeOnurimAccess(1L, 7L, false);
+
+        ArgumentCaptor<Admin> captor = ArgumentCaptor.forClass(Admin.class);
+        verify(adminRepository).save(captor.capture());
+        assertThat(captor.getValue().isOnurimEnabled()).isFalse();
+        assertThat(captor.getValue().getRole()).isEqualTo(AdminRole.PARTNER_ADMIN);
+        verify(companyRepository, never()).save(any());
+    }
+
+    @Test
+    void 온우림_접근_변경은_이미_같은_상태여도_멱등하다() {
+        given(adminRepository.findById(1L)).willReturn(Optional.of(accessAdmin(7L, AdminRole.BRAND_ADMIN, true)));
+        given(companyRepository.findById(7L)).willReturn(Optional.of(company(true)));
+        given(adminRepository.save(any(Admin.class))).willAnswer(inv -> inv.getArgument(0));
+
+        service.changeOnurimAccess(1L, 7L, true);
+
+        ArgumentCaptor<Admin> captor = ArgumentCaptor.forClass(Admin.class);
+        verify(adminRepository).save(captor.capture());
+        assertThat(captor.getValue().isOnurimEnabled()).isTrue();
+    }
+
+    @Test
+    void 온우림_승인되지_않은_회사에서는_켤_수_없다() {
+        Company notApproved = company(true);
+        notApproved.restoreServiceFlags(false, true);
+        given(adminRepository.findById(1L)).willReturn(Optional.of(accessAdmin(7L, AdminRole.BRAND_ADMIN, false)));
+        given(companyRepository.findById(7L)).willReturn(Optional.of(notApproved));
+
+        assertCode(() -> service.changeOnurimAccess(1L, 7L, true), AuthErrorCode.COMPANY_ONURIM_NOT_ENABLED);
+        verify(adminRepository, never()).save(any());
+    }
+
+    @Test
+    void 온우림_접근_변경은_다른_회사_소속_계정이면_거부한다() {
+        given(adminRepository.findById(1L)).willReturn(Optional.of(accessAdmin(8L, AdminRole.BRAND_ADMIN, true)));
+
+        assertCode(() -> service.changeOnurimAccess(1L, 7L, false), AuthErrorCode.SHOP_ACCESS_COMPANY_MISMATCH);
+        verify(adminRepository, never()).save(any());
+    }
+
+    @Test
+    void 온우림_접근_변경은_슈퍼관리자와_소속없는_계정을_거부한다() {
+        Admin superAdmin = accessAdmin(7L, AdminRole.SUPER_ADMIN, true);
+        given(adminRepository.findById(1L)).willReturn(Optional.of(superAdmin));
+        assertCode(() -> service.changeOnurimAccess(1L, 7L, false), AuthErrorCode.SHOP_ONURIM_ACCESS_NOT_ALLOWED);
+
+        given(adminRepository.findById(2L)).willReturn(Optional.of(accessAdmin(null, AdminRole.BRAND_ADMIN, false)));
+        assertCode(() -> service.changeOnurimAccess(2L, 7L, true), AuthErrorCode.SHOP_ONURIM_ACCESS_NOT_ALLOWED);
+        verify(adminRepository, never()).save(any());
+    }
+
+    @Test
+    void 온우림_접근_변경은_없는_계정이거나_삭제된_계정이면_404() {
+        given(adminRepository.findById(1L)).willReturn(Optional.empty());
+        assertCode(() -> service.changeOnurimAccess(1L, 7L, true), AuthErrorCode.SHOP_ACCESS_ADMIN_NOT_FOUND);
+
+        Admin deleted = Admin.of(2L, "gone", "pw", "삭제", null, null, 7L, AdminStatus.ACTIVE, null, "2026-01-01T00:00:00");
+        deleted.restoreAccess(AdminRole.BRAND_ADMIN, true);
+        given(adminRepository.findById(2L)).willReturn(Optional.of(deleted));
+        assertCode(() -> service.changeOnurimAccess(2L, 7L, false), AuthErrorCode.SHOP_ACCESS_ADMIN_NOT_FOUND);
+    }
 }

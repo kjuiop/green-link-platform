@@ -4,6 +4,7 @@ import com.greenlink.shop.adapter.in.web.dto.ApproveRequest;
 import com.greenlink.shop.adapter.in.web.dto.BrandAssignRequest;
 import com.greenlink.shop.adapter.in.web.dto.CreateMemberRequest;
 import com.greenlink.shop.adapter.in.web.dto.CreateMemberResponse;
+import com.greenlink.shop.adapter.in.web.dto.OnurimAccessRequest;
 import com.greenlink.shop.adapter.in.web.dto.RejectRequest;
 import com.greenlink.shop.adapter.in.web.dto.RoleChangeRequest;
 import com.greenlink.shop.adapter.in.web.dto.ShopAdminResponse;
@@ -78,6 +79,14 @@ public class MemberController {
     public ResponseEntity<Void> changeRole(@PathVariable Long id, @Valid @RequestBody RoleChangeRequest request,
                                            @AuthenticationPrincipal ShopPrincipal principal) {
         managementUseCase.changeRole(principal.toActor(), id, request.role());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/onurim-access")
+    public ResponseEntity<Void> changeOnurimAccess(@PathVariable Long id,
+                                                   @Valid @RequestBody OnurimAccessRequest request,
+                                                   @AuthenticationPrincipal ShopPrincipal principal) {
+        managementUseCase.changeOnurimAccess(principal.toActor(), id, request.enabled());
         return ResponseEntity.noContent().build();
     }
 

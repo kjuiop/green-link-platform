@@ -6,5 +6,7 @@ public record AccountSummary(
     String name,
     Long companyId,
     String companyName,
-    boolean passwordSetupPending
+    boolean passwordSetupPending,
+    boolean onurimEnabled,
+    boolean companyOnurimEnabled
 ) {}

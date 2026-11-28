@@ -6,6 +6,7 @@ import com.greenlink.admin.adapter.in.web.dto.OnurimApplicationApplyRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopAccessGrantRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopBusinessNoRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopManagedAccountRequest;
+import com.greenlink.admin.adapter.in.web.dto.ShopOnurimAccessRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopPasswordSetupRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopRoleChangeRequest;
 import com.greenlink.admin.adapter.in.web.dto.ShopSignupRequest;
@@ -118,6 +119,15 @@ public class InternalShopAuthController {
                            @RequestBody @Valid ShopRoleChangeRequest req) {
         requireSecret(secret);
         accessUseCase.changeRole(adminId, req.role());
+    }
+
+    @PutMapping("/accounts/{adminId}/onurim-access")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changeOnurimAccess(@RequestHeader(value = SECRET_HEADER, required = false) String secret,
+                                   @PathVariable Long adminId,
+                                   @RequestBody @Valid ShopOnurimAccessRequest req) {
+        requireSecret(secret);
+        accessUseCase.changeOnurimAccess(adminId, req.companyId(), req.enabled());
     }
 
     @PostMapping("/companies/batch")

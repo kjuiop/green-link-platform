@@ -114,6 +114,10 @@ public class Admin {
         this.onurimEnabled = true;
     }
 
+    public void disableOnurim() {
+        this.onurimEnabled = false;
+    }
+
     public void changeRole(AdminRole newRole) {
         requireShopRole(newRole);
         if (role == AdminRole.SUPER_ADMIN) {
