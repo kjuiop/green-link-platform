@@ -42,6 +42,16 @@ public class SmsMessage {
         return m;
     }
 
+    public static SmsMessage createPhoneVerification(String receiver) {
+        SmsMessage m = new SmsMessage();
+        m.receiver = receiver;
+        m.message = "[본인인증] 인증번호 발송";
+        m.status = SmsStatus.FAIL;
+        m.type = SmsMessageType.PHONE_VERIFICATION;
+        m.channel = MessageChannel.SMS;
+        return m;
+    }
+
     public static SmsMessage createAlimtalk(Long orderId, String receiver, String templateCode) {
         SmsMessage m = new SmsMessage();
         m.orderId = orderId;

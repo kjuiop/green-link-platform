@@ -66,11 +66,20 @@ public class MessageMeSmsClient implements SmsClient {
             if ("100".equals(result)) {
                 return new SmsResult(true, null, null);
             }
-            return SmsResult.rejected(result);
+            log.warn("[메시지미 발송 거절] response={}", resp);
+            return SmsResult.rejected(SmsResult.rejectionReason(result, responseMessage(resp)));
         } catch (Exception e) {
             log.warn("[메시지미 발송 실패] {}", SmsResult.reasonOf(e), e);
             return new SmsResult(false, null, SmsResult.reasonOf(e));
         }
+    }
+
+    private static Object responseMessage(Map<String, Object> resp) {
+        for (String key : new String[]{"message", "result_message", "msg", "error"}) {
+            Object v = resp.get(key);
+            if (v != null && !String.valueOf(v).isBlank()) return v;
+        }
+        return null;
     }
 
 }

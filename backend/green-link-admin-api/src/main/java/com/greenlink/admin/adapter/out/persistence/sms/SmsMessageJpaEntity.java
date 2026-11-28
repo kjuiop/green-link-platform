@@ -15,7 +15,7 @@ public class SmsMessageJpaEntity extends BaseJpaEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "order_id", nullable = false)
+    @Column(name = "order_id")
     private Long orderId;
 
     @Column(name = "company_id")

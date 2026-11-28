@@ -3,8 +3,9 @@ import { authHeaders, fetchWithAuth } from './fetchWithAuth'
 
 export type SmsMessage = {
   id: number
-  orderId: number
+  orderId: number | null
   receiver: string
+  type?: 'DELIVERY' | 'ORDER_NOTIFY' | 'PHONE_VERIFICATION'
   status: 'SUCCESS' | 'FAIL'
   failReason: string | null
   aligoMsgId: string | null
